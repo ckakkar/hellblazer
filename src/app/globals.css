@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
+/* ── Design tokens → Tailwind theme ──────────────────────────────────────
+   Dark cyberpunk, minimal: deep charcoal base, single electric-teal accent.
+   Colors are emitted as CSS custom properties so recharts can read them too. */
+@theme {
+  --color-bg: #0a0b0d;
+  --color-surface: #101216;
+  --color-surface-2: #16191f;
+  --color-border: #1f242c;
+  --color-text: #e6e9ef;
+  --color-muted: #8b93a1;
+  --color-accent: #00e5c7;
+  --color-accent-dim: #0b8f80;
+  --color-danger: #ff4d6d;
+  --color-warn: #ffb020;
+
+  --color-chart-1: #00e5c7;
+  --color-chart-2: #6c8bff;
+  --color-chart-3: #b980ff;
+  --color-chart-4: #ff6fb5;
+
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "JetBrains Mono", monospace;
+
+  --radius-lg: 0.7rem;
+
+  --shadow-glow:
+    0 0 0 1px rgba(0, 229, 199, 0.14), 0 0 22px -4px rgba(0, 229, 199, 0.32);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  color-scheme: dark;
+  --accent-glow: rgba(0, 229, 199, 0.14);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numeric/data feel: tabular figures on mono */
+.font-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Strip native number spinners — NumberStepper supplies its own controls */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+::selection {
+  background: rgba(0, 229, 199, 0.25);
+}
+
+/* Prevent iOS Safari from zooming when a control gains focus: enforce a 16px
+   floor on all editable controls at phone widths. Larger sizes are untouched. */
+@media (max-width: 639.98px) {
+  input:not([type="date"]):not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a313b;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
