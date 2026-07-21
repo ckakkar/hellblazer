@@ -34,12 +34,30 @@
   --accent-glow: rgba(0, 229, 199, 0.14);
 }
 
+html {
+  /* Match body bg so iOS rubber-band overscroll never flashes white. */
+  background: var(--color-bg);
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Native-app feel on iOS: no grey tap flash, no long-press callout menu on
+   interactive chrome, and momentum scrolling inside scroll containers. */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a,
+[role="button"],
+label {
+  -webkit-touch-callout: none;
 }
 
 /* Numeric/data feel: tabular figures on mono */

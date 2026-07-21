@@ -31,7 +31,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
         disabled={pending}
         onClick={() => begin(null)}
         className={cn(
-          "group flex items-center gap-4 rounded-lg border border-border bg-surface p-5 text-left transition-colors hover:border-accent/40",
+          "group flex items-center gap-4 rounded-lg border border-border bg-surface p-5 text-left transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]",
           pending && chosen === "freeform" && "border-accent/60",
         )}
       >
@@ -63,7 +63,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
                 aria-disabled={pending}
                 onClick={() => !pending && begin(t.id)}
                 className={cn(
-                  "cursor-pointer p-4 transition-colors hover:border-accent/40",
+                  "cursor-pointer p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]",
                   pending && chosen === t.id && "border-accent/60",
                 )}
               >

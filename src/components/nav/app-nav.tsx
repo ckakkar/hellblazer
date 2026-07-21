@@ -79,25 +79,27 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
         </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-bg/85 px-4 backdrop-blur md:hidden">
-        <Brand />
-        <div className="flex items-center gap-1">
-          {SECONDARY_NAV.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              aria-label={item.label}
-              className={cn(
-                "flex size-9 items-center justify-center rounded-lg transition-colors",
-                isActive(item.href)
-                  ? "bg-accent/10 text-accent"
-                  : "text-muted hover:bg-surface-2 hover:text-text",
-              )}
-            >
-              <item.icon className="size-5" />
-            </Link>
-          ))}
+      {/* Mobile top bar — pads into the notch via safe-area inset */}
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-border bg-bg/85 pt-[env(safe-area-inset-top)] backdrop-blur md:hidden">
+        <div className="flex h-14 items-center justify-between px-4">
+          <Brand />
+          <div className="flex items-center gap-1">
+            {SECONDARY_NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                aria-label={item.label}
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-lg transition-transform active:scale-90",
+                  isActive(item.href)
+                    ? "bg-accent/10 text-accent"
+                    : "text-muted",
+                )}
+              >
+                <item.icon className="size-5" />
+              </Link>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -110,7 +112,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center gap-1 py-2.5"
+              className="flex flex-col items-center justify-center gap-1 py-2.5 transition-transform active:scale-90"
             >
               <span
                 className={cn(

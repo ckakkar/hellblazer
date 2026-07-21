@@ -217,7 +217,7 @@ export function SessionLogger({
   );
 
   return (
-    <div className="mx-auto max-w-2xl pb-24">
+    <div className="mx-auto max-w-2xl">
       {/* Session header */}
       <div className="mb-5">
         <input
@@ -347,7 +347,12 @@ export function SessionLogger({
             className="h-9 w-20 rounded-md border border-border bg-surface-2 px-2 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
           />
         </label>
-        <Button onClick={finish} disabled={finishing} size="lg">
+        <Button
+          onClick={finish}
+          disabled={finishing}
+          size="lg"
+          className="w-full sm:w-auto"
+        >
           {finishing ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (

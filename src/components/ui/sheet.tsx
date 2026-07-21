@@ -40,18 +40,22 @@ export function Sheet({
         className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         onClick={onClose}
       />
-      <div className="relative z-10 flex max-h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-surface sm:rounded-2xl">
+      <div className="relative z-10 flex max-h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-surface pb-[env(safe-area-inset-bottom)] sm:rounded-2xl sm:pb-0">
+        {/* Grabber handle — bottom-sheet affordance on mobile */}
+        <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <h2 className="text-sm font-medium text-text">{title}</h2>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="text-muted transition-colors hover:text-text"
+            className="flex size-8 items-center justify-center text-muted transition-colors hover:text-text active:scale-90"
           >
             <X className="size-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {children}
+        </div>
         {footer && <div className="border-t border-border p-4">{footer}</div>}
       </div>
     </div>

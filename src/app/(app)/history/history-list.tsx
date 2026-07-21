@@ -84,7 +84,7 @@ export function HistoryList({
       <div className="grid gap-3">
         {filtered.map((s) => (
           <Link key={s.session_id} href={`/history/${s.session_id}`}>
-            <Card className="flex items-center gap-4 p-4 transition-colors hover:border-accent/40">
+            <Card className="flex items-center gap-4 p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99] active:border-accent/40">
               <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-2 font-mono">
                 <span className="text-[10px] uppercase text-muted">
                   {s.session_date

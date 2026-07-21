@@ -23,6 +23,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // Extends the layout into the notch / home-indicator area so the
+  // env(safe-area-inset-*) values become non-zero on iPhone.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
