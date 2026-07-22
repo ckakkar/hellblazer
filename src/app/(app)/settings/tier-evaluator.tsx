@@ -64,6 +64,16 @@ export function TierEvaluator({
         <div className="relative p-5">
           <div
             aria-hidden
+            className="hb-halftone pointer-events-none absolute inset-0 opacity-25"
+            style={{
+              maskImage:
+                "radial-gradient(circle at 85% 15%, black, transparent 60%)",
+              WebkitMaskImage:
+                "radial-gradient(circle at 85% 15%, black, transparent 60%)",
+            }}
+          />
+          <div
+            aria-hidden
             className="pointer-events-none absolute -right-6 -top-8 select-none font-display text-[9rem] font-bold leading-none text-white/[0.03]"
           >
             力

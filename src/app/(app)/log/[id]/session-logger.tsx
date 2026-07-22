@@ -406,7 +406,17 @@ export function SessionLogger({
       {/* VICTORY slam */}
       {victory && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur">
-          <div className="hb-slam text-center">
+          <div
+            aria-hidden
+            className="hb-speedlines pointer-events-none absolute inset-0 opacity-70"
+            style={{
+              maskImage:
+                "radial-gradient(circle at 50% 45%, black, transparent 68%)",
+              WebkitMaskImage:
+                "radial-gradient(circle at 50% 45%, black, transparent 68%)",
+            }}
+          />
+          <div className="hb-slam relative text-center">
             <div
               aria-hidden
               className="font-display text-sm font-bold uppercase tracking-[0.4em] text-accent/70"

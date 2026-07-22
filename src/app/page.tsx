@@ -20,12 +20,39 @@ export default async function Landing() {
             "radial-gradient(closest-side, rgba(255,45,58,0.18), transparent)",
         }}
       />
-      {/* giant kanji watermark: 最強 — "the strongest" */}
+      {/* speed-line burst radiating behind the hero */}
+      <div
+        aria-hidden
+        className="hb-speedlines pointer-events-none absolute inset-0 opacity-60"
+        style={{
+          maskImage:
+            "radial-gradient(ellipse 55% 50% at 42% 46%, black, transparent 72%)",
+          WebkitMaskImage:
+            "radial-gradient(ellipse 55% 50% at 42% 46%, black, transparent 72%)",
+        }}
+      />
+      {/* halftone floor */}
+      <div
+        aria-hidden
+        className="hb-halftone pointer-events-none absolute inset-x-0 bottom-0 h-48 opacity-30"
+        style={{
+          maskImage: "linear-gradient(to top, black, transparent)",
+          WebkitMaskImage: "linear-gradient(to top, black, transparent)",
+        }}
+      />
+      {/* giant kanji watermark: 闘 — "fight" */}
       <div
         aria-hidden
         className="pointer-events-none absolute -right-10 top-24 select-none font-display text-[22rem] font-bold leading-none text-white/[0.02] sm:text-[30rem]"
       >
         闘
+      </div>
+      {/* menace SFX */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 rotate-180 select-none font-impact text-3xl uppercase tracking-[0.35em] text-accent/15 [writing-mode:vertical-rl] sm:left-8"
+      >
+        ゴゴゴゴ
       </div>
 
       <div className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col px-6">

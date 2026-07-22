@@ -20,10 +20,10 @@ export function PageHeader({
       )}
     >
       <div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-text sm:text-[1.75rem]">
+        <h1 className="font-impact text-3xl uppercase leading-[0.95] tracking-tight text-text sm:text-4xl">
           {title}
         </h1>
-        {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
       </div>
       {action}
     </div>

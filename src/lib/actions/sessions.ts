@@ -234,13 +234,24 @@ export async function finishSession(input: {
     })
     .parse(input);
   const { supabase } = await getAuthedContext();
+  const patch: TablesUpdate<"session"> = {
+    finished_at: new Date().toISOString(),
+  };
   if (v.durationMin !== undefined && v.durationMin !== null) {
-    await supabase
-      .from("session")
-      .update({ duration_min: v.durationMin })
-      .eq("id", v.sessionId);
+    patch.duration_min = v.durationMin;
   }
+  await supabase.from("session").update(patch).eq("id", v.sessionId);
   revalidatePath("/dashboard");
   revalidatePath("/history");
   redirect(`/history/${v.sessionId}`);
+}
+
+/** Abandon an in-progress session from the resume banner (no redirect). */
+export async function discardSession(input: { id: string }) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { error } = await supabase.from("session").delete().eq("id", id);
+  if (error) throw error;
+  revalidatePath("/dashboard");
+  revalidatePath("/history");
 }

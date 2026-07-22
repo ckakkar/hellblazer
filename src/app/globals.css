@@ -131,6 +131,24 @@ label {
   }
 }
 
+/* Manga halftone dots */
+.hb-halftone {
+  background-image: radial-gradient(
+    rgba(255, 45, 58, 0.22) 1px,
+    transparent 1.5px
+  );
+  background-size: 7px 7px;
+}
+
+/* Speed-line burst radiating from center (manga impact) */
+.hb-speedlines {
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, 0.055) 0deg 0.5deg,
+    transparent 0.5deg 4.5deg
+  );
+}
+
 /* Victory slam-in */
 .hb-slam {
   animation: hb-slam 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) both;

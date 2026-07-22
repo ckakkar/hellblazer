@@ -18,6 +18,40 @@ export type SessionDetail = Session & {
   session_exercise: SessionExerciseFull[];
 };
 
+export type ActiveSession = {
+  id: string;
+  title: string | null;
+  workingSets: number;
+  exerciseCount: number;
+};
+
+/** The most recent unfinished session, if any — powers the resume banner. */
+export async function getActiveSession(): Promise<ActiveSession | null> {
+  const supabase = await createClient();
+  const { data: sess, error } = await supabase
+    .from("session")
+    .select("id, title")
+    .is("finished_at", null)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!sess) return null;
+
+  const { data: summary } = await supabase
+    .from("v_session_summary")
+    .select("working_sets, exercise_count")
+    .eq("session_id", sess.id)
+    .maybeSingle();
+
+  return {
+    id: sess.id,
+    title: sess.title,
+    workingSets: Number(summary?.working_sets ?? 0),
+    exerciseCount: Number(summary?.exercise_count ?? 0),
+  };
+}
+
 /** Per-session rollups for history + dashboard, most recent first. */
 export async function getSessionSummaries(
   limit?: number,
