@@ -209,6 +209,19 @@ export async function deleteSession(input: { id: string }) {
   redirect("/history");
 }
 
+/** Delete every logged session (cascades to exercises + sets). Irreversible. */
+export async function clearHistory() {
+  const { supabase, user } = await getAuthedContext();
+  const { error } = await supabase
+    .from("session")
+    .delete()
+    .eq("user_id", user.id);
+  if (error) throw error;
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  revalidatePath("/progress");
+}
+
 /** Persist an optional duration and jump to the finished session's detail. */
 export async function finishSession(input: {
   sessionId: string;

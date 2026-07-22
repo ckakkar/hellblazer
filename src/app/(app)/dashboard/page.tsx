@@ -7,7 +7,10 @@ import {
 } from "@/lib/data/analytics";
 import { getSessionSummaries } from "@/lib/data/sessions";
 import { getActiveProgramProgress } from "@/lib/data/programs";
+import { getProfile } from "@/lib/data/profile";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
+import { TierLadder } from "@/components/tier/tier-ui";
+import { getTier } from "@/lib/tiers";
 import { getUnit } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -23,14 +26,16 @@ import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [weeklySets, volumeTrend, summaries, activeProgress, unit] =
+  const [weeklySets, volumeTrend, summaries, activeProgress, profile, unit] =
     await Promise.all([
       getCurrentWeekSetsPerMuscle(),
       getVolumeTrend(12),
       getSessionSummaries(),
       getActiveProgramProgress(),
+      getProfile(),
       getUnit(),
     ]);
+  const tier = getTier(profile?.tier);
 
   const weekStart = startOfISOWeek(new Date());
   const thisWeek = summaries.filter(
@@ -57,6 +62,19 @@ export default async function DashboardPage() {
           </Link>
         }
       />
+
+      <Link
+        href="/settings"
+        className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/40"
+      >
+        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+          Rank
+        </span>
+        <span className="font-impact text-lg uppercase leading-none text-accent">
+          {tier ? tier.name : "Unranked"}
+        </span>
+        <TierLadder rank={tier?.rank ?? 0} className="ml-auto max-w-[160px]" />
+      </Link>
 
       {activeProgress ? (
         <div className="mb-6">

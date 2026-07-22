@@ -7,8 +7,10 @@ import {
   ChevronDown,
   ChevronUp,
   Loader2,
+  Pencil,
   Plus,
   Power,
+  RotateCcw,
   Trash2,
   X,
 } from "lucide-react";
@@ -26,6 +28,7 @@ import {
   deleteProgram,
   moveProgramDay,
   removeProgramDay,
+  resetProgram,
   setActiveProgram,
   updateProgram,
 } from "@/lib/actions/programs";
@@ -139,6 +142,18 @@ export function ProgramDetail({
               <Power className="size-4" />
               {program.is_active ? "Deactivate" : "Set as active"}
             </Button>
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() =>
+                start(async () => {
+                  await resetProgram({ id: program.id });
+                })
+              }
+            >
+              <RotateCcw className="size-4" />
+              Restart at week 1
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -202,6 +217,14 @@ export function ProgramDetail({
                       <ChevronDown className="size-4" />
                     </button>
                   </div>
+                  <Link
+                    href="/templates"
+                    aria-label="Edit exercises"
+                    title="Edit exercises"
+                    className="flex size-8 shrink-0 items-center justify-center text-muted transition-colors hover:text-accent"
+                  >
+                    <Pencil className="size-4" />
+                  </Link>
                   {tmpl && (
                     <StartWorkoutButton
                       programDayId={d.id}

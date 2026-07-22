@@ -74,6 +74,30 @@ export type Database = {
         }
         Relationships: []
       }
+      profile: {
+        Row: {
+          created_at: string
+          tier: string | null
+          tier_evaluated_at: string | null
+          tier_rationale: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          tier?: string | null
+          tier_evaluated_at?: string | null
+          tier_rationale?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          tier?: string | null
+          tier_evaluated_at?: string | null
+          tier_rationale?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       program: {
         Row: {
           created_at: string

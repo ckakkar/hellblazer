@@ -5,7 +5,7 @@ import {
   TrendingUp,
   ClipboardList,
   Dumbbell,
-  Settings,
+  User,
   CalendarRange,
   type LucideIcon,
 } from "lucide-react";
@@ -39,8 +39,8 @@ export const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
 
 export const SETTINGS_ITEM: NavItem = {
   href: "/settings",
-  label: "Settings",
-  icon: Settings,
+  label: "Profile",
+  icon: User,
 };
 
 /** Mobile bottom tab bar — the five most-used destinations. */
@@ -56,5 +56,5 @@ export const BOTTOM_NAV: NavItem[] = [
 export const SECONDARY_NAV: NavItem[] = [
   { href: "/templates", label: "Templates", icon: ClipboardList },
   { href: "/exercises", label: "Exercises", icon: Dumbbell },
-  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/settings", label: "Profile", icon: User },
 ];

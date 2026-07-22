@@ -137,6 +137,20 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
   revalidatePath("/dashboard");
 }
 
+/** Restart the block from week 1 (start date = today). Keeps logged sessions. */
+export async function resetProgram(input: { id: string }) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { error } = await supabase
+    .from("program")
+    .update({ start_date: new Date().toISOString().slice(0, 10) })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath(`/programs/${id}`);
+  revalidatePath("/programs");
+  revalidatePath("/dashboard");
+}
+
 export async function deleteProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase } = await getAuthedContext();
