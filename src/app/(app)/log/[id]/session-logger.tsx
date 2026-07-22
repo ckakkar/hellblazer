@@ -2,20 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
-import {
-  Check,
-  Dumbbell,
-  Flame,
-  Loader2,
-  Plus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Flame, Loader2, Plus, Swords, Trash2, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Badge } from "@/components/ui/badge";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { cn } from "@/lib/utils";
+import { pickHype, randomVictory } from "@/lib/hype";
 import {
   fromDisplayWeight,
   toDisplayWeight,
@@ -64,9 +57,12 @@ export function SessionLogger({
   const [, startNav] = useTransition();
   const [finishing, setFinishing] = useState(false);
   const [picker, setPicker] = useState(false);
+  const [flashId, setFlashId] = useState<string | null>(null);
+  const [victory, setVictory] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(
     session.duration_min ?? null,
   );
+  const hype = pickHype(session.id);
 
   const [exercises, setExercises] = useState<LocalExercise[]>(() =>
     session.session_exercise.map((se) => ({
@@ -161,6 +157,7 @@ export function SessionLogger({
     setExercises((p) =>
       p.map((e) => (e.seId === seId ? { ...e, sets: [...e.sets, seed] } : e)),
     );
+    setFlashId(seed.id);
     void persist(seId, seed, nextNumber);
   }
 
@@ -206,13 +203,28 @@ export function SessionLogger({
 
   function finish() {
     setFinishing(true);
-    startNav(async () => {
-      await finishSession({ sessionId: session.id, durationMin: duration });
-    });
+    setVictory(randomVictory());
+    // Let the VICTORY slam land before the redirect.
+    setTimeout(() => {
+      startNav(async () => {
+        await finishSession({ sessionId: session.id, durationMin: duration });
+      });
+    }, 1100);
   }
 
   const totalSets = exercises.reduce(
     (n, e) => n + e.sets.filter((s) => !s.isWarmup).length,
+    0,
+  );
+  const totalForce = exercises.reduce(
+    (n, e) =>
+      n +
+      e.sets
+        .filter((s) => !s.isWarmup)
+        .reduce(
+          (m, s) => m + (Number(s.weight) || 0) * (Number(s.reps) || 0),
+          0,
+        ),
     0,
   );
 
@@ -245,10 +257,31 @@ export function SessionLogger({
             }
             className="rounded-md border border-border bg-surface-2 px-2 py-1 font-mono text-xs text-text focus:border-accent/60 focus:outline-none"
           />
-          <span className="font-mono text-xs">
-            {exercises.length} exercises · {totalSets} working sets
-          </span>
         </div>
+
+        {/* Live power HUD — total force climbs as you log */}
+        <div className="mt-3 flex items-stretch gap-3">
+          <div className="flex-1 overflow-hidden rounded-lg border border-border bg-surface px-4 py-3">
+            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+              Total force
+            </div>
+            <div className="mt-0.5 font-impact text-[2rem] leading-none text-accent tabular-nums">
+              {Math.round(totalForce).toLocaleString()}
+              <span className="ml-1 text-base text-muted">{unit}</span>
+            </div>
+          </div>
+          <div className="rounded-lg border border-border bg-surface px-4 py-3 text-right">
+            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+              Sets
+            </div>
+            <div className="mt-0.5 font-impact text-[2rem] leading-none text-text tabular-nums">
+              {totalSets}
+            </div>
+          </div>
+        </div>
+        <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-accent/70">
+          {hype}
+        </p>
       </div>
 
       {/* Exercises */}
@@ -304,6 +337,7 @@ export function SessionLogger({
                     set={s}
                     unit={unit}
                     weightStep={weightStep}
+                    flash={s.id === flashId}
                     onChange={(patch) => updateSet(ex.seId, s.id, patch)}
                     onRemove={() => removeSet(ex.seId, s.id)}
                   />
@@ -315,7 +349,7 @@ export function SessionLogger({
                   className="mt-1 w-full"
                 >
                   <Plus className="size-4" />
-                  {ex.sets.length === 0 ? "Log first set" : "Add set (copy forward)"}
+                  {ex.sets.length === 0 ? "Draw first blood" : "Again · copy forward"}
                 </Button>
               </div>
             </div>
@@ -328,8 +362,8 @@ export function SessionLogger({
         onClick={() => setPicker(true)}
         className="mt-4 w-full"
       >
-        <Dumbbell className="size-4" />
-        Add exercise
+        <Swords className="size-4" />
+        Add opponent
       </Button>
 
       {/* Finish bar */}
@@ -356,9 +390,9 @@ export function SessionLogger({
           {finishing ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Check className="size-4" />
+            <Trophy className="size-4" />
           )}
-          Finish session
+          Claim victory
         </Button>
       </div>
 
@@ -368,6 +402,27 @@ export function SessionLogger({
         exercises={exerciseLibrary}
         onPick={addExercise}
       />
+
+      {/* VICTORY slam */}
+      {victory && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur">
+          <div className="hb-slam text-center">
+            <div
+              aria-hidden
+              className="font-display text-sm font-bold uppercase tracking-[0.4em] text-accent/70"
+            >
+              勝利
+            </div>
+            <div className="mt-2 font-impact text-6xl uppercase tracking-tight text-accent sm:text-8xl">
+              {victory}
+            </div>
+            <div className="mt-4 font-mono text-sm text-muted">
+              {Math.round(totalForce).toLocaleString()} {unit} moved ·{" "}
+              {totalSets} sets
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -377,6 +432,7 @@ function SetRow({
   set,
   unit,
   weightStep,
+  flash,
   onChange,
   onRemove,
 }: {
@@ -384,6 +440,7 @@ function SetRow({
   set: LocalSet;
   unit: Unit;
   weightStep: number;
+  flash?: boolean;
   onChange: (patch: Partial<LocalSet>) => void;
   onRemove: () => void;
 }) {
@@ -394,6 +451,7 @@ function SetRow({
         set.isWarmup
           ? "border-warn/30 bg-warn/[0.04]"
           : "border-border bg-surface-2/40",
+        flash && "hb-hit",
       )}
     >
       <div className="mb-2 flex items-center justify-between">

@@ -1,40 +1,41 @@
 @import "tailwindcss";
 
-/* ── Hell Blazer design tokens → Tailwind theme ──────────────────────────
-   Near-monochrome warm-black. Hairline borders. A single disciplined ember
-   accent ("blaze") used sparingly — mostly one signature moment, not chrome.
+/* ── Hell Blazer · Baki-grade design tokens → Tailwind theme ──────────────
+   Black + blood-crimson. Warm-neutral base, hairline borders, one savage red
+   accent. Heavy impact type for the moments that should hit.
    Colors are emitted as CSS custom properties so recharts can read them too. */
 @theme {
-  --color-bg: #0a0a0b;
-  --color-surface: #101011;
-  --color-surface-2: #17171a;
-  --color-border: #232227;
-  --color-text: #ededeb;
-  --color-muted: #86867f;
-  --color-accent: #ff5a26;
-  --color-accent-dim: #c7431a;
-  --color-danger: #f5566b;
+  --color-bg: #0a0908;
+  --color-surface: #100f0e;
+  --color-surface-2: #181615;
+  --color-border: #262220;
+  --color-text: #efece8;
+  --color-muted: #86807a;
+  --color-accent: #ff2d3a;
+  --color-accent-dim: #b3141f;
+  --color-danger: #ff5470;
   --color-warn: #f5a524;
 
-  --color-chart-1: #ff5a26;
-  --color-chart-2: #9a9a92;
-  --color-chart-3: #c9895e;
-  --color-chart-4: #5f6672;
+  --color-chart-1: #ff2d3a;
+  --color-chart-2: #9a938c;
+  --color-chart-3: #d98b57;
+  --color-chart-4: #61656f;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "JetBrains Mono", monospace;
   --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif,
     sans-serif;
+  --font-impact: var(--font-anton), var(--font-bricolage), sans-serif;
 
   --radius-lg: 0.625rem;
 
   --shadow-glow:
-    0 0 0 1px rgba(255, 90, 38, 0.18), 0 0 28px -8px rgba(255, 90, 38, 0.5);
+    0 0 0 1px rgba(255, 45, 58, 0.22), 0 0 30px -8px rgba(255, 45, 58, 0.6);
 }
 
 :root {
   color-scheme: dark;
-  --accent-glow: rgba(255, 90, 38, 0.16);
+  --accent-glow: rgba(255, 45, 58, 0.18);
 }
 
 html {
@@ -67,13 +68,15 @@ label {
   font-variant-numeric: tabular-nums;
 }
 
-/* Display face: tighten tracking, it carries the brand personality */
 .font-display {
   letter-spacing: -0.02em;
 }
+.font-impact {
+  letter-spacing: 0.005em;
+}
 
 /* ── Signature motion (CSS only, no libs) ─────────────────────────────────
-   Shiny wordmark: an ember glint sweeps across an off-white base. */
+   Shiny wordmark: a crimson glint sweeps across an off-white base. */
 .hb-shiny {
   background: linear-gradient(
     110deg,
@@ -114,6 +117,40 @@ label {
   }
 }
 
+/* Impact hit — a crimson shockwave pulse on a logged set */
+.hb-hit {
+  animation: hb-hit 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes hb-hit {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 45, 58, 0.55);
+    border-color: var(--color-accent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(255, 45, 58, 0);
+  }
+}
+
+/* Victory slam-in */
+.hb-slam {
+  animation: hb-slam 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) both;
+}
+@keyframes hb-slam {
+  0% {
+    opacity: 0;
+    transform: scale(1.6);
+    filter: blur(6px);
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
 /* Strip native number spinners — NumberStepper supplies its own controls */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
@@ -125,7 +162,7 @@ input[type="number"] {
 }
 
 ::selection {
-  background: rgba(255, 90, 38, 0.24);
+  background: rgba(255, 45, 58, 0.28);
 }
 
 /* Prevent iOS Safari zoom on focus: 16px floor on controls at phone widths */
@@ -150,7 +187,7 @@ input[type="number"] {
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2f2e34;
+  background: #34302d;
 }
 
 @media (prefers-reduced-motion: reduce) {

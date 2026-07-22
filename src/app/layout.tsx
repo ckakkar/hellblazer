@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Bricolage_Grotesque } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Bricolage_Grotesque,
+  Anton,
+} from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,10 +24,17 @@ const bricolage = Bricolage_Grotesque({
   weight: ["500", "600", "700", "800"],
 });
 
+// Impact face — heavy condensed, for the moments that should hit.
+const anton = Anton({
+  variable: "--font-anton",
+  subsets: ["latin"],
+  weight: "400",
+});
+
 export const metadata: Metadata = {
-  title: "Hell Blazer — Training Log",
+  title: "Hell Blazer — Strength Log",
   description:
-    "A precision workout tracker. Templates, fast set logging, and instrumented progress — built to be lived in mid-workout.",
+    "Train like the strongest creature alive. Programs, savage-fast set logging, and power analytics that climb with every rep.",
 };
 
 export const viewport: Viewport = {
@@ -41,7 +53,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} ${anton.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-bg text-text">{children}</body>
     </html>

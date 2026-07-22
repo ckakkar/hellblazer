@@ -1,5 +1,6 @@
 import { requireUser } from "@/lib/auth";
 import { AppNav } from "@/components/nav/app-nav";
+import { RealtimeSync } from "@/components/realtime-sync";
 
 export default async function AppLayout({
   children,
@@ -10,6 +11,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-dvh">
+      <RealtimeSync userId={user.id} />
       <AppNav userEmail={user.email} />
       <div className="md:pl-60">
         <main className="mx-auto w-full max-w-6xl px-4 pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:px-6 md:pt-8 md:pb-12">

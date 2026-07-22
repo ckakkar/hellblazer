@@ -43,7 +43,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
           )}
         </div>
         <div>
-          <div className="text-sm font-medium text-text">Freeform session</div>
+          <div className="text-sm font-medium text-text">Freeform battle</div>
           <div className="text-xs text-muted">
             Start empty and add exercises as you go
           </div>

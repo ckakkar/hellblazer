@@ -8,7 +8,7 @@ import { startSession } from "@/lib/actions/sessions";
 export function StartWorkoutButton({
   programDayId,
   templateId,
-  label = "Start workout",
+  label = "Enter the arena",
   variant = "primary",
   size = "md",
   className,
