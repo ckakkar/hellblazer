@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
-import { ShinyText, Reveal } from "@/components/ui/motion";
+import { Reveal } from "@/components/ui/motion";
+import { DecryptedText } from "@/components/ui/decrypted-text";
 import { Flame } from "lucide-react";
 
 export default async function Landing() {
@@ -48,7 +49,7 @@ export default async function Landing() {
             <h1 className="mt-6 max-w-4xl font-impact text-6xl uppercase leading-[0.92] tracking-tight text-text sm:text-8xl">
               Train like the
               <br />
-              <ShinyText>strongest creature</ShinyText> alive.
+              <DecryptedText text="strongest creature alive." className="text-accent" />
             </h1>
           </Reveal>
 
@@ -78,10 +79,6 @@ export default async function Landing() {
             </div>
           </Reveal>
         </section>
-
-        <footer className="py-6 text-xs text-muted/70">
-          Built on Next.js + Supabase · RLS-isolated, multi-user
-        </footer>
       </div>
     </main>
   );
