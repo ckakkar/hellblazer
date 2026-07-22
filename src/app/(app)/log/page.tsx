@@ -13,12 +13,40 @@ export default async function LogPage() {
     getTemplates(),
     getActiveProgramProgress(),
   ]);
-  const options = templates.map((t) => ({
-    id: t.id,
-    name: t.name,
-    day_label: t.day_label,
-    count: t.template_exercise.length,
-  }));
+
+  // Only offer the days of the current split (the active program), not every
+  // template ever loaded. With no active program, fall back to all templates.
+  type Opt = {
+    id: string;
+    name: string;
+    day_label: string | null;
+    count: number;
+  };
+  const options: Opt[] = [];
+  if (activeProgress) {
+    const seen = new Set<string>();
+    for (const d of activeProgress.program.program_day) {
+      const t = d.workout_template;
+      if (t && !seen.has(t.id)) {
+        seen.add(t.id);
+        options.push({
+          id: t.id,
+          name: t.name,
+          day_label: t.day_label,
+          count: t.template_exercise.length,
+        });
+      }
+    }
+  } else {
+    for (const t of templates) {
+      options.push({
+        id: t.id,
+        name: t.name,
+        day_label: t.day_label,
+        count: t.template_exercise.length,
+      });
+    }
+  }
   const hasProgramNext = Boolean(activeProgress?.nextDay?.template_id);
 
   return (

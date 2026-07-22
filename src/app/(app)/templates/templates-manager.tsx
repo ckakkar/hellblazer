@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  Eraser,
   GripVertical,
   Loader2,
   Plus,
@@ -23,6 +24,7 @@ import type { TemplateWithExercises } from "@/lib/data/templates";
 import type { Preset } from "@/lib/presets";
 import {
   addTemplateExercise,
+  cleanupTemplates,
   createTemplate,
   deleteTemplate,
   loadPreset,
@@ -35,15 +37,29 @@ export function TemplatesManager({
   templates,
   exercises,
   presets,
+  activeTemplateIds,
+  activeProgramName,
 }: {
   templates: TemplateWithExercises[];
   exercises: Exercise[];
   presets: Preset[];
+  activeTemplateIds: string[];
+  activeProgramName: string | null;
 }) {
   const [pending, start] = useTransition();
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [showOthers, setShowOthers] = useState(false);
+
+  // "Your split" = the active program's days, in order. Everything else is
+  // shown separately so a page full of old loads doesn't drown the current one.
+  const byId = new Map(templates.map((t) => [t.id, t]));
+  const currentSplit = activeTemplateIds
+    .map((id) => byId.get(id))
+    .filter((t): t is TemplateWithExercises => Boolean(t));
+  const currentIds = new Set(currentSplit.map((t) => t.id));
+  const otherTemplates = templates.filter((t) => !currentIds.has(t.id));
 
   function handleCreate() {
     const name = newName.trim();
@@ -144,22 +160,110 @@ export function TemplatesManager({
       {templates.length === 0 ? (
         <EmptyState
           title="No templates yet"
-          body="Load the starter split above, or create a template from scratch."
+          body="Load a starter split above, or create a template from scratch."
         />
+      ) : currentSplit.length > 0 ? (
+        <>
+          <div className="mb-3 flex items-center gap-2 px-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-accent">
+              Your split
+            </span>
+            {activeProgramName && (
+              <span className="min-w-0 truncate text-xs text-muted">
+                · {activeProgramName}
+              </span>
+            )}
+          </div>
+          <div className="grid gap-4">
+            {currentSplit.map((t) => (
+              <TemplateCard
+                key={t.id}
+                template={t}
+                exercises={exercises}
+                pending={pending}
+                start={start}
+              />
+            ))}
+          </div>
+
+          {otherTemplates.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between gap-2 px-1">
+                <button
+                  onClick={() => setShowOthers((v) => !v)}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted transition-colors hover:text-text"
+                >
+                  {showOthers ? (
+                    <ChevronUp className="size-4" />
+                  ) : (
+                    <ChevronDown className="size-4" />
+                  )}
+                  Other templates · {otherTemplates.length}
+                </button>
+                <CleanupButton pending={pending} start={start} />
+              </div>
+              {showOthers && (
+                <div className="mt-3 grid gap-4">
+                  {otherTemplates.map((t) => (
+                    <TemplateCard
+                      key={t.id}
+                      template={t}
+                      exercises={exercises}
+                      pending={pending}
+                      start={start}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
       ) : (
-        <div className="grid gap-4">
-          {templates.map((t) => (
-            <TemplateCard
-              key={t.id}
-              template={t}
-              exercises={exercises}
-              pending={pending}
-              start={start}
-            />
-          ))}
-        </div>
+        <>
+          <div className="mb-3 flex items-center justify-between gap-2 px-1">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted">
+              All templates
+            </span>
+            <CleanupButton pending={pending} start={start} />
+          </div>
+          <div className="grid gap-4">
+            {otherTemplates.map((t) => (
+              <TemplateCard
+                key={t.id}
+                template={t}
+                exercises={exercises}
+                pending={pending}
+                start={start}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
+  );
+}
+
+function CleanupButton({
+  pending,
+  start,
+}: {
+  pending: boolean;
+  start: (fn: () => Promise<void>) => void;
+}) {
+  return (
+    <button
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          await cleanupTemplates();
+        })
+      }
+      title="Delete leftover templates you've never trained and aren't in a program"
+      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-45"
+    >
+      <Eraser className="size-3.5" />
+      Clean up
+    </button>
   );
 }
 

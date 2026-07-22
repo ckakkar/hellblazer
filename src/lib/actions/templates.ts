@@ -213,6 +213,70 @@ export async function moveTemplateExercise(input: {
 }
 
 /**
+ * Remove the clutter that repeated preset loads leave behind: inactive programs
+ * that were never trained (no logged session), and templates that afterwards
+ * belong to no program and were never used in a session. Anything you've
+ * actually logged against, and your active split, are always kept.
+ */
+async function purgeAbandoned(
+  supabase: Awaited<ReturnType<typeof getAuthedContext>>["supabase"],
+  userId: string,
+) {
+  // 1. Delete inactive programs with no logged sessions (cascades their days).
+  const [{ data: programs }, { data: sessProg }] = await Promise.all([
+    supabase.from("program").select("id, is_active").eq("user_id", userId),
+    supabase
+      .from("session")
+      .select("program_id")
+      .eq("user_id", userId)
+      .not("program_id", "is", null),
+  ]);
+  const usedPrograms = new Set(
+    (sessProg ?? []).map((s) => s.program_id).filter(Boolean),
+  );
+  const abandonedPrograms = (programs ?? [])
+    .filter((p) => !p.is_active && !usedPrograms.has(p.id))
+    .map((p) => p.id);
+  if (abandonedPrograms.length > 0) {
+    await supabase.from("program").delete().in("id", abandonedPrograms);
+  }
+
+  // 2. Delete templates now orphaned: in no program day and no logged session.
+  const [{ data: templates }, { data: days }, { data: sessTmpl }] =
+    await Promise.all([
+      supabase.from("workout_template").select("id").eq("user_id", userId),
+      supabase.from("program_day").select("template_id").eq("user_id", userId),
+      supabase
+        .from("session")
+        .select("template_id")
+        .eq("user_id", userId)
+        .not("template_id", "is", null),
+    ]);
+  const usedByProgram = new Set(
+    (days ?? []).map((d) => d.template_id).filter(Boolean),
+  );
+  const usedBySession = new Set(
+    (sessTmpl ?? []).map((s) => s.template_id).filter(Boolean),
+  );
+  const orphanTemplates = (templates ?? [])
+    .map((t) => t.id)
+    .filter((id) => !usedByProgram.has(id) && !usedBySession.has(id));
+  if (orphanTemplates.length > 0) {
+    await supabase.from("workout_template").delete().in("id", orphanTemplates);
+  }
+}
+
+/** Manual "clean up" — same purge, triggered from the Templates screen. */
+export async function cleanupTemplates() {
+  const { supabase, user } = await getAuthedContext();
+  await purgeAbandoned(supabase, user.id);
+  revalidatePath("/templates");
+  revalidatePath("/programs");
+  revalidatePath("/log");
+  revalidatePath("/dashboard");
+}
+
+/**
  * One-click load of a starter routine. Maps each preset exercise name to a
  * library exercise the user can see, then creates the templates + prescribed
  * exercises. Skips names that don't resolve (shouldn't happen with seed data).
@@ -222,6 +286,16 @@ export async function loadPreset(input: { presetId: string }) {
   const preset = getPreset(presetId);
   if (!preset) throw new Error("Unknown preset");
   const { supabase, user } = await getAuthedContext();
+
+  // Loading a fresh split replaces the previous one: deactivate the current
+  // program, then purge abandoned blocks + orphaned templates so past loads
+  // don't accumulate into a graveyard of stray days.
+  await supabase
+    .from("program")
+    .update({ is_active: false })
+    .eq("user_id", user.id)
+    .eq("is_active", true);
+  await purgeAbandoned(supabase, user.id);
 
   // Build a name → id map from the user's visible library.
   const { data: exercises, error: exErr } = await supabase
@@ -281,11 +355,6 @@ export async function loadPreset(input: { presetId: string }) {
 
   // Bundle the days into a runnable, active program so the user can start
   // training immediately (8-week block starting today).
-  await supabase
-    .from("program")
-    .update({ is_active: false })
-    .eq("user_id", user.id)
-    .eq("is_active", true);
   const { data: program, error: pErr } = await supabase
     .from("program")
     .insert({
