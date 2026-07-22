@@ -96,12 +96,16 @@ export async function getProgramProgress(
     weekStart = format(addDays(start, (currentWeek - 1) * 7), "yyyy-MM-dd");
   }
 
-  // Count sessions logged AND days skipped within the current program-week.
+  // Count sessions logged AND days skipped this week, and grab the latest of
+  // each — all in one round-trip (the "last" rows drive the roll-back control).
   let sessionsThisWeek = 0;
   let skipsThisWeek = 0;
+  let lastSessionRow: { id: string; title: string | null; created_at: string } | null =
+    null;
+  let lastSkipRow: { id: string; created_at: string } | null = null;
   if (weekStart && program.start_date) {
     const windowEnd = format(addDays(parseISO(weekStart), 7), "yyyy-MM-dd");
-    const [sessionCount, skipCount] = await Promise.all([
+    const [sessionCount, skipCount, lastSession, lastSkip] = await Promise.all([
       supabase
         .from("session")
         .select("id", { count: "exact", head: true })
@@ -114,21 +118,6 @@ export async function getProgramProgress(
         .eq("program_id", program.id)
         .gte("date", weekStart)
         .lt("date", windowEnd),
-    ]);
-    sessionsThisWeek = sessionCount.count ?? 0;
-    skipsThisWeek = skipCount.count ?? 0;
-  }
-
-  const doneThisWeek = sessionsThisWeek + skipsThisWeek;
-  const weekComplete = daysPerWeek > 0 && doneThisWeek >= daysPerWeek;
-  const nextDay =
-    daysPerWeek > 0 ? days[doneThisWeek % daysPerWeek] ?? days[0] : null;
-
-  // The most recent advance (for the "Roll back a day" control) — whichever of
-  // the latest logged session or latest skip happened last.
-  let lastAdvance: ProgramProgress["lastAdvance"] = null;
-  if (doneThisWeek > 0) {
-    const [{ data: lastSession }, { data: lastSkip }] = await Promise.all([
       supabase
         .from("session")
         .select("id, title, created_at")
@@ -144,18 +133,36 @@ export async function getProgramProgress(
         .limit(1)
         .maybeSingle(),
     ]);
-    const sessTime = lastSession
-      ? new Date(lastSession.created_at).getTime()
+    sessionsThisWeek = sessionCount.count ?? 0;
+    skipsThisWeek = skipCount.count ?? 0;
+    lastSessionRow = lastSession.data;
+    lastSkipRow = lastSkip.data;
+  }
+
+  const doneThisWeek = sessionsThisWeek + skipsThisWeek;
+  const weekComplete = daysPerWeek > 0 && doneThisWeek >= daysPerWeek;
+  const nextDay =
+    daysPerWeek > 0 ? days[doneThisWeek % daysPerWeek] ?? days[0] : null;
+
+  // The most recent advance (for the "Roll back a day" control) — whichever of
+  // the latest logged session or latest skip happened last. Uses rows already
+  // fetched above, so no extra round-trip.
+  let lastAdvance: ProgramProgress["lastAdvance"] = null;
+  if (doneThisWeek > 0) {
+    const sessTime = lastSessionRow
+      ? new Date(lastSessionRow.created_at).getTime()
       : -1;
-    const skipTime = lastSkip ? new Date(lastSkip.created_at).getTime() : -1;
+    const skipTime = lastSkipRow
+      ? new Date(lastSkipRow.created_at).getTime()
+      : -1;
     if (sessTime >= 0 || skipTime >= 0) {
       lastAdvance =
         skipTime >= sessTime
           ? { kind: "skip", label: "a skipped day" }
           : {
               kind: "session",
-              label: lastSession?.title
-                ? `“${lastSession.title}”`
+              label: lastSessionRow?.title
+                ? `“${lastSessionRow.title}”`
                 : "your last logged workout",
             };
     }

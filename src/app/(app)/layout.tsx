@@ -1,4 +1,5 @@
-import { requireUser } from "@/lib/auth";
+import { Suspense } from "react";
+import { requireSessionUser } from "@/lib/auth";
 import { AppNav } from "@/components/nav/app-nav";
 import { RealtimeSync } from "@/components/realtime-sync";
 import { ResumeBanner } from "@/components/resume-banner";
@@ -9,8 +10,7 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireUser();
-  const activeSession = await getActiveSession();
+  const user = await requireSessionUser();
 
   return (
     <div className="min-h-dvh">
@@ -27,10 +27,19 @@ export default async function AppLayout({
       <AppNav userEmail={user.email} />
       <div className="md:pl-60">
         <main className="mx-auto w-full max-w-6xl px-4 pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:px-6 md:pt-8 md:pb-12">
-          {activeSession && <ResumeBanner session={activeSession} />}
+          {/* Streamed so its lookup never blocks the page content. */}
+          <Suspense fallback={null}>
+            <ResumeBannerSlot />
+          </Suspense>
           {children}
         </main>
       </div>
     </div>
   );
+}
+
+async function ResumeBannerSlot() {
+  const activeSession = await getActiveSession();
+  if (!activeSession) return null;
+  return <ResumeBanner session={activeSession} />;
 }

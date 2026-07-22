@@ -21,6 +21,27 @@ export async function requireUser(): Promise<User> {
   return user;
 }
 
+/**
+ * Fast identity read from the already-validated session cookie — no auth-server
+ * round-trip. Safe for the app layout because the proxy authenticates every
+ * request with getUser() (refreshing + gating unauth traffic) and RLS validates
+ * the JWT signature on every query. Use for display/identity, not as a gate on
+ * its own.
+ */
+export async function getSessionUser(): Promise<User | null> {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.user ?? null;
+}
+
+export async function requireSessionUser(): Promise<User> {
+  const user = await getSessionUser();
+  if (!user) redirect("/");
+  return user;
+}
+
 /** Action guard: supabase client + user, throwing when unauthenticated. */
 export async function getAuthedContext(): Promise<{ supabase: DB; user: User }> {
   const supabase = await createClient();
