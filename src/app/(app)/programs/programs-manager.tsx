@@ -44,6 +44,7 @@ export function ProgramsManager({
 }) {
   const [pending, start] = useTransition();
   const [creating, setCreating] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   return (
     <div>
@@ -99,18 +100,23 @@ export function ProgramsManager({
                   variant="secondary"
                   className="shrink-0"
                   disabled={pending}
-                  onClick={() =>
+                  onClick={() => {
+                    setLoadingId(p.id);
                     start(async () => {
-                      await loadPreset({ presetId: p.id });
-                    })
-                  }
+                      try {
+                        await loadPreset({ presetId: p.id });
+                      } finally {
+                        setLoadingId(null);
+                      }
+                    });
+                  }}
                 >
-                  {pending ? (
+                  {loadingId === p.id ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <Plus className="size-4" />
                   )}
-                  Load
+                  {loadingId === p.id ? "Loading…" : "Load"}
                 </Button>
               </div>
             ))}

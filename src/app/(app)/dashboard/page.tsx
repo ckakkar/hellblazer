@@ -6,9 +6,11 @@ import {
   getVolumeTrend,
 } from "@/lib/data/analytics";
 import { getSessionSummaries } from "@/lib/data/sessions";
-import { getActiveProgramProgress } from "@/lib/data/programs";
+import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
 import { getProfile } from "@/lib/data/profile";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
+import { OnboardingHero } from "./onboarding-hero";
+import { PRESETS } from "@/lib/presets";
 import { TierLadder } from "@/components/tier/tier-ui";
 import { getTier } from "@/lib/tiers";
 import { getUnit } from "@/lib/settings";
@@ -26,16 +28,36 @@ import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [weeklySets, volumeTrend, summaries, activeProgress, profile, unit] =
-    await Promise.all([
-      getCurrentWeekSetsPerMuscle(),
-      getVolumeTrend(12),
-      getSessionSummaries(),
-      getActiveProgramProgress(),
-      getProfile(),
-      getUnit(),
-    ]);
+  const [
+    weeklySets,
+    volumeTrend,
+    summaries,
+    activeProgress,
+    programs,
+    profile,
+    unit,
+  ] = await Promise.all([
+    getCurrentWeekSetsPerMuscle(),
+    getVolumeTrend(12),
+    getSessionSummaries(),
+    getActiveProgramProgress(),
+    getPrograms(),
+    getProfile(),
+    getUnit(),
+  ]);
   const tier = getTier(profile?.tier);
+
+  // A brand-new lifter (no history, no programs) gets pushed straight at a split.
+  const isNewUser = summaries.length === 0 && programs.length === 0;
+  const featuredPreset =
+    PRESETS.find((p) => p.days.length === 5) ?? PRESETS[0];
+  const presetLite = (p: (typeof PRESETS)[number]) => ({
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    days: p.days.length,
+    weeks: p.weeks ?? 8,
+  });
 
   const weekStart = startOfISOWeek(new Date());
   const thisWeek = summaries.filter(
@@ -76,7 +98,14 @@ export default async function DashboardPage() {
         <TierLadder rank={tier?.rank ?? 0} className="ml-auto max-w-[160px]" />
       </Link>
 
-      {activeProgress ? (
+      {isNewUser ? (
+        <OnboardingHero
+          featured={presetLite(featuredPreset)}
+          others={PRESETS.filter((p) => p.id !== featuredPreset.id).map(
+            presetLite,
+          )}
+        />
+      ) : activeProgress ? (
         <div className="mb-6">
           <ProgramProgressCard
             progress={activeProgress}
@@ -89,18 +118,16 @@ export default async function DashboardPage() {
             <Sparkles className="mt-0.5 size-5 shrink-0 text-accent" />
             <div>
               <div className="text-sm font-medium text-text">
-                {summaries.length === 0
-                  ? "Get set up in 30 seconds"
-                  : "No active program"}
+                No active program
               </div>
               <p className="mt-0.5 text-sm text-muted">
-                Load the Back &amp; Arm Focused Strength split — it becomes a
-                ready-to-run 8-week program you can start today.
+                Pick one of your programs and make it active, or load a fresh
+                starter split to run for the next few weeks.
               </p>
             </div>
           </div>
-          <Link href="/templates" className="shrink-0">
-            <Button variant="secondary">Load starter split</Button>
+          <Link href="/programs" className="shrink-0">
+            <Button variant="secondary">Go to Programs</Button>
           </Link>
         </Card>
       )}

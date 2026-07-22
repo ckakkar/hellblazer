@@ -43,6 +43,7 @@ export function TemplatesManager({
   const [pending, start] = useTransition();
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   function handleCreate() {
     const name = newName.trim();
@@ -116,18 +117,23 @@ export function TemplatesManager({
                   variant="secondary"
                   className="shrink-0"
                   disabled={pending}
-                  onClick={() =>
+                  onClick={() => {
+                    setLoadingId(p.id);
                     start(async () => {
-                      await loadPreset({ presetId: p.id });
-                    })
-                  }
+                      try {
+                        await loadPreset({ presetId: p.id });
+                      } finally {
+                        setLoadingId(null);
+                      }
+                    });
+                  }}
                 >
-                  {pending ? (
+                  {loadingId === p.id ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
                     <Plus className="size-4" />
                   )}
-                  Load split
+                  {loadingId === p.id ? "Loading…" : "Load split"}
                 </Button>
               </div>
             ))}
