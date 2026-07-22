@@ -54,10 +54,23 @@ export async function evaluateTier(): Promise<EvalResult> {
   const system = `You are the judge of strength in a Baki-themed training app. Place the lifter into exactly ONE tier of this 9-rank ladder (weakest to strongest):
 ${ladder}
 
-Judge holistically from their data: estimated 1RMs, strength relative to bodyweight, total training volume, consistency and frequency, training age, and rate of progression. Be honest and a little brutal. Most real lifters sit around Doppo–Hanayama; only elite, long-tenured, exceptionally strong lifters approach Pickle/Baki/Yujiro. Lifters with little history or light numbers belong near the bottom.
+Your job is to be FAIR and a little generous — a coach who genuinely respects the work, not a gatekeeper. Actually think about how strong this person is and give them the rank they've earned. When a lifter sits between two tiers, round UP. Reward consistency, training age, and steady progression as much as raw numbers — someone who keeps showing up and adding weight is getting stronger and should climb. Never punish a short history if the logged work is solid; judge by demonstrated strength, not by how long they've used the app.
+
+Use these GENEROUS reference anchors (a natural lifter, judged on their best working sets; use bodyweight-relative numbers on the big compounds — squat, bench, deadlift, overhead press, rows — whenever bodyweight is known, otherwise judge absolute loads and consistency and lean generous):
+- Doppo (1): just getting started — first few weeks, still finding form and light loads.
+- Retsu (2): a real beginner base — training regularly, loads clearly climbing (roughly bench ~0.6×bw, squat ~1×bw).
+- Biscuit Oliva (3): solid intermediate — strong for a regular gym-goer (bench ~0.85×bw, squat ~1.25×bw, deadlift ~1.5×bw).
+- Kaoru Hanayama (4): strong intermediate — visibly above average with consistent volume (bench ~1×bw, squat ~1.5×bw, deadlift ~1.75×bw).
+- Musashi (5): advanced — strong in any gym (bench ~1.25×bw, squat ~1.75×bw, deadlift ~2×bw).
+- Jack Hanma (6): very advanced — years of hard work and big numbers (bench ~1.4×bw, squat ~2×bw, deadlift ~2.25×bw).
+- Pickle (7): elite — near-competitive strength.
+- Baki (8): near the natural ceiling — exceptional across the board.
+- Yujiro (9): once-in-a-generation, monstrous numbers — reserve for the truly freakish.
+
+Be encouraging and grounded in their real numbers. It is fine — good, even — to place a committed lifter in the middle of the ladder; do not default everyone to the bottom.
 
 Respond with ONLY a JSON object of exactly this shape:
-{"tier":"<one of the exact keys above>","rationale":"<2-3 sentences, Baki-flavored but grounded in their real numbers>","highlights":["<short data point>","<short data point>","<short data point>"]}`;
+{"tier":"<one of the exact keys above>","rationale":"<2-3 sentences, Baki-flavored, honest but motivating and grounded in their real numbers>","highlights":["<short data point>","<short data point>","<short data point>"]}`;
 
   const userMsg = `Lifter's full training data (all weights in kg):\n${JSON.stringify(
     profile,
@@ -115,7 +128,7 @@ Respond with ONLY a JSON object of exactly this shape:
           parsed.tier &&
           t.name.toLowerCase().includes(parsed.tier.toLowerCase().trim()),
       );
-      tierKey = byName?.key ?? "doppo";
+      tierKey = byName?.key ?? "retsu";
     }
     const tier = getTier(tierKey)!;
 
