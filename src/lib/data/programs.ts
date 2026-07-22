@@ -59,6 +59,8 @@ export type ProgramProgress = {
   isCompleted: boolean;
   daysPerWeek: number;
   sessionsThisWeek: number;
+  skipsThisWeek: number;
+  doneThisWeek: number;
   weekComplete: boolean;
   nextDay: ProgramDayWithTemplate | null;
   weekStart: string | null;
@@ -89,22 +91,33 @@ export async function getProgramProgress(
     weekStart = format(addDays(start, (currentWeek - 1) * 7), "yyyy-MM-dd");
   }
 
-  // Count sessions logged within the current program-week window.
+  // Count sessions logged AND days skipped within the current program-week.
   let sessionsThisWeek = 0;
+  let skipsThisWeek = 0;
   if (weekStart && program.start_date) {
     const windowEnd = format(addDays(parseISO(weekStart), 7), "yyyy-MM-dd");
-    const { count } = await supabase
-      .from("session")
-      .select("id", { count: "exact", head: true })
-      .eq("program_id", program.id)
-      .gte("date", weekStart)
-      .lt("date", windowEnd);
-    sessionsThisWeek = count ?? 0;
+    const [sessionCount, skipCount] = await Promise.all([
+      supabase
+        .from("session")
+        .select("id", { count: "exact", head: true })
+        .eq("program_id", program.id)
+        .gte("date", weekStart)
+        .lt("date", windowEnd),
+      supabase
+        .from("program_skip")
+        .select("id", { count: "exact", head: true })
+        .eq("program_id", program.id)
+        .gte("date", weekStart)
+        .lt("date", windowEnd),
+    ]);
+    sessionsThisWeek = sessionCount.count ?? 0;
+    skipsThisWeek = skipCount.count ?? 0;
   }
 
-  const weekComplete = daysPerWeek > 0 && sessionsThisWeek >= daysPerWeek;
+  const doneThisWeek = sessionsThisWeek + skipsThisWeek;
+  const weekComplete = daysPerWeek > 0 && doneThisWeek >= daysPerWeek;
   const nextDay =
-    daysPerWeek > 0 ? days[sessionsThisWeek % daysPerWeek] ?? days[0] : null;
+    daysPerWeek > 0 ? days[doneThisWeek % daysPerWeek] ?? days[0] : null;
 
   return {
     program,
@@ -113,6 +126,8 @@ export async function getProgramProgress(
     isCompleted,
     daysPerWeek,
     sessionsThisWeek,
+    skipsThisWeek,
+    doneThisWeek,
     weekComplete,
     nextDay,
     weekStart,

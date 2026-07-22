@@ -12,6 +12,7 @@ import {
   Power,
   RotateCcw,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import {
   removeProgramDay,
   resetProgram,
   setActiveProgram,
+  undoLastSkip,
   updateProgram,
 } from "@/lib/actions/programs";
 
@@ -73,6 +75,27 @@ export function ProgramDetail({
       />
 
       <ProgramProgressCard progress={progress} />
+
+      {progress.skipsThisWeek > 0 && (
+        <div className="mt-2 flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5 text-xs text-muted">
+          <span>
+            {progress.skipsThisWeek} day
+            {progress.skipsThisWeek === 1 ? "" : "s"} skipped this week
+          </span>
+          <button
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                await undoLastSkip({ programId: program.id });
+              })
+            }
+            className="inline-flex items-center gap-1 font-medium text-accent transition-colors hover:underline"
+          >
+            <Undo2 className="size-3.5" />
+            Undo last skip
+          </button>
+        </div>
+      )}
 
       {/* Block settings */}
       <Card className="mt-4">

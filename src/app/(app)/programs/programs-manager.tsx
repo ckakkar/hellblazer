@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Loader2,
   Plus,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -20,11 +21,13 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
+import type { Preset } from "@/lib/presets";
 import {
   createProgram,
   deleteProgram,
   setActiveProgram,
 } from "@/lib/actions/programs";
+import { loadPreset } from "@/lib/actions/templates";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -32,10 +35,12 @@ export function ProgramsManager({
   programs,
   templates,
   activeProgress,
+  presets,
 }: {
   programs: ProgramWithDays[];
   templates: TemplateWithExercises[];
   activeProgress: ProgramProgress | null;
+  presets: Preset[];
 }) {
   const [pending, start] = useTransition();
   const [creating, setCreating] = useState(false);
@@ -62,33 +67,67 @@ export function ProgramsManager({
         </div>
       )}
 
-      {templates.length === 0 ? (
-        <EmptyState
-          icon={<CalendarRange className="size-6" />}
-          title="Build a template first"
-          body="Programs schedule your workout templates across the week. Create a few templates, then come back."
-          action={
-            <Link href="/templates">
-              <Button variant="secondary">Go to Templates</Button>
-            </Link>
-          }
-        />
-      ) : programs.length === 0 ? (
+      {/* Starter programs — load a proven split (any number of times) */}
+      {presets.length > 0 && (
+        <Card className="mb-6 border-accent/20 bg-accent/[0.03] p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-text">
+            <Sparkles className="size-4 text-accent" />
+            Starter programs
+          </div>
+          <p className="mt-1 text-xs text-muted">
+            Load a proven, strength-first split — it becomes a ready-to-run
+            active program. Load any of them again whenever you want a fresh
+            block.
+          </p>
+          <div className="mt-3 grid gap-3">
+            {presets.map((p) => (
+              <div
+                key={p.id}
+                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-text">{p.name}</div>
+                  <p className="mt-0.5 text-xs leading-5 text-muted">
+                    {p.description}
+                  </p>
+                  <div className="mt-1 font-mono text-xs text-muted">
+                    {p.days.length} days/week · {p.weeks ?? 8} weeks ·{" "}
+                    {p.days.reduce((n, d) => n + d.exercises.length, 0)} exercises
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  className="shrink-0"
+                  disabled={pending}
+                  onClick={() =>
+                    start(async () => {
+                      await loadPreset({ presetId: p.id });
+                    })
+                  }
+                >
+                  {pending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Plus className="size-4" />
+                  )}
+                  Load
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {programs.length === 0 ? (
         <EmptyState
           icon={<CalendarRange className="size-6" />}
           title="No programs yet"
-          body="Create a program to run your split for a set number of weeks and track adherence."
-          action={
-            <Button onClick={() => setCreating(true)}>
-              <Plus className="size-4" />
-              New program
-            </Button>
-          }
+          body="Load a starter program above, or build your own from templates."
         />
       ) : (
         <div className="grid gap-3">
           <div className="px-1 text-xs font-medium uppercase tracking-wide text-muted">
-            All programs
+            All programs · tap “Make active” to switch
           </div>
           {programs.map((p) => (
             <Card
@@ -117,9 +156,9 @@ export function ProgramsManager({
                       await setActiveProgram({ id: p.id, active: true });
                     })
                   }
-                  className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-accent"
+                  className="shrink-0 rounded-md border border-accent/30 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/10"
                 >
-                  Set active
+                  Make active
                 </button>
               )}
               <button

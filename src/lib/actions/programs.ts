@@ -137,6 +137,55 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
   revalidatePath("/dashboard");
 }
 
+/** Skip today's programmed day — advances the rotation without a logged session. */
+export async function skipWorkout(input: { programDayId: string }) {
+  const { programDayId } = z
+    .object({ programDayId: z.string().uuid() })
+    .parse(input);
+  const { supabase, user } = await getAuthedContext();
+  const { data: pd } = await supabase
+    .from("program_day")
+    .select("program_id")
+    .eq("id", programDayId)
+    .maybeSingle();
+  if (!pd) throw new Error("Program day not found");
+  const { error } = await supabase.from("program_skip").insert({
+    user_id: user.id,
+    program_id: pd.program_id,
+    program_day_id: programDayId,
+  });
+  if (error) throw error;
+  revalidatePath("/programs");
+  revalidatePath(`/programs/${pd.program_id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/log");
+}
+
+/** Undo the most recent skip for a program this week (roll the rotation back). */
+export async function undoLastSkip(input: { programId: string }) {
+  const { programId } = z
+    .object({ programId: z.string().uuid() })
+    .parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data: last } = await supabase
+    .from("program_skip")
+    .select("id")
+    .eq("program_id", programId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (!last) return;
+  const { error } = await supabase
+    .from("program_skip")
+    .delete()
+    .eq("id", last.id);
+  if (error) throw error;
+  revalidatePath("/programs");
+  revalidatePath(`/programs/${programId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/log");
+}
+
 /** Restart the block from week 1 (start date = today). Keeps logged sessions. */
 export async function resetProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);

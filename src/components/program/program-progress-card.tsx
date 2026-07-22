@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ProgramProgress } from "@/lib/data/programs";
 import { StartWorkoutButton } from "./start-workout-button";
+import { SkipWorkoutButton } from "./skip-workout-button";
 
 export function ProgramProgressCard({
   progress,
@@ -20,6 +21,8 @@ export function ProgramProgressCard({
     isCompleted,
     daysPerWeek,
     sessionsThisWeek,
+    skipsThisWeek,
+    doneThisWeek,
     nextDay,
     weekComplete,
   } = progress;
@@ -76,11 +79,12 @@ export function ProgramProgressCard({
           </span>
           {daysPerWeek > 0 && !isCompleted && !notStarted && (
             <span className="font-mono">
-              {sessionsThisWeek}/{daysPerWeek} this week
+              {doneThisWeek}/{daysPerWeek} this week
+              {skipsThisWeek > 0 ? ` · ${skipsThisWeek} skipped` : ""}
             </span>
           )}
         </div>
-        {/* This-week adherence dots */}
+        {/* This-week adherence dots: logged = solid, skipped = faded */}
         {daysPerWeek > 0 && !isCompleted && !notStarted && (
           <div className="mt-3 flex gap-1.5">
             {Array.from({ length: daysPerWeek }).map((_, i) => (
@@ -88,7 +92,11 @@ export function ProgramProgressCard({
                 key={i}
                 className={cn(
                   "h-1.5 flex-1 rounded-full",
-                  i < sessionsThisWeek ? "bg-accent" : "bg-surface-2",
+                  i < sessionsThisWeek
+                    ? "bg-accent"
+                    : i < doneThisWeek
+                      ? "bg-accent/40"
+                      : "bg-surface-2",
                 )}
               />
             ))}
@@ -121,11 +129,14 @@ export function ProgramProgressCard({
                 </div>
               </div>
             </div>
-            <StartWorkoutButton
-              programDayId={nextDay.id}
-              label="Start workout"
-              className="w-full sm:w-auto"
-            />
+            <div className="flex w-full gap-2 sm:w-auto">
+              <StartWorkoutButton
+                programDayId={nextDay.id}
+                label="Start workout"
+                className="flex-1 sm:flex-none"
+              />
+              <SkipWorkoutButton programDayId={nextDay.id} />
+            </div>
           </>
         ) : (
           <div className="text-sm text-muted">

@@ -176,6 +176,48 @@ export type Database = {
           },
         ]
       }
+      program_skip: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          program_day_id: string | null
+          program_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          program_day_id?: string | null
+          program_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          program_day_id?: string | null
+          program_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_skip_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_skip_program_day_id_fkey"
+            columns: ["program_day_id"]
+            isOneToOne: false
+            referencedRelation: "program_day"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session: {
         Row: {
           created_at: string

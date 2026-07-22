@@ -270,7 +270,7 @@ export async function loadPreset(input: { presetId: string }) {
     .insert({
       user_id: user.id,
       name: preset.name,
-      duration_weeks: 8,
+      duration_weeks: preset.weeks ?? 8,
       start_date: new Date().toISOString().slice(0, 10),
       is_active: true,
     })
