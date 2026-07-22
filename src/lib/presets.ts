@@ -370,6 +370,75 @@ export const PRESETS: Preset[] = [
       },
     ],
   },
+  {
+    id: "dumbbell-home-5",
+    name: "Dumbbell Home Circuit · 5-Day",
+    weeks: 8,
+    description:
+      "A dumbbell-only, home-friendly 5-day split — glute & leg focused with dedicated shoulders/arms, back/core, and posterior-chain days. No machines, no barbell: just a pair of dumbbells.",
+    days: [
+      {
+        name: "Day 1 — Legs & Glutes",
+        dayLabel: "Legs & Glutes (Quad-dominant)",
+        exercises: [
+          { name: "Goblet Squat", sets: 3, reps: "12" },
+          { name: "Dumbbell Forward Lunge", sets: 3, reps: "10", note: "per leg" },
+          {
+            name: "Dumbbell Step-Up",
+            sets: 3,
+            reps: "10",
+            note: "per leg · chair/bench",
+          },
+          { name: "Sumo Squat", sets: 3, reps: "12" },
+          { name: "Standing Calf Raise", sets: 3, reps: "15", note: "dumbbells in hand" },
+        ],
+      },
+      {
+        name: "Day 2 — Shoulders & Arms",
+        dayLabel: "Upper Body (Shoulders & Arms)",
+        exercises: [
+          { name: "Seated Dumbbell Shoulder Press", sets: 3, reps: "10" },
+          { name: "Dumbbell Lateral Raise", sets: 3, reps: "12" },
+          { name: "Dumbbell Curl", sets: 3, reps: "12" },
+          { name: "Skull Crusher", sets: 3, reps: "12", note: "dumbbells" },
+          { name: "Dumbbell Front Raise", sets: 3, reps: "12" },
+        ],
+      },
+      {
+        name: "Day 3 — Glutes & Hamstrings",
+        dayLabel: "Glutes & Hamstrings (Posterior chain)",
+        exercises: [
+          { name: "Dumbbell Romanian Deadlift", sets: 3, reps: "12" },
+          { name: "Single-Leg Romanian Deadlift", sets: 3, reps: "8", note: "per leg" },
+          { name: "Glute Bridge", sets: 3, reps: "15", note: "dumbbell on hips" },
+          { name: "Curtsy Lunge", sets: 3, reps: "10", note: "per leg" },
+          { name: "Donkey Kick", sets: 3, reps: "12", note: "per leg · weighted" },
+        ],
+      },
+      {
+        name: "Day 4 — Back & Core",
+        dayLabel: "Upper Body (Back & Core)",
+        exercises: [
+          { name: "Dumbbell Bent-Over Row", sets: 3, reps: "12" },
+          { name: "Renegade Row", sets: 3, reps: "8", note: "per side" },
+          { name: "Dumbbell Pullover", sets: 3, reps: "12" },
+          { name: "Weighted Crunch", sets: 3, reps: "15" },
+          { name: "Russian Twist", sets: 3, reps: "12", note: "per side" },
+        ],
+      },
+      {
+        name: "Day 5 — Glutes Focus",
+        dayLabel: "Glutes Focus",
+        exercises: [
+          { name: "Bulgarian Split Squat", sets: 3, reps: "10", note: "per leg" },
+          { name: "Sumo Deadlift", sets: 3, reps: "12" },
+          { name: "Fire Hydrant", sets: 3, reps: "12", note: "per leg · weighted" },
+          { name: "Hip Thrust", sets: 3, reps: "15", note: "dumbbell on hips" },
+          { name: "Lateral Lunge", sets: 3, reps: "10", note: "per leg" },
+        ],
+      },
+    ],
+  },
 ];
 
 export function getPreset(id: string): Preset | undefined {
