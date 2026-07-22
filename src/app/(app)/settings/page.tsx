@@ -5,7 +5,7 @@ import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { signOut } from "@/lib/actions/auth";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import {
   Card,
   CardContent,
@@ -42,7 +42,7 @@ export default async function ProfilePage() {
 
       <div className="grid gap-6">
         <section>
-          <h2 className="mb-3 text-sm font-medium text-text">Strength rank</h2>
+          <SectionLabel>Strength rank</SectionLabel>
           <TierEvaluator
             currentTierKey={profile?.tier ?? null}
             rationale={profile?.tier_rationale ?? null}

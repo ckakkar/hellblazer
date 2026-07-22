@@ -30,6 +30,31 @@ export function PageHeader({
   );
 }
 
+/** Mono uppercase micro-label for section headers — the instrument-panel eyebrow. */
+export function SectionLabel({
+  children,
+  action,
+  className,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "mb-3 flex items-center justify-between gap-2 px-1",
+        className,
+      )}
+    >
+      <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+        {children}
+      </span>
+      {action}
+    </div>
+  );
+}
+
 export function EmptyState({
   icon,
   title,

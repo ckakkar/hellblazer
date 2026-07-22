@@ -14,7 +14,7 @@ import { PRESETS } from "@/lib/presets";
 import { TierLadder } from "@/components/tier/tier-ui";
 import { getTier } from "@/lib/tiers";
 import { getUnit } from "@/lib/settings";
-import { PageHeader } from "@/components/ui/page-header";
+import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Card } from "@/components/ui/card";
@@ -89,7 +89,7 @@ export default async function DashboardPage() {
         href="/settings"
         className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/40"
       >
-        <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
           Rank
         </span>
         <span className="font-impact text-lg uppercase leading-none text-accent">
@@ -187,16 +187,19 @@ export default async function DashboardPage() {
       </div>
 
       {/* Recent sessions */}
-      <div className="mt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-medium text-text">Recent sessions</h2>
-          <Link
-            href="/history"
-            className="text-xs text-muted transition-colors hover:text-accent"
-          >
-            View all
-          </Link>
-        </div>
+      <div className="mt-8">
+        <SectionLabel
+          action={
+            <Link
+              href="/history"
+              className="font-mono text-[11px] uppercase tracking-wide text-muted transition-colors hover:text-accent"
+            >
+              View all →
+            </Link>
+          }
+        >
+          Recent sessions
+        </SectionLabel>
         {recent.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted">
             No sessions logged yet.

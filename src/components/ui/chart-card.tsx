@@ -21,18 +21,18 @@ export function ChartCard({
 }: ChartCardProps) {
   return (
     <Card className={cn("flex flex-col", className)}>
-      <div className="flex items-start justify-between gap-3 p-5 pb-2">
-        <div>
-          <h3 className="text-sm font-medium tracking-tight text-text">
+      <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-3.5">
+        <div className="min-w-0">
+          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
             {title}
           </h3>
           {subtitle && (
-            <p className="mt-0.5 text-xs text-muted">{subtitle}</p>
+            <p className="mt-1 text-xs text-muted/80">{subtitle}</p>
           )}
         </div>
         {action}
       </div>
-      <div className={cn("min-w-0 flex-1 p-2 pt-1", bodyClassName)}>
+      <div className={cn("min-w-0 flex-1 p-2 pt-3", bodyClassName)}>
         {children}
       </div>
     </Card>

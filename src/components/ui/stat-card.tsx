@@ -29,24 +29,32 @@ export function StatCard({
         className,
       )}
     >
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
           {label}
         </span>
-        {icon && <span className="text-muted">{icon}</span>}
+        {icon && (
+          <span className={highlight ? "text-accent" : "text-muted"}>
+            {icon}
+          </span>
+        )}
       </div>
-      <div className="mt-2 flex items-baseline gap-1">
+      <div className="mt-2.5 flex items-baseline gap-1">
         <span
           className={cn(
-            "font-mono text-2xl font-semibold tabular-nums",
+            "font-impact text-[1.9rem] leading-none tabular-nums",
             highlight ? "text-accent" : "text-text",
           )}
         >
           {value}
         </span>
-        {unit && <span className="text-sm text-muted">{unit}</span>}
+        {unit && (
+          <span className="text-xs uppercase tracking-wide text-muted">
+            {unit}
+          </span>
+        )}
       </div>
-      {hint && <div className="mt-1 text-xs text-muted">{hint}</div>}
+      {hint && <div className="mt-1.5 text-[11px] text-muted">{hint}</div>}
     </Card>
   );
 }
