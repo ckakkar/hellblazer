@@ -74,6 +74,84 @@ export type Database = {
         }
         Relationships: []
       }
+      program: {
+        Row: {
+          created_at: string
+          duration_weeks: number
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          start_date: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_weeks?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          start_date?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_weeks?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          start_date?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      program_day: {
+        Row: {
+          id: string
+          label: string | null
+          position: number
+          program_id: string
+          template_id: string | null
+          user_id: string
+          weekday: number | null
+        }
+        Insert: {
+          id?: string
+          label?: string | null
+          position?: number
+          program_id: string
+          template_id?: string | null
+          user_id: string
+          weekday?: number | null
+        }
+        Update: {
+          id?: string
+          label?: string | null
+          position?: number
+          program_id?: string
+          template_id?: string | null
+          user_id?: string
+          weekday?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_day_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_day_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "workout_template"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       session: {
         Row: {
           created_at: string
@@ -81,6 +159,7 @@ export type Database = {
           duration_min: number | null
           id: string
           notes: string | null
+          program_id: string | null
           template_id: string | null
           title: string | null
           user_id: string
@@ -91,6 +170,7 @@ export type Database = {
           duration_min?: number | null
           id?: string
           notes?: string | null
+          program_id?: string | null
           template_id?: string | null
           title?: string | null
           user_id: string
@@ -101,11 +181,19 @@ export type Database = {
           duration_min?: number | null
           id?: string
           notes?: string | null
+          program_id?: string | null
           template_id?: string | null
           title?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "session_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "session_template_id_fkey"
             columns: ["template_id"]

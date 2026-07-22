@@ -6,6 +6,8 @@ import {
   getVolumeTrend,
 } from "@/lib/data/analytics";
 import { getSessionSummaries } from "@/lib/data/sessions";
+import { getActiveProgramProgress } from "@/lib/data/programs";
+import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { getUnit } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -21,12 +23,14 @@ import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const [weeklySets, volumeTrend, summaries, unit] = await Promise.all([
-    getCurrentWeekSetsPerMuscle(),
-    getVolumeTrend(12),
-    getSessionSummaries(),
-    getUnit(),
-  ]);
+  const [weeklySets, volumeTrend, summaries, activeProgress, unit] =
+    await Promise.all([
+      getCurrentWeekSetsPerMuscle(),
+      getVolumeTrend(12),
+      getSessionSummaries(),
+      getActiveProgramProgress(),
+      getUnit(),
+    ]);
 
   const weekStart = startOfISOWeek(new Date());
   const thisWeek = summaries.filter(
@@ -54,17 +58,26 @@ export default async function DashboardPage() {
         }
       />
 
-      {summaries.length === 0 && (
+      {activeProgress ? (
+        <div className="mb-6">
+          <ProgramProgressCard
+            progress={activeProgress}
+            href={`/programs/${activeProgress.program.id}`}
+          />
+        </div>
+      ) : (
         <Card className="mb-6 flex flex-col items-start gap-3 border-accent/20 bg-accent/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 size-5 shrink-0 text-accent" />
             <div>
               <div className="text-sm font-medium text-text">
-                Get set up in 30 seconds
+                {summaries.length === 0
+                  ? "Get set up in 30 seconds"
+                  : "No active program"}
               </div>
               <p className="mt-0.5 text-sm text-muted">
-                Load the Back &amp; Arm Focused Strength split, then log your
-                first session.
+                Load the Back &amp; Arm Focused Strength split — it becomes a
+                ready-to-run 8-week program you can start today.
               </p>
             </div>
           </div>

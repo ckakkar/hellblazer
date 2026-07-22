@@ -6,12 +6,35 @@ import { redirect } from "next/navigation";
 import { getAuthedContext } from "@/lib/auth";
 import type { TablesUpdate } from "@/lib/database.types";
 
-/** Create a session (freeform or from a template) and open the logger. */
-export async function startSession(input: { templateId: string | null }) {
-  const { templateId } = z
-    .object({ templateId: z.string().uuid().nullable() })
+/**
+ * Create a session and open the logger. A session can come from a program day
+ * (links to the program), a bare template, or be freeform.
+ */
+export async function startSession(input: {
+  templateId?: string | null;
+  programDayId?: string | null;
+}) {
+  const v = z
+    .object({
+      templateId: z.string().uuid().nullable().optional(),
+      programDayId: z.string().uuid().nullable().optional(),
+    })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
+
+  let templateId: string | null = v.templateId ?? null;
+  let programId: string | null = null;
+
+  if (v.programDayId) {
+    const { data: pd } = await supabase
+      .from("program_day")
+      .select("template_id, program_id")
+      .eq("id", v.programDayId)
+      .maybeSingle();
+    if (!pd) throw new Error("Program day not found");
+    templateId = pd.template_id;
+    programId = pd.program_id;
+  }
 
   let title: string | null = null;
   if (templateId) {
@@ -20,13 +43,17 @@ export async function startSession(input: { templateId: string | null }) {
       .select("name, day_label")
       .eq("id", templateId)
       .maybeSingle();
-    if (!tmpl) throw new Error("Template not found");
-    title = tmpl.day_label || tmpl.name;
+    if (tmpl) title = tmpl.day_label || tmpl.name;
   }
 
   const { data: session, error } = await supabase
     .from("session")
-    .insert({ user_id: user.id, template_id: templateId, title })
+    .insert({
+      user_id: user.id,
+      template_id: templateId,
+      program_id: programId,
+      title,
+    })
     .select("id")
     .single();
   if (error) throw error;

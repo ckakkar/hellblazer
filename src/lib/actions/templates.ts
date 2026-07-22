@@ -218,6 +218,7 @@ export async function loadPreset(input: { presetId: string }) {
     .limit(1)
     .maybeSingle();
   let position = (last?.position ?? -1) + 1;
+  const createdTemplateIds: string[] = [];
 
   for (const day of preset.days) {
     const { data: tmpl, error: tErr } = await supabase
@@ -231,6 +232,7 @@ export async function loadPreset(input: { presetId: string }) {
       .select("id")
       .single();
     if (tErr) throw tErr;
+    createdTemplateIds.push(tmpl.id);
 
     const rows = day.exercises
       .map((ex, i) => {
@@ -255,5 +257,38 @@ export async function loadPreset(input: { presetId: string }) {
       if (teErr) throw teErr;
     }
   }
+
+  // Bundle the days into a runnable, active program so the user can start
+  // training immediately (8-week block starting today).
+  await supabase
+    .from("program")
+    .update({ is_active: false })
+    .eq("user_id", user.id)
+    .eq("is_active", true);
+  const { data: program, error: pErr } = await supabase
+    .from("program")
+    .insert({
+      user_id: user.id,
+      name: preset.name,
+      duration_weeks: 8,
+      start_date: new Date().toISOString().slice(0, 10),
+      is_active: true,
+    })
+    .select("id")
+    .single();
+  if (pErr) throw pErr;
+
+  if (createdTemplateIds.length > 0) {
+    const dayRows = createdTemplateIds.map((tid, i) => ({
+      user_id: user.id,
+      program_id: program.id,
+      template_id: tid,
+      position: i,
+    }));
+    await supabase.from("program_day").insert(dayRows);
+  }
+
   revalidatePath("/templates");
+  revalidatePath("/programs");
+  revalidatePath("/dashboard");
 }
