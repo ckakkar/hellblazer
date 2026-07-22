@@ -151,6 +151,27 @@ export async function removeTemplateExercise(input: { id: string }) {
   revalidatePath("/templates");
 }
 
+/**
+ * Change the movement on a prescribed template exercise (e.g. while previewing a
+ * day, swap Pendlay rows for seated rows). Becomes that day's new default.
+ */
+export async function swapTemplateExercise(input: {
+  id: string;
+  newExerciseId: string;
+}) {
+  const v = z
+    .object({ id: z.string().uuid(), newExerciseId: z.string().uuid() })
+    .parse(input);
+  const { supabase } = await getAuthedContext();
+  const { error } = await supabase
+    .from("template_exercise")
+    .update({ exercise_id: v.newExerciseId })
+    .eq("id", v.id);
+  if (error) throw error;
+  revalidatePath("/templates");
+  revalidatePath("/programs");
+}
+
 /** Swap a template exercise with its neighbour to reorder. */
 export async function moveTemplateExercise(input: {
   id: string;

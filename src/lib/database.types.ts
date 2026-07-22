@@ -106,6 +106,7 @@ export type Database = {
           is_active: boolean
           name: string
           notes: string | null
+          paused_at: string | null
           start_date: string | null
           user_id: string
         }
@@ -116,6 +117,7 @@ export type Database = {
           is_active?: boolean
           name: string
           notes?: string | null
+          paused_at?: string | null
           start_date?: string | null
           user_id: string
         }
@@ -126,6 +128,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           notes?: string | null
+          paused_at?: string | null
           start_date?: string | null
           user_id?: string
         }
@@ -203,17 +206,17 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "program_skip_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "program"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "program_skip_program_day_id_fkey"
             columns: ["program_day_id"]
             isOneToOne: false
             referencedRelation: "program_day"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_skip_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "program"
             referencedColumns: ["id"]
           },
         ]

@@ -6,13 +6,12 @@ import {
   ArrowLeft,
   ChevronDown,
   ChevronUp,
+  Eye,
   Loader2,
-  Pencil,
   Plus,
   Power,
   RotateCcw,
   Trash2,
-  Undo2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -21,9 +20,15 @@ import { Input } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { StartWorkoutButton } from "@/components/program/start-workout-button";
+import {
+  PauseResumeButton,
+  RollbackButton,
+} from "@/components/program/program-controls";
+import { DayPreview } from "@/components/program/day-preview";
 import { cn } from "@/lib/utils";
 import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
+import type { Exercise } from "@/lib/data/exercises";
 import {
   addProgramDay,
   deleteProgram,
@@ -31,7 +36,6 @@ import {
   removeProgramDay,
   resetProgram,
   setActiveProgram,
-  undoLastSkip,
   updateProgram,
 } from "@/lib/actions/programs";
 
@@ -41,15 +45,22 @@ export function ProgramDetail({
   program,
   progress,
   templates,
+  exercises,
 }: {
   program: ProgramWithDays;
   progress: ProgramProgress;
   templates: TemplateWithExercises[];
+  exercises: Exercise[];
 }) {
   const [pending, start] = useTransition();
   const [picker, setPicker] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [previewDayId, setPreviewDayId] = useState<string | null>(null);
   const days = program.program_day;
+  const previewDay = days.find((d) => d.id === previewDayId) ?? null;
+  const previewTemplate = previewDay
+    ? templates.find((t) => t.id === previewDay.template_id) ?? null
+    : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -76,24 +87,25 @@ export function ProgramDetail({
 
       <ProgramProgressCard progress={progress} />
 
-      {progress.skipsThisWeek > 0 && (
-        <div className="mt-2 flex items-center justify-between rounded-lg border border-border bg-surface px-4 py-2.5 text-xs text-muted">
-          <span>
-            {progress.skipsThisWeek} day
-            {progress.skipsThisWeek === 1 ? "" : "s"} skipped this week
-          </span>
-          <button
-            disabled={pending}
-            onClick={() =>
-              start(async () => {
-                await undoLastSkip({ programId: program.id });
-              })
-            }
-            className="inline-flex items-center gap-1 font-medium text-accent transition-colors hover:underline"
-          >
-            <Undo2 className="size-3.5" />
-            Undo last skip
-          </button>
+      {/* Day-to-day controls: pause the block, or roll back the last advance */}
+      {program.start_date && !progress.isCompleted && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <PauseResumeButton
+            programId={program.id}
+            isPaused={progress.isPaused}
+            size="sm"
+          />
+          {progress.lastAdvance && (
+            <RollbackButton
+              programId={program.id}
+              lastAdvance={progress.lastAdvance}
+            />
+          )}
+          {progress.skipsThisWeek > 0 && (
+            <span className="text-xs text-muted">
+              {progress.skipsThisWeek} skipped this week
+            </span>
+          )}
         </div>
       )}
 
@@ -240,14 +252,14 @@ export function ProgramDetail({
                       <ChevronDown className="size-4" />
                     </button>
                   </div>
-                  <Link
-                    href="/templates"
-                    aria-label="Edit exercises"
-                    title="Edit exercises"
-                    className="flex size-8 shrink-0 items-center justify-center text-muted transition-colors hover:text-accent"
+                  <button
+                    onClick={() => setPreviewDayId(d.id)}
+                    aria-label="Preview this day"
+                    title="Preview this day"
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent"
                   >
-                    <Pencil className="size-4" />
-                  </Link>
+                    <Eye className="size-4" />
+                  </button>
                   {tmpl && (
                     <StartWorkoutButton
                       programDayId={d.id}
@@ -358,6 +370,21 @@ export function ProgramDetail({
           )}
         </ul>
       </Sheet>
+
+      {/* Preview a day without starting it */}
+      {previewDay && (
+        <DayPreview
+          onClose={() => setPreviewDayId(null)}
+          template={previewTemplate}
+          programDayId={previewDay.id}
+          dayTitle={
+            previewTemplate?.day_label ||
+            previewTemplate?.name ||
+            "Workout"
+          }
+          exercises={exercises}
+        />
+      )}
     </div>
   );
 }

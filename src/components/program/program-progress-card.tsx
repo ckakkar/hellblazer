@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { CalendarRange, CheckCircle2, Dumbbell } from "lucide-react";
+import { CalendarRange, CheckCircle2, Dumbbell, Pause } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ProgramProgress } from "@/lib/data/programs";
 import { StartWorkoutButton } from "./start-workout-button";
 import { SkipWorkoutButton } from "./skip-workout-button";
+import { PauseResumeButton } from "./program-controls";
 
 export function ProgramProgressCard({
   progress,
@@ -19,6 +20,7 @@ export function ProgramProgressCard({
     currentWeek,
     totalWeeks,
     isCompleted,
+    isPaused,
     daysPerWeek,
     sessionsThisWeek,
     skipsThisWeek,
@@ -60,7 +62,9 @@ export function ProgramProgressCard({
             ? "Not started"
             : isCompleted
               ? "Done"
-              : `Week ${currentWeek} / ${totalWeeks}`}
+              : isPaused
+                ? "Paused"
+                : `Week ${currentWeek} / ${totalWeeks}`}
         </Badge>
       </div>
 
@@ -111,6 +115,18 @@ export function ProgramProgressCard({
             <CheckCircle2 className="size-4 text-accent" />
             Block complete — start a fresh one or extend it.
           </div>
+        ) : isPaused ? (
+          <>
+            <div className="flex items-center gap-2 text-sm text-muted">
+              <Pause className="size-4 text-warn" />
+              Block paused — your week count is frozen.
+            </div>
+            <PauseResumeButton
+              programId={program.id}
+              isPaused
+              className="w-full sm:w-auto"
+            />
+          </>
         ) : nextDay?.template_id ? (
           <>
             <div className="flex items-center gap-3">

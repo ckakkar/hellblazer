@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { getAuthedContext } from "@/lib/auth";
 import type { TablesUpdate } from "@/lib/database.types";
 
@@ -161,29 +162,119 @@ export async function skipWorkout(input: { programDayId: string }) {
   revalidatePath("/log");
 }
 
-/** Undo the most recent skip for a program this week (roll the rotation back). */
-export async function undoLastSkip(input: { programId: string }) {
+/**
+ * Pause a program for a while (injury, travel, a rest day). The week counter
+ * freezes at this instant — `paused_at` is stamped, and progress is computed
+ * as of that moment until the block is resumed.
+ */
+export async function pauseProgram(input: { id: string }) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data: p } = await supabase
+    .from("program")
+    .select("paused_at, start_date")
+    .eq("id", id)
+    .maybeSingle();
+  if (!p || p.paused_at) return; // already paused / missing
+  const { error } = await supabase
+    .from("program")
+    .update({ paused_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+  revalidatePath("/programs");
+  revalidatePath(`/programs/${id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/log");
+}
+
+/**
+ * Resume a paused program. The block picks up exactly where it left off: the
+ * start date is shifted forward by however long it was paused, so the same
+ * week and next-workout are restored (rather than the pause silently burning
+ * training days).
+ */
+export async function resumeProgram(input: { id: string }) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data: p } = await supabase
+    .from("program")
+    .select("paused_at, start_date")
+    .eq("id", id)
+    .maybeSingle();
+  if (!p || !p.paused_at) return; // not paused
+
+  const patch: TablesUpdate<"program"> = { paused_at: null };
+  if (p.start_date) {
+    const pausedForDays = Math.max(
+      0,
+      differenceInCalendarDays(new Date(), new Date(p.paused_at)),
+    );
+    if (pausedForDays > 0) {
+      patch.start_date = format(
+        addDays(parseISO(p.start_date), pausedForDays),
+        "yyyy-MM-dd",
+      );
+    }
+  }
+  const { error } = await supabase.from("program").update(patch).eq("id", id);
+  if (error) throw error;
+  revalidatePath("/programs");
+  revalidatePath(`/programs/${id}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/log");
+}
+
+/**
+ * Roll back the most recent advance in the program — undoes the last skip, or
+ * discards the last logged session (destructive: that session's sets are
+ * removed). Used by the "Roll back a day" control.
+ */
+export async function rollbackLastDay(input: {
+  programId: string;
+}): Promise<{ removed: "skip" | "session" | "none" }> {
   const { programId } = z
     .object({ programId: z.string().uuid() })
     .parse(input);
   const { supabase } = await getAuthedContext();
-  const { data: last } = await supabase
-    .from("program_skip")
-    .select("id")
-    .eq("program_id", programId)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (!last) return;
-  const { error } = await supabase
-    .from("program_skip")
-    .delete()
-    .eq("id", last.id);
-  if (error) throw error;
+
+  const [{ data: lastSkip }, { data: lastSession }] = await Promise.all([
+    supabase
+      .from("program_skip")
+      .select("id, created_at")
+      .eq("program_id", programId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("session")
+      .select("id, created_at")
+      .eq("program_id", programId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const skipTime = lastSkip ? new Date(lastSkip.created_at).getTime() : -1;
+  const sessTime = lastSession ? new Date(lastSession.created_at).getTime() : -1;
+  if (skipTime < 0 && sessTime < 0) return { removed: "none" };
+
+  let removed: "skip" | "session";
+  if (skipTime >= sessTime) {
+    await supabase.from("program_skip").delete().eq("id", lastSkip!.id);
+    removed = "skip";
+  } else {
+    // Deleting the session cascades its exercises + sets.
+    await supabase.from("session").delete().eq("id", lastSession!.id);
+    removed = "session";
+  }
+
   revalidatePath("/programs");
   revalidatePath(`/programs/${programId}`);
   revalidatePath("/dashboard");
+  revalidatePath("/history");
+  revalidatePath("/progress");
   revalidatePath("/log");
+  return { removed };
 }
 
 /** Restart the block from week 1 (start date = today). Keeps logged sessions. */
@@ -195,7 +286,10 @@ export async function resetProgram(input: { id: string }) {
   await supabase.from("program_skip").delete().eq("program_id", id);
   const { error } = await supabase
     .from("program")
-    .update({ start_date: new Date().toISOString().slice(0, 10) })
+    .update({
+      start_date: new Date().toISOString().slice(0, 10),
+      paused_at: null,
+    })
     .eq("id", id);
   if (error) throw error;
   revalidatePath(`/programs/${id}`);

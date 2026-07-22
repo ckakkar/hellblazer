@@ -57,12 +57,14 @@ export type ProgramProgress = {
   totalWeeks: number;
   currentWeek: number | null; // null when not started
   isCompleted: boolean;
+  isPaused: boolean;
   daysPerWeek: number;
   sessionsThisWeek: number;
   skipsThisWeek: number;
   doneThisWeek: number;
   weekComplete: boolean;
   nextDay: ProgramDayWithTemplate | null;
+  lastAdvance: { kind: "skip" | "session"; label: string } | null;
   weekStart: string | null;
   endDate: string | null;
 };
@@ -75,6 +77,9 @@ export async function getProgramProgress(
   const days = program.program_day;
   const daysPerWeek = days.length;
   const totalWeeks = program.duration_weeks;
+  const isPaused = Boolean(program.paused_at);
+  // While paused the clock freezes: everything is computed as of the pause.
+  const nowRef = program.paused_at ? new Date(program.paused_at) : new Date();
 
   let currentWeek: number | null = null;
   let weekStart: string | null = null;
@@ -84,7 +89,7 @@ export async function getProgramProgress(
   if (program.start_date) {
     const start = parseISO(program.start_date);
     endDate = format(addDays(start, totalWeeks * 7 - 1), "yyyy-MM-dd");
-    const daysSince = differenceInCalendarDays(new Date(), start);
+    const daysSince = differenceInCalendarDays(nowRef, start);
     const rawWeek = Math.floor(Math.max(0, daysSince) / 7) + 1;
     isCompleted = rawWeek > totalWeeks;
     currentWeek = Math.min(rawWeek, totalWeeks);
@@ -119,17 +124,56 @@ export async function getProgramProgress(
   const nextDay =
     daysPerWeek > 0 ? days[doneThisWeek % daysPerWeek] ?? days[0] : null;
 
+  // The most recent advance (for the "Roll back a day" control) — whichever of
+  // the latest logged session or latest skip happened last.
+  let lastAdvance: ProgramProgress["lastAdvance"] = null;
+  if (doneThisWeek > 0) {
+    const [{ data: lastSession }, { data: lastSkip }] = await Promise.all([
+      supabase
+        .from("session")
+        .select("id, title, created_at")
+        .eq("program_id", program.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("program_skip")
+        .select("id, created_at")
+        .eq("program_id", program.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
+    const sessTime = lastSession
+      ? new Date(lastSession.created_at).getTime()
+      : -1;
+    const skipTime = lastSkip ? new Date(lastSkip.created_at).getTime() : -1;
+    if (sessTime >= 0 || skipTime >= 0) {
+      lastAdvance =
+        skipTime >= sessTime
+          ? { kind: "skip", label: "a skipped day" }
+          : {
+              kind: "session",
+              label: lastSession?.title
+                ? `“${lastSession.title}”`
+                : "your last logged workout",
+            };
+    }
+  }
+
   return {
     program,
     totalWeeks,
     currentWeek,
     isCompleted,
+    isPaused,
     daysPerWeek,
     sessionsThisWeek,
     skipsThisWeek,
     doneThisWeek,
     weekComplete,
     nextDay,
+    lastAdvance,
     weekStart,
     endDate,
   };
