@@ -127,6 +127,60 @@ export async function removeSessionExercise(input: { id: string }) {
   if (error) throw error;
 }
 
+/**
+ * Swap the movement on a session exercise mid-workout (e.g. seated rows instead
+ * of Pendlay rows). Keeps any sets already logged (they re-attribute to the new
+ * movement). If the session came from a template, the swap also becomes that
+ * day's new default — the matching `template_exercise` (same position + old
+ * movement) is updated so the substitution sticks for future sessions.
+ */
+export async function swapSessionExercise(input: {
+  sessionExerciseId: string;
+  newExerciseId: string;
+}) {
+  const v = z
+    .object({
+      sessionExerciseId: z.string().uuid(),
+      newExerciseId: z.string().uuid(),
+    })
+    .parse(input);
+  const { supabase } = await getAuthedContext();
+
+  const { data: se, error: seErr } = await supabase
+    .from("session_exercise")
+    .select("id, session_id, exercise_id, position")
+    .eq("id", v.sessionExerciseId)
+    .maybeSingle();
+  if (seErr) throw seErr;
+  if (!se) throw new Error("Session exercise not found");
+  const oldExerciseId = se.exercise_id;
+
+  const { error: upErr } = await supabase
+    .from("session_exercise")
+    .update({ exercise_id: v.newExerciseId })
+    .eq("id", v.sessionExerciseId);
+  if (upErr) throw upErr;
+
+  // Persist the swap into the day's template so it carries forward.
+  const { data: sess } = await supabase
+    .from("session")
+    .select("template_id")
+    .eq("id", se.session_id)
+    .maybeSingle();
+  if (sess?.template_id) {
+    await supabase
+      .from("template_exercise")
+      .update({ exercise_id: v.newExerciseId })
+      .eq("template_id", sess.template_id)
+      .eq("position", se.position)
+      .eq("exercise_id", oldExerciseId);
+  }
+
+  revalidatePath(`/log/${se.session_id}`);
+  revalidatePath("/templates");
+  revalidatePath("/programs");
+}
+
 const setSchema = z.object({
   id: z.string().uuid(),
   sessionExerciseId: z.string().uuid(),
