@@ -1,37 +1,40 @@
 @import "tailwindcss";
 
-/* ── Design tokens → Tailwind theme ──────────────────────────────────────
-   Dark cyberpunk, minimal: deep charcoal base, single electric-teal accent.
+/* ── Hell Blazer design tokens → Tailwind theme ──────────────────────────
+   Near-monochrome warm-black. Hairline borders. A single disciplined ember
+   accent ("blaze") used sparingly — mostly one signature moment, not chrome.
    Colors are emitted as CSS custom properties so recharts can read them too. */
 @theme {
-  --color-bg: #0a0b0d;
-  --color-surface: #101216;
-  --color-surface-2: #16191f;
-  --color-border: #1f242c;
-  --color-text: #e6e9ef;
-  --color-muted: #8b93a1;
-  --color-accent: #00e5c7;
-  --color-accent-dim: #0b8f80;
-  --color-danger: #ff4d6d;
-  --color-warn: #ffb020;
+  --color-bg: #0a0a0b;
+  --color-surface: #101011;
+  --color-surface-2: #17171a;
+  --color-border: #232227;
+  --color-text: #ededeb;
+  --color-muted: #86867f;
+  --color-accent: #ff5a26;
+  --color-accent-dim: #c7431a;
+  --color-danger: #f5566b;
+  --color-warn: #f5a524;
 
-  --color-chart-1: #00e5c7;
-  --color-chart-2: #6c8bff;
-  --color-chart-3: #b980ff;
-  --color-chart-4: #ff6fb5;
+  --color-chart-1: #ff5a26;
+  --color-chart-2: #9a9a92;
+  --color-chart-3: #c9895e;
+  --color-chart-4: #5f6672;
 
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "JetBrains Mono", monospace;
+  --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif,
+    sans-serif;
 
-  --radius-lg: 0.7rem;
+  --radius-lg: 0.625rem;
 
   --shadow-glow:
-    0 0 0 1px rgba(0, 229, 199, 0.14), 0 0 22px -4px rgba(0, 229, 199, 0.32);
+    0 0 0 1px rgba(255, 90, 38, 0.18), 0 0 28px -8px rgba(255, 90, 38, 0.5);
 }
 
 :root {
   color-scheme: dark;
-  --accent-glow: rgba(0, 229, 199, 0.14);
+  --accent-glow: rgba(255, 90, 38, 0.16);
 }
 
 html {
@@ -48,8 +51,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Native-app feel on iOS: no grey tap flash, no long-press callout menu on
-   interactive chrome, and momentum scrolling inside scroll containers. */
+/* Native-app feel on iOS: no grey tap flash, no long-press callout menu. */
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -65,6 +67,53 @@ label {
   font-variant-numeric: tabular-nums;
 }
 
+/* Display face: tighten tracking, it carries the brand personality */
+.font-display {
+  letter-spacing: -0.02em;
+}
+
+/* ── Signature motion (CSS only, no libs) ─────────────────────────────────
+   Shiny wordmark: an ember glint sweeps across an off-white base. */
+.hb-shiny {
+  background: linear-gradient(
+    110deg,
+    var(--color-text) 30%,
+    #ffffff 45%,
+    var(--color-accent) 52%,
+    #ffffff 59%,
+    var(--color-text) 74%
+  );
+  background-size: 260% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: hb-shine 6s linear infinite;
+}
+@keyframes hb-shine {
+  to {
+    background-position: -260% center;
+  }
+}
+
+/* Blur-rise entrance; stagger with inline animation-delay */
+.hb-reveal {
+  opacity: 0;
+  animation: hb-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes hb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
 /* Strip native number spinners — NumberStepper supplies its own controls */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
@@ -76,11 +125,10 @@ input[type="number"] {
 }
 
 ::selection {
-  background: rgba(0, 229, 199, 0.25);
+  background: rgba(255, 90, 38, 0.24);
 }
 
-/* Prevent iOS Safari from zooming when a control gains focus: enforce a 16px
-   floor on all editable controls at phone widths. Larger sizes are untouched. */
+/* Prevent iOS Safari zoom on focus: 16px floor on controls at phone widths */
 @media (max-width: 639.98px) {
   input:not([type="date"]):not([type="checkbox"]):not([type="radio"]),
   select,
@@ -102,7 +150,7 @@ input[type="number"] {
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #2a313b;
+  background: #2f2e34;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -110,6 +158,7 @@ input[type="number"] {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Dumbbell, LogOut } from "lucide-react";
+import { Flame, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import { NAV_ITEMS, BOTTOM_NAV, SECONDARY_NAV } from "./nav-items";
@@ -16,11 +16,11 @@ function useActive() {
 function Brand() {
   return (
     <Link href="/dashboard" className="flex items-center gap-2">
-      <div className="flex size-7 items-center justify-center rounded-md bg-accent text-bg shadow-glow">
-        <Dumbbell className="size-4" />
-      </div>
-      <span className="font-mono text-sm font-semibold tracking-[0.2em] text-text">
-        OVERLOAD
+      <span className="flex size-6 items-center justify-center rounded-md border border-accent/40 text-accent">
+        <Flame className="size-3.5" />
+      </span>
+      <span className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-text">
+        Hell&nbsp;Blazer
       </span>
     </Link>
   );

@@ -45,7 +45,7 @@ export default async function SessionDetailPage({
 
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-text">
             {session.title ?? "Session"}
           </h1>
           <div className="mt-1 font-mono text-xs text-muted">

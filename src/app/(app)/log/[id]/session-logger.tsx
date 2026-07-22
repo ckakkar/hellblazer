@@ -229,7 +229,7 @@ export function SessionLogger({
               title: e.target.value.trim() || null,
             })
           }
-          className="w-full bg-transparent text-xl font-semibold tracking-tight text-text focus:outline-none sm:text-2xl"
+          className="w-full bg-transparent font-display text-2xl font-semibold tracking-tight text-text focus:outline-none"
         />
         <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted">
           <input

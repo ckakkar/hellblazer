@@ -20,7 +20,7 @@ export function PageHeader({
       )}
     >
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-text sm:text-2xl">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-text sm:text-[1.75rem]">
           {title}
         </h1>
         {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
