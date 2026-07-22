@@ -8,6 +8,7 @@ const WATCHED_TABLES = [
   "session",
   "program",
   "program_day",
+  "program_skip",
   "workout_template",
 ] as const;
 

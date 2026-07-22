@@ -5,9 +5,14 @@ import { Reveal } from "@/components/ui/motion";
 import { DecryptedText } from "@/components/ui/decrypted-text";
 import { Flame } from "lucide-react";
 
-export default async function Landing() {
+export default async function Landing({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   const user = await getUser();
   if (user) redirect("/dashboard");
+  const { error } = await searchParams;
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden">
@@ -89,6 +94,11 @@ export default async function Landing() {
 
           <Reveal delay={280}>
             <div className="mt-10">
+              {error === "auth" && (
+                <p className="mb-3 max-w-md rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
+                  Sign-in didn&apos;t complete. Try again.
+                </p>
+              )}
               <GoogleSignIn />
               <p className="mt-3 text-xs text-muted">
                 Google sign-in only. Your war is yours — isolated per account.

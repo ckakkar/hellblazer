@@ -177,7 +177,14 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid gap-2">
             {recent.map((s) => (
-              <Link key={s.session_id} href={`/history/${s.session_id}`}>
+              <Link
+                key={s.session_id}
+                href={
+                  s.finished_at
+                    ? `/history/${s.session_id}`
+                    : `/log/${s.session_id}`
+                }
+              >
                 <Card className="flex items-center gap-3 p-3 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99] active:border-accent/40">
                   <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 font-mono text-xs text-muted">
                     {s.session_date ? format(parseISO(s.session_date), "d") : ""}
@@ -187,6 +194,9 @@ export default async function DashboardPage() {
                       <span className="truncate text-sm text-text">
                         {s.title ?? "Session"}
                       </span>
+                      {!s.finished_at && (
+                        <Badge variant="accent">In progress</Badge>
+                      )}
                       {!s.template_id && <Badge variant="muted">freeform</Badge>}
                     </div>
                     <div className="font-mono text-xs text-muted">

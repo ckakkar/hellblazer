@@ -14,7 +14,7 @@ import {
 } from "@/components/charts/exercise-charts";
 import { MuscleTrendChart } from "@/components/charts/muscle-trend-chart";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
-import { MUSCLE_LABEL, isWeakPoint, type Muscle } from "@/lib/muscles";
+import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
 import { ProgressControls } from "./progress-controls";
 
 export const dynamic = "force-dynamic";
@@ -31,9 +31,17 @@ export default async function ProgressPage({
     getUnit(),
   ]);
 
-  const selectedMuscle = (sp.muscle as Muscle) || "back";
+  // Validate URL params — bad values fall back instead of crashing the page.
+  const selectedMuscle: Muscle = MUSCLES.includes(sp.muscle as Muscle)
+    ? (sp.muscle as Muscle)
+    : "back";
   const selectedExercise =
-    sp.exercise || loggedExercises[0]?.exercise_id || undefined;
+    (sp.exercise &&
+    loggedExercises.some((e) => e.exercise_id === sp.exercise)
+      ? sp.exercise
+      : undefined) ??
+    loggedExercises[0]?.exercise_id ??
+    undefined;
 
   return (
     <div>

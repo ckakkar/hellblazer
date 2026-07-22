@@ -217,9 +217,12 @@ export async function clearHistory() {
     .delete()
     .eq("user_id", user.id);
   if (error) throw error;
+  // Wipe skips too so the program rotation starts clean with the history.
+  await supabase.from("program_skip").delete().eq("user_id", user.id);
   revalidatePath("/history");
   revalidatePath("/dashboard");
   revalidatePath("/progress");
+  revalidatePath("/programs");
 }
 
 /** Persist an optional duration and jump to the finished session's detail. */

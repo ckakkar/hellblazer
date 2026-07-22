@@ -35,6 +35,11 @@ export const metadata: Metadata = {
   title: "Hell Blazer — Strength Log",
   description:
     "Train like the strongest creature alive. Programs, savage-fast set logging, and power analytics that climb with every rep.",
+  appleWebApp: {
+    capable: true,
+    title: "Hell Blazer",
+    statusBarStyle: "black-translucent",
+  },
 };
 
 export const viewport: Viewport = {

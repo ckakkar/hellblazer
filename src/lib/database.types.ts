@@ -492,6 +492,7 @@ export type Database = {
         Row: {
           duration_min: number | null
           exercise_count: number | null
+          finished_at: string | null
           session_date: string | null
           session_id: string | null
           template_id: string | null

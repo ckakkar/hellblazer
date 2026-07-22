@@ -190,6 +190,9 @@ export async function undoLastSkip(input: { programId: string }) {
 export async function resetProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase } = await getAuthedContext();
+  // A restart must also clear skips, or old skips (dated today) would advance
+  // the fresh week-1 rotation before it even begins.
+  await supabase.from("program_skip").delete().eq("program_id", id);
   const { error } = await supabase
     .from("program")
     .update({ start_date: new Date().toISOString().slice(0, 10) })

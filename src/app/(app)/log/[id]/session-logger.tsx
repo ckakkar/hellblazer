@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
 import { Flame, Loader2, Plus, Swords, Trash2, Trophy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -88,30 +88,63 @@ export function SessionLogger({
     ref.current = exercises;
   }, [exercises]);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // setId → seId for debounced saves still in flight, so they can be flushed
+  // immediately if the tab is closed or backgrounded mid-workout.
+  const pendingSaves = useRef<Map<string, string>>(new Map());
 
   const weightStep = unit === "lb" ? 5 : 2.5;
 
-  function persist(seId: string, set: LocalSet, setNumber: number) {
-    return saveSet({
-      id: set.id,
-      sessionExerciseId: seId,
-      setNumber,
-      weightKg: fromDisplayWeight(
-        Number.isFinite(set.weight ?? NaN) ? (set.weight as number) : 0,
-        unit,
-      ),
-      reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
-      rpe: set.rpe,
-      isWarmup: set.isWarmup,
-    }).catch(() => {});
-  }
+  const persist = useCallback(
+    (seId: string, set: LocalSet, setNumber: number) => {
+      return saveSet({
+        id: set.id,
+        sessionExerciseId: seId,
+        setNumber,
+        weightKg: fromDisplayWeight(
+          Number.isFinite(set.weight ?? NaN) ? (set.weight as number) : 0,
+          unit,
+        ),
+        reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
+        rpe: set.rpe,
+        isWarmup: set.isWarmup,
+      }).catch(() => {});
+    },
+    [unit],
+  );
+
+  // Flush any debounced saves immediately when the tab is hidden, closed or
+  // the logger unmounts — a mid-workout tab close must never lose a set.
+  useEffect(() => {
+    const flush = () => {
+      for (const [setId, seId] of pendingSaves.current) {
+        const t = timers.current.get(setId);
+        if (t) clearTimeout(t);
+        const ex = ref.current.find((e) => e.seId === seId);
+        const idx = ex?.sets.findIndex((s) => s.id === setId) ?? -1;
+        if (ex && idx >= 0) void persist(seId, ex.sets[idx], idx + 1);
+      }
+      pendingSaves.current.clear();
+    };
+    const onHide = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHide);
+    return () => {
+      flush();
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHide);
+    };
+  }, [persist]);
 
   function scheduleSave(seId: string, setId: string) {
     const existing = timers.current.get(setId);
     if (existing) clearTimeout(existing);
+    pendingSaves.current.set(setId, seId);
     timers.current.set(
       setId,
       setTimeout(() => {
+        pendingSaves.current.delete(setId);
         const ex = ref.current.find((e) => e.seId === seId);
         if (!ex) return;
         const idx = ex.sets.findIndex((s) => s.id === setId);

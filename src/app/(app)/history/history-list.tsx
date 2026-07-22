@@ -83,7 +83,14 @@ export function HistoryList({
 
       <div className="grid gap-3">
         {filtered.map((s) => (
-          <Link key={s.session_id} href={`/history/${s.session_id}`}>
+          <Link
+            key={s.session_id}
+            href={
+              s.finished_at
+                ? `/history/${s.session_id}`
+                : `/log/${s.session_id}`
+            }
+          >
             <Card className="flex items-center gap-4 p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99] active:border-accent/40">
               <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-2 font-mono">
                 <span className="text-[10px] uppercase text-muted">
@@ -100,6 +107,9 @@ export function HistoryList({
                   <span className="truncate text-sm font-medium text-text">
                     {s.title ?? "Session"}
                   </span>
+                  {!s.finished_at && (
+                    <Badge variant="accent">In progress</Badge>
+                  )}
                   {!s.template_id && <Badge variant="muted">freeform</Badge>}
                 </div>
                 <div className="mt-0.5 font-mono text-xs text-muted">
