@@ -2,6 +2,7 @@
 
 import { getAuthedContext } from "@/lib/auth";
 import { getTrainingProfile } from "@/lib/data/evaluation";
+import { getProfile } from "@/lib/data/profile";
 import { TIERS, TIER_KEYS, MAX_RANK, getTier } from "@/lib/tiers";
 
 export type EvalResult =
@@ -47,6 +48,15 @@ export async function evaluateTier(): Promise<EvalResult> {
     };
   }
 
+  // Rank ratchet: a lifter can only hold or climb, never fall. The current
+  // tier is the floor — passed to the model as a hard constraint, and enforced
+  // server-side below in case the model ignores it.
+  const currentProfile = await getProfile();
+  const currentTier = getTier(currentProfile?.tier);
+  const floorNote = currentTier
+    ? `\n\nRANK FLOOR (STRICT): This lifter already holds rank ${currentTier.rank} — ${currentTier.name}. Strength earned is never lost here. You MUST place them at rank ${currentTier.rank} or HIGHER; never below, under any circumstances. If today's numbers only support their current rank, keep them there; if they've grown, promote them.`
+    : "";
+
   const ladder = TIERS.map(
     (t) =>
       `${t.rank}. ${t.name} — "${t.epithet}" (key: "${t.key}") — ${t.blurb}`,
@@ -69,7 +79,7 @@ Use these GENEROUS reference anchors (a natural lifter, judged on their best wor
 - Kanoh Agito (9): near the natural ceiling — exceptional across the board.
 - Kuroki Gensai (10): once-in-a-generation, monstrous numbers — reserve for the truly freakish.
 
-Be encouraging and grounded in their real numbers. It is fine — good, even — to place a committed lifter in the middle of the ladder; do not default everyone to the bottom.
+Be encouraging and grounded in their real numbers. It is fine — good, even — to place a committed lifter in the middle of the ladder; do not default everyone to the bottom.${floorNote}
 
 Respond with ONLY a JSON object of exactly this shape:
 {"tier":"<one of the exact keys above>","rationale":"<2-3 sentences, Kengan-flavored, honest but motivating and grounded in their real numbers>","highlights":["<short data point>","<short data point>","<short data point>"]}`;
@@ -132,7 +142,12 @@ Respond with ONLY a JSON object of exactly this shape:
       );
       tierKey = byName?.key ?? "hatsumi";
     }
-    const tier = getTier(tierKey)!;
+    let tier = getTier(tierKey)!;
+
+    // Enforce the ratchet regardless of what the model returned.
+    if (currentTier && tier.rank < currentTier.rank) {
+      tier = currentTier;
+    }
 
     return {
       ok: true,
