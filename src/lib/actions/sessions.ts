@@ -36,6 +36,20 @@ export async function startSession(input: {
     programId = pd.program_id;
   }
 
+  // If a bare template was started (e.g. from the /log picker) and it happens to
+  // be a day in the user's active program, attribute the session to that program
+  // so it advances the rotation — otherwise the day silently wouldn't count.
+  if (templateId && !programId) {
+    const { data: active } = await supabase
+      .from("program")
+      .select("id, program_day(template_id)")
+      .eq("is_active", true)
+      .maybeSingle();
+    if (active?.program_day?.some((d) => d.template_id === templateId)) {
+      programId = active.id;
+    }
+  }
+
   let title: string | null = null;
   if (templateId) {
     const { data: tmpl } = await supabase

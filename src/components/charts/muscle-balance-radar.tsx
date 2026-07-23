@@ -13,12 +13,18 @@ import { ChartEmpty, TooltipBox } from "./chart-kit";
 
 type Row = { muscle: Muscle; sets: number };
 
+// Small stabiliser muscles clutter the shape without saying much — keep the
+// radar to the movers that actually define push/pull/legs balance.
+const EXCLUDED: ReadonlySet<Muscle> = new Set(["abs", "forearms", "traps"]);
+
 /** Radar of average weekly sets per muscle — see your push/pull/legs balance at a glance. */
 export function MuscleBalanceRadar({ data }: { data: Row[] }) {
-  const chartData = data.map((d) => ({
-    label: MUSCLE_LABEL[d.muscle],
-    sets: d.sets,
-  }));
+  const chartData = data
+    .filter((d) => !EXCLUDED.has(d.muscle))
+    .map((d) => ({
+      label: MUSCLE_LABEL[d.muscle],
+      sets: d.sets,
+    }));
 
   if (chartData.every((d) => d.sets === 0)) {
     return <ChartEmpty message="Log a few sessions and your muscle balance appears here." />;
