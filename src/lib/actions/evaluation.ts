@@ -2,7 +2,7 @@
 
 import { getAuthedContext } from "@/lib/auth";
 import { getTrainingProfile } from "@/lib/data/evaluation";
-import { TIERS, TIER_KEYS, getTier } from "@/lib/tiers";
+import { TIERS, TIER_KEYS, MAX_RANK, getTier } from "@/lib/tiers";
 
 export type EvalResult =
   | {
@@ -51,7 +51,7 @@ export async function evaluateTier(): Promise<EvalResult> {
     (t) => `${t.rank}. ${t.name} (key: "${t.key}") — ${t.blurb}`,
   ).join("\n");
 
-  const system = `You are the judge of strength in a Kengan Ashura-themed training app. Place the lifter into exactly ONE tier of this 9-rank ladder (weakest to strongest):
+  const system = `You are the judge of strength in a Kengan Ashura-themed training app. Place the lifter into exactly ONE tier of this ${MAX_RANK}-rank ladder (weakest to strongest):
 ${ladder}
 
 Your job is to be FAIR and a little generous — a Kengan matchmaker who genuinely respects the work, not a gatekeeper. Actually think about how strong this person is and give them the rank they've earned. When a lifter sits between two tiers, round UP. Reward consistency, training age, and steady progression as much as raw numbers — someone who keeps showing up and adding weight is getting stronger and should climb. Never punish a short history if the logged work is solid; judge by demonstrated strength, not by how long they've used the app.
@@ -63,9 +63,10 @@ Use these GENEROUS reference anchors (a natural lifter, judged on their best wor
 - Gaolang Wongsawat (4): strong intermediate — visibly above average with consistent volume (bench ~1×bw, squat ~1.5×bw, deadlift ~1.75×bw).
 - Julius Reinhold (5): advanced — strong in any gym (bench ~1.25×bw, squat ~1.75×bw, deadlift ~2×bw).
 - Raian Kure (6): very advanced — years of hard work and big numbers (bench ~1.4×bw, squat ~2×bw, deadlift ~2.25×bw).
-- Ohma Tokita (7): elite — near-competitive strength.
-- Kanoh Agito (8): near the natural ceiling — exceptional across the board.
-- Kuroki Gensai (9): once-in-a-generation, monstrous numbers — reserve for the truly freakish.
+- Wakatsuki Takeshi (7): near-elite — big, well-rounded strength approaching competitive numbers.
+- Ohma Tokita (8): elite — near-competitive strength.
+- Kanoh Agito (9): near the natural ceiling — exceptional across the board.
+- Kuroki Gensai (10): once-in-a-generation, monstrous numbers — reserve for the truly freakish.
 
 Be encouraging and grounded in their real numbers. It is fine — good, even — to place a committed lifter in the middle of the ladder; do not default everyone to the bottom.
 

@@ -6,6 +6,8 @@ import {
   getMuscleWeeklySeries,
 } from "@/lib/data/analytics";
 import { getUnit } from "@/lib/settings";
+import { getProfile } from "@/lib/data/profile";
+import { LadderStanding } from "@/components/tier/ladder-standing";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { ChartCard } from "@/components/ui/chart-card";
 import { StatCard } from "@/components/ui/stat-card";
@@ -28,9 +30,10 @@ export default async function ProgressPage({
 }) {
   const sp = await searchParams;
   const tab = sp.tab === "muscle" ? "muscle" : "exercise";
-  const [loggedExercises, unit] = await Promise.all([
+  const [loggedExercises, unit, profile] = await Promise.all([
     getLoggedExercises(),
     getUnit(),
+    getProfile(),
   ]);
 
   // Validate URL params — bad values fall back instead of crashing the page.
@@ -51,6 +54,9 @@ export default async function ProgressPage({
         title="Progress"
         subtitle="Estimated 1RM, volume and per-muscle trends over time."
       />
+
+      <LadderStanding tierKey={profile?.tier ?? null} />
+
       <ProgressControls
         tab={tab}
         exercises={loggedExercises}

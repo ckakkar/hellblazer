@@ -93,7 +93,7 @@ export default async function Landing({
           <section
             className="hb-reveal relative"
             style={{ animationDelay: "180ms" }}
-            aria-label="The strength ladder — rank 9 down to rank 1"
+            aria-label={`The strength ladder — rank ${TIERS.length} down to rank 1`}
           >
             <div className="relative overflow-hidden rounded-xl border border-border bg-surface/60 p-3 backdrop-blur-sm sm:p-4">
               <div className="mb-3 flex items-center justify-between px-1">
@@ -101,7 +101,7 @@ export default async function Landing({
                   Rank ladder
                 </span>
                 <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                  09 → 01
+                  {String(TIERS.length).padStart(2, "0")} → 01
                 </span>
               </div>
 

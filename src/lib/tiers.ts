@@ -44,21 +44,27 @@ export const TIERS: Tier[] = [
     blurb: "The Kure clan's beast. Removal off the leash.",
   },
   {
+    key: "wakatsuki",
+    name: "Wakatsuki Takeshi",
+    rank: 7,
+    blurb: "The Wild Tiger. Superhuman power, raw and untamed.",
+  },
+  {
     key: "ohma",
     name: "Ohma Tokita",
-    rank: 7,
+    rank: 8,
     blurb: "The Ashura. Niko Style, evolving mid-fight.",
   },
   {
     key: "agito",
     name: "Kanoh Agito",
-    rank: 8,
+    rank: 9,
     blurb: "The Fang of Metsudo. Undefeated, adapts to anything.",
   },
   {
     key: "kuroki",
     name: "Kuroki Gensai",
-    rank: 9,
+    rank: 10,
     blurb: "The Devil Lance. The apex the strongest still fear.",
   },
 ];
