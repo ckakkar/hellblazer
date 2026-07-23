@@ -62,7 +62,7 @@ export default async function Landing({
               className="hb-reveal mt-6 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl"
               style={{ animationDelay: "110ms" }}
             >
-              Nine fighters
+              Ten fighters
               <br />
               <span className="text-accent">stand above you.</span>
             </h1>
