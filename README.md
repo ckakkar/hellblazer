@@ -1,160 +1,275 @@
-# OVERLOAD
+<div align="center">
 
-**Progressive overload, instrumented.** A precision workout tracker built around a fast, mobile-first set logger and a live analytics engine. Log the set — watch the numbers move.
+# 🔥 HELL BLAZER
 
-Built with Next.js (App Router) and Supabase, with row-level security isolating every user's data from day one.
+### Train like a Kengan fighter.
+
+A production-grade, **Kengan Ashura–themed** strength tracker built around a savage-fast mobile set logger and a live analytics engine. Log every set like it counts — then earn your place on the ladder of monsters.
+
+<br />
+
+[![Live](https://img.shields.io/badge/live-hellblazer.vercel.app-00E5C7?style=for-the-badge)](https://hellblazer.vercel.app)
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-087EA4?style=for-the-badge&logo=react)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
+[![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+
+**[Live app →](https://hellblazer.vercel.app)** · App by [Cyrus](https://kkrwhofrags.xyz)
+
+</div>
 
 ---
 
-## Features
+Hell Blazer is a real, multi-user workout app — not a demo. Every screen runs against live Postgres data behind row-level security, sign-in is Google-only, and the whole thing installs to your phone as a PWA with offline logging and push reminders. It logs to a single atomic `set` grain, then computes estimated 1RM, tonnage, and weekly sets-per-muscle server-side so the client only ever fetches pre-aggregated numbers.
 
-- **Google sign-in only** — no passwords, no magic links. PKCE OAuth via `@supabase/ssr`.
-- **Template-driven training** — build your split once (e.g. a 5-day weak-point split), then instantiate a session in a tap. Freeform sessions supported too.
-- **Fast set logging** — the mid-workout screen. Copy-forward sets (the previous set's weight/reps pre-fill the next), inline "last: 60kg×5" targets, big thumb targets, debounced autosave that can't create duplicates.
-- **Live analytics** — estimated 1RM (Epley), volume, and **weekly sets-per-muscle**, all computed server-side from Postgres views. Secondary muscles are weighted 0.5 toward their muscle's volume and set count.
-- **Weak-point tracking** — back · biceps · triceps · side delts are highlighted everywhere.
-- **Per-exercise progress** — 1RM line, volume bars, and a PR table (heaviest weight, best est. 1RM, best set volume).
-- **Exercise library** — ~60 seeded lifts covering every muscle group, plus your own custom exercises.
-- **kg/lb display** — canonical storage is always kilograms; conversion happens only at display.
-- **Multi-user & secure** — RLS on every table; a second account sees zero of the first account's data.
-- **Mobile-first** — safe-area insets (notch + home indicator), 16px input floor (no iOS focus-zoom), native tap feedback, bottom tab bar.
+The twist: your training gets **judged**. An AI coach reads your full history and places you on a ten-rung ladder of Kengan Ashura's deadliest fighters — and you climb it, one honest rep at a time.
+
+## Contents
+
+- [Highlights](#highlights)
+- [The Strength Ladder](#the-strength-ladder)
+- [Screens](#screens)
+- [The analytics engine](#the-analytics-engine)
+- [Tech stack](#tech-stack)
+- [Architecture](#architecture)
+- [Data model](#data-model)
+- [Design system](#design-system)
+- [PWA & notifications](#pwa--notifications)
+- [Getting started](#getting-started)
+- [Project structure](#project-structure)
+- [Security & privacy](#security--privacy)
+
+## Highlights
+
+**⚡ Savage-fast set logging** — the mid-workout screen is the whole point. Start an exercise, log sets in a focused modal, end it, move to the next. Every "+ set" **copies the previous set's weight & reps forward**; last session's numbers show inline as a target (`last · 60kg×5`); big thumb targets; debounced autosave that flushes on tab-hide and can't create duplicates.
+
+**🏆 REMOVAL — live PR detection** — the moment a working set beats your all-time best on a lift (heaviest load *or* best estimated 1RM), a **Removal** callout fires and the set is tagged with a PR badge. Baselines come from prior sessions only, gated to lifts with history, and fold into a running best so it never over-fires on a warm-up ramp.
+
+**📈 ADVANCE — go beyond the program** — add bonus movements mid-session without touching your program. Advance work writes to the session grain only; your split stays exactly as designed.
+
+**🥋 Programs, not just templates** — build a reusable split once, run it as a multi-week program with day-by-day progression. Pause a program, resume it, roll back a day, preview tomorrow's session before you commit, and swap a movement mid-workout so it becomes that day's new default going forward.
+
+**🎯 Weak-point tracking** — back · biceps · triceps · side delts are highlighted across the dashboard and progress views, because those are the muscles worth obsessing over.
+
+**🎨 App-wide accent themer** — the entire UI re-skins from a single CSS channel variable. Six palettes (Crimson, Ember, Gold, Teal, Azure, Violet) selectable from Settings, persisted per user, applied server-side with zero flash.
+
+**📊 Nine data-dense charts** — consistency heatmap (GitHub-style), muscle-balance radar, volume-distribution donut, bodyweight trend, per-exercise 1RM + volume, weekly sets-per-muscle, and volume trend — all rendered from real aggregated data.
+
+**⚖️ kg / lb** — canonical storage is always kilograms; conversion happens only at display.
+
+**📱 Installable PWA** — offline shell, offline logging, and daily push reminders when a programmed workout is due.
+
+## The Strength Ladder
+
+Log enough, then run an evaluation. An AI judge weighs your real numbers — bodyweight-relative on the big compounds, rewarding consistency and progression — and ranks you fairly (it rounds *up* when you're between tiers). You enter unranked and climb from **Rei** to **Kuroki**.
+
+| # | Fighter | Call sign | Standard |
+|:-:|---------|-----------|----------|
+| 10 | **Kuroki Gensai** | The Devil Lance | Once-in-a-generation, monstrous |
+| 9 | **Kanoh Agito** | The Fang of Metsudo | Near the natural ceiling |
+| 8 | **Ohma Tokita** | The Ashura | Elite, near-competitive |
+| 7 | **Wakatsuki Takeshi** | The Wild Tiger | Near-elite, big all-round |
+| 6 | **Raian Kure** | The Devil | Very advanced |
+| 5 | **Julius Reinhold** | The Monster | Advanced |
+| 4 | **Gaolang Wongsawat** | The Thai God of War | Strong intermediate |
+| 3 | **Sen Hatsumi** | The Floating Cloud | Solid intermediate |
+| 2 | **Setsuna Kiryu** | The Beautiful Beast | Beginner base, climbing |
+| 1 | **Rei Mikazuchi** | The Lightning God | Where everyone starts |
+
+The **Progress** tab renders your standing on this ladder — the fighter you're chasing, the one you've surpassed, and every rung between.
 
 ## Screens
 
 | Route | Purpose |
-| --- | --- |
+|-------|---------|
 | `/` | Landing / Google sign-in (redirects to `/dashboard` if authed) |
-| `/dashboard` | This-week summary, weak-point cards, weekly-sets-per-muscle chart, volume trend, recent sessions |
-| `/log` → `/log/[id]` | Start a session (template or freeform), then the fast set logger |
-| `/history` → `/history/[id]` | Filterable session list; editable detail |
-| `/progress` | Per-exercise 1RM/volume/PRs, and per-muscle trends |
-| `/templates` | CRUD your split; one-click starter-split preset |
-| `/exercises` | Browse the library; create custom exercises |
-| `/settings` | Units toggle, bodyweight log, sign out |
+| `/dashboard` | This-week summary, weak-point cards, weekly-sets-per-muscle chart, volume trend, recent sessions, onboarding |
+| `/log` → `/log/[id]` | Start a session (from a program or freeform), then the fast set logger |
+| `/history` → `/history/[id]` | Reverse-chron session list; editable detail |
+| `/progress` | Your ladder standing + per-exercise 1RM / volume / PRs and per-muscle trends |
+| `/programs` → `/programs/[id]` | Build & run multi-week programs; pause / resume / roll back / preview |
+| `/templates` | CRUD your split — searchable exercise library, target sets/reps/notes, ordering |
+| `/exercises` | Browse the seeded library; create custom exercises |
+| `/settings` | Accent theme, units, bodyweight log, push notifications, strength evaluation, sign out |
 
----
+## The analytics engine
+
+Nothing derived is stored — it's all computed from the atomic `set` grain via **security-invoker Postgres views**, so the client fetches pre-aggregated rows and RLS still applies.
+
+- **Estimated 1RM (Epley):** `weight × (1 + reps / 30)`, working sets only. Charted as best-per-session over time.
+- **Volume:** `Σ (weight × reps)` for working sets, rolled up per session, per exercise, and per muscle.
+- **Weekly sets per muscle:** working sets grouped by ISO week and primary muscle — the flagship weak-point view.
+- **Secondary-muscle weighting:** a set's secondary muscles each count **0.5×** toward their muscle's volume and set totals, so accessory work is credited honestly.
+- **PRs:** heaviest weight, best estimated 1RM, and best single-set volume per exercise.
 
 ## Tech stack
 
 | Layer | Choice |
-| --- | --- |
-| Framework | **Next.js 16** (App Router, TypeScript, `src/`) |
-| Backend | **Supabase** — Postgres, Auth, Row-Level Security |
-| Data access | `@supabase/ssr` (server/browser clients + session refresh) |
-| Styling | **Tailwind CSS v4** (CSS-first tokens), `class-variance-authority` |
-| Charts | **Recharts** |
-| Dates | **date-fns** |
-| Validation | **Zod** (every Server Action input) |
-| Icons | **lucide-react** |
+|-------|--------|
+| Framework | **Next.js 16** (App Router, React Server Components, Server Actions) |
+| Language | **TypeScript** |
+| UI | **React 19**, **Tailwind CSS v4** (CSS-first `@theme` tokens) |
+| Backend | **Supabase** — Postgres, Row-Level Security, security-invoker views, Google OAuth |
+| Auth | `@supabase/ssr` — PKCE OAuth, cookie-based sessions, edge session refresh |
+| Charts | **Recharts 3** (custom dark theme) |
+| Validation | **Zod 4** on every Server Action |
+| AI judge | **DeepSeek** (optional — powers strength evaluation) |
+| Push | **web-push** (VAPID) + a hand-rolled service worker |
+| Primitives | `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `date-fns` |
 
-> **Note for contributors:** this repo pins a build of Next.js where **Middleware has been renamed to Proxy**. Session refresh lives in [`src/proxy.ts`](src/proxy.ts) (exporting a `proxy` function), not `middleware.ts`. `cookies()`, `params`, and `searchParams` are all async. Read the bundled docs under `node_modules/next/dist/docs/` before making framework-level changes.
-
----
+No Redux, no tRPC, no component library. Server Components + Supabase + minimal client state, hand-built primitives to preserve the aesthetic.
 
 ## Architecture
 
-```
-src/
-├─ proxy.ts                 # Next 16 "middleware" — refreshes session, gates routes
-├─ app/
-│  ├─ page.tsx              # landing / login
-│  ├─ auth/callback/        # OAuth PKCE code exchange (route handler)
-│  └─ (app)/                # auth-gated route group (sidebar + bottom nav shell)
-│     ├─ dashboard, log, history, progress, templates, exercises, settings
-├─ components/
-│  ├─ ui/                   # hand-built primitives (Button, Card, NumberStepper, Sheet…)
-│  ├─ charts/               # recharts client components
-│  └─ nav/                  # sidebar + mobile top/bottom bars
-└─ lib/
-   ├─ supabase/             # browser client, server client, proxy session helper
-   ├─ data/                 # typed read queries per entity (server-only)
-   ├─ actions/              # Server Actions (mutations, zod-validated)
-   ├─ presets.ts            # loadable starter routines
-   ├─ database.types.ts     # generated from the live schema
-   └─ muscles.ts, units.ts, settings.ts, utils.ts
-```
+```mermaid
+flowchart TD
+    subgraph Client["Browser / PWA"]
+        SW["Service Worker<br/>offline shell + push"]
+        UI["React 19 · Client islands<br/>(set logger, charts, theme)"]
+    end
 
-**Data flow:** Server Components read via `lib/data/*`; mutations go through `lib/actions/*` (each re-checks auth and validates input with Zod). No raw Supabase calls are scattered in components. RLS is the security boundary — the client only ever holds the public `anon`/publishable key.
+    subgraph Edge["Next.js 16"]
+        PX["proxy.ts<br/>session refresh + route gate"]
+        RSC["Server Components<br/>read via typed data layer"]
+        SA["Server Actions<br/>Zod-validated mutations"]
+    end
 
-### Data model
+    subgraph DB["Supabase · Postgres"]
+        RLS["Row-Level Security<br/>on every table"]
+        VIEWS["Aggregation views<br/>1RM · volume · weekly sets"]
+        AUTH["Google OAuth"]
+    end
 
-`exercise` (shared library, `user_id` nullable) · `workout_template` → `template_exercise` · `session` → `session_exercise` → `set` · `bodyweight_log`. A `muscle_group` Postgres enum drives the taxonomy.
+    JUDGE["DeepSeek<br/>strength evaluation"]
 
-**Derived analytics are never stored — they're computed** in security-invoker Postgres views so RLS still applies:
-
-| View | Gives |
-| --- | --- |
-| `v_working_set` | Per working set: est. 1RM (`weight × (1 + reps/30)`) and volume |
-| `v_weekly_sets_per_muscle` | Weekly sets & volume per muscle (ISO week; secondary muscles ×0.5) |
-| `v_exercise_progression` | Best 1RM / top weight / volume per exercise per session |
-| `v_session_summary` | Per-session totals for history & dashboard |
-
----
-
-## Getting started
-
-### Prerequisites
-
-- Node.js 20+
-- A Supabase project (schema, RLS, views and seed data are applied via migrations)
-
-### 1. Install
-
-```bash
-npm install
+    UI --> SA
+    UI --> RSC
+    SW -.-> UI
+    PX --> RSC
+    RSC --> VIEWS
+    SA --> RLS
+    VIEWS --> RLS
+    AUTH --> PX
+    SA --> JUDGE
 ```
 
-### 2. Environment
+- **Reads** live in a typed data layer (`src/lib/data/*`) — no raw Supabase calls scattered through components.
+- **Writes** are Server Actions (`src/lib/actions/*`), each validated with Zod.
+- **Auth** is refreshed on every request in `src/proxy.ts`, with the authoritative check server-side in the `(app)` layout via `supabase.auth.getUser()`.
+- **Types** are generated from the live schema into `src/lib/database.types.ts`.
 
-Create `.env.local` in the project root:
+## Data model
 
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://<your-project-ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-publishable-or-anon-key>
+Structure is **template-based with ad-hoc override**: build reusable templates, run them as programs, and log freely on top. Logging always writes to the same `set` grain regardless of source.
+
+```
+exercise            shared library (nullable user_id = custom) · muscle_group enum
+workout_template ─┬ template_exercise      prescribed sets/reps per movement
+program ──────────┼ program_day / program_skip   multi-week scheduling & pauses
+session ──────────┬ session_exercise ─── set      the atomic logged unit
+bodyweight_log      dated bodyweight entries
+profile             tier, rationale, evaluated-at
+push_subscription   Web Push endpoints
 ```
 
-Find both under **Supabase → Project Settings → API**. Only public keys are used client-side — never expose the service-role key.
+**Muscle groups** (`muscle_group` enum, 14): chest · back · side_delt · rear_delt · front_delt · biceps · triceps · quads · hamstrings · glutes · calves · abs · forearms · traps.
 
-### 3. Enable Google sign-in (required)
+**Aggregation views:** `v_working_set` · `v_session_summary` · `v_exercise_progression` · `v_weekly_sets_per_muscle`.
 
-Sign-in won't work until the Google provider is configured:
-
-1. **Supabase → Authentication → Providers → Google:** enable it, and paste your Google Cloud OAuth **Client ID** and **Client Secret**.
-2. **Google Cloud Console → Credentials → Authorized redirect URIs:** add
-   `https://<your-project-ref>.supabase.co/auth/v1/callback`
-3. **Supabase → Authentication → URL Configuration:** add your app origins to **Site URL** and **Redirect URLs**, e.g. `http://localhost:3000/**` (and your production origin).
-
-The app-side callback is [`/auth/callback`](src/app/auth/callback/route.ts); the sign-in button requests `redirectTo = <origin>/auth/callback`.
-
-### 4. Run
-
-```bash
-npm run dev      # http://localhost:3000
-```
-
-Sign in → open **Templates** and load the **Back & Arm Focused Strength** starter split → start a session from it → log a few sets → watch the dashboard and progress charts populate.
-
----
-
-## Scripts
-
-| Command | Does |
-| --- | --- |
-| `npm run dev` | Start the dev server (Turbopack) |
-| `npm run build` | Production build (runs TypeScript) |
-| `npm run start` | Serve the production build |
-| `npm run lint` | ESLint (run separately — `build` does not lint) |
-
----
+Every user-owned row carries `user_id`; RLS policies restrict CRUD to `auth.uid()`. The exercise library is the one shared read-only table (global rows have a null `user_id`).
 
 ## Design system
 
-Dark cyberpunk, minimal — an "engineered instrument panel," not gamer RGB. Deep charcoal base (`#0A0B0D`) with a single electric-teal accent (`#00E5C7`). Clean sans (Geist) for labels, **monospace with tabular numerals** for all data (weights, reps, 1RM). Borders over shadows; one accent hue in the UI, with blue/violet/pink reserved for differentiating chart series. Tokens are defined as CSS variables in [`globals.css`](src/app/globals.css) and mapped into the Tailwind theme.
+**Dark cyberpunk, minimal** — an engineered instrument panel, not gamer RGB. Deep charcoal base, hairline borders, a single electric accent hue.
 
-## Deployment
+- **One accent, themeable.** All accent color routes through a single `--accent-rgb` channel variable, so opacity composites, glows, chart series, and the manga effects all re-skin from one swap. Six palettes ship via `html[data-accent]`.
+- **Type as instrument.** [Geist](https://vercel.com/font) for UI, **Geist Mono** with tabular figures for all data (weights, reps, 1RM), Bricolage Grotesque for display, and **Anton** for the moments that should *hit*.
+- **Motion, restrained.** 150–200ms ease-outs, a crimson shockwave on a logged set, a slam-in on victory, manga halftone + speed-lines — all gated behind `prefers-reduced-motion`.
+- **Mobile-first logging.** Safe-area insets for notch & home indicator, a 16px input floor to kill iOS focus-zoom, native tap feedback, and a bottom tab bar.
 
-Deploy on Vercel (or any Node host). Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in the host's environment, add your production origin to the Supabase redirect allowlist, and you're live.
+## PWA & notifications
+
+- Installable via Add-to-Home-Screen; standalone display, themed splash, maskable icon.
+- A hand-rolled service worker (`public/sw.js`) — network-first navigations with an offline fallback (`public/offline.html`), cache-first static assets.
+- Web Push (VAPID) with a **daily cron** (`/api/cron/reminders`) that reminds you when a programmed workout is due.
+
+## Getting started
+
+**Prerequisites:** Node 20+, a Supabase project (Google OAuth configured), and optionally a DeepSeek API key.
+
+```bash
+# 1. Install
+npm install
+
+# 2. Configure environment (.env.local) — see the table below
+
+# 3. Run
+npm run dev                  # http://localhost:3000
+```
+
+**Environment variables**
+
+| Variable | Required | Purpose |
+|----------|:--------:|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Public anon key (client-safe) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Server-only — used by the push cron |
+| `DEEPSEEK_API_KEY` | optional | Enables AI strength evaluation |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | optional | Web Push public key |
+| `VAPID_PRIVATE_KEY` | optional | Web Push private key (server-only) |
+| `CRON_SECRET` | optional | Authorizes the reminder cron endpoint |
+
+> The service-role and VAPID private keys are **server-only** — never exposed to the client. Canonical weight is stored in **kg** everywhere and converted only at display.
+
+**Scripts**
+
+```bash
+npm run dev      # start the dev server
+npm run build    # production build (typecheck + lint gated)
+npm run start    # serve the production build
+npm run lint     # eslint
+```
+
+## Project structure
+
+```
+src/
+├── app/
+│   ├── (app)/              # auth-gated routes (dashboard, log, progress, …)
+│   ├── api/cron/reminders/ # daily push-reminder endpoint
+│   ├── auth/callback/      # OAuth callback
+│   ├── page.tsx            # landing / sign-in
+│   ├── layout.tsx          # root: fonts + accent theme
+│   ├── manifest.ts         # PWA manifest
+│   └── globals.css         # design tokens + accent palettes
+├── components/
+│   ├── charts/             # 9 Recharts views + chart-kit
+│   ├── tier/               # ladder standing + strength meter
+│   └── ui/                 # hand-built primitives (Button, Card, NumberStepper…)
+├── lib/
+│   ├── data/               # typed read layer (per entity)
+│   ├── actions/            # Zod-validated Server Actions
+│   ├── supabase/           # server / client / proxy factories
+│   ├── tiers.ts            # the Kengan strength ladder
+│   ├── accents.ts          # accent palettes
+│   ├── presets.ts          # starter programs
+│   └── database.types.ts   # generated from the live schema
+└── proxy.ts                # edge session refresh + route gating
+```
+
+## Security & privacy
+
+- **RLS on every table**, enforced — a second account sees *zero* of the first account's data.
+- **Google OAuth only** — no passwords, no magic links.
+- **No secrets in client code** — only the Supabase URL and anon key reach the browser; service-role and VAPID private keys stay server-side.
 
 ---
 
-_Built with Next.js + Supabase. RLS-isolated, multi-user from day one._
+<div align="center">
+
+**[Hell Blazer](https://hellblazer.vercel.app)** — built by [Cyrus](https://kkrwhofrags.xyz)
+
+*Numbers don't lie. Make them climb.*
+
+</div>
