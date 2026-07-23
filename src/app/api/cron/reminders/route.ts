@@ -137,15 +137,14 @@ export async function GET(request: NextRequest) {
 
   let notified = 0;
   for (const p of profiles ?? []) {
-    const hour = p.reminder_hour;
-    if (hour == null) continue;
+    // reminder_hour set = reminders on. (Hobby's daily cron runs once a day, so
+    // the exact hour can't be honored; the value gates on/off.)
+    if (p.reminder_hour == null) continue;
     const userSubs = byUser.get(p.user_id);
     if (!userSubs || userSubs.length === 0) continue;
 
-    // Fire on the reminder hour in the user's primary timezone.
-    const { hour: localHour, date: localDate } = localParts(userSubs[0].timezone);
-    if (localHour !== hour) continue;
-
+    // "Today" in the user's primary timezone, for the due check.
+    const { date: localDate } = localParts(userSubs[0].timezone);
     const due = await workoutDue(svc, p.user_id, localDate);
     if (!due) continue;
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { Bell, Loader2, Send, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import {
   deletePushSubscription,
   savePushSubscription,
@@ -18,12 +18,6 @@ function urlBase64ToUint8Array(base64String: string) {
   const out = new Uint8Array(new ArrayBuffer(raw.length));
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
-}
-
-function formatHour(h: number): string {
-  const ampm = h < 12 ? "AM" : "PM";
-  const hh = h % 12 === 0 ? 12 : h % 12;
-  return `${hh}:00 ${ampm}`;
 }
 
 type Status = "loading" | "unsupported" | "ios-install" | "ready";
@@ -150,7 +144,8 @@ export function NotificationsManager({
     );
   }
 
-  function changeHour(value: number | null) {
+  function changeReminder(on: boolean) {
+    const value = on ? 18 : null;
     setHour(value);
     startSaving(async () => {
       await setReminderHour({ hour: value });
@@ -215,28 +210,33 @@ export function NotificationsManager({
             Notifications are on for this device.
           </div>
 
-          <label className="grid gap-1.5">
-            <span className="text-xs font-medium text-muted">
-              Daily workout reminder
-            </span>
-            <Select
-              value={hour == null ? "off" : String(hour)}
-              onChange={(e) =>
-                changeHour(e.target.value === "off" ? null : Number(e.target.value))
-              }
-              className="sm:w-56"
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2/40 px-4 py-3">
+            <div className="min-w-0">
+              <div className="text-sm text-text">Daily workout reminder</div>
+              <div className="mt-0.5 text-xs text-muted">
+                A once-a-day nudge when a workout is due and not yet logged.
+              </div>
+            </div>
+            <button
+              role="switch"
+              aria-checked={hour != null}
+              aria-label="Daily workout reminder"
+              onClick={() => changeReminder(hour == null)}
+              className={cn(
+                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
+                hour != null
+                  ? "bg-accent"
+                  : "border border-border bg-surface-2",
+              )}
             >
-              <option value="off">Off</option>
-              {Array.from({ length: 24 }).map((_, h) => (
-                <option key={h} value={h}>
-                  {formatHour(h)}
-                </option>
-              ))}
-            </Select>
-            <span className="text-xs text-muted">
-              Fires only on days a workout is due and not yet logged.
-            </span>
-          </label>
+              <span
+                className={cn(
+                  "absolute top-0.5 size-5 rounded-full bg-white transition-transform",
+                  hour != null ? "translate-x-[22px]" : "translate-x-0.5",
+                )}
+              />
+            </button>
+          </div>
 
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={test} disabled={busy}>
