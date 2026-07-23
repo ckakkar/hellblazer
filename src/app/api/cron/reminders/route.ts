@@ -119,13 +119,23 @@ export async function GET(request: NextRequest) {
   if (!svc) return NextResponse.json({ skipped: "service client unavailable" });
   if (!pushConfigured()) return NextResponse.json({ skipped: "push not configured" });
 
-  const [{ data: profiles }, { data: subs }] = await Promise.all([
-    svc.from("profile").select("user_id, reminder_hour").not("reminder_hour", "is", null),
-    svc
-      .from("push_subscription")
-      .select("user_id, endpoint, p256dh, auth, timezone, created_at")
-      .order("created_at", { ascending: false }),
-  ]);
+  const [{ data: profiles, error: pErr }, { data: subs, error: sErr }] =
+    await Promise.all([
+      svc
+        .from("profile")
+        .select("user_id, reminder_hour")
+        .not("reminder_hour", "is", null),
+      svc
+        .from("push_subscription")
+        .select("user_id, endpoint, p256dh, auth, timezone, created_at")
+        .order("created_at", { ascending: false }),
+    ]);
+  if (pErr || sErr) {
+    return NextResponse.json(
+      { ok: false, error: (pErr ?? sErr)?.message ?? "query failed" },
+      { status: 500 },
+    );
+  }
 
   // Group subscriptions by user (newest first — first seen = "primary" device).
   const byUser = new Map<string, Sub[]>();

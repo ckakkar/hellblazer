@@ -135,37 +135,48 @@ async function MuscleTab({
     points.length > 0
       ? points.reduce((n, p) => n + p.sets, 0) / points.length
       : 0;
+  const hasMuscleData = points.some((p) => p.sets > 0);
 
   return (
     <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <StatCard
-          label="This week"
-          value={trimNum(Math.round((lastWeek?.sets ?? 0) * 10) / 10)}
-          unit="sets"
-          highlight={isWeakPoint(muscle)}
-        />
-        <StatCard
-          label="12-wk avg"
-          value={trimNum(Math.round(avgSets * 10) / 10)}
-          unit="sets/wk"
-        />
-        <StatCard
-          label="This week vol"
-          value={formatVolume(lastWeek?.volume ?? 0, unit)}
-        />
-      </div>
+      {hasMuscleData ? (
+        <>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+            <StatCard
+              label="This week"
+              value={trimNum(Math.round((lastWeek?.sets ?? 0) * 10) / 10)}
+              unit="sets"
+              highlight={isWeakPoint(muscle)}
+            />
+            <StatCard
+              label="12-wk avg"
+              value={trimNum(Math.round(avgSets * 10) / 10)}
+              unit="sets/wk"
+            />
+            <StatCard
+              label="This week vol"
+              value={formatVolume(lastWeek?.volume ?? 0, unit)}
+            />
+          </div>
 
-      <ChartCard
-        title={`${MUSCLE_LABEL[muscle]} — weekly sets & volume`}
-        subtitle="Sets (bars) with volume overlay · secondary muscles weighted 0.5"
-      >
-        <MuscleTrendChart
-          data={points}
-          unit={unit}
-          accent={isWeakPoint(muscle)}
+          <ChartCard
+            title={`${MUSCLE_LABEL[muscle]} — weekly sets & volume`}
+            subtitle="Sets (bars) with volume overlay · secondary muscles weighted 0.5"
+          >
+            <MuscleTrendChart
+              data={points}
+              unit={unit}
+              accent={isWeakPoint(muscle)}
+            />
+          </ChartCard>
+        </>
+      ) : (
+        <EmptyState
+          icon={<TrendingUp className="size-6" />}
+          title={`No ${MUSCLE_LABEL[muscle]} work logged yet`}
+          body="Log sets that train this muscle and its weekly trend, volume and stats will show up here."
         />
-      </ChartCard>
+      )}
 
       <ChartCard
         title="Volume distribution"
