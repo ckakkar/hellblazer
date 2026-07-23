@@ -218,7 +218,7 @@ export function ProgramDetail({
                       {tmpl ? `${tmpl.template_exercise.length} exercises` : "—"}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col">
+                  <div className="hidden shrink-0 flex-col sm:flex">
                     <button
                       disabled={i === 0 || pending}
                       aria-label="Move up"

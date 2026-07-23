@@ -44,10 +44,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0b",
+  themeColor: "#0a0908",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  // No maximumScale — pinch-zoom stays available for accessibility; the 16px
+  // input floor in globals.css already prevents iOS focus-zoom.
   viewportFit: "cover",
 };
 

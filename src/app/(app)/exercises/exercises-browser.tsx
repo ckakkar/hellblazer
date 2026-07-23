@@ -86,7 +86,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
       <div className="grid gap-5">
         {groups.map((g) => (
           <section key={g.muscle}>
-            <h2 className="mb-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
+            <h2 className="mb-2 px-1 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
               {MUSCLE_LABEL[g.muscle]}
             </h2>
             <Card className="divide-y divide-border overflow-hidden">

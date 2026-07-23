@@ -79,7 +79,7 @@ export default async function DashboardPage() {
           <Link href="/log">
             <Button>
               <Dumbbell className="size-4" />
-              Log session
+              Log workout
             </Button>
           </Link>
         }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Loader2, Play, X } from "lucide-react";
 import { discardSession } from "@/lib/actions/sessions";
 import type { ActiveSession } from "@/lib/data/sessions";
@@ -10,9 +10,13 @@ import type { ActiveSession } from "@/lib/data/sessions";
 export function ResumeBanner({ session }: { session: ActiveSession }) {
   const pathname = usePathname();
   const [pending, start] = useTransition();
+  const [confirming, setConfirming] = useState(false);
 
   // Don't nag while you're already in that workout.
   if (pathname === `/log/${session.id}`) return null;
+
+  const discard = () =>
+    start(async () => void (await discardSession({ id: session.id })));
 
   return (
     <div className="mb-5 flex items-center gap-3 rounded-lg border border-accent/40 bg-accent/[0.07] px-4 py-3">
@@ -38,18 +42,35 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
         <Play className="size-4" />
         Resume
       </Link>
-      <button
-        onClick={() => start(async () => void (await discardSession({ id: session.id })))}
-        disabled={pending}
-        aria-label="Discard workout"
-        className="shrink-0 text-muted transition-colors hover:text-danger"
-      >
-        {pending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
+      {confirming ? (
+        <div className="flex shrink-0 items-center gap-1.5">
+          <button
+            onClick={discard}
+            disabled={pending}
+            className="inline-flex items-center gap-1 rounded-md bg-danger/15 px-2 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger/25"
+          >
+            {pending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : null}
+            Discard
+          </button>
+          <button
+            onClick={() => setConfirming(false)}
+            aria-label="Keep workout"
+            className="text-muted transition-colors hover:text-text"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => setConfirming(true)}
+          aria-label="Discard workout"
+          className="shrink-0 text-muted transition-colors hover:text-danger"
+        >
           <X className="size-4" />
-        )}
-      </button>
+        </button>
+      )}
     </div>
   );
 }
