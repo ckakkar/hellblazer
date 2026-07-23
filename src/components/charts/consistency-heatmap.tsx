@@ -3,19 +3,23 @@ import type { SessionSummary } from "@/lib/data/sessions";
 import { formatVolume, type Unit } from "@/lib/units";
 
 const WEEKS = 17;
+// Rest → four crimson steps. Solid fills, GitHub-style (no outlines).
+const REST = "#231d19";
 const LEVEL_BG = [
-  "var(--color-surface-2)",
-  "rgba(255,45,58,0.22)",
-  "rgba(255,45,58,0.42)",
-  "rgba(255,45,58,0.66)",
-  "rgba(255,45,58,1)",
+  REST,
+  "rgba(255,45,58,0.34)",
+  "rgba(255,45,58,0.56)",
+  "rgba(255,45,58,0.78)",
+  "#ff2d3a",
 ];
 
+// Calibrated for one session a day: a light day is a faint square, a big
+// leg/back day is a full-crimson one.
 function level(sets: number): number {
   if (sets <= 0) return 0;
-  if (sets <= 9) return 1;
+  if (sets <= 11) return 1;
   if (sets <= 17) return 2;
-  if (sets <= 25) return 3;
+  if (sets <= 23) return 3;
   return 4;
 }
 
@@ -50,7 +54,13 @@ export function ConsistencyHeatmap({
       const date = addDays(monday, d);
       const key = format(date, "yyyy-MM-dd");
       const hit = byDay.get(key);
-      return { date, key, future: isAfter(date, today), sets: hit?.sets ?? 0, volume: hit?.volume ?? 0 };
+      return {
+        date,
+        key,
+        future: isAfter(date, today),
+        sets: hit?.sets ?? 0,
+        volume: hit?.volume ?? 0,
+      };
     });
     return { monday, cells };
   });
@@ -58,7 +68,7 @@ export function ConsistencyHeatmap({
   const trainedDays = [...byDay.values()].filter((d) => d.sets > 0).length;
 
   // Month labels, grouped so each spans its own columns (no overlap). Each
-  // column is 12px cell + 3px gap = 15px wide.
+  // column is 13px cell + 3px gap = 16px wide.
   const monthGroups: { label: string; span: number }[] = [];
   for (const c of columns) {
     const label = format(c.monday, "MMM");
@@ -76,7 +86,7 @@ export function ConsistencyHeatmap({
             {monthGroups.map((g, i) => (
               <div
                 key={i}
-                style={{ width: g.span * 15 }}
+                style={{ width: g.span * 16 }}
                 className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted"
               >
                 {g.span >= 2 ? g.label : ""}
@@ -88,7 +98,7 @@ export function ConsistencyHeatmap({
         <div className="mt-1 flex gap-2">
           <div className="flex w-7 shrink-0 flex-col gap-[3px] pt-[1px]">
             {weekdayLabels.map((d, i) => (
-              <span key={i} className="h-3 text-[9px] leading-3 text-muted">
+              <span key={i} className="h-[13px] text-[9px] leading-[13px] text-muted">
                 {d}
               </span>
             ))}
@@ -98,7 +108,7 @@ export function ConsistencyHeatmap({
               <div key={i} className="flex flex-col gap-[3px]">
                 {col.cells.map((cell) =>
                   cell.future ? (
-                    <div key={cell.key} className="size-3" />
+                    <div key={cell.key} className="size-[13px]" />
                   ) : (
                     <div
                       key={cell.key}
@@ -107,7 +117,7 @@ export function ConsistencyHeatmap({
                           ? `${Math.round(cell.sets)} sets · ${formatVolume(cell.volume, unit)}`
                           : "rest"
                       }`}
-                      className="size-3 rounded-[3px] ring-1 ring-inset ring-white/[0.03]"
+                      className="size-[13px] rounded-[3px]"
                       style={{ backgroundColor: LEVEL_BG[level(cell.sets)] }}
                     />
                   ),
@@ -117,17 +127,17 @@ export function ConsistencyHeatmap({
           </div>
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-3 pl-9">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-9">
           <span className="text-[11px] text-muted">
             <span className="font-mono text-text">{trainedDays}</span> training
-            days in {WEEKS} weeks
+            day{trainedDays === 1 ? "" : "s"} in the last {WEEKS} weeks
           </span>
           <div className="flex items-center gap-1.5 text-[10px] text-muted">
             Less
             {LEVEL_BG.map((bg, i) => (
               <span
                 key={i}
-                className="size-3 rounded-[3px] ring-1 ring-inset ring-white/[0.03]"
+                className="size-[13px] rounded-[3px]"
                 style={{ backgroundColor: bg }}
               />
             ))}
