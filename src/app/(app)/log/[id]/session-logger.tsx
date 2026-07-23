@@ -12,6 +12,7 @@ import { format, parseISO } from "date-fns";
 import {
   ArrowRight,
   Check,
+  ChevronsUp,
   Flame,
   Loader2,
   Lock,
@@ -20,10 +21,10 @@ import {
   Plus,
   Repeat2,
   Search,
-  Swords,
   Trash2,
   Trophy,
   X,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
@@ -41,7 +42,11 @@ import {
 } from "@/lib/units";
 import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
-import type { LastPerformance, SessionDetail } from "@/lib/data/sessions";
+import type {
+  ExercisePR,
+  LastPerformance,
+  SessionDetail,
+} from "@/lib/data/sessions";
 import {
   addSessionExercise,
   deleteSet,
@@ -68,15 +73,21 @@ type LocalExercise = {
   sets: LocalSet[];
 };
 
+// Running personal-best tracker per exercise. `hadHistory` gates the Removal
+// callout to exercises with prior-session data, so a brand-new lift never fires.
+type PrBest = { weight: number; est1rm: number; hadHistory: boolean };
+
 export function SessionLogger({
   session,
   exerciseLibrary,
   lastPerformances,
+  exercisePRs,
   unit,
 }: {
   session: SessionDetail;
   exerciseLibrary: Exercise[];
   lastPerformances: Record<string, LastPerformance>;
+  exercisePRs: Record<string, ExercisePR>;
   unit: Unit;
 }) {
   const [, startNav] = useTransition();
@@ -88,6 +99,15 @@ export function SessionLogger({
   const [duration, setDuration] = useState<number | null>(
     session.duration_min ?? null,
   );
+  // Exercises added mid-session via "Advance" — bonus work, tagged in the queue.
+  const [advanceIds, setAdvanceIds] = useState<Set<string>>(new Set());
+  // Sets that broke a personal best this session, and the active Removal toast.
+  const [prSets, setPrSets] = useState<Set<string>>(new Set());
+  const [removal, setRemoval] = useState<{
+    name: string;
+    detail: string;
+  } | null>(null);
+  const removalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hype = pickHype(session.id);
 
   const [exercises, setExercises] = useState<LocalExercise[]>(() =>
@@ -118,6 +138,39 @@ export function SessionLogger({
           .map((se) => se.id),
       ),
   );
+
+  // Prior all-time working-set bests per exercise, for the Removal PR callout.
+  // Seeded from previous sessions (DB), then folded with any sets already logged
+  // in this one so a resumed session won't re-fire on numbers you already hit.
+  const prBest = useRef<Map<string, PrBest> | null>(null);
+  if (prBest.current === null) {
+    const m = new Map<string, PrBest>();
+    for (const [exId, pr] of Object.entries(exercisePRs)) {
+      m.set(exId, {
+        weight: pr.bestWeightKg,
+        est1rm: pr.bestEst1rm,
+        hadHistory: pr.bestWeightKg > 0,
+      });
+    }
+    for (const se of session.session_exercise) {
+      for (const s of se.set) {
+        if (s.is_warmup) continue;
+        const w = Number(s.weight_kg ?? 0);
+        const e = w * (1 + Number(s.reps ?? 0) / 30);
+        const cur = m.get(se.exercise_id) ?? {
+          weight: 0,
+          est1rm: 0,
+          hadHistory: false,
+        };
+        m.set(se.exercise_id, {
+          weight: Math.max(cur.weight, w),
+          est1rm: Math.max(cur.est1rm, e),
+          hadHistory: cur.hadHistory,
+        });
+      }
+    }
+    prBest.current = m;
+  }
 
   // Mirror of state for debounced saves to read the latest values.
   const ref = useRef(exercises);
@@ -171,6 +224,57 @@ export function SessionLogger({
     };
   }, [persist]);
 
+  useEffect(
+    () => () => {
+      if (removalTimer.current) clearTimeout(removalTimer.current);
+    },
+    [],
+  );
+
+  // Evaluate a just-committed working set against the running PR. Fires the
+  // Removal callout only when it beats the prior all-time best (heaviest load,
+  // else best est. 1RM), and always folds the value into the running best so it
+  // won't re-fire on equal or lighter follow-up sets.
+  const checkPR = useCallback(
+    (exerciseId: string, name: string, set: LocalSet) => {
+      if (set.isWarmup) return;
+      const reps = Number(set.reps ?? 0);
+      const wDisp = Number(set.weight ?? 0);
+      if (!(reps > 0) || !(wDisp > 0)) return;
+
+      const wKg = fromDisplayWeight(wDisp, unit);
+      const e1rm = wKg * (1 + reps / 30);
+      const cur = prBest.current?.get(exerciseId) ?? {
+        weight: 0,
+        est1rm: 0,
+        hadHistory: false,
+      };
+
+      let kind: "weight" | "e1rm" | null = null;
+      if (cur.hadHistory) {
+        if (wKg > cur.weight + 0.01) kind = "weight";
+        else if (e1rm > cur.est1rm + 0.01) kind = "e1rm";
+      }
+
+      prBest.current?.set(exerciseId, {
+        weight: Math.max(cur.weight, wKg),
+        est1rm: Math.max(cur.est1rm, e1rm),
+        hadHistory: cur.hadHistory,
+      });
+
+      if (!kind) return;
+      setPrSets((prev) => new Set(prev).add(set.id));
+      const detail =
+        kind === "weight"
+          ? `New heaviest · ${trimNum(wDisp)}${unit} × ${reps}`
+          : `New est. 1RM · ${Math.round(toDisplayWeight(e1rm, unit))}${unit}`;
+      setRemoval({ name, detail });
+      if (removalTimer.current) clearTimeout(removalTimer.current);
+      removalTimer.current = setTimeout(() => setRemoval(null), 2600);
+    },
+    [unit],
+  );
+
   function scheduleSave(seId: string, setId: string) {
     const existing = timers.current.get(setId);
     if (existing) clearTimeout(existing);
@@ -184,6 +288,7 @@ export function SessionLogger({
         const idx = ex.sets.findIndex((s) => s.id === setId);
         if (idx < 0) return;
         void persist(seId, ex.sets[idx], idx + 1);
+        checkPR(ex.exerciseId, ex.name, ex.sets[idx]);
       }, 500),
     );
   }
@@ -259,7 +364,8 @@ export function SessionLogger({
           sets: [],
         },
       ]);
-      // Jump straight into logging the new movement.
+      // Mark it as bonus "Advance" work and jump straight into logging it.
+      setAdvanceIds((prev) => new Set(prev).add(id));
       setActiveSeId(id);
     });
   }
@@ -396,8 +502,16 @@ export function SessionLogger({
           const isDone = completed.has(ex.seId);
           const isCurrent = i === currentIndex;
           const isLocked = !isDone && !isCurrent;
+          const isAdvance = advanceIds.has(ex.seId);
+          const hasPR = ex.sets.some((s) => prSets.has(s.id));
           const workingSets = ex.sets.filter((s) => !s.isWarmup);
           const last = lastPerformances[ex.exerciseId];
+          const advanceBadge = isAdvance ? (
+            <Badge variant="accent" className="gap-1">
+              <ChevronsUp className="size-3" />
+              Advance
+            </Badge>
+          ) : null;
 
           if (isDone) {
             return (
@@ -415,6 +529,13 @@ export function SessionLogger({
                       {ex.name}
                     </span>
                     <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
+                    {advanceBadge}
+                    {hasPR && (
+                      <Badge variant="accent" className="gap-1">
+                        <Zap className="size-3" />
+                        PR
+                      </Badge>
+                    )}
                   </div>
                   <div className="mt-0.5 truncate font-mono text-xs text-muted">
                     {workingSets.length > 0
@@ -441,11 +562,12 @@ export function SessionLogger({
                 <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-accent">
                   Up next · {i + 1} of {exercises.length}
                 </div>
-                <div className="mt-1.5 flex items-center gap-2">
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
                   <span className="text-base font-semibold text-text">
                     {ex.name}
                   </span>
                   <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
+                  {advanceBadge}
                 </div>
                 {last && (
                   <div className="mt-1 font-mono text-xs text-muted">
@@ -491,6 +613,7 @@ export function SessionLogger({
                 <div className="flex items-center gap-2">
                   <span className="truncate text-sm text-text">{ex.name}</span>
                   <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
+                  {advanceBadge}
                 </div>
                 <div className="mt-0.5 text-xs text-muted">
                   Finish the current exercise first
@@ -510,14 +633,28 @@ export function SessionLogger({
         )}
       </div>
 
-      <Button
-        variant="secondary"
+      {/* Advance — bonus movement beyond the program, this session only */}
+      <button
         onClick={() => setPicker(true)}
-        className="mt-4 w-full"
+        className="mt-4 flex w-full items-center gap-3 rounded-lg border border-dashed border-accent/40 bg-accent/[0.04] px-4 py-3.5 text-left transition-colors hover:border-accent/60 hover:bg-accent/[0.07]"
       >
-        <Swords className="size-4" />
-        Add exercise
-      </Button>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-accent/40 bg-accent/10 text-accent">
+          <ChevronsUp className="size-4" />
+        </span>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="font-display text-sm font-semibold text-text">
+              Advance
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/70">
+              前進
+            </span>
+          </div>
+          <div className="text-xs text-muted">
+            Add a movement beyond your program — this session only.
+          </div>
+        </div>
+      </button>
 
       {/* Finish bar */}
       <div
@@ -579,6 +716,7 @@ export function SessionLogger({
           unit={unit}
           weightStep={weightStep}
           flashId={flashId}
+          prSets={prSets}
           onClose={() => setActiveSeId(null)}
           onEnd={() => endExercise(active.seId)}
           onAddSet={() => addSet(active.seId)}
@@ -587,6 +725,34 @@ export function SessionLogger({
           onSwap={(newId) => swap(active.seId, newId)}
           onRemoveExercise={() => removeExercise(active.seId)}
         />
+      )}
+
+      {/* REMOVAL — a PR broke; brief limiter-release callout */}
+      {removal && (
+        <div
+          className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex justify-center px-4"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="hb-slam pointer-events-auto flex items-center gap-3 rounded-xl border border-accent/40 bg-surface/95 px-4 py-2.5 shadow-glow backdrop-blur">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+              <Zap className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex items-baseline gap-2">
+                <span className="font-impact text-lg uppercase leading-none tracking-tight text-accent">
+                  Removal
+                </span>
+                <span className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                  {removal.name}
+                </span>
+              </div>
+              <div className="mt-0.5 font-mono text-xs text-text">
+                {removal.detail}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* VICTORY slam */}
@@ -630,6 +796,7 @@ function ActiveExerciseModal({
   unit,
   weightStep,
   flashId,
+  prSets,
   onClose,
   onEnd,
   onAddSet,
@@ -644,6 +811,7 @@ function ActiveExerciseModal({
   unit: Unit;
   weightStep: number;
   flashId: string | null;
+  prSets: Set<string>;
   onClose: () => void;
   onEnd: () => void;
   onAddSet: () => void;
@@ -772,6 +940,7 @@ function ActiveExerciseModal({
                 unit={unit}
                 weightStep={weightStep}
                 flash={s.id === flashId}
+                isPR={prSets.has(s.id)}
                 onChange={(patch) => onUpdateSet(s.id, patch)}
                 onRemove={() => onRemoveSet(s.id)}
               />
@@ -804,6 +973,7 @@ function SetRow({
   unit,
   weightStep,
   flash,
+  isPR,
   onChange,
   onRemove,
 }: {
@@ -812,6 +982,7 @@ function SetRow({
   unit: Unit;
   weightStep: number;
   flash?: boolean;
+  isPR?: boolean;
   onChange: (patch: Partial<LocalSet>) => void;
   onRemove: () => void;
 }) {
@@ -821,13 +992,21 @@ function SetRow({
         "rounded-lg border p-2.5",
         set.isWarmup
           ? "border-warn/30 bg-warn/[0.04]"
-          : "border-border bg-surface-2/40",
+          : isPR
+            ? "border-accent/50 bg-accent/[0.05]"
+            : "border-border bg-surface-2/40",
         flash && "hb-hit",
       )}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-mono text-xs font-medium text-muted">
+        <span className="flex items-center gap-1.5 font-mono text-xs font-medium text-muted">
           {set.isWarmup ? "Warm-up" : `Set ${index + 1}`}
+          {isPR && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-bg">
+              <Zap className="size-2.5" />
+              PR
+            </span>
+          )}
         </span>
         <div className="flex items-center gap-1">
           <label className="flex items-center gap-1 text-xs text-muted">

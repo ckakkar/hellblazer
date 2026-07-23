@@ -97,6 +97,41 @@ export type LastPerformance = {
   sets: { set_number: number; weight_kg: number; reps: number }[];
 };
 
+export type ExercisePR = { bestWeightKg: number; bestEst1rm: number };
+
+/**
+ * All-time working-set bests per exercise, drawn from PRIOR sessions only (the
+ * current session is excluded so re-editing today's numbers can't inflate the
+ * baseline). Powers the mid-workout "Removal" PR callout. Keyed by exercise_id;
+ * every exercise the user has ever trained is included, so movements added or
+ * swapped in mid-session already have their baseline client-side.
+ */
+export async function getExercisePRs(
+  excludeSessionId: string,
+): Promise<Record<string, ExercisePR>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("v_working_set")
+    .select("exercise_id, weight_kg, est_1rm")
+    .neq("session_id", excludeSessionId);
+  if (error) throw error;
+
+  const result: Record<string, ExercisePR> = {};
+  for (const row of data ?? []) {
+    if (!row.exercise_id) continue;
+    const w = Number(row.weight_kg ?? 0);
+    const e = Number(row.est_1rm ?? 0);
+    const cur = result[row.exercise_id];
+    if (!cur) {
+      result[row.exercise_id] = { bestWeightKg: w, bestEst1rm: e };
+    } else {
+      if (w > cur.bestWeightKg) cur.bestWeightKg = w;
+      if (e > cur.bestEst1rm) cur.bestEst1rm = e;
+    }
+  }
+  return result;
+}
+
 /**
  * The most recent prior working-set performance for each of the given
  * exercises — powers the inline "last: 60kg×5" target on the log screen.

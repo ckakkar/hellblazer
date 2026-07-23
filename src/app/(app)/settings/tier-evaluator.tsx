@@ -86,6 +86,9 @@ export function TierEvaluator({
               <div className="mt-1 font-impact text-4xl uppercase leading-none text-accent sm:text-5xl">
                 {current.name}
               </div>
+              <div className="mt-1 font-display text-sm font-semibold uppercase tracking-[0.12em] text-accent/80">
+                {current.epithet}
+              </div>
               <div className="mt-1 font-mono text-xs text-muted">
                 Rank {current.rank} / {MAX_RANK} · {current.blurb}
               </div>
@@ -166,6 +169,11 @@ export function TierEvaluator({
             <div className="mt-1 font-impact text-5xl uppercase leading-none text-accent">
               {result.tierName}
             </div>
+            {getTier(result.tierKey)?.epithet && (
+              <div className="mt-1 font-display text-sm font-semibold uppercase tracking-[0.12em] text-accent/80">
+                {getTier(result.tierKey)!.epithet}
+              </div>
+            )}
             <div className="mt-1 font-mono text-xs text-muted">
               Rank {result.rank} / {MAX_RANK}
             </div>

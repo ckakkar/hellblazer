@@ -48,7 +48,8 @@ export async function evaluateTier(): Promise<EvalResult> {
   }
 
   const ladder = TIERS.map(
-    (t) => `${t.rank}. ${t.name} (key: "${t.key}") — ${t.blurb}`,
+    (t) =>
+      `${t.rank}. ${t.name} — "${t.epithet}" (key: "${t.key}") — ${t.blurb}`,
   ).join("\n");
 
   const system = `You are the judge of strength in a Kengan Ashura-themed training app. Place the lifter into exactly ONE tier of this ${MAX_RANK}-rank ladder (weakest to strongest):

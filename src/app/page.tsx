@@ -5,13 +5,6 @@ import { TIERS } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { Flame } from "lucide-react";
 
-// Terse ladder tags — the destination and the floor are labelled; the rungs
-// between just carry a name and a rising strength bar.
-const RUNG_TAG: Record<string, string> = {
-  kuroki: "最強 · the devil lance",
-  rei: "where everyone starts",
-};
-
 export default async function Landing({
   searchParams,
 }: {
@@ -109,7 +102,7 @@ export default async function Landing({
                 {ladder.map((t) => {
                   const top = t.rank === TIERS.length;
                   const pct = Math.round((t.rank / TIERS.length) * 100);
-                  const tag = RUNG_TAG[t.key];
+                  const tag = t.epithet;
                   return (
                     <li
                       key={t.key}

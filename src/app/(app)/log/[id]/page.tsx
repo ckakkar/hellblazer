@@ -1,5 +1,9 @@
 import { notFound } from "next/navigation";
-import { getSessionDetail, getLastPerformances } from "@/lib/data/sessions";
+import {
+  getSessionDetail,
+  getLastPerformances,
+  getExercisePRs,
+} from "@/lib/data/sessions";
 import { getExercises } from "@/lib/data/exercises";
 import { getUnit } from "@/lib/settings";
 import { SessionLogger } from "./session-logger";
@@ -12,10 +16,11 @@ export default async function LoggerPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, exerciseLibrary, unit] = await Promise.all([
+  const [session, exerciseLibrary, unit, exercisePRs] = await Promise.all([
     getSessionDetail(id),
     getExercises(),
     getUnit(),
+    getExercisePRs(id),
   ]);
   if (!session) notFound();
 
@@ -29,6 +34,7 @@ export default async function LoggerPage({
       session={session}
       exerciseLibrary={exerciseLibrary}
       lastPerformances={lastPerformances}
+      exercisePRs={exercisePRs}
       unit={unit}
     />
   );

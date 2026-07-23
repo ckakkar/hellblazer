@@ -43,6 +43,9 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                 <div className="font-impact text-4xl uppercase leading-none text-accent sm:text-5xl">
                   {current.name}
                 </div>
+                <div className="mt-1.5 font-display text-sm font-semibold uppercase tracking-[0.12em] text-accent/80">
+                  {current.epithet}
+                </div>
                 <div className="mt-1.5 font-mono text-xs text-muted">
                   Rank {rank} / {MAX_RANK} · {current.blurb}
                 </div>
@@ -58,6 +61,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                 dir="up"
                 label={atSummit ? "At the summit" : "Chasing"}
                 name={above?.name ?? "No one left above"}
+                epithet={above?.epithet ?? null}
                 rank={above?.rank ?? null}
                 emphasis
               />
@@ -65,6 +69,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                 dir="down"
                 label={below ? "Ahead of" : "The climb begins"}
                 name={below?.name ?? "You're on the first rung"}
+                epithet={below?.epithet ?? null}
                 rank={below?.rank ?? null}
               />
             </div>
@@ -135,6 +140,15 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                   {t.name}
                 </span>
 
+                <span
+                  className={cn(
+                    "hidden shrink-0 font-mono text-[10px] uppercase tracking-wide sm:inline",
+                    isYou ? "text-accent/70" : "text-muted/40",
+                  )}
+                >
+                  {t.epithet}
+                </span>
+
                 {isTop && !isYou && (
                   <Crown className="size-3.5 shrink-0 text-muted/50" />
                 )}
@@ -153,12 +167,14 @@ function Neighbor({
   dir,
   label,
   name,
+  epithet,
   rank,
   emphasis,
 }: {
   dir: "up" | "down";
   label: string;
   name: string;
+  epithet: string | null;
   rank: number | null;
   emphasis?: boolean;
 }) {
@@ -189,6 +205,11 @@ function Neighbor({
           </span>
         )}
       </div>
+      {epithet && (
+        <div className="mt-0.5 truncate font-mono text-[10px] uppercase tracking-wide text-muted/60">
+          {epithet}
+        </div>
+      )}
     </div>
   );
 }
