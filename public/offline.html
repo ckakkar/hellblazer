@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Offline — Hell Blazer</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        background: #0a0908;
+        color: #efece8;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        display: flex; align-items: center; justify-content: center;
+        padding: 24px; text-align: center;
+      }
+      .wrap { max-width: 22rem; }
+      .badge {
+        width: 44px; height: 44px; margin: 0 auto 20px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid rgba(255,45,58,0.4); border-radius: 12px; color: #ff2d3a;
+      }
+      .kicker {
+        font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+        color: #86807a; margin-bottom: 12px;
+      }
+      h1 {
+        font-size: 30px; line-height: 1.1; letter-spacing: -0.01em;
+        text-transform: uppercase; margin: 0 0 12px; font-weight: 800;
+      }
+      h1 .accent { color: #ff2d3a; }
+      p { color: #86807a; font-size: 15px; line-height: 1.55; margin: 0 0 24px; }
+      button {
+        appearance: none; border: 1px solid #262220; background: #181615;
+        color: #efece8; font: inherit; font-weight: 600; font-size: 15px;
+        padding: 12px 20px; border-radius: 10px; cursor: pointer;
+      }
+      button:active { transform: scale(0.98); }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="badge" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      </div>
+      <div class="kicker">Connection lost</div>
+      <h1>You're <span class="accent">off the grid.</span></h1>
+      <p>Any sets you logged are saved on this device and will sync the moment you reconnect. Get back online and try again.</p>
+      <button onclick="location.reload()">Retry</button>
+    </div>
+  </body>
+</html>
