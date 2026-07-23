@@ -3,6 +3,7 @@ import { format, parseISO, startOfISOWeek } from "date-fns";
 import { ChevronRight, Dumbbell, Flame, Sparkles } from "lucide-react";
 import {
   getCurrentWeekSetsPerMuscle,
+  getMuscleBalance,
   getVolumeTrend,
 } from "@/lib/data/analytics";
 import { getSessionSummaries } from "@/lib/data/sessions";
@@ -22,6 +23,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WeeklySetsChart } from "@/components/charts/weekly-sets-chart";
 import { VolumeTrendChart } from "@/components/charts/volume-trend-chart";
+import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
+import { MuscleBalanceRadar } from "@/components/charts/muscle-balance-radar";
 import { formatVolume } from "@/lib/units";
 import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
 
@@ -31,6 +34,7 @@ export default async function DashboardPage() {
   const [
     weeklySets,
     volumeTrend,
+    muscleBalance,
     summaries,
     activeProgress,
     programs,
@@ -39,6 +43,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
     getVolumeTrend(12),
+    getMuscleBalance(4),
     getSessionSummaries(),
     getActiveProgramProgress(),
     getPrograms(),
@@ -171,6 +176,14 @@ export default async function DashboardPage() {
       {/* Charts */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ChartCard
+          title="Training consistency"
+          subtitle="Working sets per day · last 17 weeks"
+          className="lg:col-span-2"
+          bodyClassName="p-4"
+        >
+          <ConsistencyHeatmap summaries={summaries} unit={unit} />
+        </ChartCard>
+        <ChartCard
           title="Weekly sets per muscle"
           subtitle="This week · weak points highlighted · secondary ×0.5"
           className="lg:col-span-2"
@@ -178,9 +191,14 @@ export default async function DashboardPage() {
           <WeeklySetsChart data={weeklySets} />
         </ChartCard>
         <ChartCard
+          title="Muscle balance"
+          subtitle="Avg weekly sets per muscle · last 4 weeks"
+        >
+          <MuscleBalanceRadar data={muscleBalance} />
+        </ChartCard>
+        <ChartCard
           title="Volume trend"
-          subtitle="Total working-set tonnage per week · last 12 weeks"
-          className="lg:col-span-2"
+          subtitle="Total tonnage per week · last 12 weeks"
         >
           <VolumeTrendChart data={volumeTrend} unit={unit} />
         </ChartCard>

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { UnitToggle } from "./unit-toggle";
 import { BodyweightManager } from "./bodyweight-manager";
+import { BodyweightChart } from "@/components/charts/bodyweight-chart";
 import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
@@ -87,7 +88,8 @@ export default async function ProfilePage() {
               Track bodyweight over time — it feeds your strength evaluation.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-4">
+            <BodyweightChart logs={logs} unit={unit} />
             <BodyweightManager logs={logs} unit={unit} />
           </CardContent>
         </Card>

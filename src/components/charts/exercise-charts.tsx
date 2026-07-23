@@ -2,11 +2,11 @@
 
 import { format, parseISO } from "date-fns";
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -37,7 +37,13 @@ export function OneRepMaxChart({
 
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <LineChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
+      <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
+        <defs>
+          <linearGradient id="oneRmFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.26} />
+            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
         <XAxis
           dataKey="date"
@@ -63,15 +69,16 @@ export function OneRepMaxChart({
             ) : null
           }
         />
-        <Line
+        <Area
           type="monotone"
           dataKey="est1rm"
           stroke="var(--color-accent)"
           strokeWidth={2}
+          fill="url(#oneRmFill)"
           dot={{ r: 2.5, fill: "var(--color-accent)", strokeWidth: 0 }}
           activeDot={{ r: 4.5, fill: "var(--color-accent)", stroke: "var(--color-bg)" }}
         />
-      </LineChart>
+      </AreaChart>
     </ResponsiveContainer>
   );
 }

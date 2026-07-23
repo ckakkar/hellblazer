@@ -2,6 +2,7 @@ import { TrendingUp } from "lucide-react";
 import { getLoggedExercises } from "@/lib/data/exercises";
 import {
   getExerciseProgression,
+  getMuscleBalance,
   getMuscleWeeklySeries,
 } from "@/lib/data/analytics";
 import { getUnit } from "@/lib/settings";
@@ -13,6 +14,7 @@ import {
   VolumeBarsChart,
 } from "@/components/charts/exercise-charts";
 import { MuscleTrendChart } from "@/components/charts/muscle-trend-chart";
+import { MuscleVolumeDonut } from "@/components/charts/muscle-volume-donut";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
 import { ProgressControls } from "./progress-controls";
@@ -124,7 +126,10 @@ async function MuscleTab({
   muscle: Muscle;
   unit: "kg" | "lb";
 }) {
-  const points = await getMuscleWeeklySeries(muscle, 12);
+  const [points, balance] = await Promise.all([
+    getMuscleWeeklySeries(muscle, 12),
+    getMuscleBalance(4),
+  ]);
   const lastWeek = points[points.length - 1];
   const avgSets =
     points.length > 0
@@ -160,6 +165,14 @@ async function MuscleTab({
           unit={unit}
           accent={isWeakPoint(muscle)}
         />
+      </ChartCard>
+
+      <ChartCard
+        title="Volume distribution"
+        subtitle="Where your tonnage went · last 4 weeks"
+        bodyClassName="p-4"
+      >
+        <MuscleVolumeDonut data={balance} unit={unit} />
       </ChartCard>
     </div>
   );

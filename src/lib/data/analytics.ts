@@ -93,6 +93,41 @@ export async function getVolumeTrend(weeks = 12): Promise<WeekPoint[]> {
   return [...buckets.values()];
 }
 
+export type MuscleBalanceRow = { muscle: Muscle; sets: number; volume: number };
+
+/**
+ * Per-muscle balance over the trailing `weeks` window: average weekly sets and
+ * total volume for every muscle (zero-filled, chart order). Powers the muscle
+ * radar and the volume-share donut. Secondary-muscle 0.5 weighting is baked in
+ * by the view.
+ */
+export async function getMuscleBalance(weeks = 4): Promise<MuscleBalanceRow[]> {
+  const supabase = await createClient();
+  const cutoff = isoWeekKey(subWeeks(new Date(), weeks - 1));
+  const { data, error } = await supabase
+    .from("v_weekly_sets_per_muscle")
+    .select("muscle, sets, volume")
+    .gte("week", cutoff);
+  if (error) throw error;
+
+  const agg = new Map<Muscle, { sets: number; volume: number }>();
+  for (const r of data ?? []) {
+    if (!r.muscle) continue;
+    const cur = agg.get(r.muscle) ?? { sets: 0, volume: 0 };
+    cur.sets += Number(r.sets ?? 0);
+    cur.volume += Number(r.volume ?? 0);
+    agg.set(r.muscle, cur);
+  }
+  return MUSCLE_CHART_ORDER.map((muscle) => {
+    const hit = agg.get(muscle);
+    return {
+      muscle,
+      sets: hit ? Math.round((hit.sets / weeks) * 10) / 10 : 0,
+      volume: hit?.volume ?? 0,
+    };
+  });
+}
+
 export type MuscleWeekPoint = { week: string; sets: number; volume: number };
 
 /** Zero-filled weekly sets & volume series for one muscle (progress muscle tab). */
