@@ -1,8 +1,10 @@
 @import "tailwindcss";
 
-/* ── Hell Blazer · Baki-grade design tokens → Tailwind theme ──────────────
-   Black + blood-crimson. Warm-neutral base, hairline borders, one savage red
-   accent. Heavy impact type for the moments that should hit.
+/* ── Hell Blazer · Kengan-grade design tokens → Tailwind theme ────────────
+   Black base, hairline borders, a single savage accent hue. Heavy impact type
+   for the moments that should hit. The accent is routed through one channel
+   variable (--accent-rgb) so the whole app re-skins from a single swap; see
+   the html[data-accent] blocks below for the selectable palettes.
    Colors are emitted as CSS custom properties so recharts can read them too. */
 @theme {
   --color-bg: #0a0908;
@@ -11,12 +13,12 @@
   --color-border: #262220;
   --color-text: #efece8;
   --color-muted: #86807a;
-  --color-accent: #ff2d3a;
-  --color-accent-dim: #b3141f;
+  --color-accent: rgb(var(--accent-rgb));
+  --color-accent-dim: rgb(var(--accent-dim-rgb));
   --color-danger: #ff5470;
   --color-warn: #f5a524;
 
-  --color-chart-1: #ff2d3a;
+  --color-chart-1: rgb(var(--accent-rgb));
   --color-chart-2: #9a938c;
   --color-chart-3: #d98b57;
   --color-chart-4: #61656f;
@@ -30,12 +32,45 @@
   --radius-lg: 0.625rem;
 
   --shadow-glow:
-    0 0 0 1px rgba(255, 45, 58, 0.22), 0 0 30px -8px rgba(255, 45, 58, 0.6);
+    0 0 0 1px rgb(var(--accent-rgb) / 0.22),
+    0 0 30px -8px rgb(var(--accent-rgb) / 0.6);
 }
 
 :root {
   color-scheme: dark;
-  --accent-glow: rgba(255, 45, 58, 0.18);
+  /* Default accent — Crimson (blood). Space-separated channels so it composes
+     into rgb(var(--accent-rgb) / <alpha>) anywhere translucency is needed. */
+  --accent-rgb: 255 45 58;
+  --accent-dim-rgb: 179 20 31;
+  --accent-glow: rgb(var(--accent-rgb) / 0.18);
+}
+
+/* ── Selectable accent palettes ───────────────────────────────────────────
+   Set on <html data-accent="…"> from Settings. Each only needs to redefine the
+   two channel vars; everything else (utilities, glows, charts) derives. */
+html[data-accent="crimson"] {
+  --accent-rgb: 255 45 58;
+  --accent-dim-rgb: 179 20 31;
+}
+html[data-accent="ember"] {
+  --accent-rgb: 255 122 41;
+  --accent-dim-rgb: 179 77 18;
+}
+html[data-accent="gold"] {
+  --accent-rgb: 245 176 40;
+  --accent-dim-rgb: 169 118 26;
+}
+html[data-accent="teal"] {
+  --accent-rgb: 0 229 199;
+  --accent-dim-rgb: 11 143 128;
+}
+html[data-accent="azure"] {
+  --accent-rgb: 61 139 255;
+  --accent-dim-rgb: 30 95 191;
+}
+html[data-accent="violet"] {
+  --accent-rgb: 168 108 255;
+  --accent-dim-rgb: 108 60 190;
 }
 
 html {
@@ -123,18 +158,18 @@ label {
 }
 @keyframes hb-hit {
   0% {
-    box-shadow: 0 0 0 0 rgba(255, 45, 58, 0.55);
+    box-shadow: 0 0 0 0 rgb(var(--accent-rgb) / 0.55);
     border-color: var(--color-accent);
   }
   100% {
-    box-shadow: 0 0 0 14px rgba(255, 45, 58, 0);
+    box-shadow: 0 0 0 14px rgb(var(--accent-rgb) / 0);
   }
 }
 
 /* Manga halftone dots */
 .hb-halftone {
   background-image: radial-gradient(
-    rgba(255, 45, 58, 0.22) 1px,
+    rgb(var(--accent-rgb) / 0.22) 1px,
     transparent 1.5px
   );
   background-size: 7px 7px;
@@ -180,7 +215,7 @@ input[type="number"] {
 }
 
 ::selection {
-  background: rgba(255, 45, 58, 0.28);
+  background: rgb(var(--accent-rgb) / 0.28);
 }
 
 /* Prevent iOS Safari zoom on focus: 16px floor on controls at phone widths */

@@ -8,7 +8,7 @@ import { ChartEmpty, TooltipBox } from "./chart-kit";
 type Row = { muscle: Muscle; volume: number };
 type Slice = { label: string; volume: number; other?: boolean };
 
-/** Where your tonnage goes — volume share across muscles, as a crimson-ramp donut. */
+/** Where your tonnage goes — volume share across muscles, as an accent-ramp donut. */
 export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   const ranked = data
     .filter((d) => d.volume > 0)
@@ -29,7 +29,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   const color = (i: number, other?: boolean) => {
     if (other) return "var(--color-surface-2)";
     const alpha = Math.max(0.28, 1 - (i / Math.max(1, slices.length)) * 0.8);
-    return `rgba(255,45,58,${alpha.toFixed(2)})`;
+    return `rgb(var(--accent-rgb) / ${alpha.toFixed(2)})`;
   };
 
   return (

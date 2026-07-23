@@ -7,6 +7,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
+import { getAccent } from "@/lib/settings";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +36,7 @@ const anton = Anton({
 export const metadata: Metadata = {
   title: "Hell Blazer — Strength Log",
   description:
-    "Train like the strongest creature alive. Programs, savage-fast set logging, and power analytics that climb with every rep.",
+    "Train like a Kengan fighter. Programs, savage-fast set logging, and power analytics that climb with every rep.",
   appleWebApp: {
     capable: true,
     title: "Hell Blazer",
@@ -52,14 +53,16 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const accent = await getAccent();
   return (
     <html
       lang="en"
+      data-accent={accent}
       className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} ${anton.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-bg text-text">

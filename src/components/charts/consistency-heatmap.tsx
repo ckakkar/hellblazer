@@ -3,14 +3,15 @@ import type { SessionSummary } from "@/lib/data/sessions";
 import { formatVolume, type Unit } from "@/lib/units";
 
 const WEEKS = 17;
-// Rest → four crimson steps. Solid fills, GitHub-style (no outlines).
+// Rest → four accent steps. Solid fills, GitHub-style (no outlines). Tracks the
+// active accent via --accent-rgb so the grid re-skins with the theme.
 const REST = "#231d19";
 const LEVEL_BG = [
   REST,
-  "rgba(255,45,58,0.34)",
-  "rgba(255,45,58,0.56)",
-  "rgba(255,45,58,0.78)",
-  "#ff2d3a",
+  "rgb(var(--accent-rgb) / 0.34)",
+  "rgb(var(--accent-rgb) / 0.56)",
+  "rgb(var(--accent-rgb) / 0.78)",
+  "rgb(var(--accent-rgb))",
 ];
 
 // Calibrated for one session a day: a light day is a faint square, a big

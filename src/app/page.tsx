@@ -8,8 +8,8 @@ import { Flame } from "lucide-react";
 // Terse ladder tags — the destination and the floor are labelled; the rungs
 // between just carry a name and a rising strength bar.
 const RUNG_TAG: Record<string, string> = {
-  yujiro: "最強 · strongest creature alive",
-  doppo: "where everyone starts",
+  kuroki: "最強 · the devil lance",
+  rei: "where everyone starts",
 };
 
 export default async function Landing({
@@ -21,7 +21,7 @@ export default async function Landing({
   if (user) redirect("/dashboard");
   const { error } = await searchParams;
 
-  // Yujiro (rank 9) on top, Doppo (rank 1) at the floor.
+  // Kuroki (rank 9) on top, Rei (rank 1) at the floor.
   const ladder = [...TIERS].sort((a, b) => b.rank - a.rank);
 
   return (
@@ -32,7 +32,7 @@ export default async function Landing({
         className="pointer-events-none absolute right-[-10%] top-[-10%] h-[620px] w-[620px] rounded-full opacity-50 blur-[130px] sm:opacity-70"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(255,45,58,0.20), transparent)",
+            "radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.20), transparent)",
         }}
       />
 
@@ -62,7 +62,7 @@ export default async function Landing({
               className="hb-reveal mt-6 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl"
               style={{ animationDelay: "110ms" }}
             >
-              Nine monsters
+              Nine fighters
               <br />
               <span className="text-accent">stand above you.</span>
             </h1>
@@ -72,8 +72,8 @@ export default async function Landing({
               style={{ animationDelay: "200ms" }}
             >
               Log every set like it counts. Your numbers get weighed and ranked
-              against the strongest to ever live — climb from Doppo to Yujiro,
-              one honest rep at a time.
+              against the deadliest fighters in the ring — climb from Rei to
+              Kuroki, one honest rep at a time.
             </p>
 
             <div className="hb-reveal mt-9" style={{ animationDelay: "290ms" }}>

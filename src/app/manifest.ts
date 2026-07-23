@@ -5,7 +5,7 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Hell Blazer",
     short_name: "Hell Blazer",
     description:
-      "Train like the strongest creature alive. Programs, savage-fast set logging, and power analytics.",
+      "Train like a Kengan fighter. Programs, savage-fast set logging, and power analytics.",
     id: "/",
     start_url: "/dashboard",
     scope: "/",

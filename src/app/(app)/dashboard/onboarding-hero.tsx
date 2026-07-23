@@ -46,7 +46,7 @@ export function OnboardingHero({
         className="pointer-events-none absolute -right-16 -top-20 size-64 rounded-full opacity-40 blur-3xl"
         style={{
           background:
-            "radial-gradient(closest-side, rgba(255,45,58,0.35), transparent)",
+            "radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.35), transparent)",
         }}
       />
       <div className="relative">

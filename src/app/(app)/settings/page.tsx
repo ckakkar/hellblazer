@@ -1,6 +1,6 @@
 import { LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
-import { getUnit } from "@/lib/settings";
+import { getUnit, getAccent } from "@/lib/settings";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
 import { getActiveProgramProgress } from "@/lib/data/programs";
@@ -15,6 +15,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { UnitToggle } from "./unit-toggle";
+import { ThemeSelector } from "./theme-selector";
 import { BodyweightManager } from "./bodyweight-manager";
 import { BodyweightChart } from "@/components/charts/bodyweight-chart";
 import { NotificationsManager } from "./notifications-manager";
@@ -24,14 +25,16 @@ import { DangerZone } from "./danger-zone";
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const [user, unit, logs, profile, active, notifications] = await Promise.all([
-    getUser(),
-    getUnit(),
-    getBodyweightLog(),
-    getProfile(),
-    getActiveProgramProgress(),
-    getNotificationState(),
-  ]);
+  const [user, unit, accent, logs, profile, active, notifications] =
+    await Promise.all([
+      getUser(),
+      getUnit(),
+      getAccent(),
+      getBodyweightLog(),
+      getProfile(),
+      getActiveProgramProgress(),
+      getNotificationState(),
+    ]);
 
   const activeProgram = active
     ? { id: active.program.id, name: active.program.name }
@@ -53,6 +56,18 @@ export default async function ProfilePage() {
             evaluatedAt={profile?.tier_evaluated_at ?? null}
           />
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Accent theme</CardTitle>
+            <CardDescription>
+              Pick the hue that runs through the whole app.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ThemeSelector current={accent} />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

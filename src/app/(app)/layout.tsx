@@ -20,7 +20,7 @@ export default async function AppLayout({
         className="pointer-events-none fixed inset-0 -z-10"
         style={{
           background:
-            "radial-gradient(120% 55% at 50% -8%, rgba(255,45,58,0.06), transparent 62%)",
+            "radial-gradient(120% 55% at 50% -8%, rgb(var(--accent-rgb) / 0.06), transparent 62%)",
         }}
       />
       <RealtimeSync userId={user.id} />

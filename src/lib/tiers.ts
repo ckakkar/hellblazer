@@ -5,61 +5,61 @@ export type Tier = {
   blurb: string;
 };
 
-/** The strength ladder, weakest → strongest. Rank 1..9. */
+/** The strength ladder, weakest → strongest. Rank 1..9. Kengan Ashura fighters. */
 export const TIERS: Tier[] = [
   {
-    key: "doppo",
-    name: "Doppo Orochi",
+    key: "rei",
+    name: "Rei Mikazuchi",
     rank: 1,
-    blurb: "The undefeated karate master. Grit over genetics.",
+    blurb: "Assassin's precision. One strike, one kill.",
   },
   {
-    key: "retsu",
-    name: "Retsu Kaioh",
+    key: "setsuna",
+    name: "Setsuna Kiryu",
     rank: 2,
-    blurb: "4000 years of kung-fu. Refined, disciplined power.",
+    blurb: "Devotion turned lethal — the god-chaser's blades.",
   },
   {
-    key: "oliva",
-    name: "Biscuit Oliva",
+    key: "hatsumi",
+    name: "Sen Hatsumi",
     rank: 3,
-    blurb: "Mr. Unchained. Grotesque, unnatural muscle.",
+    blurb: "Effortless aikido. Turns your own force against you.",
   },
   {
-    key: "hanayama",
-    name: "Kaoru Hanayama",
+    key: "gaolang",
+    name: "Gaolang Wongsawat",
     rank: 4,
-    blurb: "A monster's grip. Raw, honorable brute force.",
+    blurb: "The Thai god of war. Eight limbs, no mercy.",
   },
   {
-    key: "musashi",
-    name: "Musashi Miyamoto",
+    key: "julius",
+    name: "Julius Reinhold",
     rank: 5,
-    blurb: "The reborn swordsman. Lethal precision.",
+    blurb: "Grotesque, engineered muscle. Raw power made flesh.",
   },
   {
-    key: "jack",
-    name: "Jack Hanma",
+    key: "raian",
+    name: "Raian Kure",
     rank: 6,
-    blurb: "Effort incarnate. Grew through sheer will.",
+    blurb: "The Kure clan's beast. Removal off the leash.",
   },
   {
-    key: "pickle",
-    name: "Pickle",
+    key: "ohma",
+    name: "Ohma Tokita",
     rank: 7,
-    blurb: "Prehistoric predator. Untrained perfection.",
+    blurb: "The Ashura. Niko Style, evolving mid-fight.",
   },
   {
-    key: "baki",
-    name: "Baki Hanma",
+    key: "agito",
+    name: "Kanoh Agito",
     rank: 8,
-    blurb: "The protagonist. Forever chasing the strongest.",
+    blurb: "The Fang of Metsudo. Undefeated, adapts to anything.",
   },
   {
-    key: "yujiro",
-    name: "Yujiro Hanma",
+    key: "kuroki",
+    name: "Kuroki Gensai",
     rank: 9,
-    blurb: "The Ogre. The strongest creature alive.",
+    blurb: "The Devil Lance. The apex the strongest still fear.",
   },
 ];
 

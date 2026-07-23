@@ -1,21 +1,21 @@
-// Grappler-grade hype lines shown mid-session. Kept punchy and on-theme.
+// Kengan-grade hype lines shown mid-session. Kept punchy and on-theme.
 export const HYPE_LINES = [
   "Pain is just data. Log it.",
   "The set doesn't count until it's recorded.",
   "Weakness is a choice. Not today.",
-  "Every rep is a punch thrown.",
+  "Every rep is a strike thrown in the ring.",
   "The strongest are the most obsessed.",
-  "Leave nothing in the tank.",
+  "Leave nothing on the arena floor.",
   "One more. Always one more.",
-  "Grow stronger, or stay the same.",
+  "Advance. Then advance again.",
   "Numbers don't lie. Make them climb.",
-  "This is the arena. Perform.",
+  "This is the Kengan match. Perform.",
 ];
 
 export const VICTORY_LINES = [
   "VICTORY",
-  "DEMOLISHED",
-  "WAR WON",
+  "REMOVAL",
+  "MATCH WON",
   "CRUSHED IT",
   "DOMINATED",
 ];
