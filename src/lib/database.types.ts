@@ -77,6 +77,7 @@ export type Database = {
       profile: {
         Row: {
           created_at: string
+          reminder_hour: number | null
           tier: string | null
           tier_evaluated_at: string | null
           tier_rationale: string | null
@@ -84,6 +85,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          reminder_hour?: number | null
           tier?: string | null
           tier_evaluated_at?: string | null
           tier_rationale?: string | null
@@ -91,6 +93,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          reminder_hour?: number | null
           tier?: string | null
           tier_evaluated_at?: string | null
           tier_rationale?: string | null
@@ -220,6 +223,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      push_subscription: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          timezone: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          timezone?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          timezone?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       session: {
         Row: {

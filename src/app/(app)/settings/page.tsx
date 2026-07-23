@@ -4,6 +4,7 @@ import { getUnit } from "@/lib/settings";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
 import { getActiveProgramProgress } from "@/lib/data/programs";
+import { getNotificationState } from "@/lib/data/push";
 import { signOut } from "@/lib/actions/auth";
 import { PageHeader, SectionLabel } from "@/components/ui/page-header";
 import {
@@ -15,18 +16,20 @@ import {
 } from "@/components/ui/card";
 import { UnitToggle } from "./unit-toggle";
 import { BodyweightManager } from "./bodyweight-manager";
+import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const [user, unit, logs, profile, active] = await Promise.all([
+  const [user, unit, logs, profile, active, notifications] = await Promise.all([
     getUser(),
     getUnit(),
     getBodyweightLog(),
     getProfile(),
     getActiveProgramProgress(),
+    getNotificationState(),
   ]);
 
   const activeProgram = active
@@ -59,6 +62,21 @@ export default async function ProfilePage() {
           </CardHeader>
           <CardContent>
             <UnitToggle current={unit} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Notifications</CardTitle>
+            <CardDescription>
+              A daily push reminder when your programmed workout is due.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <NotificationsManager
+              reminderHour={notifications.reminderHour}
+              vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
+            />
           </CardContent>
         </Card>
 
