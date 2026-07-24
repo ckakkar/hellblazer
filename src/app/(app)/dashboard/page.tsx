@@ -4,7 +4,6 @@ import { ChevronRight, Dumbbell, Flame, Sparkles } from "lucide-react";
 import {
   getCurrentWeekSetsPerMuscle,
   getMuscleBalance,
-  getVolumeTrend,
 } from "@/lib/data/analytics";
 import { getSessionSummaries } from "@/lib/data/sessions";
 import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
@@ -22,7 +21,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WeeklySetsChart } from "@/components/charts/weekly-sets-chart";
-import { VolumeTrendChart } from "@/components/charts/volume-trend-chart";
+import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { MuscleBalanceRadar } from "@/components/charts/muscle-balance-radar";
 import { formatVolume } from "@/lib/units";
@@ -33,7 +32,6 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const [
     weeklySets,
-    volumeTrend,
     muscleBalance,
     summaries,
     activeProgress,
@@ -42,7 +40,6 @@ export default async function DashboardPage() {
     unit,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
-    getVolumeTrend(12),
     getMuscleBalance(4),
     getSessionSummaries(),
     getActiveProgramProgress(),
@@ -74,6 +71,21 @@ export default async function DashboardPage() {
   );
   const setsByMuscle = new Map(weeklySets.map((m) => [m.muscle, m.sets]));
   const recent = summaries.slice(0, 6);
+
+  // Daily lifted tonnage (canonical kg) for the volume-trend windows — the card
+  // re-buckets this client-side per selected range (7d / 30d / 1y).
+  const dailyVolumeMap = new Map<string, number>();
+  for (const s of summaries) {
+    if (!s.session_date) continue;
+    dailyVolumeMap.set(
+      s.session_date,
+      (dailyVolumeMap.get(s.session_date) ?? 0) + Number(s.total_volume ?? 0),
+    );
+  }
+  const dailyVolume = [...dailyVolumeMap.entries()].map(([date, volumeKg]) => ({
+    date,
+    volumeKg,
+  }));
 
   return (
     <div>
@@ -177,11 +189,14 @@ export default async function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ChartCard
           title="Training consistency"
-          subtitle="Working sets per day · last 17 weeks"
+          subtitle="One mark per training day · since you joined"
           className="lg:col-span-2"
           bodyClassName="p-4"
         >
-          <ConsistencyHeatmap summaries={summaries} unit={unit} />
+          <ConsistencyHeatmap
+            summaries={summaries}
+            signupDate={profile?.created_at ?? null}
+          />
         </ChartCard>
         <ChartCard
           title="Weekly sets per muscle"
@@ -196,12 +211,7 @@ export default async function DashboardPage() {
         >
           <MuscleBalanceRadar data={muscleBalance} />
         </ChartCard>
-        <ChartCard
-          title="Volume trend"
-          subtitle="Total tonnage per week · last 12 weeks"
-        >
-          <VolumeTrendChart data={volumeTrend} unit={unit} />
-        </ChartCard>
+        <VolumeTrendCard daily={dailyVolume} unit={unit} />
       </div>
 
       {/* Recent sessions */}

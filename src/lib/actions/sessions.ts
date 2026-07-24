@@ -13,11 +13,18 @@ import type { TablesUpdate } from "@/lib/database.types";
 export async function startSession(input: {
   templateId?: string | null;
   programDayId?: string | null;
+  /** The client's local calendar date (YYYY-MM-DD). See {@link todayLocalISO}. */
+  localDate?: string | null;
 }) {
   const v = z
     .object({
       templateId: z.string().uuid().nullable().optional(),
       programDayId: z.string().uuid().nullable().optional(),
+      localDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .optional(),
     })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
@@ -67,6 +74,8 @@ export async function startSession(input: {
       template_id: templateId,
       program_id: programId,
       title,
+      // Stamp the lifter's local day; fall back to the DB `current_date` default.
+      ...(v.localDate ? { date: v.localDate } : {}),
     })
     .select("id")
     .single();

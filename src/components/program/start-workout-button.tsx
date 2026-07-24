@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { Loader2, Play } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
+import { todayLocalISO } from "@/lib/local-date";
 
 export function StartWorkoutButton({
   programDayId,
@@ -29,7 +30,11 @@ export function StartWorkoutButton({
       disabled={pending}
       onClick={() =>
         start(async () => {
-          await startSession({ programDayId, templateId });
+          await startSession({
+            programDayId,
+            templateId,
+            localDate: todayLocalISO(),
+          });
         })
       }
     >

@@ -58,41 +58,6 @@ export async function getWeeklyMuscleHistory(
   return data ?? [];
 }
 
-export type WeekPoint = { week: string; volume: number; sets: number };
-
-/**
- * Total working-set volume per ISO week (all muscles), for the dashboard
- * volume-trend line. Computed from session summaries so it reflects true
- * lifted tonnage, not muscle-weighted volume.
- */
-export async function getVolumeTrend(weeks = 12): Promise<WeekPoint[]> {
-  const supabase = await createClient();
-  const cutoffDate = subWeeks(new Date(), weeks - 1);
-  const { data, error } = await supabase
-    .from("v_session_summary")
-    .select("session_date, total_volume, working_sets")
-    .gte("session_date", format(startOfISOWeek(cutoffDate), "yyyy-MM-dd"))
-    .order("session_date", { ascending: true });
-  if (error) throw error;
-
-  const buckets = new Map<string, WeekPoint>();
-  // Seed every week in the window so the line has no gaps.
-  for (let i = weeks - 1; i >= 0; i--) {
-    const key = isoWeekKey(subWeeks(new Date(), i));
-    buckets.set(key, { week: key, volume: 0, sets: 0 });
-  }
-  for (const row of data ?? []) {
-    if (!row.session_date) continue;
-    const key = isoWeekKey(new Date(row.session_date + "T00:00:00"));
-    const bucket = buckets.get(key);
-    if (bucket) {
-      bucket.volume += Number(row.total_volume ?? 0);
-      bucket.sets += Number(row.working_sets ?? 0);
-    }
-  }
-  return [...buckets.values()];
-}
-
 export type MuscleBalanceRow = { muscle: Muscle; sets: number; volume: number };
 
 /**

@@ -5,6 +5,7 @@ import { Dumbbell, Loader2, Zap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { startSession } from "@/lib/actions/sessions";
+import { todayLocalISO } from "@/lib/local-date";
 import { cn } from "@/lib/utils";
 
 type TemplateOption = {
@@ -21,7 +22,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
   function begin(templateId: string | null) {
     setChosen(templateId ?? "freeform");
     start(async () => {
-      await startSession({ templateId });
+      await startSession({ templateId, localDate: todayLocalISO() });
     });
   }
 

@@ -1,82 +1,157 @@
-import { addDays, format, isAfter, startOfISOWeek, subWeeks } from "date-fns";
+import {
+  addDays,
+  differenceInCalendarWeeks,
+  format,
+  isAfter,
+  isSameDay,
+  parseISO,
+  startOfISOWeek,
+} from "date-fns";
 import type { SessionSummary } from "@/lib/data/sessions";
-import { formatVolume, type Unit } from "@/lib/units";
 
-const WEEKS = 17;
-// Rest → four accent steps. Solid fills, GitHub-style (no outlines). Tracks the
-// active accent via --accent-rgb so the grid re-skins with the theme.
-const REST = "#231d19";
-const LEVEL_BG = [
-  REST,
-  "rgb(var(--accent-rgb) / 0.34)",
-  "rgb(var(--accent-rgb) / 0.56)",
-  "rgb(var(--accent-rgb) / 0.78)",
-  "rgb(var(--accent-rgb))",
-];
+// Beyond this many weeks of membership, switch from the roomy day-by-day
+// calendar to the compact GitHub-style column grid (which scrolls sideways).
+const ROOMY_MAX_WEEKS = 16;
+// Never render more than a trailing year, however long ago the user joined.
+const HARD_MAX_WEEKS = 53;
 
-// Calibrated for one session a day: a light day is a faint square, a big
-// leg/back day is a full-crimson one.
-function level(sets: number): number {
-  if (sets <= 0) return 0;
-  if (sets <= 11) return 1;
-  if (sets <= 17) return 2;
-  if (sets <= 23) return 3;
-  return 4;
-}
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+type DayCell = {
+  date: Date;
+  key: string;
+  state: "trained" | "rest" | "blank"; // blank = before signup or in the future
+  isToday: boolean;
+  sets: number;
+};
 
 /**
- * GitHub-style training grid: one cell per day for the last 17 weeks, crimson
- * intensity scaled by that day's working sets. Pure markup + title tooltips —
- * no client JS.
+ * A per-day training map. One mark per calendar day: solid accent when at least
+ * one working set was logged, a faint rest cell otherwise. The grid begins the
+ * week the lifter joined (not a fixed lookback) and, while that history is
+ * short, renders a clear day-numbered calendar; once it grows past a few months
+ * it falls back to a compact column grid. Pure markup — no client JS.
  */
 export function ConsistencyHeatmap({
   summaries,
-  unit,
+  signupDate,
 }: {
   summaries: SessionSummary[];
-  unit: Unit;
+  signupDate: string | null;
 }) {
-  const byDay = new Map<string, { sets: number; volume: number }>();
+  // Working sets per calendar day → a day counts as "trained" when > 0.
+  const setsByDay = new Map<string, number>();
   for (const s of summaries) {
     if (!s.session_date) continue;
-    const cur = byDay.get(s.session_date) ?? { sets: 0, volume: 0 };
-    cur.sets += Number(s.working_sets ?? 0);
-    cur.volume += Number(s.total_volume ?? 0);
-    byDay.set(s.session_date, cur);
+    setsByDay.set(
+      s.session_date,
+      (setsByDay.get(s.session_date) ?? 0) + Number(s.working_sets ?? 0),
+    );
   }
 
   const today = new Date();
-  const start = startOfISOWeek(subWeeks(today, WEEKS - 1));
-  const weekdayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
+  const todayWeek = startOfISOWeek(today);
+  const signup = signupDate ? parseISO(signupDate) : null;
+  const signupKey = signup ? format(signup, "yyyy-MM-dd") : null;
 
-  const columns = Array.from({ length: WEEKS }).map((_, w) => {
-    const monday = addDays(start, w * 7);
-    const cells = Array.from({ length: 7 }).map((__, d) => {
+  // Start the grid at the ISO week the user joined; fall back to a short window
+  // for accounts with no signup timestamp. Cap veterans to a trailing year.
+  let startWeek = signup ? startOfISOWeek(signup) : startOfISOWeek(addDays(today, -27));
+  const floorWeek = startOfISOWeek(addDays(todayWeek, -7 * (HARD_MAX_WEEKS - 1)));
+  if (startWeek < floorWeek) startWeek = floorWeek;
+
+  const weeksSpan =
+    differenceInCalendarWeeks(todayWeek, startWeek, { weekStartsOn: 1 }) + 1;
+  const roomy = weeksSpan <= ROOMY_MAX_WEEKS;
+
+  const weeks: DayCell[][] = Array.from({ length: weeksSpan }).map((_, w) => {
+    const monday = addDays(startWeek, w * 7);
+    return Array.from({ length: 7 }).map((__, d) => {
       const date = addDays(monday, d);
       const key = format(date, "yyyy-MM-dd");
-      const hit = byDay.get(key);
-      return {
-        date,
-        key,
-        future: isAfter(date, today),
-        sets: hit?.sets ?? 0,
-        volume: hit?.volume ?? 0,
-      };
+      const future = isAfter(date, today);
+      const beforeSignup = signupKey ? key < signupKey : false;
+      const sets = setsByDay.get(key) ?? 0;
+      // A logged day always shows, even if a local-timezone date lands a hair
+      // ahead of the server's UTC "today" (past-midnight training).
+      const state: DayCell["state"] =
+        sets > 0 ? "trained" : future || beforeSignup ? "blank" : "rest";
+      return { date, key, state, isToday: isSameDay(date, today), sets };
     });
-    return { monday, cells };
   });
 
-  const trainedDays = [...byDay.values()].filter((d) => d.sets > 0).length;
+  const trainedCount = weeks
+    .flat()
+    .filter((c) => c.state === "trained").length;
 
-  // Month labels, grouped so each spans its own columns (no overlap). Each
-  // column is 13px cell + 3px gap = 16px wide.
+  const caption = (
+    <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-muted">
+      <span>
+        <span className="font-mono text-text">{trainedCount}</span> training day
+        {trainedCount === 1 ? "" : "s"}
+        {signup ? ` since ${format(signup, "MMM d, yyyy")}` : ""}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="size-[11px] rounded-[3px] bg-accent shadow-glow" />
+        Trained
+      </span>
+    </div>
+  );
+
+  // ── Roomy calendar: responsive 7-column grid of day-numbered cells ────────
+  if (roomy) {
+    const cells = weeks.flat();
+    return (
+      <div>
+        <div className="grid grid-cols-7 gap-1.5">
+          {WEEKDAYS.map((d) => (
+            <div
+              key={d}
+              className="pb-1 text-center text-[10px] font-medium uppercase tracking-wide text-muted/70"
+            >
+              {d.slice(0, 1)}
+            </div>
+          ))}
+          {cells.map((c) =>
+            c.state === "blank" ? (
+              <div key={c.key} className="aspect-square" />
+            ) : (
+              <div
+                key={c.key}
+                title={`${format(c.date, "EEE, MMM d")} · ${
+                  c.state === "trained"
+                    ? `trained · ${Math.round(c.sets)} sets`
+                    : "rest"
+                }`}
+                className={[
+                  "flex aspect-square items-center justify-center rounded-md font-mono text-[11px] tabular-nums transition-colors",
+                  c.state === "trained"
+                    ? "bg-accent font-semibold text-bg shadow-glow"
+                    : "border border-border bg-surface-2 text-muted/45",
+                  c.isToday && c.state !== "trained"
+                    ? "ring-1 ring-accent/50"
+                    : "",
+                ].join(" ")}
+              >
+                {format(c.date, "d")}
+              </div>
+            ),
+          )}
+        </div>
+        {caption}
+      </div>
+    );
+  }
+
+  // ── Compact column grid: GitHub-style, one 13px cell per day ──────────────
   const monthGroups: { label: string; span: number }[] = [];
-  for (const c of columns) {
-    const label = format(c.monday, "MMM");
+  for (const col of weeks) {
+    const label = format(col[0].date, "MMM");
     const last = monthGroups[monthGroups.length - 1];
     if (last && last.label === label) last.span += 1;
     else monthGroups.push({ label, span: 1 });
   }
+  const weekdayLabels = ["", "Mon", "", "Wed", "", "Fri", ""];
 
   return (
     <div className="overflow-x-auto">
@@ -105,21 +180,24 @@ export function ConsistencyHeatmap({
             ))}
           </div>
           <div className="flex gap-[3px]">
-            {columns.map((col, i) => (
+            {weeks.map((col, i) => (
               <div key={i} className="flex flex-col gap-[3px]">
-                {col.cells.map((cell) =>
-                  cell.future ? (
+                {col.map((cell) =>
+                  cell.state === "blank" ? (
                     <div key={cell.key} className="size-[13px]" />
                   ) : (
                     <div
                       key={cell.key}
                       title={`${format(cell.date, "EEE, MMM d")} · ${
-                        cell.sets > 0
-                          ? `${Math.round(cell.sets)} sets · ${formatVolume(cell.volume, unit)}`
+                        cell.state === "trained"
+                          ? `trained · ${Math.round(cell.sets)} sets`
                           : "rest"
                       }`}
-                      className="size-[13px] rounded-[3px]"
-                      style={{ backgroundColor: LEVEL_BG[level(cell.sets)] }}
+                      className={`size-[13px] rounded-[3px] ${
+                        cell.state === "trained"
+                          ? "bg-accent"
+                          : "border border-border/60 bg-surface-2"
+                      } ${cell.isToday && cell.state !== "trained" ? "ring-1 ring-accent/50" : ""}`}
                     />
                   ),
                 )}
@@ -128,23 +206,7 @@ export function ConsistencyHeatmap({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-9">
-          <span className="text-[11px] text-muted">
-            <span className="font-mono text-text">{trainedDays}</span> training
-            day{trainedDays === 1 ? "" : "s"} in the last {WEEKS} weeks
-          </span>
-          <div className="flex items-center gap-1.5 text-[10px] text-muted">
-            Less
-            {LEVEL_BG.map((bg, i) => (
-              <span
-                key={i}
-                className="size-[13px] rounded-[3px]"
-                style={{ backgroundColor: bg }}
-              />
-            ))}
-            More
-          </div>
-        </div>
+        {caption}
       </div>
     </div>
   );
