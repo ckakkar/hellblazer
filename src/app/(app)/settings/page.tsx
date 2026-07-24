@@ -61,7 +61,8 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle>Accent theme</CardTitle>
             <CardDescription>
-              Pick the hue that runs through the whole app.
+              Fly the colours of a Kengan Association company — it runs through
+              the whole app.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -60,13 +60,15 @@ html[data-accent="gold"] {
   --accent-rgb: 245 176 40;
   --accent-dim-rgb: 169 118 26;
 }
-html[data-accent="teal"] {
-  --accent-rgb: 0 229 199;
-  --accent-dim-rgb: 11 143 128;
+html[data-accent="green"] {
+  /* Pastel bottle green */
+  --accent-rgb: 116 191 160;
+  --accent-dim-rgb: 60 122 100;
 }
-html[data-accent="azure"] {
-  --accent-rgb: 61 139 255;
-  --accent-dim-rgb: 30 95 191;
+html[data-accent="slate"] {
+  /* Cool greyish steel */
+  --accent-rgb: 150 162 180;
+  --accent-dim-rgb: 88 96 108;
 }
 html[data-accent="violet"] {
   --accent-rgb: 168 108 255;

@@ -1,11 +1,12 @@
-/** Selectable accent hues. Keys must match the html[data-accent] blocks in
- *  globals.css; `swatch` is only for rendering the picker preview. */
+/** Selectable accent hues, named after Kengan Association member companies.
+ *  Keys must match the html[data-accent] blocks in globals.css; `swatch` is
+ *  only for rendering the picker preview. */
 export type AccentKey =
   | "crimson"
   | "ember"
   | "gold"
-  | "teal"
-  | "azure"
+  | "green"
+  | "slate"
   | "violet";
 
 export type Accent = {
@@ -15,12 +16,12 @@ export type Accent = {
 };
 
 export const ACCENTS: Accent[] = [
-  { key: "crimson", name: "Crimson", swatch: "#ff2d3a" },
-  { key: "ember", name: "Ember", swatch: "#ff7a29" },
-  { key: "gold", name: "Gold", swatch: "#f5b028" },
-  { key: "teal", name: "Teal", swatch: "#00e5c7" },
-  { key: "azure", name: "Azure", swatch: "#3d8bff" },
-  { key: "violet", name: "Violet", swatch: "#a86cff" },
+  { key: "crimson", name: "Nogi", swatch: "#ff2d3a" },
+  { key: "ember", name: "Motorhead", swatch: "#ff7a29" },
+  { key: "gold", name: "Dainippon", swatch: "#f5b028" },
+  { key: "green", name: "Kouou", swatch: "#74bfa0" },
+  { key: "slate", name: "Under Mount", swatch: "#96a2b4" },
+  { key: "violet", name: "Gandai", swatch: "#a86cff" },
 ];
 
 export const ACCENT_KEYS = ACCENTS.map((a) => a.key);
