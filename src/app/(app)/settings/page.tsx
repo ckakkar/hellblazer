@@ -1,5 +1,7 @@
-import { LogOut } from "lucide-react";
+import { Download, LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { getUnit, getAccent } from "@/lib/settings";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
@@ -130,6 +132,25 @@ export default async function ProfilePage() {
           <CardContent className="grid gap-4">
             <BodyweightChart logs={logs} unit={unit} />
             <BodyweightManager logs={logs} unit={unit} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Export your data</CardTitle>
+            <CardDescription>
+              Download every logged set as a CSV — weights in kg, yours to keep.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <a
+              href="/api/export"
+              download
+              className={cn(buttonVariants({ variant: "secondary" }))}
+            >
+              <Download className="size-4" />
+              Export CSV
+            </a>
           </CardContent>
         </Card>
 

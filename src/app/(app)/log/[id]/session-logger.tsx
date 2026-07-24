@@ -21,6 +21,7 @@ import {
   Plus,
   Repeat2,
   Search,
+  Timer,
   Trash2,
   Trophy,
   X,
@@ -77,6 +78,17 @@ type LocalExercise = {
 // callout to exercises with prior-session data, so a brand-new lift never fires.
 type PrBest = { weight: number; est1rm: number; hadHistory: boolean };
 
+/** Elapsed milliseconds → clock string (H:MM:SS past an hour, else M:SS). */
+function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = String(m).padStart(2, "0");
+  const ss = String(s).padStart(2, "0");
+  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+}
+
 export function SessionLogger({
   session,
   exerciseLibrary,
@@ -99,6 +111,10 @@ export function SessionLogger({
   const [duration, setDuration] = useState<number | null>(
     session.duration_min ?? null,
   );
+  // Live workout clock — ticks from when the session was started (created_at).
+  const startedAt = new Date(session.created_at).getTime();
+  const [elapsed, setElapsed] = useState(0);
+  const elapsedMin = Math.max(1, Math.round(elapsed / 60000));
   // Exercises added mid-session via "Advance" — bonus work, tagged in the queue.
   const [advanceIds, setAdvanceIds] = useState<Set<string>>(new Set());
   // Sets that broke a personal best this session, and the active Removal toast.
@@ -230,6 +246,14 @@ export function SessionLogger({
     },
     [],
   );
+
+  // Tick the workout clock once a second while the logger is open.
+  useEffect(() => {
+    const tick = () => setElapsed(Date.now() - startedAt);
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
 
   // Evaluate a just-committed working set against the running PR. Fires the
   // Removal callout only when it beats the prior all-time best (heaviest load,
@@ -412,7 +436,11 @@ export function SessionLogger({
     setVictory(randomVictory());
     setTimeout(() => {
       startNav(async () => {
-        await finishSession({ sessionId: session.id, durationMin: duration });
+        // Auto-record the live clock unless a duration was typed by hand.
+        await finishSession({
+          sessionId: session.id,
+          durationMin: duration ?? elapsedMin,
+        });
       });
     }, 1100);
   }
@@ -464,6 +492,14 @@ export function SessionLogger({
             }
             className="rounded-md border border-border bg-surface-2 px-2 py-1 font-mono text-xs text-text focus:border-accent/60 focus:outline-none"
           />
+          <span
+            className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-accent"
+            title="Workout time"
+            aria-label={`Elapsed ${formatElapsed(elapsed)}`}
+          >
+            <Timer className="size-3.5" />
+            {formatElapsed(elapsed)}
+          </span>
           {exercises.length > 0 && (
             <span className="font-mono text-xs text-muted">
               {doneCount}/{exercises.length} exercises done
@@ -678,9 +714,11 @@ export function SessionLogger({
               onChange={(e) =>
                 setDuration(e.target.value === "" ? null : Number(e.target.value))
               }
-              placeholder="min"
+              placeholder={String(elapsedMin)}
+              title="Auto-tracked from the workout clock — type to override"
               className="h-9 w-20 rounded-md border border-border bg-surface-2 px-2 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
             />
+            <span className="text-xs text-muted/70">min</span>
           </label>
         </div>
         <Button
@@ -780,7 +818,7 @@ export function SessionLogger({
             </div>
             <div className="mt-4 font-mono text-sm text-muted">
               {Math.round(totalForce).toLocaleString()} {unit} moved · {totalSets}{" "}
-              sets
+              sets · {formatElapsed(elapsed)}
             </div>
           </div>
         </div>
