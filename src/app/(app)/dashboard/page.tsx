@@ -192,14 +192,11 @@ export default async function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ChartCard
           title="Training consistency"
-          subtitle="Working sets per day · since you joined"
+          subtitle="Working sets per day · last 6 months"
           className="lg:col-span-2"
           bodyClassName="p-4"
         >
-          <ConsistencyHeatmap
-            summaries={summaries}
-            signupDate={profile?.created_at ?? null}
-          />
+          <ConsistencyHeatmap summaries={summaries} />
         </ChartCard>
         <ChartCard
           title="Weekly sets per muscle"
