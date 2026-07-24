@@ -192,7 +192,7 @@ export default async function DashboardPage() {
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <ChartCard
           title="Training consistency"
-          subtitle="One mark per training day · since you joined"
+          subtitle="Working sets per day · since you joined"
           className="lg:col-span-2"
           bodyClassName="p-4"
         >
