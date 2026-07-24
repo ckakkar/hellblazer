@@ -102,14 +102,16 @@ Respond with ONLY a JSON object of exactly this shape:
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        // DeepSeek retired "deepseek-chat"; v4 models are the supported names.
-        model: "deepseek-v4-pro",
+        // v4 model names. Flash answers directly in `content`; pro is a
+        // reasoning model that can spend the whole budget "thinking" and return
+        // empty content. Give a generous ceiling either way.
+        model: "deepseek-v4-flash",
         messages: [
           { role: "system", content: system },
           { role: "user", content: userMsg },
         ],
         temperature: 0.6,
-        max_tokens: 700,
+        max_tokens: 2000,
         response_format: { type: "json_object" },
       }),
       signal: controller.signal,
@@ -143,12 +145,27 @@ Respond with ONLY a JSON object of exactly this shape:
     }
 
     const json = await res.json();
-    const content: string | undefined = json?.choices?.[0]?.message?.content;
+    const choice = json?.choices?.[0];
+    // Reasoning models can leave `content` empty and put text in
+    // `reasoning_content`; fall back to it before giving up.
+    const content: string =
+      choice?.message?.content || choice?.message?.reasoning_content || "";
     if (!content) {
-      return { ok: false, error: "failed", message: "No verdict returned." };
+      console.error(
+        "DeepSeek returned no content",
+        JSON.stringify(json).slice(0, 800),
+      );
+      const fr = choice?.finish_reason;
+      return {
+        ok: false,
+        error: "failed",
+        message: `No verdict returned${fr ? ` (${fr})` : ""}. Try again.`,
+      };
     }
 
-    const parsed = JSON.parse(content) as {
+    // Pull the JSON object out even if it's wrapped in prose or code fences.
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content) as {
       tier?: string;
       rationale?: string;
       highlights?: string[];
