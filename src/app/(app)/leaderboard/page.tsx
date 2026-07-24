@@ -71,19 +71,26 @@ export default async function LeaderboardPage() {
               <li key={`${e.username}-${i}`}>
                 <Card
                   className={cn(
-                    "flex items-center gap-4 p-4 transition-colors",
+                    "flex items-center gap-3.5 p-4 transition-colors",
                     isMe
                       ? "border-accent/50 bg-accent/[0.05]"
                       : "hover:border-accent/30",
                   )}
                 >
-                  <div className="flex w-8 shrink-0 items-center justify-center">
+                  <div
+                    className={cn(
+                      "flex size-10 shrink-0 items-center justify-center rounded-full border",
+                      place === 1
+                        ? "border-accent/50 bg-accent/10"
+                        : "border-border bg-surface-2",
+                    )}
+                  >
                     {place === 1 ? (
                       <Crown className="size-5 text-accent" />
                     ) : (
                       <span
                         className={cn(
-                          "font-impact text-lg tabular-nums",
+                          "font-impact text-base tabular-nums leading-none",
                           place <= 3 ? "text-text" : "text-muted/70",
                         )}
                       >
