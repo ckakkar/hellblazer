@@ -1,16 +1,6 @@
-import { PageHeaderSkeleton, CardSkeleton } from "@/components/ui/skeleton";
+import { ArenaLoader } from "@/components/ui/arena-loader";
 
-/** Generic themed fallback — used by any screen without its own loading state. */
+/** Kengan match-loading screen — shown for every route while its data resolves. */
 export default function Loading() {
-  return (
-    <div>
-      <span className="sr-only">Loading…</span>
-      <PageHeaderSkeleton />
-      <div className="grid gap-3">
-        <CardSkeleton className="h-24" />
-        <CardSkeleton className="h-44" />
-        <CardSkeleton className="h-44" />
-      </div>
-    </div>
-  );
+  return <ArenaLoader />;
 }

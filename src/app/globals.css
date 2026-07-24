@@ -206,31 +206,60 @@ label {
   }
 }
 
-/* Themed skeleton — a surface block with an accent glint sweeping across,
-   instead of a flat grey pulse. Used by every route's loading state. */
-.hb-skeleton {
-  position: relative;
-  overflow: hidden;
-  background-color: var(--color-surface);
+/* ── Arena loader — Kengan "match loading" motion ────────────────────────── */
+/* Expanding shockwave ring radiating from the charging core */
+.hb-ring {
+  animation: hb-ring 1.7s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
 }
-.hb-skeleton::after {
+@keyframes hb-ring {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.65;
+  }
+  80% {
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.95);
+    opacity: 0;
+  }
+}
+/* The core building power */
+.hb-breathe {
+  animation: hb-breathe 1.7s ease-in-out infinite;
+}
+@keyframes hb-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.09);
+  }
+}
+/* Indeterminate power-charge bar */
+.hb-charge::after {
   content: "";
   position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background-image: linear-gradient(
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 45%;
+  border-radius: inherit;
+  background: linear-gradient(
     90deg,
-    transparent 0%,
-    rgb(var(--accent-rgb) / 0.07) 45%,
-    rgb(var(--accent-rgb) / 0.11) 50%,
-    rgb(var(--accent-rgb) / 0.07) 55%,
-    transparent 100%
+    transparent,
+    rgb(var(--accent-rgb)),
+    transparent
   );
-  animation: hb-shimmer 1.5s ease-in-out infinite;
+  animation: hb-charge 1.15s ease-in-out infinite;
 }
-@keyframes hb-shimmer {
+@keyframes hb-charge {
+  0% {
+    transform: translateX(-120%);
+  }
   100% {
-    transform: translateX(100%);
+    transform: translateX(340%);
   }
 }
 
