@@ -142,7 +142,17 @@ export function ConsistencyHeatmap({
               <div key={i} className="flex flex-col gap-[3px]">
                 {col.map((cell) =>
                   cell.future ? (
-                    <div key={cell.key} className="size-3" />
+                    // Upcoming days: shown as faint empty cells so every column
+                    // keeps its full seven rows (no ragged right edge).
+                    <div
+                      key={cell.key}
+                      title={`${format(cell.date, "EEE, MMM d")} · upcoming`}
+                      className="size-3 rounded-[2px] opacity-40"
+                      style={{
+                        backgroundColor: LEVELS[0],
+                        boxShadow: CELL_RING,
+                      }}
+                    />
                   ) : (
                     <div
                       key={cell.key}

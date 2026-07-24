@@ -139,6 +139,57 @@ export type ExerciseProgression = {
   pr: ExercisePR;
 };
 
+export type Exercise1RM = {
+  exerciseId: string;
+  name: string;
+  primaryMuscle: Muscle;
+  bestEst1rm: number; // kg
+  bestWeightKg: number; // load of the set that produced the best est. 1RM
+  bestReps: number; // reps of that set
+  topWeightKg: number; // heaviest load ever handled (any rep count)
+};
+
+/**
+ * Every exercise the user has logged a working set against, with their all-time
+ * best estimated 1RM (Epley) and the set that produced it, ranked strongest
+ * first. Powers the Progress "1RM board". One pass over `v_working_set`.
+ */
+export async function getAllExercise1RMs(): Promise<Exercise1RM[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("v_working_set")
+    .select("exercise_id, exercise_name, primary_muscle, weight_kg, reps, est_1rm");
+  if (error) throw error;
+
+  const byExercise = new Map<string, Exercise1RM>();
+  for (const r of data ?? []) {
+    if (!r.exercise_id) continue;
+    const e1rm = Number(r.est_1rm ?? 0);
+    const w = Number(r.weight_kg ?? 0);
+    const reps = Number(r.reps ?? 0);
+    const cur = byExercise.get(r.exercise_id);
+    if (!cur) {
+      byExercise.set(r.exercise_id, {
+        exerciseId: r.exercise_id,
+        name: r.exercise_name ?? "Exercise",
+        primaryMuscle: (r.primary_muscle as Muscle) ?? "chest",
+        bestEst1rm: e1rm,
+        bestWeightKg: w,
+        bestReps: reps,
+        topWeightKg: w,
+      });
+    } else {
+      if (e1rm > cur.bestEst1rm) {
+        cur.bestEst1rm = e1rm;
+        cur.bestWeightKg = w;
+        cur.bestReps = reps;
+      }
+      if (w > cur.topWeightKg) cur.topWeightKg = w;
+    }
+  }
+  return [...byExercise.values()].sort((a, b) => b.bestEst1rm - a.bestEst1rm);
+}
+
 /** 1RM progression, volume-per-session and PRs for one exercise. */
 export async function getExerciseProgression(
   exerciseId: string,

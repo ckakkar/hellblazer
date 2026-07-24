@@ -1,6 +1,7 @@
 import { TrendingUp } from "lucide-react";
 import { getLoggedExercises } from "@/lib/data/exercises";
 import {
+  getAllExercise1RMs,
   getExerciseProgression,
   getMuscleBalance,
   getMuscleWeeklySeries,
@@ -8,7 +9,8 @@ import {
 import { getUnit } from "@/lib/settings";
 import { getProfile } from "@/lib/data/profile";
 import { LadderStanding } from "@/components/tier/ladder-standing";
-import { PageHeader, EmptyState } from "@/components/ui/page-header";
+import { OneRepMaxBoard } from "@/components/one-rep-max-board";
+import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ChartCard } from "@/components/ui/chart-card";
 import { StatCard } from "@/components/ui/stat-card";
 import {
@@ -30,10 +32,11 @@ export default async function ProgressPage({
 }) {
   const sp = await searchParams;
   const tab = sp.tab === "muscle" ? "muscle" : "exercise";
-  const [loggedExercises, unit, profile] = await Promise.all([
+  const [loggedExercises, unit, profile, oneRepMaxes] = await Promise.all([
     getLoggedExercises(),
     getUnit(),
     getProfile(),
+    getAllExercise1RMs(),
   ]);
 
   // Validate URL params — bad values fall back instead of crashing the page.
@@ -76,6 +79,13 @@ export default async function ProgressPage({
         )
       ) : (
         <MuscleTab muscle={selectedMuscle} unit={unit} />
+      )}
+
+      {oneRepMaxes.length > 0 && (
+        <div className="mt-8">
+          <SectionLabel>Strength board · every lift</SectionLabel>
+          <OneRepMaxBoard rows={oneRepMaxes} unit={unit} />
+        </div>
       )}
     </div>
   );
