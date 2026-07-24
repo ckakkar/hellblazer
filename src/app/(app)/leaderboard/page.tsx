@@ -63,12 +63,12 @@ export default async function LeaderboardPage() {
           body="Be the first — set a ring name and log some working sets."
         />
       ) : (
-        <ol className="grid gap-2">
+        <ol className="flex flex-col gap-2">
           {entries.map((e, i) => {
             const place = i + 1;
             const isMe = me != null && e.username.toLowerCase() === me;
             return (
-              <li key={`${e.username}-${i}`}>
+              <li key={`${e.username}-${i}`} className="min-w-0">
                 <Card
                   className={cn(
                     "flex items-center gap-3.5 p-4 transition-colors",
@@ -99,8 +99,8 @@ export default async function LeaderboardPage() {
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm font-semibold text-text">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className="min-w-0 truncate text-sm font-semibold text-text">
                         {e.username}
                       </span>
                       {isMe && (
