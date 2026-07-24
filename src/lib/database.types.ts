@@ -85,6 +85,7 @@ export type Database = {
           tier_evaluated_at: string | null
           tier_rationale: string | null
           user_id: string
+          username: string | null
         }
         Insert: {
           birth_year?: number | null
@@ -96,6 +97,7 @@ export type Database = {
           tier_evaluated_at?: string | null
           tier_rationale?: string | null
           user_id: string
+          username?: string | null
         }
         Update: {
           birth_year?: number | null
@@ -107,6 +109,7 @@ export type Database = {
           tier_evaluated_at?: string | null
           tier_rationale?: string | null
           user_id?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -601,7 +604,13 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      leaderboard: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          username: string | null
+          tier: string | null
+        }[]
+      }
     }
     Enums: {
       muscle_group:

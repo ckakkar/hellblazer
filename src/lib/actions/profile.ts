@@ -57,3 +57,38 @@ export async function updateProfileDetails(input: {
   if (error) throw error;
   revalidatePath("/settings");
 }
+
+/**
+ * Set (or clear) the lifter's public ring name shown on the leaderboard.
+ * Case-insensitively unique — returns a typed result rather than throwing so
+ * the UI can show "that name's taken".
+ */
+export async function setUsername(input: {
+  username: string | null;
+}): Promise<{ ok: true } | { ok: false; error: "taken" | "invalid" }> {
+  const parsed = z
+    .object({
+      username: z
+        .string()
+        .trim()
+        .min(2)
+        .max(24)
+        .regex(/^[a-zA-Z0-9 _.-]+$/)
+        .nullable(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "invalid" };
+
+  const { supabase, user } = await getAuthedContext();
+  const { error } = await supabase.from("profile").upsert({
+    user_id: user.id,
+    username: parsed.data.username,
+  });
+  if (error) {
+    if (error.code === "23505") return { ok: false, error: "taken" };
+    throw error;
+  }
+  revalidatePath("/settings");
+  revalidatePath("/leaderboard");
+  return { ok: true };
+}

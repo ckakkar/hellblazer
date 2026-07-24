@@ -7,6 +7,7 @@ import {
   Dumbbell,
   User,
   CalendarRange,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ export const NAV_SECTIONS: { title?: string; items: NavItem[] }[] = [
     items: [
       { href: "/progress", label: "Progress", icon: TrendingUp },
       { href: "/history", label: "History", icon: History },
+      { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
     ],
   },
 ];
@@ -54,6 +56,7 @@ export const BOTTOM_NAV: NavItem[] = [
 
 /** Mobile top-bar overflow (secondary destinations). */
 export const SECONDARY_NAV: NavItem[] = [
+  { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/templates", label: "Templates", icon: ClipboardList },
   { href: "/exercises", label: "Exercises", icon: Dumbbell },
   { href: "/settings", label: "Profile", icon: User },

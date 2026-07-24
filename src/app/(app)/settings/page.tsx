@@ -19,6 +19,7 @@ import {
 import { UnitToggle } from "./unit-toggle";
 import { ThemeSelector } from "./theme-selector";
 import { ProfileDetails } from "./profile-details";
+import { UsernameField } from "./username-field";
 import { BodyweightManager } from "./bodyweight-manager";
 import { BodyweightChart } from "@/components/charts/bodyweight-chart";
 import { NotificationsManager } from "./notifications-manager";
@@ -64,10 +65,15 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle>About you</CardTitle>
             <CardDescription>
-              Sex, age and height — these calibrate your strength evaluation.
+              Your ring name for the leaderboard, plus the details that
+              calibrate your strength rank.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="grid gap-5">
+            <div className="grid gap-1.5">
+              <span className="text-xs font-medium text-muted">Ring name</span>
+              <UsernameField current={profile?.username ?? null} />
+            </div>
             <ProfileDetails
               sex={
                 (profile?.sex as "male" | "female" | "other" | null) ?? null
