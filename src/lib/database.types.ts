@@ -609,6 +609,7 @@ export type Database = {
         Returns: {
           username: string | null
           tier: string | null
+          total_volume: number | null
         }[]
       }
     }

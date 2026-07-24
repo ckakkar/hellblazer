@@ -3,16 +3,18 @@ import { getTier } from "@/lib/tiers";
 
 export type LeaderboardEntry = {
   username: string;
-  tierKey: string;
-  name: string;
-  epithet: string;
-  rank: number;
+  totalVolumeKg: number;
+  tierKey: string | null;
+  name: string | null;
+  epithet: string | null;
+  rank: number | null;
 };
 
 /**
- * The global standings — every lifter who has claimed a ring name and a rank,
- * strongest first. Reads through the `leaderboard()` security-definer RPC, which
- * exposes only username + tier (no private data) across all users.
+ * The global standings — every lifter who has claimed a ring name, ranked by
+ * lifetime working-set volume moved (strongest mover first). Reads through the
+ * `leaderboard()` security-definer RPC, which exposes only username, tier and
+ * total volume across all users (no other private data).
  */
 export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
   const supabase = await createClient();
@@ -21,17 +23,21 @@ export async function getLeaderboard(): Promise<LeaderboardEntry[]> {
 
   const entries: LeaderboardEntry[] = [];
   for (const row of data ?? []) {
+    if (!row.username) continue;
     const tier = getTier(row.tier);
-    if (!row.username || !tier) continue;
     entries.push({
       username: row.username,
-      tierKey: tier.key,
-      name: tier.name,
-      epithet: tier.epithet,
-      rank: tier.rank,
+      totalVolumeKg: Number(row.total_volume ?? 0),
+      tierKey: tier?.key ?? null,
+      name: tier?.name ?? null,
+      epithet: tier?.epithet ?? null,
+      rank: tier?.rank ?? null,
     });
   }
-  // Strongest first; ties broken alphabetically for a stable order.
-  entries.sort((a, b) => b.rank - a.rank || a.username.localeCompare(b.username));
+  // Most tonnage first; ties broken alphabetically for a stable order.
+  entries.sort(
+    (a, b) =>
+      b.totalVolumeKg - a.totalVolumeKg || a.username.localeCompare(b.username),
+  );
   return entries;
 }

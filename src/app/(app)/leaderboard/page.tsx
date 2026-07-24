@@ -2,16 +2,21 @@ import Link from "next/link";
 import { Crown, Trophy } from "lucide-react";
 import { getLeaderboard } from "@/lib/data/leaderboard";
 import { getProfile } from "@/lib/data/profile";
+import { getUnit } from "@/lib/settings";
+import { formatVolume } from "@/lib/units";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { TierLadder } from "@/components/tier/tier-ui";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function LeaderboardPage() {
-  const [entries, profile] = await Promise.all([getLeaderboard(), getProfile()]);
+  const [entries, profile, unit] = await Promise.all([
+    getLeaderboard(),
+    getProfile(),
+    getUnit(),
+  ]);
   const me = profile?.username?.toLowerCase() ?? null;
   const myPlace = me
     ? entries.findIndex((e) => e.username.toLowerCase() === me) + 1
@@ -21,7 +26,7 @@ export default async function LeaderboardPage() {
     <div>
       <PageHeader
         title="Leaderboard"
-        subtitle="Every fighter with a ring name, ranked by strength."
+        subtitle="Every fighter with a ring name, ranked by total volume moved."
       />
 
       {!profile?.username && (
@@ -33,7 +38,7 @@ export default async function LeaderboardPage() {
                 Claim your ring name
               </div>
               <p className="mt-0.5 text-sm text-muted">
-                Set a ring name and get evaluated to take your place among the
+                Set a ring name in your profile to take your place among the
                 fighters.
               </p>
             </div>
@@ -55,7 +60,7 @@ export default async function LeaderboardPage() {
         <EmptyState
           icon={<Trophy className="size-6" />}
           title="No fighters ranked yet"
-          body="Be the first — set a ring name and run a strength evaluation."
+          body="Be the first — set a ring name and log some working sets."
         />
       ) : (
         <ol className="grid gap-2">
@@ -98,14 +103,16 @@ export default async function LeaderboardPage() {
                       )}
                     </div>
                     <div className="truncate font-mono text-xs text-muted">
-                      {e.name} · {e.epithet}
+                      {e.name ? `${e.name} · ${e.epithet}` : "Unranked fighter"}
                     </div>
                   </div>
-                  <div className="flex shrink-0 flex-col items-end gap-1.5">
-                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted/70">
-                      Rank {e.rank}/10
-                    </span>
-                    <TierLadder rank={e.rank} className="w-20 sm:w-28" />
+                  <div className="shrink-0 text-right">
+                    <div className="font-mono text-sm font-semibold tabular-nums text-text">
+                      {formatVolume(e.totalVolumeKg, unit)}
+                    </div>
+                    <div className="font-mono text-[10px] uppercase tracking-wide text-muted/70">
+                      total moved
+                    </div>
                   </div>
                 </Card>
               </li>
