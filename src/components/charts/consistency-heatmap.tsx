@@ -1,9 +1,9 @@
 import { addDays, format, isAfter, isSameDay, startOfISOWeek, subWeeks } from "date-fns";
 import type { SessionSummary } from "@/lib/data/sessions";
 
-// Trailing window, GitHub-style. 13 weeks ≈ 3 months — a full frame that fits a
-// phone width comfortably at a legible cell size.
-const WEEKS = 13;
+// Trailing window, GitHub-style. 26 weeks ≈ 6 months — a full frame that still
+// fits a phone width at these cell sizes.
+const WEEKS = 26;
 
 // GitHub-style 5-step contribution ramp, keyed off the active accent so it
 // re-skins with the theme. Level 0 is an empty rest cell.
@@ -37,7 +37,7 @@ type DayCell = {
 
 /**
  * GitHub-style contribution graph: one 7-day column per week over a trailing
- * three-month window, cells shaded by that day's working sets across a 5-step
+ * six-month window, cells shaded by that day's working sets across a 5-step
  * accent ramp. Pure markup — no client JS.
  */
 export function ConsistencyHeatmap({
@@ -78,7 +78,7 @@ export function ConsistencyHeatmap({
     .filter((c) => !c.future && c.sets > 0).length;
 
   // Month labels, one group per run of columns sharing a month (no overlap).
-  // Each column is a 12px cell + 3px gap = 15px wide.
+  // Each column is a 10px cell + 3px gap = 13px wide.
   const monthGroups: { label: string; span: number }[] = [];
   for (const col of weeks) {
     const label = format(col[0].date, "MMM");
@@ -99,7 +99,7 @@ export function ConsistencyHeatmap({
             {monthGroups.map((g, i) => (
               <div
                 key={i}
-                style={{ width: g.span * 15 }}
+                style={{ width: g.span * 13 }}
                 className="text-[10px] font-medium text-muted"
               >
                 {g.span >= 2 ? g.label : ""}
@@ -112,7 +112,7 @@ export function ConsistencyHeatmap({
         <div className="mt-1 flex gap-1">
           <div className="flex w-6 shrink-0 flex-col gap-[3px]">
             {weekdayLabels.map((d, i) => (
-              <span key={i} className="h-3 text-[9px] leading-3 text-muted">
+              <span key={i} className="h-2.5 text-[8px] leading-[10px] text-muted">
                 {d}
               </span>
             ))}
@@ -127,7 +127,7 @@ export function ConsistencyHeatmap({
                     <div
                       key={cell.key}
                       title={`${format(cell.date, "EEE, MMM d")} · upcoming`}
-                      className="size-3 rounded-[2px] opacity-40"
+                      className="size-2.5 rounded-[2px] opacity-40"
                       style={{ backgroundColor: LEVELS[0], boxShadow: CELL_RING }}
                     />
                   ) : (
@@ -136,7 +136,7 @@ export function ConsistencyHeatmap({
                       title={`${format(cell.date, "EEE, MMM d")} · ${
                         cell.sets > 0 ? `${Math.round(cell.sets)} sets` : "rest"
                       }`}
-                      className={`size-3 rounded-[2px] ${
+                      className={`size-2.5 rounded-[2px] ${
                         cell.isToday && cell.sets === 0
                           ? "ring-1 ring-accent/60"
                           : ""
@@ -157,14 +157,14 @@ export function ConsistencyHeatmap({
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-7">
           <span className="text-[11px] text-muted">
             <span className="font-mono text-text">{trainedCount}</span> training
-            day{trainedCount === 1 ? "" : "s"} · last 3 months
+            day{trainedCount === 1 ? "" : "s"} · last 6 months
           </span>
           <div className="flex items-center gap-1 text-[10px] text-muted">
             Less
             {LEVELS.map((bg, i) => (
               <span
                 key={i}
-                className="size-3 rounded-[2px]"
+                className="size-2.5 rounded-[2px]"
                 style={{ backgroundColor: bg, boxShadow: CELL_RING }}
               />
             ))}
