@@ -206,6 +206,34 @@ label {
   }
 }
 
+/* Themed skeleton — a surface block with an accent glint sweeping across,
+   instead of a flat grey pulse. Used by every route's loading state. */
+.hb-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-surface);
+}
+.hb-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(var(--accent-rgb) / 0.07) 45%,
+    rgb(var(--accent-rgb) / 0.11) 50%,
+    rgb(var(--accent-rgb) / 0.07) 55%,
+    transparent 100%
+  );
+  animation: hb-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes hb-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Strip native number spinners — NumberStepper supplies its own controls */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
