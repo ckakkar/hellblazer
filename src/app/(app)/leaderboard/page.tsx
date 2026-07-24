@@ -5,6 +5,7 @@ import { getProfile } from "@/lib/data/profile";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TierLadder } from "@/components/tier/tier-ui";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -100,9 +101,12 @@ export default async function LeaderboardPage() {
                       {e.name} · {e.epithet}
                     </div>
                   </div>
-                  <span className="shrink-0 rounded-md border border-accent/40 bg-accent/[0.07] px-2.5 py-1 font-mono text-xs tabular-nums text-accent">
-                    #{e.rank}
-                  </span>
+                  <div className="flex shrink-0 flex-col items-end gap-1.5">
+                    <span className="font-mono text-[10px] uppercase tracking-wide text-muted/70">
+                      Rank {e.rank}/10
+                    </span>
+                    <TierLadder rank={e.rank} className="w-20 sm:w-28" />
+                  </div>
                 </Card>
               </li>
             );
