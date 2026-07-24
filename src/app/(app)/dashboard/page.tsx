@@ -106,13 +106,16 @@ export default async function DashboardPage() {
         href="/settings"
         className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/40"
       >
-        <span className="font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+        <span className="shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
           Rank
         </span>
-        <span className="font-impact text-lg uppercase leading-none text-accent">
+        <span className="min-w-0 truncate font-impact text-lg uppercase leading-none text-accent">
           {tier ? tier.name : "Unranked"}
         </span>
-        <TierLadder rank={tier?.rank ?? 0} className="ml-auto max-w-[160px]" />
+        <TierLadder
+          rank={tier?.rank ?? 0}
+          className="ml-auto w-24 shrink-0 sm:w-40"
+        />
       </Link>
 
       {isNewUser ? (

@@ -37,6 +37,7 @@ export function ProgressControls({
           <button
             key={t}
             onClick={() => go({ tab: t })}
+            aria-pressed={tab === t}
             className={cn(
               "rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors",
               tab === t

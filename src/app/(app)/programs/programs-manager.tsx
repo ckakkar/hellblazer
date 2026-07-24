@@ -8,12 +8,12 @@ import {
   Loader2,
   Plus,
   Sparkles,
-  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
@@ -52,7 +52,15 @@ export function ProgramsManager({
         title="Programs"
         subtitle="Build a training block, set how many weeks to run it, and go."
         action={
-          <Button onClick={() => setCreating(true)} disabled={templates.length === 0}>
+          <Button
+            onClick={() => setCreating(true)}
+            disabled={templates.length === 0}
+            title={
+              templates.length === 0
+                ? "Build a template first — programs are made from templates"
+                : undefined
+            }
+          >
             <Plus className="size-4" />
             New program
           </Button>
@@ -167,18 +175,16 @@ export function ProgramsManager({
                   Make active
                 </button>
               )}
-              <button
-                aria-label="Delete program"
+              <ConfirmIconButton
+                label="Delete program"
+                confirmLabel="Tap again to delete program"
                 disabled={pending}
-                onClick={() =>
+                onConfirm={() =>
                   start(async () => {
                     await deleteProgram({ id: p.id });
                   })
                 }
-                className="shrink-0 text-muted transition-colors hover:text-danger"
-              >
-                <Trash2 className="size-4" />
-              </button>
+              />
               <Link href={`/programs/${p.id}`} aria-label="Open program">
                 <ChevronRight className="size-4 shrink-0 text-muted" />
               </Link>

@@ -4,18 +4,19 @@ import { useState, useTransition } from "react";
 import {
   ChevronDown,
   ChevronUp,
+  ClipboardList,
   Eraser,
   GripVertical,
   Loader2,
   Plus,
   Sparkles,
-  Trash2,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { MUSCLE_LABEL } from "@/lib/muscles";
@@ -159,6 +160,7 @@ export function TemplatesManager({
 
       {templates.length === 0 ? (
         <EmptyState
+          icon={<ClipboardList className="size-6" />}
           title="No templates yet"
           body="Load a starter split above, or create a template from scratch."
         />
@@ -287,6 +289,7 @@ function TemplateCard({
       <div className="flex items-center gap-3 p-4">
         <button
           onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
           className="flex min-w-0 flex-1 items-center gap-3 text-left"
         >
           <div className="min-w-0">
@@ -303,21 +306,20 @@ function TemplateCard({
             </div>
           </div>
         </button>
-        <button
-          aria-label="Delete template"
+        <ConfirmIconButton
+          label="Delete template"
+          confirmLabel="Tap again to delete template"
           disabled={pending}
-          onClick={() =>
+          onConfirm={() =>
             start(async () => {
               await deleteTemplate({ id: template.id });
             })
           }
-          className="text-muted transition-colors hover:text-danger"
-        >
-          <Trash2 className="size-4" />
-        </button>
+        />
         <button
           onClick={() => setOpen((v) => !v)}
-          className="text-muted transition-colors hover:text-text"
+          className="flex size-8 shrink-0 items-center justify-center text-muted transition-colors hover:text-text"
+          aria-expanded={open}
           aria-label={open ? "Collapse" : "Expand"}
         >
           {open ? (

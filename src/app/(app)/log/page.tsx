@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CalendarRange } from "lucide-react";
 import { getTemplates } from "@/lib/data/templates";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
@@ -69,6 +70,7 @@ export default async function LogPage() {
         <div className="grid gap-4">
           <SessionStarter templates={[]} />
           <EmptyState
+            icon={<CalendarRange className="size-6" />}
             title="No program or templates yet"
             body="Build a split on Templates (or load the starter split) to train from a plan."
             action={

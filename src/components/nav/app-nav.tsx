@@ -149,7 +149,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
                 className={cn(
                   "flex size-9 items-center justify-center rounded-lg transition-colors",
                   isLog && "bg-accent text-bg shadow-glow",
-                  !isLog && active && "text-accent",
+                  !isLog && active && "bg-accent/10 text-accent",
                   !isLog && !active && "text-muted",
                 )}
               >

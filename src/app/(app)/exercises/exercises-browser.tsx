@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Loader2, Plus, Search, Trash2 } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { PageHeader } from "@/components/ui/page-header";
 import { cn } from "@/lib/utils";
@@ -122,18 +123,16 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
                       </span>
                     )}
                     {e.user_id ? (
-                      <button
-                        aria-label="Delete exercise"
+                      <ConfirmIconButton
+                        label="Delete exercise"
+                        confirmLabel="Tap again to delete exercise"
                         disabled={pending}
-                        onClick={() =>
+                        onConfirm={() =>
                           start(async () => {
                             await deleteCustomExercise({ id: e.id });
                           })
                         }
-                        className="text-muted transition-colors hover:text-danger"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
+                      />
                     ) : (
                       <Badge variant="muted">library</Badge>
                     )}

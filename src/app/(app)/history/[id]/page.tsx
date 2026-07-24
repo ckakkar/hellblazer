@@ -49,7 +49,7 @@ export default async function SessionDetailPage({
             {session.title ?? "Session"}
           </h1>
           <div className="mt-1 font-mono text-xs text-muted">
-            {session.date ? format(parseISO(session.date), "EEEE, MMM d yyyy") : ""}
+            {session.date ? format(parseISO(session.date), "EEEE, MMM d, yyyy") : ""}
             {" · "}
             {totalSets} sets · {formatVolume(totalVolume, unit)}
             {session.duration_min ? ` · ${session.duration_min}min` : ""}

@@ -23,6 +23,8 @@ export function UnitToggle({ current }: { current: Unit }) {
         <button
           key={u}
           onClick={() => choose(u)}
+          aria-pressed={unit === u}
+          aria-label={u === "kg" ? "Kilograms" : "Pounds"}
           className={cn(
             "min-w-16 rounded-md px-4 py-2 text-sm font-medium uppercase transition-colors",
             unit === u ? "bg-accent text-bg" : "text-muted hover:text-text",

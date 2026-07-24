@@ -2,9 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus, Trash2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import {
   fromDisplayWeight,
   toDisplayWeight,
@@ -74,24 +75,22 @@ export function BodyweightManager({
               className="flex items-center justify-between px-4 py-2.5"
             >
               <span className="font-mono text-sm text-muted">
-                {format(parseISO(l.date), "EEE, MMM d yyyy")}
+                {format(parseISO(l.date), "EEE, MMM d, yyyy")}
               </span>
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <span className="font-mono text-sm text-text">
                   {trimNum(toDisplayWeight(l.weight_kg, unit))} {unit}
                 </span>
-                <button
-                  aria-label="Delete entry"
+                <ConfirmIconButton
+                  label="Delete entry"
+                  confirmLabel="Tap again to delete entry"
                   disabled={pending}
-                  onClick={() =>
+                  onConfirm={() =>
                     start(async () => {
                       await deleteBodyweight({ id: l.id });
                     })
                   }
-                  className="text-muted transition-colors hover:text-danger"
-                >
-                  <Trash2 className="size-4" />
-                </button>
+                />
               </div>
             </li>
           ))}
