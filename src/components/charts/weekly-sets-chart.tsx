@@ -15,12 +15,18 @@ import { AXIS_TICK, ChartEmpty, TooltipBox } from "./chart-kit";
 type Row = { muscle: Muscle; sets: number };
 type Datum = { label: string; sets: number; weak: boolean };
 
+// Small stabilisers clutter the bars without guiding programming — keep the
+// chart to the movers that define push/pull/legs balance.
+const EXCLUDED: ReadonlySet<Muscle> = new Set(["abs", "forearms", "traps"]);
+
 export function WeeklySetsChart({ data }: { data: Row[] }) {
-  const chartData: Datum[] = data.map((d) => ({
-    label: MUSCLE_LABEL[d.muscle],
-    sets: Math.round(d.sets * 10) / 10,
-    weak: isWeakPoint(d.muscle),
-  }));
+  const chartData: Datum[] = data
+    .filter((d) => !EXCLUDED.has(d.muscle))
+    .map((d) => ({
+      label: MUSCLE_LABEL[d.muscle],
+      sets: Math.round(d.sets * 10) / 10,
+      weak: isWeakPoint(d.muscle),
+    }));
 
   const total = chartData.reduce((s, d) => s + d.sets, 0);
   if (total === 0) {
