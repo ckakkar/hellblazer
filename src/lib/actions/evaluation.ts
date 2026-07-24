@@ -67,7 +67,9 @@ ${ladder}
 
 Your job is to be FAIR and a little generous — a Kengan matchmaker who genuinely respects the work, not a gatekeeper. Actually think about how strong this person is and give them the rank they've earned. When a lifter sits between two tiers, round UP. Reward consistency, training age, and steady progression as much as raw numbers — someone who keeps showing up and adding weight is getting stronger and should climb. Never punish a short history if the logged work is solid; judge by demonstrated strength, not by how long they've used the app.
 
-Use these GENEROUS reference anchors (a natural lifter, judged on their best working sets; use bodyweight-relative numbers on the big compounds — squat, bench, deadlift, overhead press, rows — whenever bodyweight is known, otherwise judge absolute loads and consistency and lean generous):
+Calibrate to the lifter when their details are known: strength standards are sex-relative (a given absolute load is more impressive for a female or lighter/older lifter), so judge bodyweight-relative on the big compounds and weight the reference anchors below by sex, bodyweight, height and age. Never penalise anyone for their demographics — use them only to give fair, generous credit.
+
+Use these GENEROUS reference anchors (a natural MALE lifter at the stated bodyweight-relative numbers; scale expectations down for female, lighter, or masters lifters, judged on their best working sets; use bodyweight-relative numbers on the big compounds — squat, bench, deadlift, overhead press, rows — whenever bodyweight is known, otherwise judge absolute loads and consistency and lean generous):
 - Rei Mikazuchi (1): just getting started — first few weeks in the ring, still finding form and light loads.
 - Setsuna Kiryu (2): a real beginner base — training regularly, loads clearly climbing (roughly bench ~0.6×bw, squat ~1×bw).
 - Sen Hatsumi (3): solid intermediate — strong for a regular gym-goer (bench ~0.85×bw, squat ~1.25×bw, deadlift ~1.5×bw).

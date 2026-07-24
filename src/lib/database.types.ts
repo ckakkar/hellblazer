@@ -76,24 +76,33 @@ export type Database = {
       }
       profile: {
         Row: {
+          birth_year: number | null
           created_at: string
+          height_cm: number | null
           reminder_hour: number | null
+          sex: string | null
           tier: string | null
           tier_evaluated_at: string | null
           tier_rationale: string | null
           user_id: string
         }
         Insert: {
+          birth_year?: number | null
           created_at?: string
+          height_cm?: number | null
           reminder_hour?: number | null
+          sex?: string | null
           tier?: string | null
           tier_evaluated_at?: string | null
           tier_rationale?: string | null
           user_id: string
         }
         Update: {
+          birth_year?: number | null
           created_at?: string
+          height_cm?: number | null
           reminder_hour?: number | null
+          sex?: string | null
           tier?: string | null
           tier_evaluated_at?: string | null
           tier_rationale?: string | null

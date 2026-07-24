@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/card";
 import { UnitToggle } from "./unit-toggle";
 import { ThemeSelector } from "./theme-selector";
+import { ProfileDetails } from "./profile-details";
 import { BodyweightManager } from "./bodyweight-manager";
 import { BodyweightChart } from "@/components/charts/bodyweight-chart";
 import { NotificationsManager } from "./notifications-manager";
@@ -56,6 +57,28 @@ export default async function ProfilePage() {
             evaluatedAt={profile?.tier_evaluated_at ?? null}
           />
         </section>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>About you</CardTitle>
+            <CardDescription>
+              Sex, age and height — these calibrate your strength evaluation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProfileDetails
+              sex={
+                (profile?.sex as "male" | "female" | "other" | null) ?? null
+              }
+              age={
+                profile?.birth_year
+                  ? new Date().getFullYear() - profile.birth_year
+                  : null
+              }
+              heightCm={profile?.height_cm ?? null}
+            />
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

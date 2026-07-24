@@ -12,6 +12,9 @@ export type LiftStat = {
 };
 
 export type TrainingProfile = {
+  sex: string | null;
+  age: number | null;
+  heightCm: number | null;
   bodyweightKg: number | null;
   totalSessions: number;
   sessionsLast28d: number;
@@ -35,7 +38,7 @@ export type TrainingProfile = {
 export async function getTrainingProfile(): Promise<TrainingProfile> {
   const supabase = await createClient();
 
-  const [bwRes, sessionsRes, progRes, programRes, weeklyRes] =
+  const [bwRes, sessionsRes, progRes, programRes, weeklyRes, profileRes] =
     await Promise.all([
       supabase
         .from("bodyweight_log")
@@ -60,6 +63,10 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .from("v_weekly_sets_per_muscle")
         .select("muscle, sets, week")
         .order("week", { ascending: false }),
+      supabase
+        .from("profile")
+        .select("sex, birth_year, height_cm")
+        .maybeSingle(),
     ]);
 
   const sessions = sessionsRes.data ?? [];
@@ -175,7 +182,11 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
     };
   }
 
+  const birthYear = profileRes.data?.birth_year ?? null;
   return {
+    sex: profileRes.data?.sex ?? null,
+    age: birthYear ? new Date().getFullYear() - birthYear : null,
+    heightCm: profileRes.data?.height_cm ?? null,
     bodyweightKg: bwRes.data?.weight_kg ?? null,
     totalSessions,
     sessionsLast28d,
