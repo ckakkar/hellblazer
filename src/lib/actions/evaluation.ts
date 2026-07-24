@@ -116,10 +116,28 @@ Respond with ONLY a JSON object of exactly this shape:
     clearTimeout(timeout);
 
     if (!res.ok) {
+      // Surface DeepSeek's own reason — a raw status alone hides the cause
+      // (bad key, empty balance, invalid param, rate limit, …).
+      const raw = await res.text().catch(() => "");
+      let reason = "";
+      try {
+        reason = (JSON.parse(raw)?.error?.message as string) ?? "";
+      } catch {
+        reason = raw.slice(0, 160);
+      }
+      console.error("DeepSeek evaluation failed", res.status, raw.slice(0, 500));
+      const friendly =
+        res.status === 401
+          ? "the API key is being rejected"
+          : res.status === 402
+            ? "the DeepSeek account is out of balance"
+            : res.status === 429
+              ? "rate limited — wait a moment"
+              : reason || "the request was rejected";
       return {
         ok: false,
         error: "failed",
-        message: `The judge is unreachable (${res.status}). Try again.`,
+        message: `The judge turned you away (${res.status}) — ${friendly}. Try again.`,
       };
     }
 
