@@ -102,7 +102,8 @@ Respond with ONLY a JSON object of exactly this shape:
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "deepseek-chat",
+        // DeepSeek retired "deepseek-chat"; v4 models are the supported names.
+        model: "deepseek-v4-pro",
         messages: [
           { role: "system", content: system },
           { role: "user", content: userMsg },
