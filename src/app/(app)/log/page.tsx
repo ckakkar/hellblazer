@@ -15,6 +15,17 @@ export default async function LogPage() {
     getActiveProgramProgress(),
   ]);
 
+  // Full template details (movements, target sets/reps) for the preview dropdown,
+  // keyed by id — the program-day select only carries exercise counts.
+  const templateById = new Map(templates.map((t) => [t.id, t]));
+  const previewExercises = (id: string) =>
+    (templateById.get(id)?.template_exercise ?? []).map((te) => ({
+      name: te.exercise?.name ?? "Exercise",
+      muscle: te.exercise?.primary_muscle ?? null,
+      targetSets: te.target_sets,
+      targetRepRange: te.target_rep_range,
+    }));
+
   // Only offer the days of the current split (the active program), not every
   // template ever loaded. With no active program, fall back to all templates.
   type Opt = {
@@ -22,30 +33,25 @@ export default async function LogPage() {
     name: string;
     day_label: string | null;
     count: number;
+    exercises: ReturnType<typeof previewExercises>;
   };
   const options: Opt[] = [];
+  const pushOption = (id: string, name: string, day_label: string | null) => {
+    const exercises = previewExercises(id);
+    options.push({ id, name, day_label, count: exercises.length, exercises });
+  };
   if (activeProgress) {
     const seen = new Set<string>();
     for (const d of activeProgress.program.program_day) {
       const t = d.workout_template;
       if (t && !seen.has(t.id)) {
         seen.add(t.id);
-        options.push({
-          id: t.id,
-          name: t.name,
-          day_label: t.day_label,
-          count: t.template_exercise.length,
-        });
+        pushOption(t.id, t.name, t.day_label);
       }
     }
   } else {
     for (const t of templates) {
-      options.push({
-        id: t.id,
-        name: t.name,
-        day_label: t.day_label,
-        count: t.template_exercise.length,
-      });
+      pushOption(t.id, t.name, t.day_label);
     }
   }
   const hasProgramNext = Boolean(activeProgress?.nextDay?.template_id);
