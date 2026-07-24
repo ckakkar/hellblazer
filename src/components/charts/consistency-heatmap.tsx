@@ -9,13 +9,8 @@ import {
 } from "date-fns";
 import type { SessionSummary } from "@/lib/data/sessions";
 
-// Beyond this many weeks of membership, switch from the roomy day-by-day
-// calendar to the compact GitHub-style column grid (which scrolls sideways).
-const ROOMY_MAX_WEEKS = 16;
 // Never render more than a trailing year, however long ago the user joined.
 const HARD_MAX_WEEKS = 53;
-
-const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 type DayCell = {
   date: Date;
@@ -26,11 +21,11 @@ type DayCell = {
 };
 
 /**
- * A per-day training map. One mark per calendar day: solid accent when at least
- * one working set was logged, a faint rest cell otherwise. The grid begins the
- * week the lifter joined (not a fixed lookback) and, while that history is
- * short, renders a clear day-numbered calendar; once it grows past a few months
- * it falls back to a compact column grid. Pure markup — no client JS.
+ * GitHub-style training grid: one 7-day column per week, strongest signal being
+ * a single binary mark — a solid accent square on any day at least one working
+ * set was logged, a faint bordered cell on rest days. The grid begins the week
+ * the lifter joined (not a fixed lookback) and scrolls sideways as the history
+ * grows past a year. Pure markup — no client JS, no intensity ramp.
  */
 export function ConsistencyHeatmap({
   summaries,
@@ -62,7 +57,6 @@ export function ConsistencyHeatmap({
 
   const weeksSpan =
     differenceInCalendarWeeks(todayWeek, startWeek, { weekStartsOn: 1 }) + 1;
-  const roomy = weeksSpan <= ROOMY_MAX_WEEKS;
 
   const weeks: DayCell[][] = Array.from({ length: weeksSpan }).map((_, w) => {
     const monday = addDays(startWeek, w * 7);
@@ -80,70 +74,10 @@ export function ConsistencyHeatmap({
     });
   });
 
-  const trainedCount = weeks
-    .flat()
-    .filter((c) => c.state === "trained").length;
+  const trainedCount = weeks.flat().filter((c) => c.state === "trained").length;
 
-  const caption = (
-    <div className="mt-3 flex items-center justify-between gap-3 text-[11px] text-muted">
-      <span>
-        <span className="font-mono text-text">{trainedCount}</span> training day
-        {trainedCount === 1 ? "" : "s"}
-        {signup ? ` since ${format(signup, "MMM d, yyyy")}` : ""}
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="size-[11px] rounded-[3px] bg-accent shadow-glow" />
-        Trained
-      </span>
-    </div>
-  );
-
-  // ── Roomy calendar: responsive 7-column grid of day-numbered cells ────────
-  if (roomy) {
-    const cells = weeks.flat();
-    return (
-      <div>
-        <div className="grid grid-cols-7 gap-1.5">
-          {WEEKDAYS.map((d) => (
-            <div
-              key={d}
-              className="pb-1 text-center text-[10px] font-medium uppercase tracking-wide text-muted/70"
-            >
-              {d.slice(0, 1)}
-            </div>
-          ))}
-          {cells.map((c) =>
-            c.state === "blank" ? (
-              <div key={c.key} className="aspect-square" />
-            ) : (
-              <div
-                key={c.key}
-                title={`${format(c.date, "EEE, MMM d")} · ${
-                  c.state === "trained"
-                    ? `trained · ${Math.round(c.sets)} sets`
-                    : "rest"
-                }`}
-                className={[
-                  "flex aspect-square items-center justify-center rounded-md font-mono text-[11px] tabular-nums transition-colors",
-                  c.state === "trained"
-                    ? "bg-accent font-semibold text-bg shadow-glow"
-                    : "border border-border bg-surface-2 text-muted/45",
-                  c.isToday && c.state !== "trained"
-                    ? "ring-1 ring-accent/50"
-                    : "",
-                ].join(" ")}
-              >
-                {format(c.date, "d")}
-              </div>
-            ),
-          )}
-        </div>
-        {caption}
-      </div>
-    );
-  }
-
-  // ── Compact column grid: GitHub-style, one 13px cell per day ──────────────
+  // Month labels, one group per run of columns sharing a month (no overlap).
+  // Each column is 16px cell + 3px gap = 19px wide.
   const monthGroups: { label: string; span: number }[] = [];
   for (const col of weeks) {
     const label = format(col[0].date, "MMM");
@@ -157,13 +91,13 @@ export function ConsistencyHeatmap({
     <div className="overflow-x-auto">
       <div className="inline-block min-w-full">
         <div className="flex gap-2">
-          <div className="w-7 shrink-0" />
+          <div className="w-8 shrink-0" />
           <div className="flex">
             {monthGroups.map((g, i) => (
               <div
                 key={i}
-                style={{ width: g.span * 16 }}
-                className="text-[9px] font-medium uppercase tracking-[0.12em] text-muted"
+                style={{ width: g.span * 19 }}
+                className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted"
               >
                 {g.span >= 2 ? g.label : ""}
               </div>
@@ -172,9 +106,9 @@ export function ConsistencyHeatmap({
         </div>
 
         <div className="mt-1 flex gap-2">
-          <div className="flex w-7 shrink-0 flex-col gap-[3px] pt-[1px]">
+          <div className="flex w-8 shrink-0 flex-col gap-[3px] pt-[1px]">
             {weekdayLabels.map((d, i) => (
-              <span key={i} className="h-[13px] text-[9px] leading-[13px] text-muted">
+              <span key={i} className="h-4 text-[10px] leading-4 text-muted">
                 {d}
               </span>
             ))}
@@ -184,7 +118,7 @@ export function ConsistencyHeatmap({
               <div key={i} className="flex flex-col gap-[3px]">
                 {col.map((cell) =>
                   cell.state === "blank" ? (
-                    <div key={cell.key} className="size-[13px]" />
+                    <div key={cell.key} className="size-4" />
                   ) : (
                     <div
                       key={cell.key}
@@ -193,11 +127,15 @@ export function ConsistencyHeatmap({
                           ? `trained · ${Math.round(cell.sets)} sets`
                           : "rest"
                       }`}
-                      className={`size-[13px] rounded-[3px] ${
+                      className={`size-4 rounded-[4px] ${
                         cell.state === "trained"
-                          ? "bg-accent"
-                          : "border border-border/60 bg-surface-2"
-                      } ${cell.isToday && cell.state !== "trained" ? "ring-1 ring-accent/50" : ""}`}
+                          ? "bg-accent shadow-glow"
+                          : "border border-border/70 bg-surface-2"
+                      } ${
+                        cell.isToday && cell.state !== "trained"
+                          ? "ring-1 ring-accent/50"
+                          : ""
+                      }`}
                     />
                   ),
                 )}
@@ -206,7 +144,17 @@ export function ConsistencyHeatmap({
           </div>
         </div>
 
-        {caption}
+        <div className="mt-3 flex items-center justify-between gap-3 pl-10 text-[11px] text-muted">
+          <span>
+            <span className="font-mono text-text">{trainedCount}</span> training
+            day{trainedCount === 1 ? "" : "s"}
+            {signup ? ` since ${format(signup, "MMM d, yyyy")}` : ""}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span className="size-4 rounded-[4px] bg-accent shadow-glow" />
+            Trained
+          </span>
+        </div>
       </div>
     </div>
   );
