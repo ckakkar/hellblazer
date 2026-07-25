@@ -26,7 +26,7 @@ export function UnitToggle({ current }: { current: Unit }) {
           aria-pressed={unit === u}
           aria-label={u === "kg" ? "Kilograms" : "Pounds"}
           className={cn(
-            "min-w-16 rounded-md px-4 py-2 text-sm font-medium uppercase transition-colors",
+            "min-w-16 rounded-md px-4 py-2 text-sm font-medium uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50",
             unit === u ? "bg-accent text-bg" : "text-muted hover:text-text",
           )}
         >

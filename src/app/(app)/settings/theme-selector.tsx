@@ -36,7 +36,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
             aria-pressed={active}
             aria-label={a.name}
             className={cn(
-              "group flex flex-col items-center gap-2 rounded-lg border p-3 transition-colors",
+              "group flex flex-col items-center gap-2 rounded-lg border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
               active
                 ? "border-accent bg-accent/[0.07]"
                 : "border-border hover:border-muted/50 hover:bg-surface-2",

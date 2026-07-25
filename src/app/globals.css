@@ -34,6 +34,19 @@
   --shadow-glow:
     0 0 0 1px rgb(var(--accent-rgb) / 0.22),
     0 0 30px -8px rgb(var(--accent-rgb) / 0.6);
+
+  /* Premium depth — a faint glass top-edge highlight + a soft layered drop, so
+     surfaces read as gently raised over the near-black base. */
+  --shadow-card:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.045),
+    0 1px 2px rgb(0 0 0 / 0.28),
+    0 12px 30px -22px rgb(0 0 0 / 0.58);
+  --shadow-raised:
+    inset 0 1px 0 0 rgb(255 255 255 / 0.07),
+    0 2px 6px rgb(0 0 0 / 0.4),
+    0 30px 60px -30px rgb(0 0 0 / 0.8);
+  /* Recessed form fields */
+  --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 0.28);
 }
 
 :root {

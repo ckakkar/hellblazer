@@ -39,7 +39,7 @@ export function ProgressControls({
             onClick={() => go({ tab: t })}
             aria-pressed={tab === t}
             className={cn(
-              "rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors",
+              "rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50",
               tab === t
                 ? "bg-accent text-bg"
                 : "text-muted hover:text-text",

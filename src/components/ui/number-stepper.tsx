@@ -45,7 +45,7 @@ export function NumberStepper({
   return (
     <div
       className={cn(
-        "flex h-12 items-stretch overflow-hidden rounded-lg border border-border bg-surface-2",
+        "flex h-12 items-stretch overflow-hidden rounded-lg border border-border bg-surface-2 shadow-inset",
         className,
       )}
     >

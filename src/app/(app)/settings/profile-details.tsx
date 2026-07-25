@@ -71,7 +71,7 @@ export function ProfileDetails({
                 persist({ sex: next });
               }}
               className={cn(
-                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50",
                 sex === o.key
                   ? "bg-accent text-bg"
                   : "text-muted hover:text-text",
