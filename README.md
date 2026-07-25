@@ -8,7 +8,7 @@ A production-grade, **Kengan Ashura–themed** strength tracker built around a s
 
 <br />
 
-[![Live](https://img.shields.io/badge/live-hellblazer.vercel.app-00E5C7?style=for-the-badge)](https://hellblazer.vercel.app)
+[![Live](https://img.shields.io/badge/live-hellblazer.vercel.app-FF2D3A?style=for-the-badge)](https://hellblazer.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-087EA4?style=for-the-badge&logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -52,17 +52,25 @@ The twist: your training gets **judged**. An AI coach reads your full history an
 
 **🎯 Weak-point tracking** — back · biceps · triceps · side delts are highlighted across the dashboard and progress views, because those are the muscles worth obsessing over.
 
-**🎨 App-wide accent themer** — the entire UI re-skins from a single CSS channel variable. Six palettes (Crimson, Ember, Gold, Teal, Azure, Violet) selectable from Settings, persisted per user, applied server-side with zero flash.
+**🏅 Global leaderboard** — claim a **ring name** and every fighter is ranked by lifetime tonnage moved, your standing highlighted. Backed by a security-definer Postgres function that exposes only public columns across all users.
 
-**📊 Nine data-dense charts** — consistency heatmap (GitHub-style), muscle-balance radar, volume-distribution donut, bodyweight trend, per-exercise 1RM + volume, weekly sets-per-muscle, and volume trend — all rendered from real aggregated data.
+**🖼️ Shareable fight card** — export any session as a themed **1080×1350 PNG** (total volume, top lifts, your rank) rendered on the server with `next/og`, handed straight to the native share sheet.
+
+**⏱️ Live workout clock + CSV export** — an elapsed timer runs during a session and auto-fills its duration; export your entire set log as **CSV** from Settings, yours to keep.
+
+**🧬 It knows you** — sex, age and height feed the AI judge so it ranks bodyweight- and sex-relative, and a **rank ratchet** means an evaluation can only hold or raise your rank, never drop it.
+
+**🎨 App-wide accent themer** — the entire UI re-skins from a single CSS channel variable. Six palettes named after Kengan Association companies — **Nogi · Motorhead · Dainippon · Kouou · Under Mount · Gandai** — selectable from Settings, persisted per user, applied server-side with zero flash.
+
+**📊 Data-dense analytics** — a GitHub-style consistency heatmap, muscle-balance radar, volume-distribution donut, bodyweight trend, per-exercise 1RM + volume, weekly sets-per-muscle, a windowed volume trend (7d / 30d / 1y), and an all-time **estimated-1RM board** across every lift — all from real aggregated data.
 
 **⚖️ kg / lb** — canonical storage is always kilograms; conversion happens only at display.
 
-**📱 Installable PWA** — offline shell, offline logging, and daily push reminders when a programmed workout is due.
+**📱 Installable PWA** — offline shell, offline logging, branded iOS launch screens, and daily push reminders when a programmed workout is due.
 
 ## The Strength Ladder
 
-Log enough, then run an evaluation. An AI judge weighs your real numbers — bodyweight-relative on the big compounds, rewarding consistency and progression — and ranks you fairly (it rounds *up* when you're between tiers). You enter unranked and climb from **Rei** to **Kuroki**.
+Log enough, then run an evaluation. An AI judge (DeepSeek) weighs your real numbers — calibrated to your sex, bodyweight, height and age, bodyweight-relative on the big compounds, rewarding consistency and progression — and ranks you fairly (it rounds *up* when you're between tiers, and never drops you below the rank you already hold). You enter unranked and climb from **Rei** to **Kuroki**.
 
 | # | Fighter | Call sign | Standard |
 |:-:|---------|-----------|----------|
@@ -86,12 +94,13 @@ The **Progress** tab renders your standing on this ladder — the fighter you're
 | `/` | Landing / Google sign-in (redirects to `/dashboard` if authed) |
 | `/dashboard` | This-week summary, weak-point cards, weekly-sets-per-muscle chart, volume trend, recent sessions, onboarding |
 | `/log` → `/log/[id]` | Start a session (from a program or freeform), then the fast set logger |
-| `/history` → `/history/[id]` | Reverse-chron session list; editable detail |
-| `/progress` | Your ladder standing + per-exercise 1RM / volume / PRs and per-muscle trends |
+| `/history` → `/history/[id]` | Reverse-chron session list; editable detail; share a session as a card |
+| `/progress` | Your ladder standing, per-exercise 1RM / volume / PRs, per-muscle trends, and the all-time 1RM board |
+| `/leaderboard` | Every fighter with a ring name, ranked by total volume moved |
 | `/programs` → `/programs/[id]` | Build & run multi-week programs; pause / resume / roll back / preview |
 | `/templates` | CRUD your split — searchable exercise library, target sets/reps/notes, ordering |
-| `/exercises` | Browse the seeded library; create custom exercises |
-| `/settings` | Accent theme, units, bodyweight log, push notifications, strength evaluation, sign out |
+| `/exercises` | Browse the 140+ movement library; create custom exercises |
+| `/settings` | Ring name, sex/age/height, accent theme, units, bodyweight log, push, strength evaluation, CSV export |
 
 ## The analytics engine
 
@@ -164,18 +173,18 @@ flowchart TD
 Structure is **template-based with ad-hoc override**: build reusable templates, run them as programs, and log freely on top. Logging always writes to the same `set` grain regardless of source.
 
 ```
-exercise            shared library (nullable user_id = custom) · muscle_group enum
+exercise            140+ seeded movements (nullable user_id = custom) · muscle_group enum
 workout_template ─┬ template_exercise      prescribed sets/reps per movement
 program ──────────┼ program_day / program_skip   multi-week scheduling & pauses
 session ──────────┬ session_exercise ─── set      the atomic logged unit
 bodyweight_log      dated bodyweight entries
-profile             tier, rationale, evaluated-at
+profile             username · sex · birth_year · height_cm · tier · rationale
 push_subscription   Web Push endpoints
 ```
 
 **Muscle groups** (`muscle_group` enum, 14): chest · back · side_delt · rear_delt · front_delt · biceps · triceps · quads · hamstrings · glutes · calves · abs · forearms · traps.
 
-**Aggregation views:** `v_working_set` · `v_session_summary` · `v_exercise_progression` · `v_weekly_sets_per_muscle`.
+**Aggregation views:** `v_working_set` · `v_session_summary` · `v_exercise_progression` · `v_weekly_sets_per_muscle` — plus a security-definer `leaderboard()` function that exposes only public columns (ring name · tier · total volume) across all users. Session dates are stamped in the lifter's **local timezone**, not the DB's UTC, so a late-night workout lands on the right day.
 
 Every user-owned row carries `user_id`; RLS policies restrict CRUD to `auth.uid()`. The exercise library is the one shared read-only table (global rows have a null `user_id`).
 
@@ -185,14 +194,16 @@ Every user-owned row carries `user_id`; RLS policies restrict CRUD to `auth.uid(
 
 - **One accent, themeable.** All accent color routes through a single `--accent-rgb` channel variable, so opacity composites, glows, chart series, and the manga effects all re-skin from one swap. Six palettes ship via `html[data-accent]`.
 - **Type as instrument.** [Geist](https://vercel.com/font) for UI, **Geist Mono** with tabular figures for all data (weights, reps, 1RM), Bricolage Grotesque for display, and **Anton** for the moments that should *hit*.
-- **Motion, restrained.** 150–200ms ease-outs, a crimson shockwave on a logged set, a slam-in on victory, manga halftone + speed-lines — all gated behind `prefers-reduced-motion`.
-- **Mobile-first logging.** Safe-area insets for notch & home indicator, a 16px input floor to kill iOS focus-zoom, native tap feedback, and a bottom tab bar.
+- **Liquid glass chrome.** The navigation — a **floating glass tab bar**, top bar and sidebar — plus bottom sheets use a translucent, saturated backdrop-blur material with a specular light edge; content cards keep an opaque premium depth for readability.
+- **Motion, restrained.** 150–200ms ease-outs, a crimson shockwave on a logged set, a slam-in on victory, a Kengan **"arena" loading screen** (a charging aura over manga speed-lines with cycling combat call-outs), and a subtle page settle-in — all gated behind `prefers-reduced-motion`.
+- **Mobile-first logging.** Safe-area insets for notch & home indicator, a 16px input floor to kill iOS focus-zoom, native tap feedback, and the floating bottom tab bar.
 
 ## PWA & notifications
 
-- Installable via Add-to-Home-Screen; standalone display, themed splash, maskable icon.
+- Installable via Add-to-Home-Screen; standalone display, maskable icon, and **branded iOS launch screens** (`apple-touch-startup-image`, generated per device by `scripts/generate-splash.mjs`) so cold-start shows the brand instead of a blank flash.
 - A hand-rolled service worker (`public/sw.js`) — network-first navigations with an offline fallback (`public/offline.html`), cache-first static assets.
 - Web Push (VAPID) with a **daily cron** (`/api/cron/reminders`) that reminds you when a programmed workout is due.
+- Functions are pinned to the Supabase region (Tokyo) so page renders and queries stay co-located and fast.
 
 ## Getting started
 
@@ -236,17 +247,20 @@ npm run lint     # eslint
 ```
 src/
 ├── app/
-│   ├── (app)/              # auth-gated routes (dashboard, log, progress, …)
-│   ├── api/cron/reminders/ # daily push-reminder endpoint
+│   ├── (app)/              # auth-gated routes (dashboard, log, progress, leaderboard, …)
+│   ├── api/
+│   │   ├── cron/reminders/ # daily push-reminder endpoint
+│   │   ├── share/[id]/     # session → shareable PNG (next/og)
+│   │   └── export/         # full set log → CSV download
 │   ├── auth/callback/      # OAuth callback
 │   ├── page.tsx            # landing / sign-in
-│   ├── layout.tsx          # root: fonts + accent theme
+│   ├── layout.tsx          # root: fonts + accent theme + iOS launch screens
 │   ├── manifest.ts         # PWA manifest
-│   └── globals.css         # design tokens + accent palettes
+│   └── globals.css         # design tokens, accent palettes, liquid-glass + motion
 ├── components/
-│   ├── charts/             # 9 Recharts views + chart-kit
+│   ├── charts/             # Recharts views + chart-kit
 │   ├── tier/               # ladder standing + strength meter
-│   └── ui/                 # hand-built primitives (Button, Card, NumberStepper…)
+│   └── ui/                 # hand-built primitives (Button, Card, NumberStepper, ArenaLoader…)
 ├── lib/
 │   ├── data/               # typed read layer (per entity)
 │   ├── actions/            # Zod-validated Server Actions
