@@ -14,13 +14,6 @@ export async function getUser(): Promise<User | null> {
   return user;
 }
 
-/** Page/layout guard: redirect to the landing page when signed out. */
-export async function requireUser(): Promise<User> {
-  const user = await getUser();
-  if (!user) redirect("/");
-  return user;
-}
-
 /**
  * Fast identity read from the already-validated session cookie — no auth-server
  * round-trip. Safe for the app layout because the proxy authenticates every

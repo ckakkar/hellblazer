@@ -9,19 +9,20 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { MUSCLE_LABEL, isWeakPoint, type Muscle } from "@/lib/muscles";
+import {
+  CHART_HIDDEN_MUSCLES,
+  MUSCLE_LABEL,
+  isWeakPoint,
+  type Muscle,
+} from "@/lib/muscles";
 import { AXIS_TICK, ChartEmpty, TooltipBox } from "./chart-kit";
 
 type Row = { muscle: Muscle; sets: number };
 type Datum = { label: string; sets: number; weak: boolean };
 
-// Small stabilisers clutter the bars without guiding programming — keep the
-// chart to the movers that define push/pull/legs balance.
-const EXCLUDED: ReadonlySet<Muscle> = new Set(["abs", "forearms", "traps"]);
-
 export function WeeklySetsChart({ data }: { data: Row[] }) {
   const chartData: Datum[] = data
-    .filter((d) => !EXCLUDED.has(d.muscle))
+    .filter((d) => !CHART_HIDDEN_MUSCLES.has(d.muscle))
     .map((d) => ({
       label: MUSCLE_LABEL[d.muscle],
       sets: Math.round(d.sets * 10) / 10,

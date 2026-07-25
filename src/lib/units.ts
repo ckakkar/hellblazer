@@ -29,10 +29,6 @@ export function trimNum(n: number): string {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100);
 }
 
-export function formatWeight(kg: number, unit: Unit): string {
-  return `${trimNum(toDisplayWeight(kg, unit))}${unit}`;
-}
-
 /** Volume is a weight-times-reps product; convert the weight component only. */
 export function formatVolume(volumeKg: number, unit: Unit): string {
   const converted = unit === "lb" ? kgToLb(volumeKg) : volumeKg;

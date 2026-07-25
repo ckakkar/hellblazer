@@ -8,19 +8,15 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from "recharts";
-import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
+import { CHART_HIDDEN_MUSCLES, MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { ChartEmpty, TooltipBox } from "./chart-kit";
 
 type Row = { muscle: Muscle; sets: number };
 
-// Small stabiliser muscles clutter the shape without saying much — keep the
-// radar to the movers that actually define push/pull/legs balance.
-const EXCLUDED: ReadonlySet<Muscle> = new Set(["abs", "forearms", "traps"]);
-
 /** Radar of average weekly sets per muscle — see your push/pull/legs balance at a glance. */
 export function MuscleBalanceRadar({ data }: { data: Row[] }) {
   const chartData = data
-    .filter((d) => !EXCLUDED.has(d.muscle))
+    .filter((d) => !CHART_HIDDEN_MUSCLES.has(d.muscle))
     .map((d) => ({
       label: MUSCLE_LABEL[d.muscle],
       sets: d.sets,

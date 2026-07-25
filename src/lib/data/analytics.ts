@@ -1,12 +1,6 @@
 import { format, startOfISOWeek, subWeeks } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import type { Database } from "@/lib/database.types";
 import { MUSCLE_CHART_ORDER, type Muscle } from "@/lib/muscles";
-
-export type WeeklyMuscleRow =
-  Database["public"]["Views"]["v_weekly_sets_per_muscle"]["Row"];
-export type ProgressionRow =
-  Database["public"]["Views"]["v_exercise_progression"]["Row"];
 
 function isoWeekKey(d: Date): string {
   return format(startOfISOWeek(d), "yyyy-MM-dd");
@@ -41,21 +35,6 @@ export async function getCurrentWeekSetsPerMuscle(): Promise<MuscleSets[]> {
     sets: byMuscle.get(muscle)?.sets ?? 0,
     volume: byMuscle.get(muscle)?.volume ?? 0,
   }));
-}
-
-/** Raw weekly-per-muscle rows for the trailing `weeks` window (progress page). */
-export async function getWeeklyMuscleHistory(
-  weeks = 12,
-): Promise<WeeklyMuscleRow[]> {
-  const supabase = await createClient();
-  const cutoff = isoWeekKey(subWeeks(new Date(), weeks - 1));
-  const { data, error } = await supabase
-    .from("v_weekly_sets_per_muscle")
-    .select("*")
-    .gte("week", cutoff)
-    .order("week", { ascending: true });
-  if (error) throw error;
-  return data ?? [];
 }
 
 export type MuscleBalanceRow = { muscle: Muscle; sets: number; volume: number };
