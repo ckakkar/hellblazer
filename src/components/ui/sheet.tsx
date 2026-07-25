@@ -40,7 +40,7 @@ export function Sheet({
         className="absolute inset-0 bg-black/70 backdrop-blur-md"
         onClick={onClose}
       />
-      <div className="relative z-10 flex max-h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border bg-surface shadow-raised pb-[env(safe-area-inset-bottom)] sm:rounded-2xl sm:pb-0">
+      <div className="hb-glass-strong relative z-10 flex max-h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border pb-[env(safe-area-inset-bottom)] sm:rounded-2xl sm:pb-0">
         {/* Grabber handle — bottom-sheet affordance on mobile */}
         <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
         <div className="flex items-center justify-between border-b border-border px-4 py-3">

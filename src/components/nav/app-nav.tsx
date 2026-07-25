@@ -66,7 +66,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border bg-surface/50 px-3 py-5 backdrop-blur-xl md:flex">
+      <aside className="hb-glass fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border px-3 py-5 md:flex">
         <div className="px-2">
           <Brand />
         </div>
@@ -111,7 +111,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
       </aside>
 
       {/* Mobile top bar — pads into the notch via safe-area inset */}
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-border bg-bg/70 pt-[env(safe-area-inset-top)] backdrop-blur-xl md:hidden">
+      <header className="hb-glass fixed inset-x-0 top-0 z-30 border-b border-border/60 pt-[env(safe-area-inset-top)] md:hidden">
         <div className="flex h-14 items-center justify-between px-4">
           <Brand />
           <div className="flex items-center gap-1">
@@ -135,7 +135,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t border-border bg-bg/75 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden">
+      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden rounded-[26px] md:hidden">
         {BOTTOM_NAV.map((item) => {
           const active = isActive(item.href);
           const isLog = item.href === "/log";
@@ -143,7 +143,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center gap-1 py-2.5 transition-transform active:scale-90"
+              className="flex flex-col items-center justify-center gap-1 py-2 transition-transform active:scale-90"
             >
               <span
                 className={cn(
