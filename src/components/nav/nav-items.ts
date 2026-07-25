@@ -51,7 +51,7 @@ export const BOTTOM_NAV: NavItem[] = [
   { href: "/programs", label: "Programs", icon: CalendarRange },
   { href: "/log", label: "Log", icon: PlusCircle },
   { href: "/progress", label: "Progress", icon: TrendingUp },
-  { href: "/history", label: "History", icon: History },
+  { href: "/settings", label: "Profile", icon: User },
 ];
 
 /** Mobile top-bar overflow (secondary destinations). */
@@ -59,5 +59,5 @@ export const SECONDARY_NAV: NavItem[] = [
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
   { href: "/templates", label: "Templates", icon: ClipboardList },
   { href: "/exercises", label: "Exercises", icon: Dumbbell },
-  { href: "/settings", label: "Profile", icon: User },
+  { href: "/history", label: "History", icon: History },
 ];
