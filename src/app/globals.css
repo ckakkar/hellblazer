@@ -263,6 +263,21 @@ label {
   }
 }
 
+/* Page content settles in on navigation — subtle, respects reduced-motion */
+.hb-page {
+  animation: hb-page 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes hb-page {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Strip native number spinners — NumberStepper supplies its own controls */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {

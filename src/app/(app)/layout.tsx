@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { requireSessionUser } from "@/lib/auth";
 import { AppNav } from "@/components/nav/app-nav";
+import { PageTransition } from "@/components/nav/page-transition";
 import { RealtimeSync } from "@/components/realtime-sync";
 import { ResumeBanner } from "@/components/resume-banner";
 import { getActiveSession } from "@/lib/data/sessions";
@@ -31,7 +32,7 @@ export default async function AppLayout({
           <Suspense fallback={null}>
             <ResumeBannerSlot />
           </Suspense>
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>

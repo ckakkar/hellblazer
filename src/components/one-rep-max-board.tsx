@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import { toDisplayWeight, trimNum, type Unit } from "@/lib/units";
+import { cn } from "@/lib/utils";
 import type { Exercise1RM } from "@/lib/data/analytics";
 
 /**
@@ -37,7 +38,7 @@ export function OneRepMaxBoard({
             <li key={r.exerciseId}>
               <Link
                 href={`/progress?tab=exercise&exercise=${r.exerciseId}`}
-                className="group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2"
+                className="group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
               >
                 {/* strength bar, scaled to the strongest lift */}
                 <span
@@ -45,7 +46,12 @@ export function OneRepMaxBoard({
                   className="absolute inset-y-0 left-0 bg-accent/[0.06] transition-colors group-hover:bg-accent/[0.09]"
                   style={{ width: `${pct}%` }}
                 />
-                <span className="relative w-5 shrink-0 text-right font-mono text-xs tabular-nums text-muted/70">
+                <span
+                  className={cn(
+                    "relative w-6 shrink-0 text-right font-impact text-sm leading-none tabular-nums",
+                    i === 0 ? "text-accent" : "text-muted/70",
+                  )}
+                >
                   {i + 1}
                 </span>
                 <div className="relative min-w-0 flex-1">

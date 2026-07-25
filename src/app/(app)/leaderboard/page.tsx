@@ -50,9 +50,12 @@ export default async function LeaderboardPage() {
       )}
 
       {myPlace > 0 && (
-        <div className="mb-4 px-1 font-mono text-xs uppercase tracking-wide text-muted">
-          You&apos;re <span className="text-accent">#{myPlace}</span> of{" "}
-          {entries.length}
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+          Your standing
+          <span className="font-impact text-sm leading-none text-accent">
+            #{myPlace}
+          </span>
+          <span className="text-muted/60">of {entries.length}</span>
         </div>
       )}
 
