@@ -276,9 +276,14 @@ label {
   }
 }
 
-/* Page content settles in on navigation — subtle, respects reduced-motion */
+/* Page content settles in on navigation — subtle, respects reduced-motion.
+   fill-mode is `backwards`, NOT `both`: a forwards fill keeps the transform
+   animation in effect after it ends, which makes .hb-page a containing block
+   for `position: fixed` descendants on WebKit (modals then anchor to the page
+   instead of the viewport). The base style already matches the `to` keyframe,
+   so dropping the forwards fill is visually identical. */
 .hb-page {
-  animation: hb-page 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: hb-page 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 @keyframes hb-page {
   from {
