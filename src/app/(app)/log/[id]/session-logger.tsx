@@ -31,6 +31,7 @@ import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Badge } from "@/components/ui/badge";
 import { Sheet } from "@/components/ui/sheet";
+import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { cn } from "@/lib/utils";
@@ -350,23 +351,39 @@ export function SessionLogger({
       isWarmup: false,
     };
     const nextNumber = ex.sets.length + 1;
-    setExercises((p) =>
-      p.map((e) => (e.seId === seId ? { ...e, sets: [...e.sets, seed] } : e)),
+    // `ref.current` is also synced from an effect, which lands a commit behind.
+    // Advance it here as well so two "+ set" taps inside the same frame can't
+    // both read the old array and write two sets with the same set_number.
+    const next = ref.current.map((e) =>
+      e.seId === seId ? { ...e, sets: [...e.sets, seed] } : e,
     );
+    ref.current = next;
+    setExercises(next);
     setFlashId(seed.id);
     void persist(seId, seed, nextNumber);
   }
 
   function removeSet(seId: string, setId: string) {
     void deleteSet({ id: setId }).catch(() => {});
-    setExercises((prev) =>
-      prev.map((ex) => {
-        if (ex.seId !== seId) return ex;
-        const sets = ex.sets.filter((s) => s.id !== setId);
-        sets.forEach((s, i) => void persist(seId, s, i + 1));
-        return { ...ex, sets };
-      }),
+    // Cancel any debounced save still queued for the row being deleted, so it
+    // can't resurrect the set after the delete lands.
+    const queued = timers.current.get(setId);
+    if (queued) clearTimeout(queued);
+    timers.current.delete(setId);
+    pendingSaves.current.delete(setId);
+
+    // Renumber the survivors. Computed out here, not inside the state updater:
+    // updaters must be pure, and React may invoke them more than once per
+    // commit — which would fire duplicate writes for every remaining set.
+    const next = ref.current.map((ex) =>
+      ex.seId === seId
+        ? { ...ex, sets: ex.sets.filter((s) => s.id !== setId) }
+        : ex,
     );
+    ref.current = next;
+    setExercises(next);
+    const target = next.find((e) => e.seId === seId);
+    target?.sets.forEach((s, i) => void persist(seId, s, i + 1));
   }
 
   function addExercise(exerciseId: string) {
@@ -767,61 +784,65 @@ export function SessionLogger({
 
       {/* REMOVAL — a PR broke; brief limiter-release callout */}
       {removal && (
-        <div
-          className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex justify-center px-4"
-          role="status"
-          aria-live="polite"
-        >
-          <div className="hb-slam pointer-events-auto flex items-center gap-3 rounded-xl border border-accent/40 bg-surface/95 px-4 py-2.5 shadow-glow backdrop-blur">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-              <Zap className="size-4" />
-            </span>
-            <div className="min-w-0">
-              <div className="flex items-baseline gap-2">
-                <span className="font-impact text-lg uppercase leading-none tracking-tight text-accent">
-                  Removal
-                </span>
-                <span className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
-                  {removal.name}
-                </span>
-              </div>
-              <div className="mt-0.5 font-mono text-xs text-text">
-                {removal.detail}
+        <Portal>
+          <div
+            className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex justify-center px-4"
+            role="status"
+            aria-live="polite"
+          >
+            <div className="hb-slam pointer-events-auto flex items-center gap-3 rounded-xl border border-accent/40 bg-surface/95 px-4 py-2.5 shadow-glow backdrop-blur">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                <Zap className="size-4" />
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-impact text-lg uppercase leading-none tracking-tight text-accent">
+                    Removal
+                  </span>
+                  <span className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                    {removal.name}
+                  </span>
+                </div>
+                <div className="mt-0.5 font-mono text-xs text-text">
+                  {removal.detail}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* VICTORY slam */}
       {victory && (
-        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur">
-          <div
-            aria-hidden
-            className="hb-speedlines pointer-events-none absolute inset-0 opacity-70"
-            style={{
-              maskImage:
-                "radial-gradient(circle at 50% 45%, black, transparent 68%)",
-              WebkitMaskImage:
-                "radial-gradient(circle at 50% 45%, black, transparent 68%)",
-            }}
-          />
-          <div className="hb-slam relative text-center">
+        <Portal>
+          <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur">
             <div
               aria-hidden
-              className="font-display text-sm font-bold uppercase tracking-[0.4em] text-accent/70"
-            >
-              勝利
-            </div>
-            <div className="mt-2 font-impact text-6xl uppercase tracking-tight text-accent sm:text-8xl">
-              {victory}
-            </div>
-            <div className="mt-4 font-mono text-sm text-muted">
-              {Math.round(totalForce).toLocaleString()} {unit} moved · {totalSets}{" "}
-              sets · {formatElapsed(elapsed)}
+              className="hb-speedlines pointer-events-none absolute inset-0 opacity-70"
+              style={{
+                maskImage:
+                  "radial-gradient(circle at 50% 45%, black, transparent 68%)",
+                WebkitMaskImage:
+                  "radial-gradient(circle at 50% 45%, black, transparent 68%)",
+              }}
+            />
+            <div className="hb-slam relative text-center">
+              <div
+                aria-hidden
+                className="font-display text-sm font-bold uppercase tracking-[0.4em] text-accent/70"
+              >
+                勝利
+              </div>
+              <div className="mt-2 font-impact text-6xl uppercase tracking-tight text-accent sm:text-8xl">
+                {victory}
+              </div>
+              <div className="mt-4 font-mono text-sm text-muted">
+                {Math.round(totalForce).toLocaleString()} {unit} moved ·{" "}
+                {totalSets} sets · {formatElapsed(elapsed)}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

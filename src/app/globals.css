@@ -149,10 +149,15 @@ label {
   }
 }
 
-/* Blur-rise entrance; stagger with inline animation-delay */
+/* Blur-rise entrance; stagger with inline animation-delay.
+   `backwards` (not `both`) holds the `from` keyframe through the delay, then
+   lets the element settle back to its plain base style. A forwards fill would
+   leave `filter: blur(0)` applied forever — a non-none filter, which makes the
+   element a containing block for any `position: fixed` descendant and pins it
+   to a compositing layer. Hence no `opacity: 0` in the base rule either; the
+   backwards fill supplies it before the animation starts. */
 .hb-reveal {
-  opacity: 0;
-  animation: hb-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: hb-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
 }
 @keyframes hb-rise {
   from {
@@ -199,9 +204,10 @@ label {
   );
 }
 
-/* Victory slam-in */
+/* Victory slam-in. `backwards` for the same reason as .hb-reveal — the base
+   style already matches the final keyframe, so there's nothing to hold. */
 .hb-slam {
-  animation: hb-slam 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) both;
+  animation: hb-slam 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) backwards;
 }
 @keyframes hb-slam {
   0% {
@@ -375,6 +381,10 @@ input[type="number"] {
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    /* Collapse the delay too, or a staggered entrance still holds its `from`
+       keyframe (opacity: 0) for the full delay — content that just sits
+       invisible for a beat instead of appearing at once. */
+    animation-delay: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
