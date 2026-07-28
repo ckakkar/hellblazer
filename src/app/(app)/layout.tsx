@@ -1,17 +1,26 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { requireSessionUser } from "@/lib/auth";
 import { AppNav } from "@/components/nav/app-nav";
 import { PageTransition } from "@/components/nav/page-transition";
 import { RealtimeSync } from "@/components/realtime-sync";
 import { ResumeBanner } from "@/components/resume-banner";
 import { getActiveSession } from "@/lib/data/sessions";
+import { isOnboarded } from "@/lib/data/profile";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireSessionUser();
+  const [user, onboarded] = await Promise.all([
+    requireSessionUser(),
+    isOnboarded(),
+  ]);
+
+  // First run after Google sign-in: collect the basics before anything else.
+  // /welcome lives outside this group, so there's no redirect loop.
+  if (!onboarded) redirect("/welcome");
 
   return (
     <div className="min-h-dvh">

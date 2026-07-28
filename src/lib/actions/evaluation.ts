@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
-import { getTrainingProfile } from "@/lib/data/evaluation";
+import { getEvalGate, getTrainingProfile } from "@/lib/data/evaluation";
+import { EVAL_COOLDOWN_DAYS, daysUntil } from "@/lib/evaluation-rules";
 import { getProfile } from "@/lib/data/profile";
 import { TIERS, TIER_KEYS, MAX_RANK, getTier } from "@/lib/tiers";
 
@@ -16,18 +18,22 @@ export type EvalResult =
     }
   | {
       ok: false;
-      error: "not_configured" | "no_data" | "failed";
+      error: "not_configured" | "no_data" | "locked" | "failed";
       message: string;
     };
 
 /**
  * Manually-triggered strength evaluation. Sends the user's full training
  * snapshot to DeepSeek and returns a proposed tier for the user to accept or
- * reject. Never persists — accepting is a separate action, so re-running is
- * the only cost (kept manual to avoid needless token spend).
+ * reject; the rank itself is only persisted by `setTier` on accept.
+ *
+ * Rate-limited by `getEvalGate`: you need a finished workout logged since your
+ * last evaluation, and at most one evaluation every EVAL_COOLDOWN_DAYS days.
+ * A delivered verdict stamps `profile.evaluation_run_at` whether or not it's
+ * accepted, so declining can't buy a free re-roll.
  */
 export async function evaluateTier(): Promise<EvalResult> {
-  await getAuthedContext(); // require auth; RLS scopes the compiled data
+  const { supabase, user } = await getAuthedContext(); // RLS scopes the data
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -36,6 +42,36 @@ export async function evaluateTier(): Promise<EvalResult> {
       error: "not_configured",
       message:
         "DeepSeek isn't connected yet. Add a DEEPSEEK_API_KEY to enable evaluations.",
+    };
+  }
+
+  // Authoritative gate. The UI disables the button too, but that's cosmetic —
+  // this is what actually stops a replayed action from burning tokens.
+  const gate = await getEvalGate();
+  if (!gate.canRun) {
+    if (gate.reason === "no_workout") {
+      return {
+        ok: false,
+        error: "no_data",
+        message:
+          "No finished workouts yet — earn your judgment in the arena first.",
+      };
+    }
+    if (gate.reason === "no_new_workout") {
+      return {
+        ok: false,
+        error: "locked",
+        message:
+          "Nothing new to judge. Log a workout since your last evaluation, then step forward.",
+      };
+    }
+    const days = gate.nextRunAt ? daysUntil(gate.nextRunAt) : EVAL_COOLDOWN_DAYS;
+    return {
+      ok: false,
+      error: "locked",
+      message: `The judge has already ruled. Return in ${days} ${
+        days === 1 ? "day" : "days"
+      }.`,
     };
   }
 
@@ -65,23 +101,27 @@ export async function evaluateTier(): Promise<EvalResult> {
   const system = `You are the judge of strength in a Kengan Ashura-themed training app. Place the lifter into exactly ONE tier of this ${MAX_RANK}-rank ladder (weakest to strongest):
 ${ladder}
 
-Your job is to be FAIR and a little generous — a Kengan matchmaker who genuinely respects the work, not a gatekeeper. Actually think about how strong this person is and give them the rank they've earned. When a lifter sits between two tiers, round UP. Reward consistency, training age, and steady progression as much as raw numbers — someone who keeps showing up and adding weight is getting stronger and should climb. Never punish a short history if the logged work is solid; judge by demonstrated strength, not by how long they've used the app.
+THE LADDER HAS TWO REGIMES. This is the most important rule and it overrides any general instinct toward evenness:
 
-Calibrate to the lifter when their details are known: strength standards are sex-relative (a given absolute load is more impressive for a female or lighter/older lifter), so judge bodyweight-relative on the big compounds and weight the reference anchors below by sex, bodyweight, height and age. Never penalise anyone for their demographics — use them only to give fair, generous credit.
+REGIME 1 — THE CLIMB (ranks 1-4, Rei → Gaolang): BRUTALLY HARD. This is the proving ground and it is meant to hurt. Demand real, demonstrated strength for every single step. Do NOT round up here — when a lifter sits between two of these tiers, place them in the LOWER one. Do not award a rank for enthusiasm, consistency, or potential; only logged loads earn it. Most lifters should spend a long time in this band, and a beginner belongs at Rei (1) until the numbers say otherwise. Reaching Gaolang (4) is a serious achievement that should feel earned.
 
-Use these GENEROUS reference anchors (a natural MALE lifter at the stated bodyweight-relative numbers; scale expectations down for female, lighter, or masters lifters, judged on their best working sets; use bodyweight-relative numbers on the big compounds — squat, bench, deadlift, overhead press, rows — whenever bodyweight is known, otherwise judge absolute loads and consistency and lean generous):
-- Rei Mikazuchi (1): just getting started — first few weeks in the ring, still finding form and light loads.
-- Setsuna Kiryu (2): a real beginner base — training regularly, loads clearly climbing (roughly bench ~0.6×bw, squat ~1×bw).
-- Sen Hatsumi (3): solid intermediate — strong for a regular gym-goer (bench ~0.85×bw, squat ~1.25×bw, deadlift ~1.5×bw).
-- Gaolang Wongsawat (4): strong intermediate — visibly above average with consistent volume (bench ~1×bw, squat ~1.5×bw, deadlift ~1.75×bw).
-- Julius Reinhold (5): advanced — strong in any gym (bench ~1.25×bw, squat ~1.75×bw, deadlift ~2×bw).
-- Raian Kure (6): very advanced — years of hard work and big numbers (bench ~1.4×bw, squat ~2×bw, deadlift ~2.25×bw).
-- Wakatsuki Takeshi (7): near-elite — big, well-rounded strength approaching competitive numbers.
-- Ohma Tokita (8): elite — near-competitive strength.
-- Kanoh Agito (9): near the natural ceiling — exceptional across the board.
-- Kuroki Gensai (10): once-in-a-generation, monstrous numbers — reserve for the truly freakish.
+REGIME 2 — THE ASCENT (ranks 5-10, Julius → Kuroki): VERY EASY. Once a lifter has cleared the Gaolang wall they have proven themselves, and the ladder rewards them. Promote FREELY and generously. Any clear progression since the last judgment — a heavier top set, added volume, steady consistency, a new PR on any lift — is enough to move up a rank. When between two of these tiers, always round UP, and where it's close, favour the higher rank. Do not gatekeep the top of the ladder and do not demand elite competition numbers; a lifter who is past Gaolang and still working should keep climbing toward Kuroki.
 
-Be encouraging and grounded in their real numbers. It is fine — good, even — to place a committed lifter in the middle of the ladder; do not default everyone to the bottom.${floorNote}
+Calibrate to the lifter when their details are known: strength standards are sex-relative (a given absolute load is more impressive for a female or lighter/older lifter), so judge bodyweight-relative on the big compounds and weight the reference anchors below by sex, bodyweight, height and age. Never penalise anyone for their demographics — use them only to give fair credit.
+
+Reference anchors (a natural MALE lifter at the stated bodyweight-relative numbers, judged on best working sets; scale expectations down for female, lighter, or masters lifters; use bodyweight-relative numbers on the big compounds — squat, bench, deadlift, overhead press, rows — whenever bodyweight is known, otherwise judge absolute loads):
+- Rei Mikazuchi (1): the starting line. Everyone begins here and stays until they clearly out-lift it.
+- Setsuna Kiryu (2): HARD — a genuine beginner base, training consistently for months (bench ~0.75×bw, squat ~1.2×bw, deadlift ~1.5×bw).
+- Sen Hatsumi (3): HARD — a strong regular gym-goer, clearly above average (bench ~1×bw, squat ~1.5×bw, deadlift ~1.9×bw).
+- Gaolang Wongsawat (4): HARDEST STEP — the wall. Serious, sustained strength (bench ~1.25×bw, squat ~1.85×bw, deadlift ~2.25×bw).
+- Julius Reinhold (5): past the wall — only a modest step beyond Gaolang. Award readily.
+- Raian Kure (6): any meaningful progression past Julius. Award readily.
+- Wakatsuki Takeshi (7): continued progression and solid all-round work. Award readily.
+- Ohma Tokita (8): sustained strength with consistent training. Award readily.
+- Kanoh Agito (9): a long, committed record of hard training. Award readily.
+- Kuroki Gensai (10): the summit — for a lifter well past the wall who keeps showing up and keeps adding weight. Reachable, not mythical.
+
+Be honest and grounded in their real numbers. Below Gaolang, be a strict gatekeeper. Above Gaolang, be a champion of their progress.${floorNote}
 
 Respond with ONLY a JSON object of exactly this shape:
 {"tier":"<one of the exact keys above>","rationale":"<2-3 sentences, Kengan-flavored, honest but motivating and grounded in their real numbers>","highlights":["<short data point>","<short data point>","<short data point>"]}`;
@@ -186,6 +226,14 @@ Respond with ONLY a JSON object of exactly this shape:
     if (currentTier && tier.rank < currentTier.rank) {
       tier = currentTier;
     }
+
+    // Start the cooldown. Stamped here — on a delivered verdict — rather than
+    // on accept, so declining a verdict can't buy a free re-roll. Failures
+    // above return early and cost the lifter nothing.
+    await supabase
+      .from("profile")
+      .upsert({ user_id: user.id, evaluation_run_at: new Date().toISOString() });
+    revalidatePath("/settings");
 
     return {
       ok: true,

@@ -5,6 +5,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { getUnit, getAccent } from "@/lib/settings";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
+import { getEvalGate } from "@/lib/data/evaluation";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { getNotificationState } from "@/lib/data/push";
 import { signOut } from "@/lib/actions/auth";
@@ -29,7 +30,7 @@ import { DangerZone } from "./danger-zone";
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const [user, unit, accent, logs, profile, active, notifications] =
+  const [user, unit, accent, logs, profile, active, notifications, evalGate] =
     await Promise.all([
       getUser(),
       getUnit(),
@@ -38,6 +39,7 @@ export default async function ProfilePage() {
       getProfile(),
       getActiveProgramProgress(),
       getNotificationState(),
+      getEvalGate(),
     ]);
 
   const activeProgram = active
@@ -58,6 +60,7 @@ export default async function ProfilePage() {
             currentTierKey={profile?.tier ?? null}
             rationale={profile?.tier_rationale ?? null}
             evaluatedAt={profile?.tier_evaluated_at ?? null}
+            gate={evalGate}
           />
         </section>
 
@@ -75,6 +78,7 @@ export default async function ProfilePage() {
               <UsernameField current={profile?.username ?? null} />
             </div>
             <ProfileDetails
+              displayName={profile?.display_name ?? null}
               sex={
                 (profile?.sex as "male" | "female" | "other" | null) ?? null
               }

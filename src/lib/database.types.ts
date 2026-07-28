@@ -78,7 +78,10 @@ export type Database = {
         Row: {
           birth_year: number | null
           created_at: string
+          display_name: string | null
+          evaluation_run_at: string | null
           height_cm: number | null
+          onboarded_at: string | null
           reminder_hour: number | null
           sex: string | null
           tier: string | null
@@ -90,7 +93,10 @@ export type Database = {
         Insert: {
           birth_year?: number | null
           created_at?: string
+          display_name?: string | null
+          evaluation_run_at?: string | null
           height_cm?: number | null
+          onboarded_at?: string | null
           reminder_hour?: number | null
           sex?: string | null
           tier?: string | null
@@ -102,7 +108,10 @@ export type Database = {
         Update: {
           birth_year?: number | null
           created_at?: string
+          display_name?: string | null
+          evaluation_run_at?: string | null
           height_cm?: number | null
+          onboarded_at?: string | null
           reminder_hour?: number | null
           sex?: string | null
           tier?: string | null

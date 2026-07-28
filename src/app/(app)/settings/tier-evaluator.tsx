@@ -5,6 +5,7 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   Loader2,
+  Lock,
   Minus,
   Swords,
 } from "lucide-react";
@@ -15,15 +16,22 @@ import { cn } from "@/lib/utils";
 import { getTier, MAX_RANK } from "@/lib/tiers";
 import { evaluateTier, type EvalResult } from "@/lib/actions/evaluation";
 import { setTier } from "@/lib/actions/profile";
+import {
+  EVAL_COOLDOWN_DAYS,
+  daysUntil,
+  type EvalGate,
+} from "@/lib/evaluation-rules";
 
 export function TierEvaluator({
   currentTierKey,
   rationale,
   evaluatedAt,
+  gate,
 }: {
   currentTierKey: string | null;
   rationale: string | null;
   evaluatedAt: string | null;
+  gate: EvalGate;
 }) {
   const [pending, start] = useTransition();
   const [accepting, startAccept] = useTransition();
@@ -56,6 +64,21 @@ export function TierEvaluator({
           ? "down"
           : "same"
       : "up";
+
+  const gateCopy =
+    gate.reason === "no_workout"
+      ? "Finish a workout first — the judge rules on logged work, nothing else."
+      : gate.reason === "no_new_workout"
+        ? "You've already been judged on this record. Log another workout to earn a fresh verdict."
+        : gate.reason === "cooldown"
+          ? `The judge has ruled. Return in ${
+              gate.nextRunAt ? daysUntil(gate.nextRunAt) : EVAL_COOLDOWN_DAYS
+            } ${
+              gate.nextRunAt && daysUntil(gate.nextRunAt) === 1
+                ? "day"
+                : "days"
+            } — one evaluation every ${EVAL_COOLDOWN_DAYS} days.`
+          : "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result.";
 
   return (
     <div className="grid gap-4">
@@ -118,18 +141,33 @@ export function TierEvaluator({
       </Card>
 
       <div>
-        <Button onClick={run} disabled={pending} size="lg" className="w-full sm:w-auto">
+        <Button
+          onClick={run}
+          disabled={pending || !gate.canRun}
+          size="lg"
+          className="w-full sm:w-auto"
+        >
           {pending ? (
             <Loader2 className="size-4 animate-spin" />
-          ) : (
+          ) : gate.canRun ? (
             <Swords className="size-4" />
+          ) : (
+            <Lock className="size-4" />
           )}
-          {pending ? "The judge deliberates…" : "Run evaluation"}
+          {pending
+            ? "The judge deliberates…"
+            : gate.canRun
+              ? "Step forward to be judged"
+              : "The judge is closed"}
         </Button>
-        <p className="mt-2 text-xs text-muted">
-          Sends your full training history to DeepSeek for a verdict. Run it
-          manually whenever you want — you choose whether to accept the result.
-        </p>
+        <p className="mt-2 text-xs text-muted">{gateCopy}</p>
+        {gate.canRun && (
+          <p className="mt-1 font-mono text-[11px] text-muted/60">
+            {gate.newWorkouts} new{" "}
+            {gate.newWorkouts === 1 ? "workout" : "workouts"} to judge · one
+            evaluation every {EVAL_COOLDOWN_DAYS} days
+          </p>
+        )}
       </div>
 
       {result && !result.ok && (

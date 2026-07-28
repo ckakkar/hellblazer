@@ -16,6 +16,16 @@ export async function GET(request: Request) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Send a first-time lifter straight into the welcome flow. The (app)
+      // layout enforces this too; doing it here just avoids a bounce through
+      // /dashboard on the very first sign-in.
+      const { data: profile } = await supabase
+        .from("profile")
+        .select("onboarded_at")
+        .maybeSingle();
+      if (!profile?.onboarded_at) {
+        return NextResponse.redirect(`${origin}/welcome`);
+      }
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
   }

@@ -70,7 +70,11 @@ The twist: your training gets **judged**. An AI coach reads your full history an
 
 ## The Strength Ladder
 
-Log enough, then run an evaluation. An AI judge (DeepSeek) weighs your real numbers — calibrated to your sex, bodyweight, height and age, bodyweight-relative on the big compounds, rewarding consistency and progression — and ranks you fairly (it rounds *up* when you're between tiers, and never drops you below the rank you already hold). You enter unranked and climb from **Rei** to **Kuroki**.
+Log a workout, then step forward to be judged. An AI judge (DeepSeek) weighs your real numbers — calibrated to your sex, bodyweight, height and age, bodyweight-relative on the big compounds — and never drops you below the rank you already hold. You enter unranked and climb from **Rei** to **Kuroki**.
+
+**The ladder has two regimes.** Rei → Gaolang (1-4) is the proving ground: brutally hard, no rounding up, and only logged loads earn a step. Clearing the **Gaolang wall** is the achievement. Past it, Julius → Kuroki (5-10) rewards you — any clear progression promotes, ties round up, and the summit is reachable rather than mythical.
+
+**Earning a verdict.** Evaluations are rate-limited: you need a finished workout logged *since your last judgment*, and the judge rules at most **once every 5 days**. Declining a verdict doesn't buy a re-roll — the cooldown starts when the judge speaks, not when you accept.
 
 | # | Fighter | Call sign | Standard |
 |:-:|---------|-----------|----------|

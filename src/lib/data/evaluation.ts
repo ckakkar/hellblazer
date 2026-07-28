@@ -1,5 +1,69 @@
-import { differenceInCalendarDays, parseISO, subDays } from "date-fns";
+import { addDays, differenceInCalendarDays, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { EVAL_COOLDOWN_DAYS, type EvalGate } from "@/lib/evaluation-rules";
+
+/**
+ * Whether the lifter may run a tier evaluation right now.
+ *
+ * Two independent gates, both enforced server-side in `evaluateTier`:
+ *  1. You must have logged at least one real workout *since your last
+ *     evaluation* — a finished session carrying at least one working set.
+ *     Judging the same data twice tells you nothing and costs tokens.
+ *  2. At most one evaluation every EVAL_COOLDOWN_DAYS days.
+ *
+ * The clock runs off `profile.evaluation_run_at`, which stamps on every run,
+ * not `tier_evaluated_at`, which stamps only when a verdict is accepted —
+ * otherwise rejecting a verdict would reset the cooldown for free.
+ */
+export async function getEvalGate(): Promise<EvalGate> {
+  const supabase = await createClient();
+
+  const { data: profile } = await supabase
+    .from("profile")
+    .select("evaluation_run_at")
+    .maybeSingle();
+  const lastRunAt = profile?.evaluation_run_at ?? null;
+
+  // A "workout" here is a finished session with real working sets, so an
+  // abandoned or empty session can't unlock an evaluation.
+  const qualifying = () =>
+    supabase
+      .from("v_session_summary")
+      .select("session_id", { count: "exact", head: true })
+      .not("finished_at", "is", null)
+      .gt("working_sets", 0);
+
+  const [totalRes, newRes] = await Promise.all([
+    qualifying(),
+    lastRunAt ? qualifying().gt("finished_at", lastRunAt) : null,
+  ]);
+
+  const totalWorkouts = totalRes.count ?? 0;
+  const newWorkouts = lastRunAt ? (newRes?.count ?? 0) : totalWorkouts;
+
+  const nextRun = lastRunAt
+    ? addDays(parseISO(lastRunAt), EVAL_COOLDOWN_DAYS)
+    : null;
+  const coolingDown = nextRun ? nextRun.getTime() > Date.now() : false;
+
+  const reason: EvalGate["reason"] =
+    totalWorkouts === 0
+      ? "no_workout"
+      : coolingDown
+        ? "cooldown"
+        : newWorkouts === 0
+          ? "no_new_workout"
+          : "ok";
+
+  return {
+    canRun: reason === "ok",
+    reason,
+    newWorkouts,
+    totalWorkouts,
+    lastRunAt,
+    nextRunAt: coolingDown && nextRun ? nextRun.toISOString() : null,
+  };
+}
 
 export type LiftStat = {
   exercise: string;

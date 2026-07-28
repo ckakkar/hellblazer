@@ -17,14 +17,17 @@ const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, n));
 
 export function ProfileDetails({
+  displayName: initName,
   sex: initSex,
   age: initAge,
   heightCm: initHeight,
 }: {
+  displayName: string | null;
   sex: Sex | null;
   age: number | null;
   heightCm: number | null;
 }) {
+  const [name, setName] = useState(initName ?? "");
   const [sex, setSex] = useState<Sex | null>(initSex);
   const [age, setAge] = useState(initAge != null ? String(initAge) : "");
   const [height, setHeight] = useState(
@@ -33,7 +36,13 @@ export function ProfileDetails({
   const [, start] = useTransition();
   const [saved, setSaved] = useState(false);
 
-  function persist(next: { sex?: Sex | null; age?: string; height?: string }) {
+  function persist(next: {
+    name?: string;
+    sex?: Sex | null;
+    age?: string;
+    height?: string;
+  }) {
+    const n = next.name !== undefined ? next.name : name;
     const s = next.sex !== undefined ? next.sex : sex;
     const a = next.age !== undefined ? next.age : age;
     const h = next.height !== undefined ? next.height : height;
@@ -43,6 +52,7 @@ export function ProfileDetails({
 
     start(async () => {
       await updateProfileDetails({
+        displayName: n.trim() === "" ? null : n.trim().slice(0, 60),
         sex: s,
         age: ageN != null && Number.isFinite(ageN) ? clamp(ageN, 10, 100) : null,
         heightCm:
@@ -57,6 +67,19 @@ export function ProfileDetails({
 
   return (
     <div className="grid gap-4">
+      <label className="grid gap-1.5">
+        <span className="text-xs font-medium text-muted">Name</span>
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onBlur={() => persist({})}
+          placeholder="Your name"
+          autoComplete="name"
+          maxLength={60}
+          aria-label="Your name"
+        />
+      </label>
+
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted">Sex</span>
         <div className="inline-flex w-full rounded-lg border border-border bg-surface-2 p-0.5">

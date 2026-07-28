@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
+import { BlurText } from "@/components/reactbits/blur-text";
 import { TIERS } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { Flame } from "lucide-react";
@@ -51,13 +52,18 @@ export default async function Landing({
               The strength ladder
             </div>
 
-            <h1
-              className="hb-reveal mt-6 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl"
-              style={{ animationDelay: "110ms" }}
-            >
-              Ten fighters
-              <br />
-              <span className="text-accent">stand above you.</span>
+            {/* React Bits BlurText — the words resolve out of a blur, one by
+                one. Two stacked lines rather than a <br/> so each animates as
+                its own run while staying inside a single <h1>. */}
+            <h1 className="mt-6 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl">
+              <BlurText as="div" text="Ten fighters" animateBy="words" delay={110} />
+              <BlurText
+                as="div"
+                text="stand above you."
+                animateBy="words"
+                delay={110}
+                className="text-accent"
+              />
             </h1>
 
             <p

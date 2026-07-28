@@ -69,6 +69,10 @@ export default async function DashboardPage() {
     (n, s) => n + Number(s.total_volume ?? 0),
     0,
   );
+  const workingSetsThisWeek = thisWeek.reduce(
+    (n, s) => n + Number(s.working_sets ?? 0),
+    0,
+  );
   const setsByMuscle = new Map(weeklySets.map((m) => [m.muscle, m.sets]));
   const recent = summaries.slice(0, 6);
 
@@ -157,6 +161,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Sessions"
           value={thisWeek.length}
+          countTo={thisWeek.length}
           hint="this week"
           icon={<Dumbbell className="size-4" />}
         />
@@ -168,24 +173,29 @@ export default async function DashboardPage() {
         />
         <StatCard
           label="Working sets"
-          value={thisWeek.reduce((n, s) => n + Number(s.working_sets ?? 0), 0)}
+          value={workingSetsThisWeek}
+          countTo={workingSetsThisWeek}
           hint="this week"
         />
       </div>
 
       {/* Weak points */}
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {WEAK_POINTS.map((m) => (
-          <StatCard
-            key={m}
-            label={MUSCLE_LABEL[m]}
-            value={Math.round((setsByMuscle.get(m) ?? 0) * 10) / 10}
-            unit="sets"
-            highlight
-            icon={<Flame className="size-4" />}
-            hint="weak-point focus"
-          />
-        ))}
+        {WEAK_POINTS.map((m) => {
+          const sets = Math.round((setsByMuscle.get(m) ?? 0) * 10) / 10;
+          return (
+            <StatCard
+              key={m}
+              label={MUSCLE_LABEL[m]}
+              value={sets}
+              countTo={sets}
+              unit="sets"
+              highlight
+              icon={<Flame className="size-4" />}
+              hint="weak-point focus"
+            />
+          );
+        })}
       </div>
 
       {/* Charts */}

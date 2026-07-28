@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
+import { CountUp } from "@/components/reactbits/count-up";
 
 interface StatCardProps {
   label: string;
@@ -10,6 +11,14 @@ interface StatCardProps {
   icon?: React.ReactNode;
   highlight?: boolean;
   className?: string;
+  /**
+   * Numeric value to spring up to on first view (React Bits CountUp) instead
+   * of rendering `value` statically. Opt-in: only worth it where the number is
+   * the headline. Falls back to `value` for anything non-numeric, and the
+   * component itself no-ops under prefers-reduced-motion. Decimal places are
+   * inferred from the value, so 12.5 counts as "12.5".
+   */
+  countTo?: number;
 }
 
 export function StatCard({
@@ -20,6 +29,7 @@ export function StatCard({
   icon,
   highlight,
   className,
+  countTo,
 }: StatCardProps) {
   return (
     <Card
@@ -46,7 +56,11 @@ export function StatCard({
             highlight ? "text-accent" : "text-text",
           )}
         >
-          {value}
+          {countTo !== undefined ? (
+            <CountUp to={countTo} duration={1.1} separator="," />
+          ) : (
+            value
+          )}
         </span>
         {unit && (
           <span className="text-xs uppercase tracking-wide text-muted">
