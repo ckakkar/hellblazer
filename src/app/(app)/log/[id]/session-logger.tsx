@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   useTransition,
 } from "react";
 import { format, parseISO } from "date-fns";
@@ -13,16 +14,19 @@ import {
   ArrowRight,
   Check,
   ChevronsUp,
+  CloudOff,
   Flame,
   Loader2,
   Lock,
   Pencil,
   Play,
   Plus,
+  RefreshCw,
   Repeat2,
   Search,
   Timer,
   Trash2,
+  TriangleAlert,
   Trophy,
   X,
   Zap,
@@ -78,6 +82,26 @@ type LocalExercise = {
 // Running personal-best tracker per exercise. `hadHistory` gates the Removal
 // callout to exercises with prior-session data, so a brand-new lift never fires.
 type PrBest = { weight: number; est1rm: number; hadHistory: boolean };
+
+/**
+ * Live connectivity. useSyncExternalStore rather than state+effect so the
+ * server render and hydration agree (assume online) and no setState happens
+ * inside an effect.
+ */
+function useOnline(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      window.addEventListener("online", cb);
+      window.addEventListener("offline", cb);
+      return () => {
+        window.removeEventListener("online", cb);
+        window.removeEventListener("offline", cb);
+      };
+    },
+    () => navigator.onLine,
+    () => true,
+  );
+}
 
 /** Elapsed milliseconds → clock string (H:MM:SS past an hour, else M:SS). */
 function formatElapsed(ms: number): string {
@@ -197,10 +221,23 @@ export function SessionLogger({
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const pendingSaves = useRef<Map<string, string>>(new Map());
 
+  // Save health. `failed` holds the ids of sets the server never accepted, so
+  // they can be retried and, crucially, shown.
+  const [failed, setFailed] = useState<Set<string>>(new Set());
+  const [inFlight, setInFlight] = useState(0);
+  const [confirmFinish, setConfirmFinish] = useState(false);
+  const online = useOnline();
+  const wasOffline = useRef(false);
+  const failedRef = useRef(failed);
+  useEffect(() => {
+    failedRef.current = failed;
+  }, [failed]);
+
   const weightStep = unit === "lb" ? 5 : 2.5;
 
   const persist = useCallback(
     (seId: string, set: LocalSet, setNumber: number) => {
+      setInFlight((n) => n + 1);
       return saveSet({
         id: set.id,
         sessionExerciseId: seId,
@@ -212,10 +249,61 @@ export function SessionLogger({
         reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
         rpe: set.rpe,
         isWarmup: set.isWarmup,
-      }).catch(() => {});
+      })
+        .then(() => {
+          setFailed((prev) => {
+            if (!prev.has(set.id)) return prev;
+            const next = new Set(prev);
+            next.delete(set.id);
+            return next;
+          });
+        })
+        .catch(() => {
+          // Never swallow this. A set that didn't reach the server is a set the
+          // lifter will lose, and mid-workout they have no other way to tell.
+          setFailed((prev) => new Set(prev).add(set.id));
+        })
+        .finally(() => setInFlight((n) => Math.max(0, n - 1)));
     },
     [unit],
   );
+
+  // Re-send every set that failed. Numbers are recomputed from current
+  // positions, so a retry after a delete still writes the right set_number.
+  const retryFailed = useCallback(() => {
+    for (const setId of failedRef.current) {
+      for (const ex of ref.current) {
+        const idx = ex.sets.findIndex((s) => s.id === setId);
+        if (idx >= 0) {
+          void persist(ex.seId, ex.sets[idx], idx + 1);
+          break;
+        }
+      }
+    }
+  }, [persist]);
+
+  // Last line of defence: warn before the tab closes while sets are still
+  // unsaved. The pagehide flush covers the happy path, but if the write is
+  // failing, leaving is what actually destroys the data.
+  useEffect(() => {
+    if (failed.size === 0) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [failed]);
+
+  // Coming back from a dead connection is the common case (a gym basement),
+  // so retry automatically rather than making them find the button.
+  useEffect(() => {
+    if (!online) {
+      wasOffline.current = true;
+      return;
+    }
+    if (wasOffline.current) {
+      wasOffline.current = false;
+      retryFailed();
+    }
+  }, [online, retryFailed]);
 
   // Flush debounced saves when the tab is hidden/closed/unmounted.
   useEffect(() => {
@@ -371,6 +459,14 @@ export function SessionLogger({
     if (queued) clearTimeout(queued);
     timers.current.delete(setId);
     pendingSaves.current.delete(setId);
+    // Drop it from the failed list too, or a deleted row would keep the
+    // "didn't save" warning up forever with nothing left to retry.
+    setFailed((prev) => {
+      if (!prev.has(setId)) return prev;
+      const next = new Set(prev);
+      next.delete(setId);
+      return next;
+    });
 
     // Renumber the survivors. Computed out here, not inside the state updater:
     // updaters must be pure, and React may invoke them more than once per
@@ -448,7 +544,15 @@ export function SessionLogger({
     setActiveSeId(null);
   }
 
-  function finish() {
+  function finish(force = false) {
+    // Finishing discards the page, so unsaved sets would be gone for good.
+    // Retry once and make them confirm rather than losing work silently.
+    if (!force && failed.size > 0) {
+      retryFailed();
+      setConfirmFinish(true);
+      return;
+    }
+    setConfirmFinish(false);
     setFinishing(true);
     setVictory(randomVictory());
     setTimeout(() => {
@@ -547,6 +651,48 @@ export function SessionLogger({
         <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-accent/70">
           {hype}
         </p>
+
+        {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
+        {failed.size > 0 ? (
+          <div
+            role="alert"
+            className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5"
+          >
+            <TriangleAlert className="size-4 shrink-0 text-danger" />
+            <span className="min-w-0 flex-1 text-xs text-text">
+              <strong className="font-medium text-danger">
+                {failed.size} {failed.size === 1 ? "set" : "sets"} didn&apos;t
+                save.
+              </strong>{" "}
+              {online
+                ? "Your log is safe on this screen until you retry."
+                : "You're offline. They'll go up automatically when you reconnect."}
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={retryFailed}
+              disabled={inFlight > 0 || !online}
+            >
+              {inFlight > 0 ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3.5" />
+              )}
+              Retry
+            </Button>
+          </div>
+        ) : !online ? (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs text-warn">
+            <CloudOff className="size-3.5 shrink-0" />
+            Offline. Keep logging, sets go up when you reconnect.
+          </div>
+        ) : inFlight > 0 ? (
+          <div className="mt-3 flex items-center gap-2 px-1 font-mono text-[11px] text-muted">
+            <Loader2 className="size-3 animate-spin" />
+            Saving…
+          </div>
+        ) : null}
       </div>
 
       {/* Exercise queue */}
@@ -738,19 +884,47 @@ export function SessionLogger({
             <span className="text-xs text-muted/70">min</span>
           </label>
         </div>
-        <Button
-          onClick={finish}
-          disabled={finishing}
-          size="lg"
-          className="w-full sm:w-auto"
-        >
-          {finishing ? (
-            <Loader2 className="size-4 animate-spin" />
-          ) : (
-            <Trophy className="size-4" />
-          )}
-          Claim victory
-        </Button>
+        {/* `() => finish()` deliberately, not `onClick={finish}`: the latter
+            hands the click event in as `force` and skips the unsaved guard. */}
+        {confirmFinish ? (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
+            <p className="text-xs text-danger sm:text-right">
+              {failed.size} {failed.size === 1 ? "set is" : "sets are"} still
+              unsaved. Finishing now loses {failed.size === 1 ? "it" : "them"}.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => setConfirmFinish(false)}
+                className="flex-1 sm:flex-none"
+              >
+                Keep logging
+              </Button>
+              <Button
+                variant="danger"
+                onClick={() => finish(true)}
+                disabled={finishing}
+                className="flex-1 sm:flex-none"
+              >
+                Finish anyway
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button
+            onClick={() => finish()}
+            disabled={finishing}
+            size="lg"
+            className="w-full sm:w-auto"
+          >
+            {finishing ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <Trophy className="size-4" />
+            )}
+            Claim victory
+          </Button>
+        )}
       </div>
 
       {/* Add-exercise picker (appends to the queue) */}

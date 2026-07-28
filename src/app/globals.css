@@ -113,6 +113,15 @@ label {
   -webkit-touch-callout: none;
 }
 
+/* Keyboard focus is visible on every interactive element by default. Wrapped
+   in :where() so it carries zero specificity: any component that styles its
+   own focus (Button, Input) still wins, and this only fills the gaps. Pointer
+   and touch input never match :focus-visible, so it costs mouse users nothing. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--accent-rgb) / 0.65);
+  outline-offset: 2px;
+}
+
 /* Numeric/data feel: tabular figures on mono */
 .font-mono {
   font-variant-numeric: tabular-nums;

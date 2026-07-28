@@ -66,6 +66,11 @@ export const viewport: Viewport = {
   // No maximumScale: pinch-zoom stays available for accessibility; the 16px
   // input floor in globals.css already prevents iOS focus-zoom.
   viewportFit: "cover",
+  // Shrink the viewport when the on-screen keyboard opens, so `100dvh` and
+  // fixed-position chrome track the space actually left. Without this the
+  // keyboard overlays the layout viewport and covers the bottom of a bottom
+  // sheet, which is exactly where the set-logging inputs live.
+  interactiveWidget: "resizes-content",
 };
 
 export default async function RootLayout({

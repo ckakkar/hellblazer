@@ -20,6 +20,20 @@ export function ExercisePicker({
 }) {
   const [q, setQ] = useState("");
 
+  // Autofocusing the search field pops the on-screen keyboard the moment the
+  // sheet opens, hiding most of the list, so only do it for a fine pointer.
+  // Safe to read at render: Sheet portals after hydration, so this subtree
+  // only ever mounts client-side.
+  const finePointer =
+    typeof window !== "undefined" &&
+    window.matchMedia("(pointer: fine)").matches;
+
+  /** Reset the query on the way out, so reopening isn't pre-filtered. */
+  function close() {
+    setQ("");
+    onClose();
+  }
+
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return exercises;
@@ -32,12 +46,13 @@ export function ExercisePicker({
   }, [q, exercises]);
 
   return (
-    <Sheet open={open} onClose={onClose} title="Add exercise">
+    <Sheet open={open} onClose={close} title="Add exercise">
       <div className="sticky top-0 z-10 border-b border-border bg-surface p-3">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input
-            autoFocus
+            autoFocus={finePointer}
+            aria-label="Search exercises"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search exercises…"
@@ -51,10 +66,9 @@ export function ExercisePicker({
             <button
               onClick={() => {
                 onPick(e.id);
-                onClose();
-                setQ("");
+                close();
               }}
-              className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+              className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
             >
               <div className="min-w-0">
                 <div className="truncate text-sm text-text">{e.name}</div>
