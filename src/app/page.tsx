@@ -52,7 +52,7 @@ export default async function Landing({
               The strength ladder
             </div>
 
-            {/* React Bits BlurText — the words resolve out of a blur, one by
+            {/* React Bits BlurText: the words resolve out of a blur, one by
                 one. Two stacked lines rather than a <br/> so each animates as
                 its own run while staying inside a single <h1>. */}
             <h1 className="mt-6 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl">
@@ -71,7 +71,7 @@ export default async function Landing({
               style={{ animationDelay: "200ms" }}
             >
               Log every set like it counts. Your numbers get weighed and ranked
-              against the deadliest fighters in the ring — climb from Rei to
+              against the deadliest fighters in the ring, climb from Rei to
               Kuroki, one honest rep at a time.
             </p>
 
@@ -92,7 +92,7 @@ export default async function Landing({
           <section
             className="hb-reveal relative"
             style={{ animationDelay: "180ms" }}
-            aria-label={`The strength ladder — rank ${TIERS.length} down to rank 1`}
+            aria-label={`The strength ladder: rank ${TIERS.length} down to rank 1`}
           >
             <div className="relative overflow-hidden rounded-xl border border-border bg-surface/60 p-3 backdrop-blur-sm sm:p-4">
               <div className="mb-3 flex items-center justify-between px-1">
@@ -170,7 +170,7 @@ export default async function Landing({
               </ol>
 
               <p className="mt-3 px-1 text-[11px] leading-5 text-muted">
-                You enter unranked. Earn your rung, then keep climbing — there is
+                You enter unranked. Earn your rung, then keep climbing. There is
                 always someone stronger.
               </p>
             </div>

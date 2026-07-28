@@ -3,8 +3,8 @@
  * match the seeded exercise-library names exactly (looked up at load time).
  *
  * "Back & Arm Focused Strength" is the user's real 5-day weak-point split
- * (back · biceps · triceps · side delts): heavy compounds first (3–6), then
- * isolation in hypertrophy ranges (8–20).
+ * (back · biceps · triceps · side delts): heavy compounds first (3-6), then
+ * isolation in hypertrophy ranges (8-20).
  */
 export type PresetExercise = {
   name: string;
@@ -33,10 +33,10 @@ export const PRESETS: Preset[] = [
     name: "Niko Style · Back & Arm Strength",
     weeks: 8,
     description:
-      "5-day weak-point split — back · biceps · triceps · side delts. Heavy compounds first (3–6), isolation after in hypertrophy ranges.",
+      "5-day weak-point split: back · biceps · triceps · side delts. Heavy compounds first (3-6), isolation after in hypertrophy ranges.",
     days: [
       {
-        name: "Day 1 — Upper",
+        name: "Day 1: Upper",
         dayLabel: "Upper (Strength)",
         exercises: [
           { name: "Barbell Bench Press", sets: 5, reps: "3-5" },
@@ -64,7 +64,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 2 — Lower",
+        name: "Day 2: Lower",
         dayLabel: "Lower (Controlled)",
         exercises: [
           { name: "Romanian Deadlift", sets: 5, reps: "4-6" },
@@ -75,12 +75,12 @@ export const PRESETS: Preset[] = [
             name: "Cable Lateral Raise",
             sets: 3,
             reps: "15-20",
-            note: "delt #2 — low-fatigue filler",
+            note: "delt #2: low-fatigue filler",
           },
         ],
       },
       {
-        name: "Day 3 — Push",
+        name: "Day 3: Push",
         dayLabel: "Push (Strength)",
         exercises: [
           { name: "Incline Dumbbell Press", sets: 5, reps: "3-5" },
@@ -107,33 +107,33 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 4 — Pull",
+        name: "Day 4: Pull",
         dayLabel: "Pull (Strength)",
         exercises: [
           {
             name: "Weighted Pull-Up",
             sets: 5,
             reps: "4-6",
-            note: "heavy back #2 — vertical",
+            note: "heavy back #2: vertical",
           },
           {
             name: "Seated Cable Row",
             sets: 4,
             reps: "6-8",
-            note: "heavy back #2 — horizontal",
+            note: "heavy back #2: horizontal",
           },
           { name: "Lat Pullover", sets: 3, reps: "10-12" },
           {
             name: "Barbell Curl",
             sets: 4,
             reps: "6-8",
-            note: "bi #2 — heavy mid-range anchor",
+            note: "bi #2: heavy mid-range anchor",
           },
           {
             name: "Incline Dumbbell Curl",
             sets: 3,
             reps: "8-10",
-            note: "bi #3 — stretch",
+            note: "bi #3: stretch",
           },
           { name: "Rear Delt Fly", sets: 3, reps: "12-15", note: "rear delt" },
           {
@@ -145,7 +145,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 5 — Legs",
+        name: "Day 5: Legs",
         dayLabel: "Legs (Strength)",
         exercises: [
           { name: "Leg Press", sets: 5, reps: "3-5" },
@@ -161,7 +161,7 @@ export const PRESETS: Preset[] = [
             name: "Chest-Supported Row",
             sets: 3,
             reps: "8-10",
-            note: "back #3 — light frequency filler",
+            note: "back #3: light frequency filler",
           },
           { name: "Preacher Curl", sets: 3, reps: "8-10", note: "bi #3.5" },
           { name: "Standing Calf Raise", sets: 4, reps: "8-10" },
@@ -174,10 +174,10 @@ export const PRESETS: Preset[] = [
     name: "Indestructible · Upper/Lower 4-Day",
     weeks: 8,
     description:
-      "The gold-standard 4-day split. Two upper + two lower days, heavy strength work up top then hypertrophy volume — the best frequency/recovery balance for natural strength gains.",
+      "The gold-standard 4-day split. Two upper + two lower days, heavy strength work up top then hypertrophy volume, the best frequency/recovery balance for natural strength gains.",
     days: [
       {
-        name: "Day 1 — Upper A",
+        name: "Day 1: Upper A",
         dayLabel: "Upper A (Strength)",
         exercises: [
           { name: "Barbell Bench Press", sets: 4, reps: "4-6", note: "main press" },
@@ -195,7 +195,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 2 — Lower A",
+        name: "Day 2: Lower A",
         dayLabel: "Lower A (Strength)",
         exercises: [
           { name: "Barbell Back Squat", sets: 4, reps: "4-6", note: "main squat" },
@@ -207,7 +207,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 3 — Upper B",
+        name: "Day 3: Upper B",
         dayLabel: "Upper B (Hypertrophy)",
         exercises: [
           { name: "Incline Barbell Press", sets: 4, reps: "6-8" },
@@ -220,7 +220,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 4 — Lower B",
+        name: "Day 4: Lower B",
         dayLabel: "Lower B (Strength)",
         exercises: [
           { name: "Deadlift", sets: 4, reps: "3-5", note: "main pull" },
@@ -238,10 +238,10 @@ export const PRESETS: Preset[] = [
     name: "Blast Core · Push/Pull/Legs ×2",
     weeks: 8,
     description:
-      "PPLPPL — the highest-frequency hypertrophy-strength split. Each muscle trained twice weekly: a heavy strength day and a higher-volume day. For advanced lifters who recover well.",
+      "PPLPPL: the highest-frequency hypertrophy-strength split. Each muscle trained twice weekly: a heavy strength day and a higher-volume day. For advanced lifters who recover well.",
     days: [
       {
-        name: "Day 1 — Push A",
+        name: "Day 1: Push A",
         dayLabel: "Push A (Strength)",
         exercises: [
           { name: "Barbell Bench Press", sets: 4, reps: "4-6" },
@@ -253,7 +253,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 2 — Pull A",
+        name: "Day 2: Pull A",
         dayLabel: "Pull A (Strength)",
         exercises: [
           { name: "Weighted Pull-Up", sets: 4, reps: "4-6" },
@@ -265,7 +265,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 3 — Legs A",
+        name: "Day 3: Legs A",
         dayLabel: "Legs A (Strength)",
         exercises: [
           { name: "Barbell Back Squat", sets: 4, reps: "4-6" },
@@ -276,7 +276,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 4 — Push B",
+        name: "Day 4: Push B",
         dayLabel: "Push B (Hypertrophy)",
         exercises: [
           { name: "Incline Barbell Press", sets: 4, reps: "6-8" },
@@ -288,7 +288,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 5 — Pull B",
+        name: "Day 5: Pull B",
         dayLabel: "Pull B (Hypertrophy)",
         exercises: [
           { name: "Lat Pulldown", sets: 4, reps: "8-12" },
@@ -300,7 +300,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 6 — Legs B",
+        name: "Day 6: Legs B",
         dayLabel: "Legs B (Hypertrophy)",
         exercises: [
           { name: "Hack Squat", sets: 4, reps: "8-12" },
@@ -318,10 +318,10 @@ export const PRESETS: Preset[] = [
     name: "Fang of Metsudo · Full-Body 4-Day",
     weeks: 8,
     description:
-      "Four full-body days, each built around one main lift (squat / deadlift / bench / pull). Maximal frequency on the big lifts — the fastest route to raw strength for busy or intermediate lifters.",
+      "Four full-body days, each built around one main lift (squat / deadlift / bench / pull). Maximal frequency on the big lifts, the fastest route to raw strength for busy or intermediate lifters.",
     days: [
       {
-        name: "Day 1 — Squat Focus",
+        name: "Day 1: Squat Focus",
         dayLabel: "Full Body A",
         exercises: [
           { name: "Barbell Back Squat", sets: 4, reps: "5", note: "top priority" },
@@ -333,7 +333,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 2 — Deadlift Focus",
+        name: "Day 2: Deadlift Focus",
         dayLabel: "Full Body B",
         exercises: [
           { name: "Deadlift", sets: 4, reps: "3-5", note: "top priority" },
@@ -345,7 +345,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 3 — Bench Focus",
+        name: "Day 3: Bench Focus",
         dayLabel: "Full Body C",
         exercises: [
           { name: "Barbell Bench Press", sets: 4, reps: "4-6", note: "top priority" },
@@ -357,7 +357,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 4 — Pull Focus",
+        name: "Day 4: Pull Focus",
         dayLabel: "Full Body D",
         exercises: [
           { name: "Weighted Pull-Up", sets: 4, reps: "5", note: "top priority" },
@@ -375,10 +375,10 @@ export const PRESETS: Preset[] = [
     name: "Formless · Dumbbell Home Circuit",
     weeks: 8,
     description:
-      "A dumbbell-only, home-friendly 5-day split — glute & leg focused with dedicated shoulders/arms, back/core, and posterior-chain days. No machines, no barbell: just a pair of dumbbells.",
+      "A dumbbell-only, home-friendly 5-day split, glute & leg focused with dedicated shoulders/arms, back/core, and posterior-chain days. No machines, no barbell: just a pair of dumbbells.",
     days: [
       {
-        name: "Day 1 — Legs & Glutes",
+        name: "Day 1: Legs & Glutes",
         dayLabel: "Legs & Glutes (Quad-dominant)",
         exercises: [
           { name: "Goblet Squat", sets: 3, reps: "12" },
@@ -394,7 +394,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 2 — Shoulders & Arms",
+        name: "Day 2: Shoulders & Arms",
         dayLabel: "Upper Body (Shoulders & Arms)",
         exercises: [
           { name: "Seated Dumbbell Shoulder Press", sets: 3, reps: "10" },
@@ -405,7 +405,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 3 — Glutes & Hamstrings",
+        name: "Day 3: Glutes & Hamstrings",
         dayLabel: "Glutes & Hamstrings (Posterior chain)",
         exercises: [
           { name: "Dumbbell Romanian Deadlift", sets: 3, reps: "12" },
@@ -416,7 +416,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 4 — Back & Core",
+        name: "Day 4: Back & Core",
         dayLabel: "Upper Body (Back & Core)",
         exercises: [
           { name: "Dumbbell Bent-Over Row", sets: 3, reps: "12" },
@@ -427,7 +427,7 @@ export const PRESETS: Preset[] = [
         ],
       },
       {
-        name: "Day 5 — Glutes Focus",
+        name: "Day 5: Glutes Focus",
         dayLabel: "Glutes Focus",
         exercises: [
           { name: "Bulgarian Split Squat", sets: 3, reps: "10", note: "per leg" },

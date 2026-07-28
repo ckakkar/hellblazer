@@ -58,18 +58,18 @@ export function UsernameField({ current }: { current: string | null }) {
       </div>
       <p className="text-xs">
         {status === "saved" ? (
-          <span className="text-accent">Saved — you&apos;re on the board.</span>
+          <span className="text-accent">Saved: you&apos;re on the board.</span>
         ) : status === "taken" ? (
           <span className="text-danger">That ring name&apos;s taken. Try another.</span>
         ) : status === "invalid" ? (
           <span className="text-danger">
-            2–24 characters — letters, numbers, spaces or _ . -
+            2-24 characters: letters, numbers, spaces or _ . -
           </span>
         ) : status === "error" ? (
           <span className="text-danger">Couldn&apos;t save. Try again.</span>
         ) : (
           <span className="text-muted">
-            Shown on the global leaderboard. 2–24 characters.
+            Shown on the global leaderboard. 2-24 characters.
           </span>
         )}
       </p>

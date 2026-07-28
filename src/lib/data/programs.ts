@@ -97,7 +97,7 @@ export async function getProgramProgress(
   }
 
   // Count sessions logged AND days skipped this week, and grab the latest of
-  // each — all in one round-trip (the "last" rows drive the roll-back control).
+  // each: all in one round-trip (the "last" rows drive the roll-back control).
   let sessionsThisWeek = 0;
   let skipsThisWeek = 0;
   let lastSessionRow: { id: string; title: string | null; created_at: string } | null =
@@ -144,7 +144,7 @@ export async function getProgramProgress(
   const nextDay =
     daysPerWeek > 0 ? days[doneThisWeek % daysPerWeek] ?? days[0] : null;
 
-  // The most recent advance (for the "Roll back a day" control) — whichever of
+  // The most recent advance (for the "Roll back a day" control): whichever of
   // the latest logged session or latest skip happened last. Uses rows already
   // fetched above, so no extra round-trip.
   let lastAdvance: ProgramProgress["lastAdvance"] = null;

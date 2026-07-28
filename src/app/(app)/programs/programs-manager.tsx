@@ -57,7 +57,7 @@ export function ProgramsManager({
             disabled={templates.length === 0}
             title={
               templates.length === 0
-                ? "Build a template first — programs are made from templates"
+                ? "Build a template first: programs are made from templates"
                 : undefined
             }
           >
@@ -76,7 +76,7 @@ export function ProgramsManager({
         </div>
       )}
 
-      {/* Starter programs — load a proven split (any number of times) */}
+      {/* Starter programs: load a proven split (any number of times) */}
       {presets.length > 0 && (
         <Card className="mb-6 border-accent/20 bg-accent/[0.03] p-4">
           <div className="flex items-center gap-2 text-sm font-medium text-text">
@@ -84,7 +84,7 @@ export function ProgramsManager({
             Starter programs
           </div>
           <p className="mt-1 text-xs text-muted">
-            Load a proven, strength-first split — it becomes a ready-to-run
+            Load a proven, strength-first split. It becomes a ready-to-run
             active program. Load any of them again whenever you want a fresh
             block.
           </p>
@@ -313,7 +313,7 @@ function CreateProgramSheet({
           <span className="text-xs font-medium text-muted">
             Weekly schedule{" "}
             <span className="text-muted/60">
-              — tap templates in order ({selected.length} selected)
+              Tap templates in order ({selected.length} selected)
             </span>
           </span>
           <div className="grid gap-2">

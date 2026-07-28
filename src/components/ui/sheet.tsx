@@ -32,7 +32,7 @@ export function Sheet({
       e.key === "Escape" && onCloseRef.current();
     document.addEventListener("keydown", onKey);
 
-    // iOS Safari ignores `body { overflow: hidden }` — the page keeps scrolling
+    // iOS Safari ignores `body { overflow: hidden }`, the page keeps scrolling
     // under the sheet. Pin the body at its current offset instead, then restore
     // the scroll position on close.
     const scrollY = window.scrollY;
@@ -74,7 +74,7 @@ export function Sheet({
           onClick={onClose}
         />
         <div className="hb-glass-strong relative z-10 flex max-h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border pb-[env(safe-area-inset-bottom)] sm:rounded-2xl sm:pb-0">
-          {/* Grabber handle — bottom-sheet affordance on mobile */}
+          {/* Grabber handle: bottom-sheet affordance on mobile */}
           <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <h2 className="text-sm font-medium text-text">{title}</h2>

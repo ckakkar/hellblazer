@@ -67,7 +67,7 @@ export function TierEvaluator({
 
   const gateCopy =
     gate.reason === "no_workout"
-      ? "Finish a workout first — the judge rules on logged work, nothing else."
+      ? "Finish a workout first: the judge rules on logged work, nothing else."
       : gate.reason === "no_new_workout"
         ? "You've already been judged on this record. Log another workout to earn a fresh verdict."
         : gate.reason === "cooldown"
@@ -77,7 +77,7 @@ export function TierEvaluator({
               gate.nextRunAt && daysUntil(gate.nextRunAt) === 1
                 ? "day"
                 : "days"
-            } — one evaluation every ${EVAL_COOLDOWN_DAYS} days.`
+            }: one evaluation every ${EVAL_COOLDOWN_DAYS} days.`
           : "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result.";
 
   return (
@@ -239,7 +239,7 @@ export function TierEvaluator({
                 {accepting ? (
                   <Loader2 className="size-4 animate-spin" />
                 ) : null}
-                Accept — become {result.tierName}
+                Accept: become {result.tierName}
               </Button>
               <Button
                 variant="ghost"

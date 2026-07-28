@@ -39,7 +39,7 @@ export default async function ProgressPage({
     getAllExercise1RMs(),
   ]);
 
-  // Validate URL params — bad values fall back instead of crashing the page.
+  // Validate URL params: bad values fall back instead of crashing the page.
   const selectedMuscle: Muscle = MUSCLES.includes(sp.muscle as Muscle)
     ? (sp.muscle as Muscle)
     : "back";
@@ -176,7 +176,7 @@ async function MuscleTab({
           </div>
 
           <ChartCard
-            title={`${MUSCLE_LABEL[muscle]} — weekly sets & volume`}
+            title={`${MUSCLE_LABEL[muscle]}: weekly sets & volume`}
             subtitle="Sets (bars) with volume overlay · secondary muscles weighted 0.5"
           >
             <MuscleTrendChart

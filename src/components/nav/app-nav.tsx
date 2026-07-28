@@ -110,7 +110,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
         </div>
       </aside>
 
-      {/* Mobile top bar — pads into the notch via safe-area inset */}
+      {/* Mobile top bar: pads into the notch via safe-area inset */}
       <header className="hb-glass fixed inset-x-0 top-0 z-30 border-b border-border/60 pt-[env(safe-area-inset-top)] md:hidden">
         <div className="flex h-14 items-center justify-between px-4">
           <Brand />

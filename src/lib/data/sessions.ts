@@ -25,7 +25,7 @@ export type ActiveSession = {
   exerciseCount: number;
 };
 
-/** The most recent unfinished session, if any — powers the resume banner. */
+/** The most recent unfinished session, if any, powers the resume banner. */
 export async function getActiveSession(): Promise<ActiveSession | null> {
   const supabase = await createClient();
   const { data: sess, error } = await supabase
@@ -134,7 +134,7 @@ export async function getExercisePRs(
 
 /**
  * The most recent prior working-set performance for each of the given
- * exercises — powers the inline "last: 60kg×5" target on the log screen.
+ * exercises. Powers the inline "last: 60kg×5" target on the log screen.
  * One query, grouped in memory by exercise → latest session.
  */
 export async function getLastPerformances(

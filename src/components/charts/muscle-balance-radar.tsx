@@ -13,7 +13,7 @@ import { ChartEmpty, TooltipBox } from "./chart-kit";
 
 type Row = { muscle: Muscle; sets: number };
 
-/** Radar of average weekly sets per muscle — see your push/pull/legs balance at a glance. */
+/** Radar of average weekly sets per muscle, see your push/pull/legs balance at a glance. */
 export function MuscleBalanceRadar({ data }: { data: Row[] }) {
   const chartData = data
     .filter((d) => !CHART_HIDDEN_MUSCLES.has(d.muscle))

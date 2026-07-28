@@ -102,7 +102,7 @@ export function ConsistencyHeatmap({
 
   return (
     <div className="w-full">
-      {/* Month labels — recent 6mo (mobile) / full year (desktop) */}
+      {/* Month labels: recent 6mo (mobile) / full year (desktop) */}
       <div className="grid gap-[3px] grid-cols-[1.75rem_repeat(26,minmax(0,1fr))] lg:hidden">
         <div />
         {monthsMobile.map(monthCell)}

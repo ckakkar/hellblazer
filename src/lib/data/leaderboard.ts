@@ -11,7 +11,7 @@ export type LeaderboardEntry = {
 };
 
 /**
- * The global standings — every lifter who has claimed a ring name, ranked by
+ * The global standings: every lifter who has claimed a ring name, ranked by
  * lifetime working-set volume moved (strongest mover first). Reads through the
  * `leaderboard()` security-definer RPC, which exposes only username, tier and
  * total volume across all users (no other private data).

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Flame } from "lucide-react";
 
-// Cycling combat call-outs — the "match is loading" flavour.
+// Cycling combat call-outs: the "match is loading" flavour.
 const PHRASES = [
   "Entering the arena",
   "The judge deliberates",

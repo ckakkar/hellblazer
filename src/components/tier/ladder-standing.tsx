@@ -6,7 +6,7 @@ import { TIERS, getTier, MAX_RANK } from "@/lib/tiers";
 const byRank = (r: number) => TIERS.find((t) => t.rank === r) ?? null;
 
 /**
- * "Where you stand" — the full strength ladder with the lifter's rung marked,
+ * "Where you stand": the full strength ladder with the lifter's rung marked,
  * and the fighters directly above (to chase) and below (already surpassed)
  * called out. Pure server markup; driven by the accepted profile tier.
  */

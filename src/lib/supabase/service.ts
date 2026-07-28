@@ -2,7 +2,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
 /**
- * Service-role Supabase client that BYPASSES RLS. Server-only — must never be
+ * Service-role Supabase client that BYPASSES RLS. Server-only: must never be
  * imported into client code. Used exclusively by the reminder cron, which needs
  * to read subscriptions/schedules across all users. Returns null when the key
  * isn't configured, so callers can no-op gracefully.

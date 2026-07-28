@@ -24,7 +24,7 @@ export function randomHype(): string {
   return HYPE_LINES[Math.floor(Math.random() * HYPE_LINES.length)];
 }
 
-/** Deterministic pick from a seed (e.g. session id) — stable across SSR/CSR. */
+/** Deterministic pick from a seed (e.g. session id): stable across SSR/CSR. */
 export function pickHype(seed: string): string {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;

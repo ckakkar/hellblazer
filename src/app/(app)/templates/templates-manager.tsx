@@ -93,7 +93,7 @@ export function TemplatesManager({
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              placeholder="Template name — e.g. Day 1 — Upper"
+              placeholder="Template name, e.g. Day 1: Upper"
             />
             <div className="flex gap-2">
               <Button onClick={handleCreate} disabled={pending || !newName.trim()}>

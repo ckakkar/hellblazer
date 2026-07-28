@@ -78,7 +78,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
                     expanded ? "border-accent/40" : "border-border",
                   )}
                 >
-                  {/* Header — tap to preview, not to start */}
+                  {/* Header. Tap to preview, not to start */}
                   <button
                     onClick={() => setOpenId(expanded ? null : t.id)}
                     aria-expanded={expanded}
@@ -109,7 +109,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
                     />
                   </button>
 
-                  {/* Preview — upcoming movements without starting */}
+                  {/* Preview: upcoming movements without starting */}
                   {expanded && (
                     <div className="border-t border-border p-3">
                       {t.exercises.length > 0 ? (
@@ -134,7 +134,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
                                 </Badge>
                               )}
                               <span className="shrink-0 font-mono text-xs text-muted">
-                                {ex.targetSets ?? 3} × {ex.targetRepRange || "—"}
+                                {ex.targetSets ?? 3} × {ex.targetRepRange || "-"}
                               </span>
                             </li>
                           ))}

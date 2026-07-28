@@ -16,7 +16,7 @@ export default async function LogPage() {
   ]);
 
   // Full template details (movements, target sets/reps) for the preview dropdown,
-  // keyed by id — the program-day select only carries exercise counts.
+  // keyed by id: the program-day select only carries exercise counts.
   const templateById = new Map(templates.map((t) => [t.id, t]));
   const previewExercises = (id: string) =>
     (templateById.get(id)?.template_exercise ?? []).map((te) => ({

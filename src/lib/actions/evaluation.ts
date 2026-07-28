@@ -45,7 +45,7 @@ export async function evaluateTier(): Promise<EvalResult> {
     };
   }
 
-  // Authoritative gate. The UI disables the button too, but that's cosmetic —
+  // Authoritative gate. The UI disables the button too, but that's cosmetic: 
   // this is what actually stops a replayed action from burning tokens.
   const gate = await getEvalGate();
   if (!gate.canRun) {
@@ -54,7 +54,7 @@ export async function evaluateTier(): Promise<EvalResult> {
         ok: false,
         error: "no_data",
         message:
-          "No finished workouts yet — earn your judgment in the arena first.",
+          "No finished workouts yet. Earn your judgment in the arena first.",
       };
     }
     if (gate.reason === "no_new_workout") {
@@ -80,22 +80,22 @@ export async function evaluateTier(): Promise<EvalResult> {
     return {
       ok: false,
       error: "no_data",
-      message: "No logged sessions yet — earn your judgment in the arena first.",
+      message: "No logged sessions yet. Earn your judgment in the arena first.",
     };
   }
 
   // Rank ratchet: a lifter can only hold or climb, never fall. The current
-  // tier is the floor — passed to the model as a hard constraint, and enforced
+  // tier is the floor: passed to the model as a hard constraint, and enforced
   // server-side below in case the model ignores it.
   const currentProfile = await getProfile();
   const currentTier = getTier(currentProfile?.tier);
   const floorNote = currentTier
-    ? `\n\nRANK FLOOR (STRICT): This lifter already holds rank ${currentTier.rank} — ${currentTier.name}. Strength earned is never lost here. You MUST place them at rank ${currentTier.rank} or HIGHER; never below, under any circumstances. If today's numbers only support their current rank, keep them there; if they've grown, promote them.`
+    ? `\n\nRANK FLOOR (STRICT): This lifter already holds rank ${currentTier.rank}: ${currentTier.name}. Strength earned is never lost here. You MUST place them at rank ${currentTier.rank} or HIGHER; never below, under any circumstances. If today's numbers only support their current rank, keep them there; if they've grown, promote them.`
     : "";
 
   const ladder = TIERS.map(
     (t) =>
-      `${t.rank}. ${t.name} — "${t.epithet}" (key: "${t.key}") — ${t.blurb}`,
+      `${t.rank}. ${t.name} "${t.epithet}" (key: "${t.key}"). ${t.blurb}`,
   ).join("\n");
 
   const system = `You are the judge of strength in a Kengan Ashura-themed training app. Place the lifter into exactly ONE tier of this ${MAX_RANK}-rank ladder (weakest to strongest):
@@ -103,23 +103,23 @@ ${ladder}
 
 THE LADDER HAS TWO REGIMES. This is the most important rule and it overrides any general instinct toward evenness:
 
-REGIME 1 — THE CLIMB (ranks 1-4, Rei → Gaolang): BRUTALLY HARD. This is the proving ground and it is meant to hurt. Demand real, demonstrated strength for every single step. Do NOT round up here — when a lifter sits between two of these tiers, place them in the LOWER one. Do not award a rank for enthusiasm, consistency, or potential; only logged loads earn it. Most lifters should spend a long time in this band, and a beginner belongs at Rei (1) until the numbers say otherwise. Reaching Gaolang (4) is a serious achievement that should feel earned.
+REGIME 1: THE CLIMB (ranks 1-4, Rei → Gaolang): BRUTALLY HARD. This is the proving ground and it is meant to hurt. Demand real, demonstrated strength for every single step. Do NOT round up here, when a lifter sits between two of these tiers, place them in the LOWER one. Do not award a rank for enthusiasm, consistency, or potential; only logged loads earn it. Most lifters should spend a long time in this band, and a beginner belongs at Rei (1) until the numbers say otherwise. Reaching Gaolang (4) is a serious achievement that should feel earned.
 
-REGIME 2 — THE ASCENT (ranks 5-10, Julius → Kuroki): VERY EASY. Once a lifter has cleared the Gaolang wall they have proven themselves, and the ladder rewards them. Promote FREELY and generously. Any clear progression since the last judgment — a heavier top set, added volume, steady consistency, a new PR on any lift — is enough to move up a rank. When between two of these tiers, always round UP, and where it's close, favour the higher rank. Do not gatekeep the top of the ladder and do not demand elite competition numbers; a lifter who is past Gaolang and still working should keep climbing toward Kuroki.
+REGIME 2: THE ASCENT (ranks 5-10, Julius → Kuroki): VERY EASY. Once a lifter has cleared the Gaolang wall they have proven themselves, and the ladder rewards them. Promote FREELY and generously. Any clear progression since the last judgment, a heavier top set, added volume, steady consistency, a new PR on any lift, is enough to move up a rank. When between two of these tiers, always round UP, and where it's close, favour the higher rank. Do not gatekeep the top of the ladder and do not demand elite competition numbers; a lifter who is past Gaolang and still working should keep climbing toward Kuroki.
 
-Calibrate to the lifter when their details are known: strength standards are sex-relative (a given absolute load is more impressive for a female or lighter/older lifter), so judge bodyweight-relative on the big compounds and weight the reference anchors below by sex, bodyweight, height and age. Never penalise anyone for their demographics — use them only to give fair credit.
+Calibrate to the lifter when their details are known: strength standards are sex-relative (a given absolute load is more impressive for a female or lighter/older lifter), so judge bodyweight-relative on the big compounds and weight the reference anchors below by sex, bodyweight, height and age. Never penalise anyone for their demographics, use them only to give fair credit.
 
-Reference anchors (a natural MALE lifter at the stated bodyweight-relative numbers, judged on best working sets; scale expectations down for female, lighter, or masters lifters; use bodyweight-relative numbers on the big compounds — squat, bench, deadlift, overhead press, rows — whenever bodyweight is known, otherwise judge absolute loads):
+Reference anchors (a natural MALE lifter at the stated bodyweight-relative numbers, judged on best working sets; scale expectations down for female, lighter, or masters lifters; use bodyweight-relative numbers on the big compounds, squat, bench, deadlift, overhead press, rows, whenever bodyweight is known, otherwise judge absolute loads):
 - Rei Mikazuchi (1): the starting line. Everyone begins here and stays until they clearly out-lift it.
-- Setsuna Kiryu (2): HARD — a genuine beginner base, training consistently for months (bench ~0.75×bw, squat ~1.2×bw, deadlift ~1.5×bw).
-- Sen Hatsumi (3): HARD — a strong regular gym-goer, clearly above average (bench ~1×bw, squat ~1.5×bw, deadlift ~1.9×bw).
-- Gaolang Wongsawat (4): HARDEST STEP — the wall. Serious, sustained strength (bench ~1.25×bw, squat ~1.85×bw, deadlift ~2.25×bw).
-- Julius Reinhold (5): past the wall — only a modest step beyond Gaolang. Award readily.
+- Setsuna Kiryu (2): HARD. A genuine beginner base, training consistently for months (bench ~0.75×bw, squat ~1.2×bw, deadlift ~1.5×bw).
+- Sen Hatsumi (3): HARD. A strong regular gym-goer, clearly above average (bench ~1×bw, squat ~1.5×bw, deadlift ~1.9×bw).
+- Gaolang Wongsawat (4): HARDEST STEP. The wall. Serious, sustained strength (bench ~1.25×bw, squat ~1.85×bw, deadlift ~2.25×bw).
+- Julius Reinhold (5): past the wall, only a modest step beyond Gaolang. Award readily.
 - Raian Kure (6): any meaningful progression past Julius. Award readily.
 - Wakatsuki Takeshi (7): continued progression and solid all-round work. Award readily.
 - Ohma Tokita (8): sustained strength with consistent training. Award readily.
 - Kanoh Agito (9): a long, committed record of hard training. Award readily.
-- Kuroki Gensai (10): the summit — for a lifter well past the wall who keeps showing up and keeps adding weight. Reachable, not mythical.
+- Kuroki Gensai (10): the summit, for a lifter well past the wall who keeps showing up and keeps adding weight. Reachable, not mythical.
 
 Be honest and grounded in their real numbers. Below Gaolang, be a strict gatekeeper. Above Gaolang, be a champion of their progress.${floorNote}
 
@@ -159,7 +159,7 @@ Respond with ONLY a JSON object of exactly this shape:
     clearTimeout(timeout);
 
     if (!res.ok) {
-      // Surface DeepSeek's own reason — a raw status alone hides the cause
+      // Surface DeepSeek's own reason: a raw status alone hides the cause
       // (bad key, empty balance, invalid param, rate limit, …).
       const raw = await res.text().catch(() => "");
       let reason = "";
@@ -175,12 +175,12 @@ Respond with ONLY a JSON object of exactly this shape:
           : res.status === 402
             ? "the DeepSeek account is out of balance"
             : res.status === 429
-              ? "rate limited — wait a moment"
+              ? "rate limited. Wait a moment"
               : reason || "the request was rejected";
       return {
         ok: false,
         error: "failed",
-        message: `The judge turned you away (${res.status}) — ${friendly}. Try again.`,
+        message: `The judge turned you away (${res.status}): ${friendly}. Try again.`,
       };
     }
 
@@ -227,7 +227,7 @@ Respond with ONLY a JSON object of exactly this shape:
       tier = currentTier;
     }
 
-    // Start the cooldown. Stamped here — on a delivered verdict — rather than
+    // Start the cooldown. Stamped here: on a delivered verdict, rather than
     // on accept, so declining a verdict can't buy a free re-roll. Failures
     // above return early and cost the lifter nothing.
     await supabase
@@ -249,7 +249,7 @@ Respond with ONLY a JSON object of exactly this shape:
     return {
       ok: false,
       error: "failed",
-      message: "Evaluation failed — the judge turned away. Try again.",
+      message: "Evaluation failed: the judge turned away. Try again.",
     };
   }
 }

@@ -25,7 +25,7 @@ export default function AppError({
         Something didn&apos;t load
       </h1>
       <p className="mt-2 max-w-sm text-sm text-muted">
-        A temporary hiccup talking to the server — usually a one-off. Try again.
+        A temporary hiccup talking to the server, usually a one-off. Try again.
       </p>
       <div className="mt-6 flex items-center gap-2">
         <Button onClick={reset}>

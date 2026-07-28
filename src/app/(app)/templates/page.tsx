@@ -13,7 +13,7 @@ export default async function TemplatesPage() {
     getActiveProgramProgress(),
   ]);
 
-  // The active program is "your split" — its day-templates, in order.
+  // The active program is "your split": its day-templates, in order.
   const activeTemplateIds: string[] = [];
   if (active) {
     for (const d of active.program.program_day) {

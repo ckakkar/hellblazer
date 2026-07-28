@@ -1,5 +1,5 @@
 /**
- * Evaluation gating rules — the shape and the constants, with no server
+ * Evaluation gating rules: the shape and the constants, with no server
  * imports, so client components can read them too. The queries that populate
  * an `EvalGate` live in `@/lib/data/evaluation` (server-only).
  */

@@ -15,7 +15,7 @@ import { AXIS_TICK, GRID_STROKE, TooltipBox } from "./chart-kit";
 
 type Log = { date: string; weight_kg: number };
 
-/** Bodyweight over time — a tight-domain area so small changes are visible. */
+/** Bodyweight over time: a tight-domain area so small changes are visible. */
 export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
   const data = [...logs]
     .sort((a, b) => a.date.localeCompare(b.date))

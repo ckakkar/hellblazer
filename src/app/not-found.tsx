@@ -11,7 +11,7 @@ export default function NotFound() {
         Lost the fight
       </h1>
       <p className="mt-3 max-w-sm text-sm text-muted">
-        This page doesn&apos;t exist — or it was knocked out of the arena.
+        This page doesn&apos;t exist: or it was knocked out of the arena.
       </p>
       <Link
         href="/dashboard"

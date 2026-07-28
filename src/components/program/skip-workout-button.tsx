@@ -23,7 +23,7 @@ export function SkipWorkoutButton({
       size={size}
       className={className}
       disabled={pending}
-      title="Skip this day — advances your rotation without logging it"
+      title="Skip this day: advances your rotation without logging it"
       onClick={() =>
         start(async () => {
           await skipWorkout({ programDayId });

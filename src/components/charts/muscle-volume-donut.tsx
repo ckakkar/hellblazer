@@ -8,7 +8,7 @@ import { ChartEmpty, TooltipBox } from "./chart-kit";
 type Row = { muscle: Muscle; volume: number };
 type Slice = { label: string; volume: number; other?: boolean };
 
-/** Where your tonnage goes — volume share across muscles, as an accent-ramp donut. */
+/** Where your tonnage goes: volume share across muscles, as an accent-ramp donut. */
 export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   const ranked = data
     .filter((d) => d.volume > 0)

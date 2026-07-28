@@ -4,7 +4,7 @@ import { useInView, useMotionValue, useReducedMotion, useSpring } from "motion/r
 import { useCallback, useEffect, useRef } from "react";
 
 /**
- * React Bits `CountUp` — springs a number up from `from` to `to` when it
+ * React Bits `CountUp`: springs a number up from `from` to `to` when it
  * scrolls into view. See ./README.md for provenance and local changes.
  */
 interface CountUpProps {

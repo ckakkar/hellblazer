@@ -113,13 +113,13 @@ export function ProgramProgressCard({
         {isCompleted ? (
           <div className="flex items-center gap-2 text-sm text-muted">
             <CheckCircle2 className="size-4 text-accent" />
-            Block complete — start a fresh one or extend it.
+            Block complete: start a fresh one or extend it.
           </div>
         ) : isPaused ? (
           <>
             <div className="flex items-center gap-2 text-sm text-muted">
               <Pause className="size-4 text-warn" />
-              Block paused — your week count is frozen.
+              Block paused: your week count is frozen.
             </div>
             <PauseResumeButton
               programId={program.id}

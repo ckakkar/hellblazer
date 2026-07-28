@@ -45,7 +45,7 @@ export const SETTINGS_ITEM: NavItem = {
   icon: User,
 };
 
-/** Mobile bottom tab bar — the five most-used destinations. */
+/** Mobile bottom tab bar: the five most-used destinations. */
 export const BOTTOM_NAV: NavItem[] = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/programs", label: "Programs", icon: CalendarRange },

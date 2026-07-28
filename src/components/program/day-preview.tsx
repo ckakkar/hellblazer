@@ -23,8 +23,8 @@ type Row = {
 };
 
 /**
- * Read-only look at a programmed day — its movements, target sets/reps and
- * notes — without starting the workout. Any movement can be swapped inline
+ * Read-only look at a programmed day, its movements, target sets/reps and
+ * notes, without starting the workout. Any movement can be swapped inline
  * (which becomes that day's new default), and the day starts from here.
  */
 export function DayPreview({
@@ -176,7 +176,7 @@ export function DayPreview({
                     </Badge>
                   </div>
                   <div className="mt-0.5 font-mono text-xs text-muted">
-                    {r.targetSets ?? 3} × {r.targetReps || "—"}
+                    {r.targetSets ?? 3} × {r.targetReps || "-"}
                     {r.note ? ` · ${r.note}` : ""}
                   </div>
                 </div>

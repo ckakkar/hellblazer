@@ -96,7 +96,7 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle>Accent theme</CardTitle>
             <CardDescription>
-              Fly the colours of a Kengan Association company — it runs through
+              Fly the colours of a Kengan Association company. It runs through
               the whole app.
             </CardDescription>
           </CardHeader>
@@ -136,7 +136,7 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle>Bodyweight log</CardTitle>
             <CardDescription>
-              Track bodyweight over time — it feeds your strength evaluation.
+              Track bodyweight over time: it feeds your strength evaluation.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -149,7 +149,7 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle>Export your data</CardTitle>
             <CardDescription>
-              Download every logged set as a CSV — weights in kg, yours to keep.
+              Download every logged set as a CSV, weights in kg, yours to keep.
             </CardDescription>
           </CardHeader>
           <CardContent>

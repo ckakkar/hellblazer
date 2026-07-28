@@ -1,4 +1,4 @@
-/* Hell Blazer service worker — offline shell + web push.
+/* Hell Blazer service worker: offline shell + web push.
    Hand-rolled (no build step) so it stays framework-agnostic. */
 const VERSION = "hb-v1";
 const STATIC_CACHE = `static-${VERSION}`;

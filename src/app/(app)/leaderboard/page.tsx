@@ -63,7 +63,7 @@ export default async function LeaderboardPage() {
         <EmptyState
           icon={<Trophy className="size-6" />}
           title="No fighters ranked yet"
-          body="Be the first — set a ring name and log some working sets."
+          body="Be the first: set a ring name and log some working sets."
         />
       ) : (
         <ol className="flex flex-col gap-2">

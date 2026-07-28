@@ -14,7 +14,7 @@ type PresetLite = {
 };
 
 /**
- * First-run onboarding — a new lifter with no history is pushed straight at a
+ * First-run onboarding: a new lifter with no history is pushed straight at a
  * ready-to-run split (the 5-day is featured), with the rest one tap away.
  */
 export function OnboardingHero({
@@ -58,7 +58,7 @@ export function OnboardingHero({
           Load your first split
         </h2>
         <p className="mt-1 max-w-md text-sm leading-6 text-muted">
-          Start with the featured 5-day split — it drops in as a ready-to-run
+          Start with the featured 5-day split. It drops in as a ready-to-run
           {" "}
           {featured.weeks}-week program you can begin today. Change or swap
           anything later.

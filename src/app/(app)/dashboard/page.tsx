@@ -76,7 +76,7 @@ export default async function DashboardPage() {
   const setsByMuscle = new Map(weeklySets.map((m) => [m.muscle, m.sets]));
   const recent = summaries.slice(0, 6);
 
-  // Daily lifted tonnage (canonical kg) for the volume-trend windows — the card
+  // Daily lifted tonnage (canonical kg) for the volume-trend windows, the card
   // re-buckets this client-side per selected range (7d / 30d / 1y).
   const dailyVolumeMap = new Map<string, number>();
   for (const s of summaries) {

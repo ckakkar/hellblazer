@@ -112,11 +112,11 @@ export function SessionLogger({
   const [duration, setDuration] = useState<number | null>(
     session.duration_min ?? null,
   );
-  // Live workout clock — ticks from when the session was started (created_at).
+  // Live workout clock: ticks from when the session was started (created_at).
   const startedAt = new Date(session.created_at).getTime();
   const [elapsed, setElapsed] = useState(0);
   const elapsedMin = Math.max(1, Math.round(elapsed / 60000));
-  // Exercises added mid-session via "Advance" — bonus work, tagged in the queue.
+  // Exercises added mid-session via "Advance", bonus work, tagged in the queue.
   const [advanceIds, setAdvanceIds] = useState<Set<string>>(new Set());
   // Sets that broke a personal best this session, and the active Removal toast.
   const [prSets, setPrSets] = useState<Set<string>>(new Set());
@@ -374,7 +374,7 @@ export function SessionLogger({
 
     // Renumber the survivors. Computed out here, not inside the state updater:
     // updaters must be pure, and React may invoke them more than once per
-    // commit — which would fire duplicate writes for every remaining set.
+    // commit: which would fire duplicate writes for every remaining set.
     const next = ref.current.map((ex) =>
       ex.seId === seId
         ? { ...ex, sets: ex.sets.filter((s) => s.id !== setId) }
@@ -650,7 +650,7 @@ export function SessionLogger({
             );
           }
 
-          // Locked — a later exercise you can't start yet.
+          // Locked: a later exercise you can't start yet.
           return (
             <div
               key={ex.seId}
@@ -681,12 +681,12 @@ export function SessionLogger({
 
         {exercises.length === 0 && (
           <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-muted">
-            No exercises yet — add your first movement to begin.
+            No exercises yet. Add your first movement to begin.
           </div>
         )}
       </div>
 
-      {/* Advance — bonus movement beyond the program, this session only */}
+      {/* Advance: bonus movement beyond the program, this session only */}
       <button
         onClick={() => setPicker(true)}
         className="mt-4 flex w-full items-center gap-3 rounded-lg border border-dashed border-accent/40 bg-accent/[0.04] px-4 py-3.5 text-left transition-colors hover:border-accent/60 hover:bg-accent/[0.07]"
@@ -704,7 +704,7 @@ export function SessionLogger({
             </span>
           </div>
           <div className="text-xs text-muted">
-            Add a movement beyond your program — this session only.
+            Add a movement beyond your program, this session only.
           </div>
         </div>
       </button>
@@ -732,7 +732,7 @@ export function SessionLogger({
                 setDuration(e.target.value === "" ? null : Number(e.target.value))
               }
               placeholder={String(elapsedMin)}
-              title="Auto-tracked from the workout clock — type to override"
+              title="Auto-tracked from the workout clock, type to override"
               className="h-9 w-20 rounded-md border border-border bg-surface-2 px-2 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
             />
             <span className="text-xs text-muted/70">min</span>
@@ -782,7 +782,7 @@ export function SessionLogger({
         />
       )}
 
-      {/* REMOVAL — a PR broke; brief limiter-release callout */}
+      {/* REMOVAL: a PR broke; brief limiter-release callout */}
       {removal && (
         <Portal>
           <div

@@ -7,12 +7,12 @@ import { EVAL_COOLDOWN_DAYS, type EvalGate } from "@/lib/evaluation-rules";
  *
  * Two independent gates, both enforced server-side in `evaluateTier`:
  *  1. You must have logged at least one real workout *since your last
- *     evaluation* — a finished session carrying at least one working set.
+ *     evaluation*: a finished session carrying at least one working set.
  *     Judging the same data twice tells you nothing and costs tokens.
  *  2. At most one evaluation every EVAL_COOLDOWN_DAYS days.
  *
  * The clock runs off `profile.evaluation_run_at`, which stamps on every run,
- * not `tier_evaluated_at`, which stamps only when a verdict is accepted —
+ * not `tier_evaluated_at`, which stamps only when a verdict is accepted, 
  * otherwise rejecting a verdict would reset the cooldown for free.
  */
 export async function getEvalGate(): Promise<EvalGate> {

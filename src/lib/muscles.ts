@@ -22,7 +22,7 @@ export const MUSCLE_LABEL: Record<Muscle, string> = {
   traps: "Traps",
 };
 
-/** The user's tracked weak points — highlighted across the dashboard/progress. */
+/** The user's tracked weak points: highlighted across the dashboard/progress. */
 export const WEAK_POINTS: readonly Muscle[] = [
   "back",
   "biceps",
@@ -34,7 +34,7 @@ export function isWeakPoint(m: Muscle): boolean {
   return WEAK_POINTS.includes(m);
 }
 
-/** Small stabilisers hidden from the balance charts — they clutter the shape
+/** Small stabilisers hidden from the balance charts: they clutter the shape
  *  without guiding programming. */
 export const CHART_HIDDEN_MUSCLES: ReadonlySet<Muscle> = new Set([
   "abs",

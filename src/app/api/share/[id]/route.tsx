@@ -80,7 +80,7 @@ export async function GET(
     ? d >= 60
       ? `${Math.floor(d / 60)}h ${d % 60}m`
       : `${d}m`
-    : "—";
+    : "-";
 
   const tiles: [string, string][] = [
     ["Sets", String(sets)],

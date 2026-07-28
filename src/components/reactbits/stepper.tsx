@@ -12,7 +12,7 @@ import { AnimatePresence, motion, type Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 
 /**
- * React Bits `Stepper` — a multi-step flow with animated indicators and
+ * React Bits `Stepper`: a multi-step flow with animated indicators and
  * sliding step transitions. See ./README.md for provenance and local changes.
  *
  * Re-themed onto the app's tokens: indicators and the connector run on the

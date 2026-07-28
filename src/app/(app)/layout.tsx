@@ -24,7 +24,7 @@ export default async function AppLayout({
 
   return (
     <div className="min-h-dvh">
-      {/* ambient crimson spotlight from the top — subtle arena drama */}
+      {/* ambient crimson spotlight from the top, subtle arena drama */}
       <div
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10"

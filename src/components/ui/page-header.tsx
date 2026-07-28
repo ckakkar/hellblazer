@@ -30,7 +30,7 @@ export function PageHeader({
   );
 }
 
-/** Mono uppercase micro-label for section headers — the instrument-panel eyebrow. */
+/** Mono uppercase micro-label for section headers, the instrument-panel eyebrow. */
 export function SectionLabel({
   children,
   action,

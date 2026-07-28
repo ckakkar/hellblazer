@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Generates iOS PWA launch screens (apple-touch-startup-image) — a dark,
+// Generates iOS PWA launch screens (apple-touch-startup-image): a dark,
 // on-brand splash so tapping the home-screen icon shows Hell Blazer instead of
 // a blank white flash while the app cold-starts. Uses the default crimson hue.
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -26,7 +26,7 @@ export async function setTier(input: { tierKey: string; rationale?: string }) {
 }
 
 /**
- * Store the lifter's demographics — sex, age and height — which sharpen the
+ * Store the lifter's demographics: sex, age and height, which sharpen the
  * strength evaluation (standards are sex- and bodyweight-relative). Age is
  * stored as a birth year so it stays correct over time. All fields nullable so
  * any can be cleared.
@@ -65,7 +65,7 @@ export async function updateProfileDetails(input: {
  * Complete the welcome flow: the lifter's name, ring name, demographics and
  * (optionally) a first bodyweight entry, written in one pass.
  *
- * Every field is optional except the completion itself — someone who'd rather
+ * Every field is optional except the completion itself, someone who'd rather
  * not share their age still gets into the app. Stamping `onboarded_at` is what
  * stops the (app) layout bouncing them back to /welcome.
  *
@@ -141,7 +141,7 @@ export async function completeOnboarding(input: {
 
 /**
  * Set (or clear) the lifter's public ring name shown on the leaderboard.
- * Case-insensitively unique — returns a typed result rather than throwing so
+ * Case-insensitively unique: returns a typed result rather than throwing so
  * the UI can show "that name's taken".
  */
 export async function setUsername(input: {

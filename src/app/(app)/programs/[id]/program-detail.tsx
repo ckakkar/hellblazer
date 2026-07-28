@@ -215,7 +215,7 @@ export function ProgramDetail({
                       {tmpl?.day_label || tmpl?.name || "Deleted template"}
                     </div>
                     <div className="font-mono text-xs text-muted">
-                      {tmpl ? `${tmpl.template_exercise.length} exercises` : "—"}
+                      {tmpl ? `${tmpl.template_exercise.length} exercises` : "-"}
                     </div>
                   </div>
                   <div className="hidden shrink-0 flex-col sm:flex">
@@ -365,7 +365,7 @@ export function ProgramDetail({
           ))}
           {templates.length === 0 && (
             <li className="px-4 py-8 text-center text-sm text-muted">
-              No templates yet — create one first.
+              No templates yet: create one first.
             </li>
           )}
         </ul>

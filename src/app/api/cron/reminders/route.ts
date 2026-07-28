@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Group subscriptions by user (newest first — first seen = "primary" device).
+  // Group subscriptions by user (newest first: first seen = "primary" device).
   const byUser = new Map<string, Sub[]>();
   for (const s of (subs ?? []) as Sub[]) {
     const list = byUser.get(s.user_id) ?? [];

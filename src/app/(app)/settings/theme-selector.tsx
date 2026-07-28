@@ -10,7 +10,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
   const [accent, setLocal] = useState<AccentKey>(current);
   const [, start] = useTransition();
 
-  // Re-skin the whole app instantly — everything derives from this attribute.
+  // Re-skin the whole app instantly. Everything derives from this attribute.
   // The server layout will re-render it to the same value once the cookie lands.
   useEffect(() => {
     document.documentElement.dataset.accent = accent;

@@ -150,7 +150,7 @@ export function ProfileDetails({
             <span className="text-accent">Saved</span>
           </>
         ) : (
-          "Sharpens your strength rank — standards are sex- and bodyweight-relative."
+          "Sharpens your strength rank: standards are sex- and bodyweight-relative."
         )}
       </p>
     </div>

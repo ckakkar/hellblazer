@@ -4,7 +4,7 @@ import { motion, useReducedMotion, type Transition, type Easing } from "motion/r
 import { useEffect, useMemo, useRef, useState } from "react";
 
 /**
- * React Bits `BlurText` — words (or letters) resolve out of a blur, staggered.
+ * React Bits `BlurText`: words (or letters) resolve out of a blur, staggered.
  * See ./README.md for provenance and local changes.
  */
 type BlurTextProps = {

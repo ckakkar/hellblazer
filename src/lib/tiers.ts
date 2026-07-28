@@ -21,7 +21,7 @@ export const TIERS: Tier[] = [
     name: "Setsuna Kiryu",
     epithet: "The Beautiful Beast",
     rank: 2,
-    blurb: "Devotion turned lethal — the god-chaser's blades.",
+    blurb: "Devotion turned lethal: the god-chaser's blades.",
   },
   {
     key: "hatsumi",

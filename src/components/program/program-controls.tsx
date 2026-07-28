@@ -32,8 +32,8 @@ export function PauseResumeButton({
       disabled={pending}
       title={
         isPaused
-          ? "Resume — the block picks up where it left off"
-          : "Pause — freeze your week count until you're back"
+          ? "Resume: the block picks up where it left off"
+          : "Pause: freeze your week count until you're back"
       }
       onClick={() =>
         start(async () => {
@@ -55,7 +55,7 @@ export function PauseResumeButton({
 }
 
 /**
- * Roll back the most recent advance — an undone skip, or (with a confirm) the
+ * Roll back the most recent advance, an undone skip, or (with a confirm) the
  * last logged workout.
  */
 export function RollbackButton({

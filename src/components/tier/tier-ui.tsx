@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { TIERS } from "@/lib/tiers";
 
-/** Strength meter — one rung per tier; rungs up to `rank` glow accent. */
+/** Strength meter: one rung per tier; rungs up to `rank` glow accent. */
 export function TierLadder({
   rank,
   className,

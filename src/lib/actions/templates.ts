@@ -266,7 +266,7 @@ async function purgeAbandoned(
   }
 }
 
-/** Manual "clean up" — same purge, triggered from the Templates screen. */
+/** Manual "clean up": same purge, triggered from the Templates screen. */
 export async function cleanupTemplates() {
   const { supabase, user } = await getAuthedContext();
   await purgeAbandoned(supabase, user.id);

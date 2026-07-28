@@ -45,7 +45,7 @@ export async function startSession(input: {
 
   // If a bare template was started (e.g. from the /log picker) and it happens to
   // be a day in the user's active program, attribute the session to that program
-  // so it advances the rotation — otherwise the day silently wouldn't count.
+  // so it advances the rotation, otherwise the day silently wouldn't count.
   if (templateId && !programId) {
     const { data: active } = await supabase
       .from("program")
@@ -154,7 +154,7 @@ export async function removeSessionExercise(input: { id: string }) {
  * Swap the movement on a session exercise mid-workout (e.g. seated rows instead
  * of Pendlay rows). Keeps any sets already logged (they re-attribute to the new
  * movement). If the session came from a template, the swap also becomes that
- * day's new default — the matching `template_exercise` (same position + old
+ * day's new default: the matching `template_exercise` (same position + old
  * movement) is updated so the substitution sticks for future sessions.
  */
 export async function swapSessionExercise(input: {
@@ -215,7 +215,7 @@ const setSchema = z.object({
 });
 
 /**
- * Idempotent upsert keyed on a client-generated set id — repeated autosaves of
+ * Idempotent upsert keyed on a client-generated set id, repeated autosaves of
  * the same row can't create duplicates. Deliberately does NOT revalidate: the
  * logger owns its own state, this just persists.
  */

@@ -58,7 +58,7 @@ export function NotificationsManager({
         const sub = await reg.pushManager.getSubscription();
         if (!cancelled) setSubscribed(!!sub);
       } catch {
-        // ignore — treat as not subscribed
+        // ignore: treat as not subscribed
       }
       if (!cancelled) setStatus("ready");
     };
@@ -78,7 +78,7 @@ export function NotificationsManager({
     try {
       const perm = await Notification.requestPermission();
       if (perm !== "granted") {
-        setMsg("Notifications are blocked — allow them in your device settings.");
+        setMsg("Notifications are blocked: allow them in your device settings.");
         return;
       }
       const reg = await navigator.serviceWorker.ready;
@@ -135,7 +135,7 @@ export function NotificationsManager({
     setBusy(false);
     setMsg(
       r.ok
-        ? "Test sent — check your notifications."
+        ? "Test sent: check your notifications."
         : r.error === "no_subscription"
           ? "Enable notifications on this device first."
           : r.error === "not_configured"
@@ -198,7 +198,7 @@ export function NotificationsManager({
             Enable notifications
           </Button>
           <p className="text-xs text-muted">
-            A daily nudge when your programmed workout is due — nothing else.
+            A daily nudge when your programmed workout is due, nothing else.
           </p>
         </div>
       ) : (

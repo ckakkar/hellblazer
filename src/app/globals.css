@@ -35,7 +35,7 @@
     0 0 0 1px rgb(var(--accent-rgb) / 0.22),
     0 0 30px -8px rgb(var(--accent-rgb) / 0.6);
 
-  /* Premium depth — a faint glass top-edge highlight + a soft layered drop, so
+  /* Premium depth: a faint glass top-edge highlight + a soft layered drop, so
      surfaces read as gently raised over the near-black base. */
   --shadow-card:
     inset 0 1px 0 0 rgb(255 255 255 / 0.045),
@@ -51,7 +51,7 @@
 
 :root {
   color-scheme: dark;
-  /* Default accent — Crimson (blood). Space-separated channels so it composes
+  /* Default accent: Crimson (blood). Space-separated channels so it composes
      into rgb(var(--accent-rgb) / <alpha>) anywhere translucency is needed. */
   --accent-rgb: 255 45 58;
   --accent-dim-rgb: 179 20 31;
@@ -152,7 +152,7 @@ label {
 /* Blur-rise entrance; stagger with inline animation-delay.
    `backwards` (not `both`) holds the `from` keyframe through the delay, then
    lets the element settle back to its plain base style. A forwards fill would
-   leave `filter: blur(0)` applied forever — a non-none filter, which makes the
+   leave `filter: blur(0)` applied forever, a non-none filter, which makes the
    element a containing block for any `position: fixed` descendant and pins it
    to a compositing layer. Hence no `opacity: 0` in the base rule either; the
    backwards fill supplies it before the animation starts. */
@@ -172,7 +172,7 @@ label {
   }
 }
 
-/* Impact hit — a crimson shockwave pulse on a logged set */
+/* Impact hit: a crimson shockwave pulse on a logged set */
 .hb-hit {
   animation: hb-hit 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -204,7 +204,7 @@ label {
   );
 }
 
-/* Victory slam-in. `backwards` for the same reason as .hb-reveal — the base
+/* Victory slam-in. `backwards` for the same reason as .hb-reveal, the base
    style already matches the final keyframe, so there's nothing to hold. */
 .hb-slam {
   animation: hb-slam 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) backwards;
@@ -225,7 +225,7 @@ label {
   }
 }
 
-/* ── Arena loader — Kengan "match loading" motion ────────────────────────── */
+/* ── Arena loader: Kengan "match loading" motion ────────────────────────── */
 /* Expanding shockwave ring radiating from the charging core */
 .hb-ring {
   animation: hb-ring 1.7s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
@@ -282,7 +282,7 @@ label {
   }
 }
 
-/* Page content settles in on navigation — subtle, respects reduced-motion.
+/* Page content settles in on navigation, subtle, respects reduced-motion.
    fill-mode is `backwards`, NOT `both`: a forwards fill keeps the transform
    animation in effect after it ends, which makes .hb-page a containing block
    for `position: fixed` descendants on WebKit (modals then anchor to the page
@@ -303,11 +303,11 @@ label {
 }
 
 /* ── Liquid glass ─────────────────────────────────────────────────────────
-   Translucent, saturated backdrop blur with a specular light edge — Apple's
+   Translucent, saturated backdrop blur with a specular light edge, Apple's
    Liquid Glass material, tuned for the dark theme. Used for chrome (nav bars,
    sheets); content cards stay opaque. */
 .hb-glass {
-  /* Lit, translucent material — brightened + saturated backdrop with bright
+  /* Lit, translucent material: brightened + saturated backdrop with bright
      specular light edges (React Bits' fallback formula), so it reads as glass
      rather than a dark panel. */
   background-color: rgb(32 30 28 / 0.42);
@@ -337,7 +337,7 @@ label {
   }
 }
 
-/* Strip native number spinners — NumberStepper supplies its own controls */
+/* Strip native number spinners: NumberStepper supplies its own controls */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -382,7 +382,7 @@ input[type="number"] {
   *::after {
     animation-duration: 0.01ms !important;
     /* Collapse the delay too, or a staggered entrance still holds its `from`
-       keyframe (opacity: 0) for the full delay — content that just sits
+       keyframe (opacity: 0) for the full delay, content that just sits
        invisible for a beat instead of appearing at once. */
     animation-delay: 0.01ms !important;
     animation-iteration-count: 1 !important;

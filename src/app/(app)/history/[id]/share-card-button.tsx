@@ -37,7 +37,7 @@ export function ShareCardButton({
         await nav.share({
           files: [file],
           title: "Hell Blazer",
-          text: `${title} — my Hell Blazer workout`,
+          text: `${title}: my Hell Blazer workout`,
         });
       } else {
         const url = URL.createObjectURL(blob);

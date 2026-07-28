@@ -269,7 +269,7 @@ function CreateExerciseSheet({
               value={mechanic}
               onChange={(e) => setMechanic(e.target.value)}
             >
-              <option value="">—</option>
+              <option value="">-</option>
               {MECHANIC_OPTIONS.map((m) => (
                 <option key={m} value={m}>
                   {m}
@@ -282,7 +282,7 @@ function CreateExerciseSheet({
               value={equipment}
               onChange={(e) => setEquipment(e.target.value)}
             >
-              <option value="">—</option>
+              <option value="">-</option>
               {EQUIPMENT_OPTIONS.map((m) => (
                 <option key={m} value={m}>
                   {m}

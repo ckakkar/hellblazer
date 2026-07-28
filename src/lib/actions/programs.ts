@@ -138,7 +138,7 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
   revalidatePath("/dashboard");
 }
 
-/** Skip today's programmed day — advances the rotation without a logged session. */
+/** Skip today's programmed day: advances the rotation without a logged session. */
 export async function skipWorkout(input: { programDayId: string }) {
   const { programDayId } = z
     .object({ programDayId: z.string().uuid() })
@@ -164,7 +164,7 @@ export async function skipWorkout(input: { programDayId: string }) {
 
 /**
  * Pause a program for a while (injury, travel, a rest day). The week counter
- * freezes at this instant — `paused_at` is stamped, and progress is computed
+ * freezes at this instant: `paused_at` is stamped, and progress is computed
  * as of that moment until the block is resumed.
  */
 export async function pauseProgram(input: { id: string }) {
@@ -225,7 +225,7 @@ export async function resumeProgram(input: { id: string }) {
 }
 
 /**
- * Roll back the most recent advance in the program — undoes the last skip, or
+ * Roll back the most recent advance in the program, undoes the last skip, or
  * discards the last logged session (destructive: that session's sets are
  * removed). Used by the "Roll back a day" control.
  */

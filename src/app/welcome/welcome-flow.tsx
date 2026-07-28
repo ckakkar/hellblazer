@@ -61,7 +61,7 @@ export function WelcomeFlow({
         sex,
         age: numOrNull(age),
         heightCm: numOrNull(height),
-        // Canonical storage is kg — convert whatever unit they typed in.
+        // Canonical storage is kg: convert whatever unit they typed in.
         bodyweightKg: bw == null ? null : fromDisplayWeight(bw, unit),
         localDate: todayLocalISO(),
       });
@@ -69,7 +69,7 @@ export function WelcomeFlow({
         setError(
           res.error === "taken"
             ? "That ring name is already claimed. Try another."
-            : "Something in there didn't look right — check your details.",
+            : "Something in there didn't look right: check your details.",
         );
         return;
       }
@@ -146,7 +146,7 @@ export function WelcomeFlow({
               </div>
             )}
           >
-            {/* 1 — identity */}
+            {/* 1: identity */}
             <Step>
               <FieldLabel icon={<User className="size-3.5" />}>
                 What should we call you?
@@ -181,7 +181,7 @@ export function WelcomeFlow({
               </div>
             </Step>
 
-            {/* 2 — demographics */}
+            {/* 2: demographics */}
             <Step>
               <FieldLabel>Sex</FieldLabel>
               <div className="grid grid-cols-3 gap-2">
@@ -217,11 +217,11 @@ export function WelcomeFlow({
 
               <p className="mt-3 text-xs text-muted">
                 Strength standards are sex- and age-relative. This only ever
-                makes your rank fairer — it never lowers it.
+                makes your rank fairer: it never lowers it.
               </p>
             </Step>
 
-            {/* 3 — measurements */}
+            {/* 3: measurements */}
             <Step>
               <FieldLabel icon={<Ruler className="size-3.5" />}>
                 Height
