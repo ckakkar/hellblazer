@@ -38,7 +38,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
 import { ExercisePicker } from "@/components/exercise-picker";
-import { cn } from "@/lib/utils";
+import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import {
   fromDisplayWeight,
@@ -872,6 +872,7 @@ export function SessionLogger({
             Duration
             <input
               type="number"
+              onFocus={selectAllOnFocus}
               inputMode="numeric"
               value={duration ?? ""}
               onChange={(e) =>
@@ -1246,6 +1247,7 @@ function SetRow({
             RPE
             <input
               type="number"
+              onFocus={selectAllOnFocus}
               inputMode="decimal"
               step={0.5}
               min={0}

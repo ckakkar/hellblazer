@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Minus, Plus } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, selectAllOnFocus } from "@/lib/utils";
 
 interface NumberStepperProps {
   value: number | null;
@@ -64,6 +64,7 @@ export function NumberStepper({
           aria-label={ariaLabel}
           value={value ?? ""}
           placeholder={placeholder}
+          onFocus={selectAllOnFocus}
           onChange={(e) => {
             const v = e.target.value;
             if (v === "") return onChange(NaN);

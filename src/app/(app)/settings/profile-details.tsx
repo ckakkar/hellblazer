@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { cn, selectAllOnFocus } from "@/lib/utils";
 import { updateProfileDetails } from "@/lib/actions/profile";
 
 type Sex = "male" | "female" | "other";
@@ -111,6 +111,7 @@ export function ProfileDetails({
           <span className="text-xs font-medium text-muted">Age</span>
           <Input
             type="number"
+            onFocus={selectAllOnFocus}
             inputMode="numeric"
             min={10}
             max={100}
@@ -126,6 +127,7 @@ export function ProfileDetails({
           <div className="relative">
             <Input
               type="number"
+              onFocus={selectAllOnFocus}
               inputMode="decimal"
               min={80}
               max={260}

@@ -14,6 +14,7 @@ import {
 } from "@/lib/units";
 import { logBodyweight, deleteBodyweight } from "@/lib/actions/bodyweight";
 import type { BodyweightLog } from "@/lib/data/bodyweight";
+import { selectAllOnFocus } from "@/lib/utils";
 
 export function BodyweightManager({
   logs,
@@ -48,6 +49,7 @@ export function BodyweightManager({
         <div className="flex gap-2">
           <Input
             type="number"
+            onFocus={selectAllOnFocus}
             inputMode="decimal"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}

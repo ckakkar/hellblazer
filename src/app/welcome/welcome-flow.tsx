@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Stepper, Step } from "@/components/reactbits/stepper";
 import { BlurText } from "@/components/reactbits/blur-text";
-import { cn } from "@/lib/utils";
+import { cn, selectAllOnFocus } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/local-date";
 import { fromDisplayWeight, type Unit } from "@/lib/units";
 import { completeOnboarding } from "@/lib/actions/profile";
@@ -209,6 +209,7 @@ export function WelcomeFlow({
                   onChange={(e) => setAge(e.target.value)}
                   inputMode="numeric"
                   type="number"
+                  onFocus={selectAllOnFocus}
                   placeholder="Years"
                   min={10}
                   max={100}
@@ -232,6 +233,7 @@ export function WelcomeFlow({
                   onChange={(e) => setHeight(e.target.value)}
                   inputMode="decimal"
                   type="number"
+                  onFocus={selectAllOnFocus}
                   placeholder="Centimetres"
                   min={80}
                   max={260}
@@ -250,6 +252,7 @@ export function WelcomeFlow({
                     onChange={(e) => setBodyweight(e.target.value)}
                     inputMode="decimal"
                     type="number"
+                    onFocus={selectAllOnFocus}
                     placeholder={`Your current weight in ${unit}`}
                     className="pr-12"
                   />

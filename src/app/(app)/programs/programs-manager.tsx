@@ -17,7 +17,7 @@ import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
-import { cn } from "@/lib/utils";
+import { cn, selectAllOnFocus } from "@/lib/utils";
 import { format } from "date-fns";
 import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
@@ -287,6 +287,7 @@ function CreateProgramSheet({
             ))}
             <Input
               type="number"
+              onFocus={selectAllOnFocus}
               min={1}
               max={52}
               value={weeks}

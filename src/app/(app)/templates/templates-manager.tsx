@@ -33,6 +33,7 @@ import {
   removeTemplateExercise,
   updateTemplateExercise,
 } from "@/lib/actions/templates";
+import { selectAllOnFocus } from "@/lib/utils";
 
 export function TemplatesManager({
   templates,
@@ -353,6 +354,7 @@ function TemplateCard({
 
                 <input
                   type="number"
+                  onFocus={selectAllOnFocus}
                   min={1}
                   defaultValue={row.target_sets ?? 3}
                   aria-label="target sets"
