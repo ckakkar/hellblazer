@@ -18,21 +18,38 @@ type TemplateExercisePreview = {
 
 type TemplateOption = {
   id: string;
+  /** Non-null only for days of the active program: this is what makes a start
+   *  advance the block. Null options are explicitly off-plan. */
+  programDayId: string | null;
   name: string;
   day_label: string | null;
   count: number;
   exercises: TemplateExercisePreview[];
 };
 
-export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
+export function SessionStarter({
+  templates,
+  hasActiveProgram = false,
+  countsLabel = null,
+}: {
+  templates: TemplateOption[];
+  /** Drives the "won't touch your block" copy: only meaningful with a program. */
+  hasActiveProgram?: boolean;
+  /** e.g. "Counts toward Week 3", or null when the block isn't accruing. */
+  countsLabel?: string | null;
+}) {
   const [pending, start] = useTransition();
   const [chosen, setChosen] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 
-  function begin(templateId: string | null) {
+  function begin(templateId: string | null, programDayId: string | null = null) {
     setChosen(templateId ?? "freeform");
     start(async () => {
-      await startSession({ templateId, localDate: todayLocalISO() });
+      await startSession({
+        templateId,
+        programDayId,
+        localDate: todayLocalISO(),
+      });
     });
   }
 
@@ -57,6 +74,12 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
           <div className="text-sm font-medium text-text">Freeform battle</div>
           <div className="text-xs text-muted">
             Start empty and add exercises as you go
+            {hasActiveProgram && (
+              <>
+                {" · "}
+                <span className="text-muted/70">won&apos;t touch your block</span>
+              </>
+            )}
           </div>
         </div>
       </button>
@@ -64,7 +87,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
       {templates.length > 0 && (
         <div>
           <div className="mb-2 mt-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
-            From a template
+            {hasActiveProgram ? "From your block" : "From a template"}
           </div>
           <div className="grid gap-3">
             {templates.map((t) => {
@@ -100,6 +123,11 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
                         {t.count} exercise{t.count === 1 ? "" : "s"} ·{" "}
                         {expanded ? "tap to collapse" : "tap to preview"}
                       </div>
+                      {t.programDayId && countsLabel && (
+                        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/80">
+                          {countsLabel}
+                        </div>
+                      )}
                     </div>
                     <ChevronDown
                       className={cn(
@@ -148,7 +176,7 @@ export function SessionStarter({ templates }: { templates: TemplateOption[] }) {
                         size="lg"
                         className="mt-3 w-full"
                         disabled={pending}
-                        onClick={() => begin(t.id)}
+                        onClick={() => begin(t.id, t.programDayId)}
                       >
                         {starting ? (
                           <Loader2 className="size-4 animate-spin" />

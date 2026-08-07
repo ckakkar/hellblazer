@@ -28,17 +28,34 @@ export default async function LogPage() {
 
   // Only offer the days of the current split (the active program), not every
   // template ever loaded. With no active program, fall back to all templates.
+  // `programDayId` is what makes a start count toward the block. Options built
+  // from the active program carry theirs; anything else is deliberately off-plan.
+  // Which day we attach is immaterial to the rotation (progress counts sessions
+  // per program, not per day), so the first day using a template is fine.
   type Opt = {
     id: string;
+    programDayId: string | null;
     name: string;
     day_label: string | null;
     count: number;
     exercises: ReturnType<typeof previewExercises>;
   };
   const options: Opt[] = [];
-  const pushOption = (id: string, name: string, day_label: string | null) => {
+  const pushOption = (
+    id: string,
+    name: string,
+    day_label: string | null,
+    programDayId: string | null,
+  ) => {
     const exercises = previewExercises(id);
-    options.push({ id, name, day_label, count: exercises.length, exercises });
+    options.push({
+      id,
+      programDayId,
+      name,
+      day_label,
+      count: exercises.length,
+      exercises,
+    });
   };
   if (activeProgress) {
     const seen = new Set<string>();
@@ -46,15 +63,26 @@ export default async function LogPage() {
       const t = d.workout_template;
       if (t && !seen.has(t.id)) {
         seen.add(t.id);
-        pushOption(t.id, t.name, t.day_label);
+        pushOption(t.id, t.name, t.day_label, d.id);
       }
     }
   } else {
     for (const t of templates) {
-      pushOption(t.id, t.name, t.day_label);
+      pushOption(t.id, t.name, t.day_label, null);
     }
   }
   const hasProgramNext = Boolean(activeProgress?.nextDay?.template_id);
+
+  // Only promise a week when the block is actually accruing one. A paused,
+  // finished, or not-yet-started program still owns the session, but claiming
+  // "counts toward Week N" there would be a lie.
+  const countsLabel =
+    activeProgress &&
+    activeProgress.currentWeek &&
+    !activeProgress.isCompleted &&
+    !activeProgress.isPaused
+      ? `Counts toward Week ${activeProgress.currentWeek}`
+      : null;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -74,7 +102,7 @@ export default async function LogPage() {
 
       {options.length === 0 && !activeProgress ? (
         <div className="grid gap-4">
-          <SessionStarter templates={[]} />
+          <SessionStarter templates={[]} hasActiveProgram={false} countsLabel={null} />
           <EmptyState
             icon={<CalendarRange className="size-6" />}
             title="No program or templates yet"
@@ -87,14 +115,11 @@ export default async function LogPage() {
           />
         </div>
       ) : (
-        <div>
-          {hasProgramNext && (
-            <div className="mb-3 px-1 text-xs font-medium uppercase tracking-wide text-muted">
-              Or start something else
-            </div>
-          )}
-          <SessionStarter templates={options} />
-        </div>
+        <SessionStarter
+          templates={options}
+          hasActiveProgram={Boolean(activeProgress)}
+          countsLabel={countsLabel}
+        />
       )}
     </div>
   );

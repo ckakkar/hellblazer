@@ -43,19 +43,12 @@ export async function startSession(input: {
     programId = pd.program_id;
   }
 
-  // If a bare template was started (e.g. from the /log picker) and it happens to
-  // be a day in the user's active program, attribute the session to that program
-  // so it advances the rotation, otherwise the day silently wouldn't count.
-  if (templateId && !programId) {
-    const { data: active } = await supabase
-      .from("program")
-      .select("id, program_day(template_id)")
-      .eq("is_active", true)
-      .maybeSingle();
-    if (active?.program_day?.some((d) => d.template_id === templateId)) {
-      programId = active.id;
-    }
-  }
+  // A session advances the program ONLY when it was started from an explicit
+  // program day. Freeform work and bare templates stay off-plan by design: we
+  // used to infer the program whenever a template happened to match a day in it,
+  // which silently burned a rung of the rotation on workouts the lifter never
+  // meant as program work. Callers that want a start to count must pass
+  // `programDayId` (see the /log starter and StartWorkoutButton).
 
   let title: string | null = null;
   if (templateId) {
