@@ -1,7 +1,40 @@
 "use client";
 
-import { motion, useReducedMotion, type Transition, type Easing } from "motion/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { motion, type Transition, type Easing } from "motion/react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToReducedMotion(onChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onChange);
+  return () => query.removeEventListener("change", onChange);
+}
+
+/**
+ * Motion's own `useReducedMotion` reads the media query with no server
+ * snapshot, so it is false while rendering on the server and can be true on
+ * the client's very first render. Branching on that produced two different
+ * trees (plain text vs. per-word spans) and threw a hydration error for every
+ * reduced-motion visitor on the landing page.
+ *
+ * `useSyncExternalStore` takes an explicit server snapshot, which React also
+ * uses while hydrating, so the first client render always matches the server
+ * and the swap happens as an ordinary re-render afterwards.
+ */
+function useReducedMotionSSR() {
+  return useSyncExternalStore(
+    subscribeToReducedMotion,
+    () => window.matchMedia(REDUCED_MOTION_QUERY).matches,
+    () => false,
+  );
+}
 
 /**
  * React Bits `BlurText`: words (or letters) resolve out of a blur, staggered.
@@ -56,7 +89,7 @@ export function BlurText({
 }: BlurTextProps) {
   const elements = animateBy === "words" ? text.split(" ") : text.split("");
   const [inView, setInView] = useState(false);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReducedMotionSSR();
   const ref = useRef<HTMLElement>(null);
 
   useEffect(() => {

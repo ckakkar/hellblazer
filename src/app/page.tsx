@@ -2,9 +2,25 @@ import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { BlurText } from "@/components/reactbits/blur-text";
+import { SplitFlapText } from "@/components/reactbits/split-flap-text";
+import { SpotlightCard } from "@/components/reactbits/spotlight-card";
 import { TIERS } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { Flame } from "lucide-react";
+
+/** Widest fighter name ("Wakatsuki Takeshi" / "Gaolang Wongsawat") sets the board. */
+const BOARD_WIDTH = 17;
+
+/** Centre a name in the fixed board width so blanks fall either side of it. */
+function centreOnBoard(name: string) {
+  const slack = Math.max(0, BOARD_WIDTH - name.length);
+  const left = Math.floor(slack / 2);
+  return " ".repeat(left) + name + " ".repeat(slack - left);
+}
+
+const BOARD_NAMES = [...TIERS]
+  .sort((a, b) => b.rank - a.rank)
+  .map((t) => centreOnBoard(t.name.toUpperCase()));
 
 export default async function Landing({
   searchParams,
@@ -35,7 +51,7 @@ export default async function Landing({
           <span className="flex size-6 items-center justify-center rounded-md border border-accent/40 text-accent">
             <Flame className="size-3.5" />
           </span>
-          <span className="font-display text-sm font-semibold uppercase tracking-[0.22em] text-text">
+          <span className="hb-shiny font-display text-sm font-semibold uppercase tracking-[0.22em]">
             Hell&nbsp;Blazer
           </span>
         </header>
@@ -52,10 +68,31 @@ export default async function Landing({
               The strength ladder
             </div>
 
+            {/* React Bits SplitFlapText: a departure board naming the fighters
+                one at a time, strongest first. Sits above the headline rather
+                than between it and the pitch, where it broke the read. Names
+                are centre-padded to a fixed 17 tiles so the board never
+                resizes and its blanks look like board furniture instead of
+                dead cells trailing off the end. */}
+            <div
+              className="hb-reveal mt-6 flex items-center gap-3"
+              style={{ animationDelay: "90ms" }}
+            >
+              <SplitFlapText
+                words={BOARD_NAMES}
+                padTo={BOARD_WIDTH}
+                fontSize={14}
+                gap={2}
+                cycleDelay={2600}
+                tileColor="#1c1917"
+                textColor="rgb(var(--accent-rgb))"
+              />
+            </div>
+
             {/* React Bits BlurText: the words resolve out of a blur, one by
                 one. Two stacked lines rather than a <br/> so each animates as
                 its own run while staying inside a single <h1>. */}
-            <h1 className="mt-6 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl">
+            <h1 className="mt-5 font-impact text-[2.5rem] uppercase leading-[0.92] tracking-tight text-text sm:text-6xl lg:text-7xl">
               <BlurText as="div" text="Ten fighters" animateBy="words" delay={110} />
               <BlurText
                 as="div"
@@ -94,8 +131,11 @@ export default async function Landing({
             style={{ animationDelay: "180ms" }}
             aria-label={`The strength ladder: rank ${TIERS.length} down to rank 1`}
           >
-            <div className="relative overflow-hidden rounded-xl border border-border bg-surface/60 p-3 backdrop-blur-sm sm:p-4">
-              <div className="mb-3 flex items-center justify-between px-1">
+            <SpotlightCard
+              className="rounded-xl border border-border bg-surface/60 p-3 backdrop-blur-sm sm:p-4"
+              spotlightOpacity={0.1}
+            >
+              <div className="relative mb-3 flex items-center justify-between px-1">
                 <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
                   Rank ladder
                 </span>
@@ -104,7 +144,7 @@ export default async function Landing({
                 </span>
               </div>
 
-              <ol className="space-y-1">
+              <ol className="relative space-y-1">
                 {ladder.map((t) => {
                   const top = t.rank === TIERS.length;
                   const pct = Math.round((t.rank / TIERS.length) * 100);
@@ -169,11 +209,11 @@ export default async function Landing({
                 })}
               </ol>
 
-              <p className="mt-3 px-1 text-[11px] leading-5 text-muted">
+              <p className="relative mt-3 px-1 text-[11px] leading-5 text-muted">
                 You enter unranked. Earn your rung, then keep climbing. There is
                 always someone stronger.
               </p>
-            </div>
+            </SpotlightCard>
           </section>
         </div>
 
