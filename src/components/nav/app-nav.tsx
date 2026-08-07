@@ -135,7 +135,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden rounded-[26px] md:hidden">
+      <nav className="hb-dock fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden rounded-[26px] md:hidden">
         {BOTTOM_NAV.map((item) => {
           const active = isActive(item.href);
           const isLog = item.href === "/log";
@@ -143,7 +143,9 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center gap-1 py-2 transition-transform active:scale-90"
+              // relative + z-3 so the tabs sit above the dock's lens (::after,
+              // z-1) and rim (::before, z-2) layers.
+              className="relative z-[3] flex flex-col items-center justify-center gap-1 py-2 transition-transform active:scale-90"
             >
               <span
                 className={cn(
