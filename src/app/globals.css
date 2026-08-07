@@ -234,63 +234,6 @@ label {
   }
 }
 
-/* ── Arena loader: Kengan "match loading" motion ────────────────────────── */
-/* Expanding shockwave ring radiating from the charging core */
-.hb-ring {
-  animation: hb-ring 1.7s cubic-bezier(0.2, 0.7, 0.2, 1) infinite;
-}
-@keyframes hb-ring {
-  0% {
-    transform: scale(0.55);
-    opacity: 0.65;
-  }
-  80% {
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1.95);
-    opacity: 0;
-  }
-}
-/* The core building power */
-.hb-breathe {
-  animation: hb-breathe 1.7s ease-in-out infinite;
-}
-@keyframes hb-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.09);
-  }
-}
-/* Indeterminate power-charge bar */
-.hb-charge::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 45%;
-  border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(var(--accent-rgb)),
-    transparent
-  );
-  animation: hb-charge 1.15s ease-in-out infinite;
-}
-@keyframes hb-charge {
-  0% {
-    transform: translateX(-120%);
-  }
-  100% {
-    transform: translateX(340%);
-  }
-}
-
 /* Page content settles in on navigation, subtle, respects reduced-motion.
    fill-mode is `backwards`, NOT `both`: a forwards fill keeps the transform
    animation in effect after it ends, which makes .hb-page a containing block
@@ -311,54 +254,106 @@ label {
   }
 }
 
-/* ── Loading ──────────────────────────────────────────────────────────────
-   Skeleton shimmer: a slow specular sweep across placeholder blocks while a
-   route resolves. Animates background-position only, so it composites on the
-   GPU and costs nothing next to a full-screen takeover. The global
-   prefers-reduced-motion rule below flattens it to a plain surface. */
-.hb-skeleton {
-  background-color: var(--color-surface-2);
-  background-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgb(255 255 255 / 0.04) 45%,
-    rgb(255 255 255 / 0.07) 50%,
-    rgb(255 255 255 / 0.04) 55%,
-    transparent 100%
-  );
-  background-size: 220% 100%;
-  background-repeat: no-repeat;
-  animation: hb-shimmer 1.6s ease-in-out infinite;
-}
-@keyframes hb-shimmer {
-  from {
-    background-position: -110% 0;
-  }
-  to {
-    background-position: 210% 0;
-  }
-}
+/* ── Loading: the plate-loaded bar ────────────────────────────────────────
+   Every route loader is one barbell being loaded. Plates fly in from outside
+   the frame and seat against the collars, innermost first, while the counter
+   climbs with them. All of it is CSS on a server-rendered SVG, so it paints on
+   the very first frame of a navigation with no client bundle and no rAF.
 
-/* Route progress: an indeterminate hairline that fills as a page streams in.
-   Pure CSS so `loading.tsx` stays a server component and the bar paints on the
-   very first frame of the navigation, before any JS for the new route runs. */
-.hb-route-bar {
-  transform-origin: 0 50%;
-  box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.65);
-  animation: hb-route 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+   The weight is real: a 20 kg bar plus 25/20/15 per side is exactly 140. */
+.hb-plate {
+  /* Resting state is *loaded*. The keyframes supply the fly-in, so when the
+     reduced-motion rule below collapses the duration, plates stay on the bar
+     instead of vanishing. */
+  opacity: 1;
+  animation: hb-plate-load 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
-@keyframes hb-route {
+@keyframes hb-plate-load {
   0% {
-    transform: scaleX(0.02);
+    transform: translateX(var(--hb-plate-from));
+    opacity: 0;
+  }
+  6% {
     opacity: 1;
   }
-  72% {
-    transform: scaleX(0.82);
+  20% {
+    transform: translateX(0);
+  }
+  86% {
+    transform: translateX(0);
     opacity: 1;
   }
   100% {
-    transform: scaleX(1);
+    transform: translateX(0);
     opacity: 0;
+  }
+}
+
+/* The counter is a real animated integer: @property makes --hb-kg
+   interpolatable, counter-reset reads it, and ::after prints it. No JS, and it
+   steps in lockstep with the plates seating above it. */
+@property --hb-kg {
+  syntax: "<integer>";
+  initial-value: 140;
+  inherits: false;
+}
+.hb-kg {
+  --hb-kg: 140;
+  counter-reset: hb-kg var(--hb-kg);
+  animation: hb-kg-load 2.8s linear infinite;
+}
+.hb-kg::after {
+  content: counter(hb-kg);
+}
+@keyframes hb-kg-load {
+  0%,
+  19% {
+    --hb-kg: 20;
+  }
+  20%,
+  25% {
+    --hb-kg: 70;
+  }
+  26%,
+  31% {
+    --hb-kg: 110;
+  }
+  32%,
+  100% {
+    --hb-kg: 140;
+  }
+}
+
+/* Stacked call-outs cross-fading in place, so nothing reflows as they cycle. */
+.hb-phrase {
+  opacity: 0;
+  animation: hb-phrase 8.4s linear infinite;
+}
+@keyframes hb-phrase {
+  0%,
+  1% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  5%,
+  28% {
+    opacity: 1;
+    transform: none;
+  }
+  33%,
+  100% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Durations collapse to ~0 above, which would leave every phrase parked on
+     its final (invisible) keyframe. Pin the first one on instead. */
+  .hb-phrase {
+    opacity: 0;
+  }
+  .hb-phrase:first-child {
+    opacity: 1;
   }
 }
 

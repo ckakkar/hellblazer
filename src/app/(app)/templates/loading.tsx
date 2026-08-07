@@ -1,9 +1,5 @@
-import { ListSkeleton, PageSkeleton } from "@/components/ui/skeleton";
+import { PlateLoader } from "@/components/ui/plate-loader";
 
 export default function Loading() {
-  return (
-    <PageSkeleton label="Loading your templates" action>
-      <ListSkeleton rows={5} height="h-[92px]" />
-    </PageSkeleton>
-  );
+  return <PlateLoader label="Templates" />;
 }
