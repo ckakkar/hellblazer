@@ -52,7 +52,7 @@ The twist: your training gets **judged**. An AI coach reads your full history an
 
 **🎯 Weak-point tracking**: back · biceps · triceps · side delts are highlighted across the dashboard and progress views, because those are the muscles worth obsessing over.
 
-**🏅 Global leaderboard**: claim a **ring name** and every fighter is ranked by lifetime tonnage moved, your standing highlighted. Backed by a security-definer Postgres function that exposes only public columns across all users.
+**🏅 King of the Hill**: claim a **ring name** and every fighter is ranked by lifetime tonnage moved, your standing highlighted. Backed by a security-definer Postgres function that exposes only public columns across all users.
 
 **🖼️ Shareable fight card**: export any session as a themed **1080×1350 PNG** (total volume, top lifts, your rank) rendered on the server with `next/og`, handed straight to the native share sheet.
 
@@ -100,7 +100,7 @@ The **Progress** tab renders your standing on this ladder, the fighter you're ch
 | `/log` → `/log/[id]` | Start a session (from a program or freeform), then the fast set logger |
 | `/history` → `/history/[id]` | Reverse-chron session list; editable detail; share a session as a card |
 | `/progress` | Your ladder standing, per-exercise 1RM / volume / PRs, per-muscle trends, and the all-time 1RM board |
-| `/leaderboard` | Every fighter with a ring name, ranked by total volume moved |
+| `/leaderboard` | King of the Hill — every fighter with a ring name, ranked by total volume moved |
 | `/programs` → `/programs/[id]` | Build & run multi-week programs; pause / resume / roll back / preview |
 | `/templates` | CRUD your split: searchable exercise library, target sets/reps/notes, ordering |
 | `/exercises` | Browse the 140+ movement library; create custom exercises |

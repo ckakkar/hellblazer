@@ -140,7 +140,7 @@ export async function completeOnboarding(input: {
 }
 
 /**
- * Set (or clear) the lifter's public ring name shown on the leaderboard.
+ * Set (or clear) the lifter's public ring name shown on King of the Hill.
  * Case-insensitively unique: returns a typed result rather than throwing so
  * the UI can show "that name's taken".
  */

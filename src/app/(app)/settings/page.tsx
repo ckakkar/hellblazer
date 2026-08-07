@@ -68,7 +68,7 @@ export default async function ProfilePage() {
           <CardHeader>
             <CardTitle>About you</CardTitle>
             <CardDescription>
-              Your ring name for the leaderboard, plus the details that
+              Your ring name for King of the Hill, plus the details that
               calibrate your strength rank.
             </CardDescription>
           </CardHeader>

@@ -69,7 +69,7 @@ export function UsernameField({ current }: { current: string | null }) {
           <span className="text-danger">Couldn&apos;t save. Try again.</span>
         ) : (
           <span className="text-muted">
-            Shown on the global leaderboard. 2-24 characters.
+            Shown on King of the Hill. 2-24 characters.
           </span>
         )}
       </p>

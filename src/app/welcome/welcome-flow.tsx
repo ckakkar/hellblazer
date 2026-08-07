@@ -169,14 +169,14 @@ export function WelcomeFlow({
                 <Input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Shown on the leaderboard"
+                  placeholder="Shown on King of the Hill"
                   maxLength={24}
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
                 <p className="mt-2 text-xs text-muted">
                   This is the only thing other fighters see. Leave it blank to
-                  stay off the leaderboard.
+                  stay off King of the Hill.
                 </p>
               </div>
             </Step>

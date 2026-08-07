@@ -27,7 +27,7 @@ export function PlateLoader({
   label,
   className,
 }: {
-  /** Route name shown as the eyebrow, e.g. "Leaderboard". */
+  /** Route name shown as the eyebrow, e.g. "King of the Hill". */
   label?: string;
   className?: string;
 }) {

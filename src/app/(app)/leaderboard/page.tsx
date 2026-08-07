@@ -24,7 +24,7 @@ export default async function LeaderboardPage() {
   return (
     <div>
       <PageHeader
-        title="Leaderboard"
+        title="King of the Hill"
         subtitle="Every fighter with a ring name, ranked by total volume moved."
       />
 
