@@ -1,7 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 import { CountUp } from "@/components/reactbits/count-up";
+import { SpotlightCard } from "@/components/reactbits/spotlight-card";
 
 interface StatCardProps {
   label: string;
@@ -32,14 +32,17 @@ export function StatCard({
   countTo,
 }: StatCardProps) {
   return (
-    <Card
+    // Card's own classes inlined rather than nesting Card inside SpotlightCard:
+    // the spotlight layer needs to be the clipping/positioning context so the
+    // wash follows the pointer under the rounded corners.
+    <SpotlightCard
       className={cn(
-        "p-4",
+        "rounded-xl border border-border bg-surface p-4 shadow-card",
         highlight && "border-accent/30 bg-accent/[0.04]",
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2">
+      <div className="relative flex items-center justify-between gap-2">
         <span className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
           {label}
         </span>
@@ -49,7 +52,7 @@ export function StatCard({
           </span>
         )}
       </div>
-      <div className="mt-2.5 flex items-baseline gap-1">
+      <div className="relative mt-2.5 flex items-baseline gap-1">
         <span
           className={cn(
             "font-impact text-[1.9rem] leading-none tabular-nums",
@@ -68,7 +71,9 @@ export function StatCard({
           </span>
         )}
       </div>
-      {hint && <div className="mt-1.5 text-[11px] text-muted">{hint}</div>}
-    </Card>
+      {hint && (
+        <div className="relative mt-1.5 text-[11px] text-muted">{hint}</div>
+      )}
+    </SpotlightCard>
   );
 }

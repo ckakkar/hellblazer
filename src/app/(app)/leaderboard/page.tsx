@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { Crown, Trophy } from "lucide-react";
+import { Trophy } from "lucide-react";
 import { getLeaderboard } from "@/lib/data/leaderboard";
 import { getProfile } from "@/lib/data/profile";
 import { getUnit } from "@/lib/settings";
-import { formatVolume } from "@/lib/units";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Standings } from "./standings";
 
 export const dynamic = "force-dynamic";
 
@@ -66,69 +65,7 @@ export default async function LeaderboardPage() {
           body="Be the first: set a ring name and log some working sets."
         />
       ) : (
-        <ol className="flex flex-col gap-2">
-          {entries.map((e, i) => {
-            const place = i + 1;
-            const isMe = me != null && e.username.toLowerCase() === me;
-            return (
-              <li key={`${e.username}-${i}`} className="min-w-0">
-                <Card
-                  className={cn(
-                    "flex items-center gap-3.5 p-4 transition-colors",
-                    isMe
-                      ? "border-accent/50 bg-accent/[0.05]"
-                      : "hover:border-accent/30",
-                  )}
-                >
-                  <div
-                    className={cn(
-                      "flex size-10 shrink-0 items-center justify-center rounded-full border",
-                      place === 1
-                        ? "border-accent/50 bg-accent/10"
-                        : "border-border bg-surface-2",
-                    )}
-                  >
-                    {place === 1 ? (
-                      <Crown className="size-5 text-accent" />
-                    ) : (
-                      <span
-                        className={cn(
-                          "font-impact text-base tabular-nums leading-none",
-                          place <= 3 ? "text-text" : "text-muted/70",
-                        )}
-                      >
-                        {place}
-                      </span>
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="min-w-0 truncate text-sm font-semibold text-text">
-                        {e.username}
-                      </span>
-                      {isMe && (
-                        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-bg">
-                          You
-                        </span>
-                      )}
-                    </div>
-                    <div className="truncate font-mono text-xs text-muted">
-                      {e.name ? `${e.name} · ${e.epithet}` : "Unranked fighter"}
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-mono text-sm font-semibold tabular-nums text-text">
-                      {formatVolume(e.totalVolumeKg, unit)}
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-wide text-muted/70">
-                      total moved
-                    </div>
-                  </div>
-                </Card>
-              </li>
-            );
-          })}
-        </ol>
+        <Standings entries={entries} me={me} unit={unit} />
       )}
     </div>
   );

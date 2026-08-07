@@ -311,6 +311,102 @@ label {
   }
 }
 
+/* ── Loading ──────────────────────────────────────────────────────────────
+   Skeleton shimmer: a slow specular sweep across placeholder blocks while a
+   route resolves. Animates background-position only, so it composites on the
+   GPU and costs nothing next to a full-screen takeover. The global
+   prefers-reduced-motion rule below flattens it to a plain surface. */
+.hb-skeleton {
+  background-color: var(--color-surface-2);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.04) 45%,
+    rgb(255 255 255 / 0.07) 50%,
+    rgb(255 255 255 / 0.04) 55%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  background-repeat: no-repeat;
+  animation: hb-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes hb-shimmer {
+  from {
+    background-position: -110% 0;
+  }
+  to {
+    background-position: 210% 0;
+  }
+}
+
+/* Route progress: an indeterminate hairline that fills as a page streams in.
+   Pure CSS so `loading.tsx` stays a server component and the bar paints on the
+   very first frame of the navigation, before any JS for the new route runs. */
+.hb-route-bar {
+  transform-origin: 0 50%;
+  box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.65);
+  animation: hb-route 2.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+@keyframes hb-route {
+  0% {
+    transform: scaleX(0.02);
+    opacity: 1;
+  }
+  72% {
+    transform: scaleX(0.82);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
+  }
+}
+
+/* Champion aura: a crimson arc sweeps the border of the #1 standing.
+   Stands in for React Bits' ElectricBorder, which drives an equivalent look
+   from a canvas requestAnimationFrame that never idles. An animated @property
+   angle keeps this on the compositor with no JS and no per-frame callback, and
+   the global reduced-motion rule parks the arc instead of spinning it. */
+@property --hb-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+.hb-champion::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--hb-angle),
+    transparent 0deg,
+    rgb(var(--accent-rgb)) 45deg,
+    rgb(var(--accent-rgb) / 0.15) 110deg,
+    transparent 190deg,
+    transparent 250deg,
+    rgb(var(--accent-rgb) / 0.7) 310deg,
+    transparent 360deg
+  );
+  /* Punch out the middle so only the 1px ring paints. */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  animation: hb-champion 6s linear infinite;
+}
+@keyframes hb-champion {
+  to {
+    --hb-angle: 360deg;
+  }
+}
+
 /* ── Liquid glass ─────────────────────────────────────────────────────────
    Translucent, saturated backdrop blur with a specular light edge, Apple's
    Liquid Glass material, tuned for the dark theme. Used for chrome (nav bars,
