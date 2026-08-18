@@ -1,6 +1,10 @@
 import { addDays, differenceInCalendarDays, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
-import { EVAL_COOLDOWN_DAYS, type EvalGate } from "@/lib/evaluation-rules";
+import {
+  EVAL_COOLDOWN_DAYS,
+  hasUnlimitedEvaluations,
+  type EvalGate,
+} from "@/lib/evaluation-rules";
 
 /**
  * Whether the lifter may run a tier evaluation right now.
@@ -14,15 +18,22 @@ import { EVAL_COOLDOWN_DAYS, type EvalGate } from "@/lib/evaluation-rules";
  * The clock runs off `profile.evaluation_run_at`, which stamps on every run,
  * not `tier_evaluated_at`, which stamps only when a verdict is accepted, 
  * otherwise rejecting a verdict would reset the cooldown for free.
+ *
+ * Both gates lift once the lifter is ranked *above* Julius Reinhold. Past the
+ * Monster the ladder stops rationing verdicts: the judge answers whenever
+ * they call, as often as they like. The one thing that survives is having
+ * something to judge at all: with no finished workout on record there is
+ * nothing to rule on, at any rank.
  */
 export async function getEvalGate(): Promise<EvalGate> {
   const supabase = await createClient();
 
   const { data: profile } = await supabase
     .from("profile")
-    .select("evaluation_run_at")
+    .select("evaluation_run_at, tier")
     .maybeSingle();
   const lastRunAt = profile?.evaluation_run_at ?? null;
+  const unlimited = hasUnlimitedEvaluations(profile?.tier);
 
   // A "workout" here is a finished session with real working sets, so an
   // abandoned or empty session can't unlock an evaluation.
@@ -41,19 +52,22 @@ export async function getEvalGate(): Promise<EvalGate> {
   const totalWorkouts = totalRes.count ?? 0;
   const newWorkouts = lastRunAt ? (newRes?.count ?? 0) : totalWorkouts;
 
-  const nextRun = lastRunAt
-    ? addDays(parseISO(lastRunAt), EVAL_COOLDOWN_DAYS)
-    : null;
+  const nextRun =
+    lastRunAt && !unlimited
+      ? addDays(parseISO(lastRunAt), EVAL_COOLDOWN_DAYS)
+      : null;
   const coolingDown = nextRun ? nextRun.getTime() > Date.now() : false;
 
   const reason: EvalGate["reason"] =
     totalWorkouts === 0
       ? "no_workout"
-      : coolingDown
-        ? "cooldown"
-        : newWorkouts === 0
-          ? "no_new_workout"
-          : "ok";
+      : unlimited
+        ? "ok"
+        : coolingDown
+          ? "cooldown"
+          : newWorkouts === 0
+            ? "no_new_workout"
+            : "ok";
 
   return {
     canRun: reason === "ok",
@@ -62,6 +76,7 @@ export async function getEvalGate(): Promise<EvalGate> {
     totalWorkouts,
     lastRunAt,
     nextRunAt: coolingDown && nextRun ? nextRun.toISOString() : null,
+    unlimited,
   };
 }
 

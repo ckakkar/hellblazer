@@ -76,6 +76,8 @@ Log a workout, then step forward to be judged. An AI judge (DeepSeek) weighs you
 
 **Earning a verdict.** Evaluations are rate-limited: you need a finished workout logged *since your last judgment*, and the judge rules at most **once every 5 days**. Declining a verdict doesn't buy a re-roll: the cooldown starts when the judge speaks, not when you accept.
 
+**The judge unchained.** Both limits lift once you rank *above* Julius Reinhold. Past the Monster the ladder stops rationing verdicts: no cooldown, no once-per-workout rule, judge on demand as often as you like. The only thing still required is a finished workout on record: there has to be something to rule on.
+
 | # | Fighter | Call sign | Standard |
 |:-:|---------|-----------|----------|
 | 10 | **Kuroki Gensai** | The Devil Lance | Once-in-a-generation, monstrous |
@@ -205,6 +207,7 @@ Every user-owned row carries `user_id`; RLS policies restrict CRUD to `auth.uid(
 ## PWA & notifications
 
 - Installable via Add-to-Home-Screen; standalone display, maskable icon, and **branded iOS launch screens** (`apple-touch-startup-image`, generated per device by `scripts/generate-splash.mjs`) so cold-start shows the brand instead of a blank flash.
+- A **bootloader** picks up where that launch image stops. iOS drops the static splash the instant the document paints, long before React has hydrated, so the installed app boots into a load meter, a split-flap status board and a POST-style log instead of a bare shell. The chrome is pure CSS on server-rendered markup (it animates on the first frame, no bundle needed); the React Bits pieces resolve at hydration, which is the tell that the app is up. Browser tabs never see it, and a CSS failsafe lifts the sheet even if hydration never happens.
 - A hand-rolled service worker (`public/sw.js`): network-first navigations with an offline fallback (`public/offline.html`), cache-first static assets.
 - Web Push (VAPID) with a **daily cron** (`/api/cron/reminders`) that reminds you when a programmed workout is due.
 - Functions are pinned to the Supabase region (Tokyo) so page renders and queries stay co-located and fast.
@@ -262,6 +265,7 @@ src/
 │   ├── manifest.ts         # PWA manifest
 │   └── globals.css         # design tokens, accent palettes, liquid-glass + motion
 ├── components/
+│   ├── boot-splash.tsx     # installed-app bootloader (PWA cold start)
 │   ├── charts/             # Recharts views + chart-kit
 │   ├── tier/               # ladder standing + strength meter
 │   └── ui/                 # hand-built primitives (Button, Card, NumberStepper, ArenaLoader…)

@@ -4,8 +4,28 @@
  * an `EvalGate` live in `@/lib/data/evaluation` (server-only).
  */
 
+import { getTier } from "@/lib/tiers";
+
 /** Days a lifter must wait between tier evaluations. */
 export const EVAL_COOLDOWN_DAYS = 5;
+
+/**
+ * Rank you must climb *past* for the judge to answer without limit: Julius
+ * Reinhold sits at 5, so Raian (6) and up are unlimited.
+ *
+ * This mirrors the ladder's two regimes. Below and up to the Monster the judge
+ * is scarce and a verdict has to be earned; past him the ladder rewards you,
+ * and the rate limit that made every judgment precious just gets in the way.
+ */
+export const UNLIMITED_EVAL_ABOVE_RANK = 5;
+
+/** Has this lifter climbed past Julius, and so earned an unlimited judge? */
+export function hasUnlimitedEvaluations(
+  tierKey: string | null | undefined,
+): boolean {
+  const tier = getTier(tierKey);
+  return !!tier && tier.rank > UNLIMITED_EVAL_ABOVE_RANK;
+}
 
 export type EvalGate = {
   canRun: boolean;
@@ -18,6 +38,8 @@ export type EvalGate = {
   lastRunAt: string | null;
   /** When the cooldown lifts (ISO), or null when not cooling down. */
   nextRunAt: string | null;
+  /** Past Julius: no cooldown, no once-per-workout rule. Judge on demand. */
+  unlimited: boolean;
 };
 
 /** Whole days until `iso`, floored at 1 so "later today" never reads as 0. */

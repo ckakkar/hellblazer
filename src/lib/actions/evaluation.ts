@@ -30,7 +30,9 @@ export type EvalResult =
  * Rate-limited by `getEvalGate`: you need a finished workout logged since your
  * last evaluation, and at most one evaluation every EVAL_COOLDOWN_DAYS days.
  * A delivered verdict stamps `profile.evaluation_run_at` whether or not it's
- * accepted, so declining can't buy a free re-roll.
+ * accepted, so declining can't buy a free re-roll. Both limits lift once the
+ * lifter is ranked above Julius Reinhold: past the Monster the judge rules on
+ * demand, as often as they ask.
  */
 export async function evaluateTier(): Promise<EvalResult> {
   const { supabase, user } = await getAuthedContext(); // RLS scopes the data

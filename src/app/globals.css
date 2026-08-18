@@ -357,6 +357,302 @@ label {
   }
 }
 
+/* ── The bootloader sheet ─────────────────────────────────────────────────
+   Shown only when the app is launched from the home screen (see
+   BootSplash for why). iOS drops its static launch image the instant the
+   document paints, which is well before React has hydrated, so this holds the
+   frame in the meantime with a boot sequence instead of a bare shell.
+
+   Everything here is CSS on server-rendered markup: the meter climbs, the
+   counter counts and the log fills on the first frame, with no bundle and no
+   rAF. The React Bits pieces inside layer on at hydration, which is precisely
+   the moment worth signalling. */
+.hb-boot {
+  display: none;
+}
+
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .hb-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    padding: calc(env(safe-area-inset-top) + 2rem) 1.75rem
+      calc(env(safe-area-inset-bottom) + 1.5rem);
+    background-color: var(--color-bg);
+    /* One heat source, the same arena glow the landing page uses. */
+    background-image: radial-gradient(
+      125% 58% at 50% -6%,
+      rgb(var(--accent-rgb) / 0.13),
+      transparent 62%
+    );
+    transition:
+      opacity 0.42s ease-out,
+      transform 0.42s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+}
+
+/* Failsafe. If hydration never happens (a bad bundle, a stale service worker)
+   nothing would ever lift the sheet, and a permanently black app is far worse
+   than one that boots ugly. The !important is deliberate: it has to survive
+   the global reduced-motion collapse at the bottom of this file, which would
+   otherwise fire this at 0.01ms and hide the splash instantly. */
+.hb-boot[data-phase="boot"] {
+  animation: hb-boot-failsafe 9s linear forwards !important;
+}
+@keyframes hb-boot-failsafe {
+  0%,
+  93% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* Handed over: fade and pull back a hair, as if the sheet lifts off the app. */
+.hb-boot[data-phase="exit"] {
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(1.035);
+}
+
+.hb-boot__texture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.16;
+  mask-image: radial-gradient(circle at 50% 44%, black, transparent 66%);
+  -webkit-mask-image: radial-gradient(circle at 50% 44%, black, transparent 66%);
+}
+
+.hb-boot__kanji {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: var(--font-display);
+  font-size: min(62vw, 27rem);
+  font-weight: 700;
+  line-height: 1;
+  color: rgb(255 255 255 / 0.022);
+  pointer-events: none;
+  user-select: none;
+}
+
+.hb-boot__frame {
+  position: relative;
+  display: flex;
+  width: 100%;
+  max-width: 21rem;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.hb-boot__sigil {
+  display: flex;
+  height: 2.25rem;
+  width: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(var(--accent-rgb) / 0.4);
+  border-radius: var(--radius-lg);
+  color: var(--color-accent);
+  animation: hb-boot-pulse 2.4s ease-in-out infinite;
+}
+@keyframes hb-boot-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 22px -8px rgb(var(--accent-rgb) / 0.5);
+    opacity: 0.86;
+  }
+  50% {
+    box-shadow: 0 0 30px -4px rgb(var(--accent-rgb) / 0.8);
+    opacity: 1;
+  }
+}
+
+.hb-boot__wordmark {
+  margin-top: 1.05rem;
+  font-size: clamp(2.35rem, 13vw, 3.35rem);
+  line-height: 0.94;
+  text-transform: uppercase;
+}
+
+.hb-boot__tagline {
+  margin-top: 0.6rem;
+  font-size: 10px;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+
+.hb-boot__board {
+  margin-top: 1.55rem;
+}
+
+/* Load meter + readout. The counter is a real animated integer (@property
+   makes it interpolatable), stepping in lockstep with the fill above it. */
+.hb-boot__meter {
+  position: relative;
+  margin-top: 1.6rem;
+  height: 2px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--color-border);
+}
+.hb-boot__meter-fill {
+  position: absolute;
+  inset: 0;
+  transform: scaleX(1);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    rgb(var(--accent-rgb) / 0.35),
+    var(--color-accent)
+  );
+  box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.5);
+  /* Stepped, not eased: a boot meter that glides to 95% in the first tenth of
+     a second and then crawls reads as a fake. These stops move in stages, the
+     way a real POST does, and the counter below shares them exactly. */
+  animation: hb-boot-fill 2.6s linear backwards;
+}
+@keyframes hb-boot-fill {
+  0% {
+    transform: scaleX(0.03);
+  }
+  18% {
+    transform: scaleX(0.22);
+  }
+  34% {
+    transform: scaleX(0.29);
+  }
+  52% {
+    transform: scaleX(0.55);
+  }
+  70% {
+    transform: scaleX(0.68);
+  }
+  88% {
+    transform: scaleX(0.91);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+@property --hb-boot-pct {
+  syntax: "<integer>";
+  initial-value: 100;
+  inherits: false;
+}
+.hb-boot__pct {
+  --hb-boot-pct: 100;
+  counter-reset: hb-boot-pct var(--hb-boot-pct);
+  font-size: 12px;
+  color: var(--color-text);
+  animation: hb-boot-count 2.6s linear backwards;
+}
+.hb-boot__pct::after {
+  content: counter(hb-boot-pct) "%";
+}
+@keyframes hb-boot-count {
+  0% {
+    --hb-boot-pct: 3;
+  }
+  18% {
+    --hb-boot-pct: 22;
+  }
+  34% {
+    --hb-boot-pct: 29;
+  }
+  52% {
+    --hb-boot-pct: 55;
+  }
+  70% {
+    --hb-boot-pct: 68;
+  }
+  88% {
+    --hb-boot-pct: 91;
+  }
+  100% {
+    --hb-boot-pct: 100;
+  }
+}
+
+.hb-boot__readout {
+  display: flex;
+  width: 100%;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: 0.7rem;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+.hb-boot__readout-label {
+  color: var(--color-muted);
+}
+
+/* POST log, one subsystem per line, revealed in the order they come up. */
+.hb-boot__log {
+  display: grid;
+  gap: 0.4rem;
+  width: 100%;
+  margin-top: 1.45rem;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--color-muted);
+}
+.hb-boot__log-line {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  /* Resting state is *shown*; the keyframes supply the entrance, so the
+     reduced-motion collapse leaves the log readable instead of blank. */
+  opacity: 1;
+  animation: hb-boot-line 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+}
+.hb-boot__log-ok {
+  display: inline-flex;
+  min-width: 2.1rem;
+  justify-content: center;
+  border: 1px solid rgb(var(--accent-rgb) / 0.32);
+  border-radius: 4px;
+  padding: 0.05rem 0.25rem;
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--color-accent);
+}
+@keyframes hb-boot-line {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hb-boot__foot {
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom) + 1.35rem);
+  font-size: 9px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.22);
+}
+
 /* Champion aura: a crimson arc sweeps the border of the #1 standing.
    Stands in for React Bits' ElectricBorder, which drives an equivalent look
    from a canvas requestAnimationFrame that never idles. An animated @property
