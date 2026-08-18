@@ -41,7 +41,7 @@ from (
     (null::uuid, 'Reverse Pec Deck',                   'rear_delt'::muscle_group,  array['traps']::muscle_group[],                           'isolation', 'machine',    '12-15'),
 
     -- Traps
-    (null::uuid, 'Standing Barbell Shrug',             'traps'::muscle_group,      array['forearms']::muscle_group[],                        'isolation', 'barbell',    '10-15'),
+    (null::uuid, 'Barbell Shrug',                      'traps'::muscle_group,      array['forearms']::muscle_group[],                        'isolation', 'barbell',    '10-15'),
     (null::uuid, 'Dumbbell Shrug',                     'traps'::muscle_group,      array['forearms']::muscle_group[],                        'isolation', 'dumbbell',   '10-15'),
 
     -- Biceps
@@ -50,7 +50,7 @@ from (
     (null::uuid, 'Concentration Curl',                 'biceps'::muscle_group,     array[]::muscle_group[],                                  'isolation', 'dumbbell',   '10-15'),
 
     -- Triceps
-    (null::uuid, 'Dumbbell Overhead Triceps Extension','triceps'::muscle_group,    array[]::muscle_group[],                                  'isolation', 'dumbbell',   '10-12'),
+    (null::uuid, 'Overhead Dumbbell Extension',        'triceps'::muscle_group,    array[]::muscle_group[],                                  'isolation', 'dumbbell',   '10-12'),
     (null::uuid, 'Bench Dip',                          'triceps'::muscle_group,    array['chest','front_delt']::muscle_group[],              'compound',  'bodyweight', '10-15'),
 
     -- Legs

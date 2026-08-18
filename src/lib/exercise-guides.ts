@@ -34,6 +34,16 @@ const GUIDES: Record<string, string> = {
     "Set the seat so the handles sit at chest height with your upper arms roughly parallel to the floor. Bring the pads together with your chest, pause where the squeeze is strongest, then return under control to a stretch. Keep your back on the pad: rocking forward turns it into a shoulder movement.",
   "push-up":
     "Set your hands slightly wider than your shoulders with your body in one line from ears to heels, ribs down and glutes tight. Lower until your chest is just off the floor with your elbows angled back around 45°, then press away and push the floor apart. If sets run past 20 reps, elevate your feet or add weight rather than chasing volume.",
+  "dumbbell bench press":
+    "Lie flat with the dumbbells at the outside of your chest, blades pulled down and together. Press up and slightly inward until they're over your shoulders, then lower under control until you feel a stretch across your chest. Dumbbells let each side work independently, so match the depth on both rather than chasing the stronger arm.",
+  "decline dumbbell press":
+    "Lock your legs into the pads on a 15–30° decline and start with the bells at the outside of your lower chest. Press up and slightly inward, then lower under control. Getting heavy dumbbells into position on a decline is the risky part: have someone hand them to you, or kick them up one at a time.",
+  "dumbbell floor press":
+    "Lie on the floor with the dumbbells at your chest and your knees bent. Press up until your arms are almost locked, then lower until your upper arms touch the floor and pause for a beat. The floor caps the range before the shoulder gets stretched, which is why it's the pressing variation to reach for when your shoulders are cranky.",
+  "incline cable fly":
+    "Set an incline bench between two low pulleys and take a handle in each hand with a soft, fixed elbow. Bring the handles up and together over your upper chest in a hugging arc, pause, then let them travel back into a stretch. Cables hold tension at the top of the arc, which is where the dumbbell version goes weightless.",
+  "diamond push-up":
+    "Set your hands together under your chest so your thumbs and index fingers form a triangle, body in one line from ears to heels. Lower with your elbows tracking close to your sides until your chest touches your hands, then press away. It's a triceps push-up: if your elbows flare out, you've turned it back into a chest one.",
   "chest dip":
     "Support yourself on the bars with a slight forward lean and your shoulders pulled down away from your ears. Lower under control until your upper arms are roughly parallel to the floor, elbows travelling back and slightly out, then press back up without locking hard at the top. The forward lean is what makes it a chest movement: stay upright and it becomes a triceps one.",
 
@@ -62,6 +72,10 @@ const GUIDES: Record<string, string> = {
     "Sit tall with a soft bend in your knees and let the handle pull your shoulder blades forward at the start of each rep. Row to your stomach by driving your elbows back and squeezing your blades together, then return under control to that same stretch. Leaning back and forth turns it into a hip movement: keep your torso still.",
   "inverted row":
     "Set a bar at waist height, hang underneath with straight arms and your body in one line from head to heels. Pull your chest to the bar by driving your elbows back and squeezing your blades, then lower under control. Walk your feet further out to make it harder, or elevate them for more; sagging hips are the sign to regress.",
+  "machine row":
+    "Set the chest pad and seat so your arms reach full extension without your shoulders rolling forward off the pad. Row the handles to your ribs, driving your elbows back and squeezing your shoulder blades, then return all the way out. The pad removes the lower back from the equation, so this is where to push hard on a heavy pull day.",
+  "meadows row":
+    "Wedge a barbell into a landmine, stand side-on in a staggered stance and grip the sleeve end with the far hand. Hinge over with a flat back, let the bar pull your shoulder into a deep stretch, then row it to your hip. The angle punishes twisting: keep your hips square and let your torso stay still.",
   "lat pulldown":
     "Set the thigh pads so you can't rise off the seat, take a grip a little wider than your shoulders and lean back slightly. Pull the bar to your upper chest by driving your elbows down and back, then let it rise all the way until you feel a stretch through your lats. It's an arm-path movement, not a hand one: think elbows into your back pockets.",
   "weighted pull-up":
@@ -86,26 +100,51 @@ const GUIDES: Record<string, string> = {
     "Set the seat so the handles sit at roughly shoulder height and your wrists stay stacked over your elbows. Press up until your arms are nearly locked, then lower under control until your upper arms are about level with your shoulders. The fixed path makes it the safest place to push a shoulder press close to failure, so pick a weight you can control on the way down.",
   "arnold press":
     "Start seated with the dumbbells in front of your shoulders, palms facing you. Rotate your palms out as you press overhead, then reverse the rotation exactly on the way down. The rotation is the point: it takes the front delt through more range, so keep it slow rather than flicking through it.",
+  "landmine press":
+    "Wedge a barbell into a landmine, hold the sleeve end at shoulder height and brace with your ribs down. Press up and slightly forward until your arm is straight, then lower under control. The arc sits between a bench press and an overhead press, which makes it the pressing option when full overhead range bothers your shoulder.",
   "dumbbell lateral raise":
     "Stand tall with the dumbbells at your sides, a soft bend in your elbows and shoulders down. Raise your arms out to roughly shoulder height, leading with your elbows, then lower slowly under control. This is a small-muscle movement: if you need momentum to start it, halve the weight and double the reps.",
   "cable lateral raise":
     "Stand side-on to a low pulley and take the handle in the outside hand with a soft elbow. Raise the arm out to shoulder height against the cable, pause, then lower slowly. The cable keeps tension at the bottom where dumbbells go slack, which is exactly why it belongs on a side-delt-focused day.",
+  "machine lateral raise":
+    "Set the seat so the pads sit against your outer upper arms with your shoulders level. Push out and up to roughly shoulder height, pause, then lower slowly under control. The machine takes the swing out entirely, so treat the top of each rep as a pause rather than a turnaround.",
+  "leaning cable lateral raise":
+    "Grip an upright with one hand and lean away from a low pulley so your working arm hangs across your body. Raise it out to shoulder height against the cable, then lower slowly. Leaning away is the whole point: it loads the side delt in the stretched bottom position dumbbells can't reach.",
+  "plate lateral raise":
+    "Hold a small plate in each hand with a soft bend in your elbows and your shoulders down. Raise out to roughly shoulder height, lead with your elbows, then lower slowly. Plates make the load awkward at the top, so go lighter than your dumbbell raise weight and keep it strict.",
   "dumbbell front raise":
     "Hold the dumbbells in front of your thighs with a soft bend in your elbows and your ribs down. Raise them to shoulder height in a controlled arc, then lower slowly. Don't swing through the bottom: the front delt already gets plenty of work from pressing, so this one is about quality.",
+  "cable front raise":
+    "Stand facing away from a low pulley with the handle in front of your thigh and a soft bend in your elbow. Raise your arm to shoulder height in a controlled arc, then lower against the cable. Keep your ribs down: leaning back to finish the rep hands the work to your lower back.",
+  "plate front raise":
+    "Hold a plate at three and nine o'clock with your arms hanging in front of your thighs. Raise it to around eye height with a soft elbow, pause, then lower slowly. It's a front delt movement, so keep the weight modest and the torso still.",
+  "cable upright row":
+    "Stand over a low pulley with a bar or rope, hands around shoulder-width. Pull up the front of your body leading with your elbows, stop when your upper arms reach roughly shoulder height, then lower under control. The cable pulls slightly forward, which keeps tension on the delts through the whole range.",
+  "dumbbell upright row":
+    "Hold the dumbbells in front of your thighs about shoulder-width apart. Pull them up the front of your body with your elbows leading, stopping when your upper arms reach shoulder height, then lower slowly. Dumbbells let your wrists find their own path, which is why they tend to feel better here than a straight bar.",
   "upright row":
     "Take a grip around shoulder-width, stand tall and pull the bar up the front of your body, leading with your elbows. Stop when your upper arms reach roughly shoulder height, then lower under control. Go too narrow or too high and it pinches the shoulder: wider and lower is the version worth doing.",
   "rear delt fly":
     "Hinge forward to roughly 45° (or lie chest-down on an incline bench) with light dumbbells hanging under your shoulders. Raise your arms out to the sides with a fixed soft elbow, squeezing your rear delts, then lower under control. Keep the weight light and the elbows behind your torso, this is where ego lifting shows up most.",
+  "cable rear delt fly":
+    "Set two pulleys at shoulder height and cross the cables, taking the left handle in your right hand and vice versa. Sweep your arms out and back with a soft, fixed elbow, squeezing your rear delts, then return under control. Think about pulling the handles apart, not back, or the traps take over.",
+  "prone rear delt raise":
+    "Lie chest-down on an incline bench with light dumbbells hanging straight below your shoulders. Raise your arms out to the sides with a fixed soft elbow until they're level with your torso, then lower under control. The bench kills all momentum, so this is the strictest rear delt option you have, expect small weights.",
   "reverse pec deck":
     "Sit chest-against the pad with the handles set at shoulder height and a soft bend in your elbows. Sweep your arms out and back, squeezing your rear delts, then return under control without letting the weights touch down. Think about pulling the handles apart rather than back, it keeps the traps out of it.",
   "face pull":
     "Set a rope at roughly face height, step back until the cable is taut and start with your arms extended. Pull the rope toward your face, splitting your hands apart and finishing with your knuckles beside your ears and elbows high. Rear delts and upper back do the work: if the weight drags your torso forward, drop it.",
 
   // ── Traps ───────────────────────────────────────────────────────────────
-  "standing barbell shrug":
+  "barbell shrug":
     "Hold the bar at arm's length in front of your thighs, shoulders relaxed down, chest tall. Shrug straight up toward your ears, pause at the top, then lower under control to a full stretch. Rolling your shoulders adds nothing but wear: straight up, straight down.",
+  "cable shrug":
+    "Stand facing a low pulley holding a bar or handles at arm's length, shoulders relaxed down. Shrug straight up toward your ears, hold the top for a beat, then lower into a full stretch. The cable keeps pulling at the bottom, so the stretched position stays loaded in a way a barbell can't manage.",
   "dumbbell shrug":
     "Stand tall with a dumbbell in each hand at your sides and your shoulders relaxed. Shrug straight up as high as you can, hold for a beat, then lower slowly until you feel the stretch. Dumbbells at your sides let the traps travel a little further than a bar in front of you.",
+
+  "farmer's carry":
+    "Pick up a heavy dumbbell or handle in each hand, stand tall with your ribs down and your shoulders back, then walk in a straight line with short, controlled steps. Don't let the load pull you into a lean or a shrug. It's loaded by distance or time rather than reps, so log it the same way every week or the numbers won't compare.",
 
   // ── Biceps ──────────────────────────────────────────────────────────────
   "barbell curl":
@@ -120,8 +159,12 @@ const GUIDES: Record<string, string> = {
     "Set a low pulley, take the handle and step forward so your arm hangs slightly behind your body with the cable taut. Curl up with a fixed elbow, then lower under control back into that stretch. Like the incline curl, it loads the long head where it's longest, expect to need less weight than a standing curl.",
   "cable curl":
     "Stand a step back from a low pulley with the bar at arm's length and your elbows at your sides. Curl up without letting your elbows travel, squeeze, then lower slowly against the cable. Constant tension is the advantage here: no resting at the bottom.",
+  "cable rope hammer curl":
+    "Attach a rope to a low pulley and hold it with a neutral grip, elbows at your sides. Curl up keeping your palms facing each other, squeeze, then lower against the cable. The neutral grip plus constant tension makes this the best of the hammer variations for the brachialis.",
   "preacher curl":
     "Set the pad so it sits under your armpits with your upper arms flat against it. Curl from a full stretch to just short of vertical, keeping your arms on the pad the whole way, then lower slowly. The bottom of a preacher curl is where biceps tear if you drop into it: lower under control every rep.",
+  "machine preacher curl":
+    "Set the seat so your upper arms lie flat on the pad with your armpits against the top edge. Curl from a full stretch to just short of vertical, then lower slowly all the way back. The machine keeps the load on through the bottom, which is exactly where it's easy to drop out of a free-weight preacher.",
   "concentration curl":
     "Sit on a bench, brace your working elbow against the inside of your thigh and let the dumbbell hang at full stretch. Curl up, squeeze hard at the top, then lower slowly. There is nowhere to hide in this one, so treat it as a finisher rather than a strength movement.",
   "hammer curl":
@@ -134,8 +177,10 @@ const GUIDES: Record<string, string> = {
     "Lie back holding an EZ bar or dumbbells over your shoulders with your upper arms angled slightly back. Bend at the elbows to lower the weight toward your forehead or just behind your head, then extend back up without letting your upper arms drift. Keep them still: once they swing, it's a pullover.",
   "overhead cable extension":
     "Face away from a low or mid pulley with the rope overhead and your upper arms beside your ears. Extend your elbows until your arms are straight, then let the rope travel back down behind your head into a deep stretch. Overhead is where the long head gets loaded: keep your ribs down so your back doesn't arch to help.",
-  "dumbbell overhead triceps extension":
+  "overhead dumbbell extension":
     "Sit or stand tall holding one dumbbell overhead with both hands, upper arms beside your ears. Lower it behind your head under control until you feel a deep stretch through the triceps, then extend back up. Elbows stay pointed forward, letting them flare turns the stretch into shoulder strain.",
+  "jm press":
+    "Take a close-grip bench setup, then lower the bar toward your upper chest and chin with your elbows staying forward, somewhere between a close-grip press and a skull crusher. Stop when your forearms are near your biceps, then press back up. It's a heavy triceps movement, so build up slowly and keep the bar path tight.",
   "rope pushdown":
     "Stand a step back from a high pulley with the rope in both hands and your elbows pinned to your sides. Extend down and spread the rope apart at the bottom, then let it rise until your forearms are past parallel. Keep your elbows still: every inch they travel forward is work handed to your lats.",
   "triceps pushdown":
@@ -170,6 +215,10 @@ const GUIDES: Record<string, string> = {
     "Set a box or bench around knee height, plant one whole foot on it and drive through that heel to stand tall. Lower under control back to the floor rather than dropping. Pushing off the trailing foot is the cheat here: the working leg should do all of it.",
   "sumo squat":
     "Take a wide stance with toes turned out around 45° and hold a dumbbell between your legs. Sit straight down between your hips, keeping your knees pushed out over your toes, then drive back up. The wide stance pulls the adductors and glutes in far more than a conventional squat.",
+  "nordic hamstring curl":
+    "Kneel on a pad with your ankles anchored, body straight from knees to shoulders. Lower yourself forward as slowly as you can under hamstring control, catch with your hands, then push back just enough to restart. It's an eccentric movement: two or three honest reps beat ten you've fallen through.",
+  "glute-ham raise":
+    "Set your feet against the plate and your thighs on the pad of a GHD, body straight. Lower your torso under control until you feel a deep hamstring stretch, then pull yourself back up with your hamstrings rather than snapping at the hips. If you can't come back up, add a band or push off lightly with your hands.",
   "leg extension":
     "Set the pad just above your ankles and line the machine's pivot up with your knee. Extend until your legs are straight, squeeze for a beat, then lower under control. It's an isolation movement: full lockout with a pause beats a heavier, half-range swing every time.",
 
@@ -186,6 +235,12 @@ const GUIDES: Record<string, string> = {
     "Lie face down with the pad just above your heels and your hips flat on the bench. Curl your heels toward your glutes, squeeze, then lower under control without letting the weight drop. If your hips lift off the pad, the weight is doing the choosing.",
   "seated leg curl":
     "Set the thigh pad snug and the ankle pad just above your heels, sitting tall against the back rest. Curl your heels down and under, pause, then return under control. The seated version puts the hamstrings on stretch at the hip, which is why it tends to load them harder than lying.",
+  "cable pull-through":
+    "Face away from a low pulley with the rope between your legs, hands holding it at your hips. Hinge back with a flat back until you feel a hamstring stretch, then snap your hips forward and squeeze your glutes hard. Your arms are just hooks, if they're pulling, it's turned into a row.",
+  "frog pump":
+    "Lie on your back with the soles of your feet together and your knees fallen out to the sides, weight across your hips if you're loading it. Drive your hips up by squeezing your glutes, hold the top, then lower under control. The turned-out position takes the quads out of it, so run it for high reps.",
+  "cable glute kickback":
+    "Strap an ankle cuff to a low pulley, face the stack and hold on with a slight hinge forward. Drive the working heel back and up, squeezing the glute at the top, then return under control. Range comes from the hip, arching your lower back to get higher is your spine doing the work.",
   "glute bridge":
     "Lie on your back with your knees bent and heels close to your glutes, weight across your hips if you're loading it. Drive through your heels to lift your hips until your body is straight from knees to shoulders, squeeze hard, then lower. Ribs down and a hard glute squeeze at the top, not a lower-back arch.",
   "hip thrust":
@@ -202,6 +257,8 @@ const GUIDES: Record<string, string> = {
   // ── Calves ──────────────────────────────────────────────────────────────
   "standing calf raise":
     "Stand with the balls of your feet on the platform and your legs straight. Drop your heels for a deep stretch, then press all the way up onto your toes and pause at the top. Straight legs bias the gastrocnemius, and pausing at both ends is what makes calves grow, not bouncing.",
+  "donkey calf raise":
+    "Set the balls of your feet on a block and hinge forward at the hips, supporting your torso on a bench or the machine pad. Drop your heels into a deep stretch, then press all the way up onto your toes and hold. The bent-over position stretches the gastrocnemius more than a standing raise does, so lead with the stretch.",
   "seated calf raise":
     "Sit with the pad over your thighs and the balls of your feet on the platform. Lower your heels into a full stretch, then press up as high as you can and hold. Bent knees shift the work to the soleus, so treat this as the higher-rep partner to standing raises.",
   "leg press calf raise":
@@ -212,10 +269,16 @@ const GUIDES: Record<string, string> = {
     "Hang from a bar with your shoulders pulled down and no swing. Raise your legs with straight knees until they're at least parallel to the floor, curling your pelvis up at the top, then lower under control. The pelvic tilt at the top is what makes it an ab movement rather than a hip flexor one.",
   "hanging knee raise":
     "Hang from a bar with your shoulders active, knees together. Raise your knees toward your chest, tilting your pelvis up at the top, then lower under control without swinging. It's the regression to the straight-leg version: earn a controlled full range here first.",
+  "bicycle crunch":
+    "Lie on your back with your hands light behind your head and your shoulder blades off the floor. Bring one knee in as you rotate the opposite shoulder toward it, then switch sides as the other leg extends. Rotate through your ribcage rather than yanking your head, and go slower than feels natural.",
+  "plank":
+    "Set your forearms under your shoulders, feet together, and hold a straight line from ears to heels with your ribs down and glutes tight. Breathe normally and keep your hips from sagging or piking up. It's a time hold rather than reps, so log the duration and add weight on your back once you pass a comfortable minute.",
   "cable crunch":
     "Kneel facing away from or below a high pulley with the rope beside your head and your hips fixed. Crunch by rounding your spine and bringing your elbows toward your thighs, squeeze, then return under control. The hips should not move, if you're hinging at them you're doing a pulldown with your abs along for the ride.",
   "weighted crunch":
     "Lie on your back with your knees bent, holding a plate or dumbbell against your chest. Curl your shoulder blades off the floor by rounding your upper back, pause at the top, then lower slowly. Range is short by design: chasing a full sit-up brings the hip flexors in.",
+  "cable woodchopper":
+    "Set a pulley high (or low, to chop upward), take the handle in both hands and stand side-on with your feet planted wide. Rotate through your torso and pull the handle diagonally across your body, letting your back foot pivot, then return under control. Arms stay long, the rotation comes from your midsection, not your shoulders.",
   "russian twist":
     "Sit with your knees bent and heels light on the floor, torso leaned back to around 45°, holding a weight at your chest. Rotate through your torso from side to side, letting your eyes follow the weight, and keep your chest tall. Rotate, don't just swing your arms across a still torso.",
   "decline sit-up":
