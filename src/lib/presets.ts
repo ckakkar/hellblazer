@@ -171,7 +171,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "upper-lower-4",
-    name: "Indestructible · Upper/Lower 4-Day",
+    name: "Hatsumi Aikido · Upper/Lower 4-Day",
     weeks: 8,
     description:
       "The gold-standard 4-day split. Two upper + two lower days, heavy strength work up top then hypertrophy volume, the best frequency/recovery balance for natural strength gains.",
@@ -235,7 +235,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "ppl-6",
-    name: "Blast Core · Push/Pull/Legs ×2",
+    name: "Kaiwan Style · Push/Pull/Legs ×2",
     weeks: 8,
     description:
       "PPLPPL: the highest-frequency hypertrophy-strength split. Each muscle trained twice weekly: a heavy strength day and a higher-volume day. For advanced lifters who recover well.",
@@ -315,7 +315,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "full-body-4",
-    name: "Fang of Metsudo · Full-Body 4-Day",
+    name: "Formless · Full-Body 4-Day",
     weeks: 8,
     description:
       "Four full-body days, each built around one main lift (squat / deadlift / bench / pull). Maximal frequency on the big lifts, the fastest route to raw strength for busy or intermediate lifters.",
@@ -372,7 +372,7 @@ export const PRESETS: Preset[] = [
   },
   {
     id: "dumbbell-home-5",
-    name: "Formless · Dumbbell Home Circuit",
+    name: "Kure Clan · Dumbbell Home Circuit",
     weeks: 8,
     description:
       "A dumbbell-only, home-friendly 5-day split, glute & leg focused with dedicated shoulders/arms, back/core, and posterior-chain days. No machines, no barbell: just a pair of dumbbells.",
