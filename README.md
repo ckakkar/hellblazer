@@ -105,7 +105,7 @@ The **Progress** tab renders your standing on this ladder, the fighter you're ch
 | `/leaderboard` | King of the Hill — every fighter with a ring name, ranked by total volume moved |
 | `/programs` → `/programs/[id]` | Build & run multi-week programs; pause / resume / roll back / preview |
 | `/templates` | CRUD your split: searchable exercise library, target sets/reps/notes, ordering |
-| `/exercises` | Browse the 140+ movement library; create custom exercises |
+| `/exercises` | Browse the 140+ movement library, tap any movement for a how-to; create custom exercises |
 | `/settings` | Ring name, sex/age/height, accent theme, units, bodyweight log, push, strength evaluation, CSV export |
 
 ## The analytics engine
@@ -273,11 +273,15 @@ src/
 │   ├── data/               # typed read layer (per entity)
 │   ├── actions/            # Zod-validated Server Actions
 │   ├── supabase/           # server / client / proxy factories
+│   ├── exercise-guides.ts  # how-to paragraph per library movement
 │   ├── tiers.ts            # the Kengan strength ladder
 │   ├── accents.ts          # accent palettes
 │   ├── presets.ts          # starter programs
 │   └── database.types.ts   # generated from the live schema
 └── proxy.ts                # edge session refresh + route gating
+
+scripts/
+└── sql/                    # one-off library SQL, run from the Supabase editor
 ```
 
 ## Security & privacy

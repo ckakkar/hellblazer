@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Loader2, Plus, Search } from "lucide-react";
+import { ChevronDown, Loader2, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -20,6 +20,7 @@ import {
   type Muscle,
 } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
+import { getExerciseGuide } from "@/lib/exercise-guides";
 import {
   createCustomExercise,
   deleteCustomExercise,
@@ -29,6 +30,9 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
   const [q, setQ] = useState("");
   const [muscle, setMuscle] = useState<string>("all");
   const [creating, setCreating] = useState(false);
+  // One how-to open at a time, held here rather than per row so opening a
+  // movement in one muscle group closes whatever was open in another.
+  const [openId, setOpenId] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   const groups = useMemo(() => {
@@ -51,7 +55,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
     <div>
       <PageHeader
         title="Exercises"
-        subtitle="The shared library plus your custom movements."
+        subtitle="The shared library plus your custom movements. Tap a movement to see how it's performed."
         action={
           <Button onClick={() => setCreating(true)}>
             <Plus className="size-4" />
@@ -92,52 +96,20 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
             </h2>
             <Card className="divide-y divide-border overflow-hidden">
               {g.items.map((e) => (
-                <div
+                <ExerciseRow
                   key={e.id}
-                  className="flex items-center justify-between gap-3 px-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm text-text">{e.name}</div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                      {e.mechanic && (
-                        <span className="text-xs text-muted">{e.mechanic}</span>
-                      )}
-                      {e.equipment && (
-                        <span className="text-xs text-muted">
-                          · {e.equipment}
-                        </span>
-                      )}
-                      {e.default_rep_range && (
-                        <span className="font-mono text-xs text-muted">
-                          · {e.default_rep_range}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    {e.secondary_muscles.length > 0 && (
-                      <span className="hidden text-xs text-muted sm:inline">
-                        {e.secondary_muscles
-                          .map((m) => MUSCLE_LABEL[m])
-                          .join(", ")}
-                      </span>
-                    )}
-                    {e.user_id ? (
-                      <ConfirmIconButton
-                        label="Delete exercise"
-                        confirmLabel="Tap again to delete exercise"
-                        disabled={pending}
-                        onConfirm={() =>
-                          start(async () => {
-                            await deleteCustomExercise({ id: e.id });
-                          })
-                        }
-                      />
-                    ) : (
-                      <Badge variant="muted">library</Badge>
-                    )}
-                  </div>
-                </div>
+                  exercise={e}
+                  open={openId === e.id}
+                  onToggle={() =>
+                    setOpenId((cur) => (cur === e.id ? null : e.id))
+                  }
+                  deleting={pending}
+                  onDelete={() =>
+                    start(async () => {
+                      await deleteCustomExercise({ id: e.id });
+                    })
+                  }
+                />
               ))}
             </Card>
           </section>
@@ -153,6 +125,103 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         open={creating}
         onClose={() => setCreating(false)}
       />
+    </div>
+  );
+}
+
+/**
+ * One library row, with its how-to as a disclosure underneath.
+ *
+ * The toggle is a button covering only the name and meta, never the whole row:
+ * the delete control and the library badge sit outside it, since nesting
+ * interactive elements inside a button is invalid and breaks keyboard use.
+ * Movements with no guide (any custom exercise) render as plain, inert text
+ * rather than a control that opens nothing.
+ */
+function ExerciseRow({
+  exercise: e,
+  open,
+  onToggle,
+  deleting,
+  onDelete,
+}: {
+  exercise: Exercise;
+  open: boolean;
+  onToggle: () => void;
+  deleting: boolean;
+  onDelete: () => void;
+}) {
+  const guide = getExerciseGuide(e.name);
+  const guideId = `guide-${e.id}`;
+
+  const meta = (
+    <>
+      <div className="flex items-center gap-1.5">
+        <span className="truncate text-sm text-text">{e.name}</span>
+        {guide && (
+          <ChevronDown
+            className={cn(
+              "size-3.5 shrink-0 text-muted transition-transform duration-200",
+              open && "rotate-180 text-accent",
+            )}
+          />
+        )}
+      </div>
+      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+        {e.mechanic && <span className="text-xs text-muted">{e.mechanic}</span>}
+        {e.equipment && (
+          <span className="text-xs text-muted">· {e.equipment}</span>
+        )}
+        {e.default_rep_range && (
+          <span className="font-mono text-xs text-muted">
+            · {e.default_rep_range}
+          </span>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <div>
+      <div className="flex items-center justify-between gap-3 px-4 py-3">
+        {guide ? (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={open}
+            aria-controls={guideId}
+            className="-my-1 min-w-0 flex-1 rounded-lg py-1 text-left transition-colors hover:text-text"
+          >
+            {meta}
+          </button>
+        ) : (
+          <div className="min-w-0 flex-1">{meta}</div>
+        )}
+        <div className="flex shrink-0 items-center gap-2">
+          {e.secondary_muscles.length > 0 && (
+            <span className="hidden text-xs text-muted sm:inline">
+              {e.secondary_muscles.map((m) => MUSCLE_LABEL[m]).join(", ")}
+            </span>
+          )}
+          {e.user_id ? (
+            <ConfirmIconButton
+              label="Delete exercise"
+              confirmLabel="Tap again to delete exercise"
+              disabled={deleting}
+              onConfirm={onDelete}
+            />
+          ) : (
+            <Badge variant="muted">library</Badge>
+          )}
+        </div>
+      </div>
+      {guide && open && (
+        <div id={guideId} className="hb-reveal px-4 pb-4">
+          <p className="border-l-2 border-accent/40 pl-3 text-sm leading-relaxed text-muted">
+            {guide}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
