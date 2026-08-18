@@ -76,7 +76,7 @@ Log a workout, then step forward to be judged. An AI judge (DeepSeek) weighs you
 
 **Earning a verdict.** Evaluations are rate-limited: you need a finished workout logged *since your last judgment*, and the judge rules at most **once every 5 days**. Declining a verdict doesn't buy a re-roll: the cooldown starts when the judge speaks, not when you accept.
 
-**The judge unchained.** Both limits lift once you rank *above* Julius Reinhold. Past the Monster the ladder stops rationing verdicts: no cooldown, no once-per-workout rule, judge on demand as often as you like. The only thing still required is a finished workout on record: there has to be something to rule on.
+**The judge unchained.** Every limit lifts once you rank *above* Julius Reinhold. Past the Monster the ladder stops rationing verdicts entirely: no cooldown, no once-per-workout rule, nothing that has to be on the log first. Call for a verdict whenever you like, as often as you like. The rank ratchet still applies, so a judgment can only hold or raise where you stand.
 
 | # | Fighter | Call sign | Standard |
 |:-:|---------|-----------|----------|

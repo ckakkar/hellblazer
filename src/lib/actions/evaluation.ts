@@ -30,9 +30,10 @@ export type EvalResult =
  * Rate-limited by `getEvalGate`: you need a finished workout logged since your
  * last evaluation, and at most one evaluation every EVAL_COOLDOWN_DAYS days.
  * A delivered verdict stamps `profile.evaluation_run_at` whether or not it's
- * accepted, so declining can't buy a free re-roll. Both limits lift once the
- * lifter is ranked above Julius Reinhold: past the Monster the judge rules on
- * demand, as often as they ask.
+ * accepted, so declining can't buy a free re-roll. Every limit lifts once the
+ * lifter is ranked above Julius Reinhold, the empty-log one included: past the
+ * Monster the judge rules on demand, as often as they ask, on whatever is
+ * there.
  */
 export async function evaluateTier(): Promise<EvalResult> {
   const { supabase, user } = await getAuthedContext(); // RLS scopes the data
@@ -78,7 +79,10 @@ export async function evaluateTier(): Promise<EvalResult> {
   }
 
   const profile = await getTrainingProfile();
-  if (profile.totalSessions === 0) {
+  // Same exemption as the gate above: past Julius an empty log is not a reason
+  // to turn someone away. The rank ratchet below still floors the verdict at
+  // the rank they hold, so a bare snapshot can't cost them anything.
+  if (profile.totalSessions === 0 && !gate.unlimited) {
     return {
       ok: false,
       error: "no_data",

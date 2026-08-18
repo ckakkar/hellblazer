@@ -19,11 +19,10 @@ import {
  * not `tier_evaluated_at`, which stamps only when a verdict is accepted, 
  * otherwise rejecting a verdict would reset the cooldown for free.
  *
- * Both gates lift once the lifter is ranked *above* Julius Reinhold. Past the
- * Monster the ladder stops rationing verdicts: the judge answers whenever
- * they call, as often as they like. The one thing that survives is having
- * something to judge at all: with no finished workout on record there is
- * nothing to rule on, at any rank.
+ * Every gate lifts once the lifter is ranked *above* Julius Reinhold. Past the
+ * Monster the ladder stops rationing verdicts entirely: no cooldown, no
+ * once-per-workout rule, and no requirement to have anything new (or anything
+ * at all) on the log. The judge answers whenever they call.
  */
 export async function getEvalGate(): Promise<EvalGate> {
   const supabase = await createClient();
@@ -58,16 +57,17 @@ export async function getEvalGate(): Promise<EvalGate> {
       : null;
   const coolingDown = nextRun ? nextRun.getTime() > Date.now() : false;
 
-  const reason: EvalGate["reason"] =
-    totalWorkouts === 0
+  // Unlimited short-circuits every gate, including the empty-log one: at this
+  // rank the judge rules on whatever is there, even if that is nothing.
+  const reason: EvalGate["reason"] = unlimited
+    ? "ok"
+    : totalWorkouts === 0
       ? "no_workout"
-      : unlimited
-        ? "ok"
-        : coolingDown
-          ? "cooldown"
-          : newWorkouts === 0
-            ? "no_new_workout"
-            : "ok";
+      : coolingDown
+        ? "cooldown"
+        : newWorkouts === 0
+          ? "no_new_workout"
+          : "ok";
 
   return {
     canRun: reason === "ok",

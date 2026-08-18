@@ -38,7 +38,7 @@ export type EvalGate = {
   lastRunAt: string | null;
   /** When the cooldown lifts (ISO), or null when not cooling down. */
   nextRunAt: string | null;
-  /** Past Julius: no cooldown, no once-per-workout rule. Judge on demand. */
+  /** Past Julius: no cooldown, no once-per-workout rule, no log required. */
   unlimited: boolean;
 };
 

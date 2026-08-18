@@ -66,22 +66,19 @@ export function TierEvaluator({
           : "same"
       : "up";
 
-  const gateCopy =
-    gate.reason === "no_workout"
+  const gateCopy = gate.unlimited
+    ? "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result: and past the Monster, you can call for one whenever you like, with nothing new on the log."
+    : gate.reason === "no_workout"
       ? "Finish a workout first: the judge rules on logged work, nothing else."
-      : gate.unlimited
-        ? "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result: and past the Monster, you can call for one as often as you like."
-        : gate.reason === "no_new_workout"
-          ? "You've already been judged on this record. Log another workout to earn a fresh verdict."
-          : gate.reason === "cooldown"
-            ? `The judge has ruled. Return in ${
-                gate.nextRunAt ? daysUntil(gate.nextRunAt) : EVAL_COOLDOWN_DAYS
-              } ${
-                gate.nextRunAt && daysUntil(gate.nextRunAt) === 1
-                  ? "day"
-                  : "days"
-              }: one evaluation every ${EVAL_COOLDOWN_DAYS} days.`
-            : "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result.";
+      : gate.reason === "no_new_workout"
+        ? "You've already been judged on this record. Log another workout to earn a fresh verdict."
+        : gate.reason === "cooldown"
+          ? `The judge has ruled. Return in ${
+              gate.nextRunAt ? daysUntil(gate.nextRunAt) : EVAL_COOLDOWN_DAYS
+            } ${
+              gate.nextRunAt && daysUntil(gate.nextRunAt) === 1 ? "day" : "days"
+            }: one evaluation every ${EVAL_COOLDOWN_DAYS} days.`
+          : "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result.";
 
   return (
     <div className="grid gap-4">
@@ -173,18 +170,22 @@ export function TierEvaluator({
         </Button>
         <p className="mt-2 text-xs text-muted">{gateCopy}</p>
         {gate.canRun && (
-          <p className="mt-1 flex items-center gap-1.5 font-mono text-[11px] text-muted/60">
-            {gate.newWorkouts} new{" "}
-            {gate.newWorkouts === 1 ? "workout" : "workouts"} to judge ·{" "}
+          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 font-mono text-[11px] text-muted/60">
+            {gate.newWorkouts > 0 && (
+              <span>
+                {gate.newWorkouts} new{" "}
+                {gate.newWorkouts === 1 ? "workout" : "workouts"} to judge ·
+              </span>
+            )}
             {gate.unlimited ? (
               <>
                 <InfinityIcon className="size-3 text-accent" />
                 <span className="text-accent/80">
-                  unlimited verdicts, no cooldown
+                  unlimited verdicts · no cooldown, no requirements
                 </span>
               </>
             ) : (
-              <>one evaluation every {EVAL_COOLDOWN_DAYS} days</>
+              <span>one evaluation every {EVAL_COOLDOWN_DAYS} days</span>
             )}
           </p>
         )}
