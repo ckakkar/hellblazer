@@ -40,6 +40,22 @@ function Tonnage({
   );
 }
 
+/**
+ * The fighter line under a ring name. The epithet is flavour, the tier name is
+ * the information: on a phone the compact rows don't have the width for both
+ * next to a tonnage, so the epithet drops out there rather than the whole line
+ * ending in an ellipsis.
+ */
+function FighterLine({ entry }: { entry: LeaderboardEntry }) {
+  if (!entry.name) return <>Unranked fighter</>;
+  return (
+    <>
+      {entry.name}
+      <span className="hidden sm:inline"> · {entry.epithet}</span>
+    </>
+  );
+}
+
 export function Standings({
   entries,
   me,
@@ -79,7 +95,10 @@ export function Standings({
                   "radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.28), transparent)",
               }}
             />
-            <div className="relative flex items-center gap-4 p-5 sm:gap-5 sm:p-6">
+            {/* Wraps on phones: the tonnage drops to its own row rather than
+                stealing width from the ring name, which is the one thing on
+                this card that must never be clipped. */}
+            <div className="relative flex flex-wrap items-center gap-4 p-5 sm:flex-nowrap sm:gap-5 sm:p-6">
               <div className="flex size-14 shrink-0 items-center justify-center rounded-full border border-accent/50 bg-accent/10 text-accent shadow-glow sm:size-16">
                 <Crown className="size-7 sm:size-8" />
               </div>
@@ -91,7 +110,13 @@ export function Standings({
                 <div className="mt-1 flex min-w-0 items-center gap-2">
                   <span
                     className={cn(
-                      "min-w-0 truncate font-impact text-2xl uppercase leading-none tracking-tight sm:text-3xl",
+                      "min-w-0 truncate font-impact uppercase leading-none tracking-tight",
+                      // Ring names run to 24 characters. Long ones step down a
+                      // size so they still land whole; short ones keep the
+                      // full swagger.
+                      champion.username.length > 15
+                        ? "text-xl sm:text-2xl"
+                        : "text-2xl sm:text-3xl",
                       // The wordmark sheen, reserved for the top of the ladder.
                       "hb-shiny",
                     )}
@@ -104,20 +129,25 @@ export function Standings({
                     </span>
                   )}
                 </div>
-                <div className="mt-1 truncate font-mono text-xs text-muted">
+                {/* Wraps rather than truncates: this is the hero card, and a
+                    second line costs less than an ellipsis eating the epithet
+                    on the narrowest phones. */}
+                <div className="mt-1 font-mono text-xs text-muted">
                   {champion.name
                     ? `${champion.name} · ${champion.epithet}`
                     : "Unranked fighter"}
                 </div>
               </div>
 
-              <div className="shrink-0 text-right">
-                <div className="font-mono text-xl font-semibold text-text sm:text-2xl">
-                  <Tonnage volumeKg={champion.totalVolumeKg} unit={unit} />
-                </div>
-                <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wide text-muted/70">
+              {/* Phone: a labelled row under a hairline. Desktop: the stacked
+                  right-hand readout it has always been. */}
+              <div className="flex w-full items-baseline justify-between gap-3 border-t border-border/70 pt-3.5 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:gap-0.5 sm:border-0 sm:pt-0">
+                <span className="order-1 font-mono text-[10px] uppercase tracking-wide text-muted/70 sm:order-2">
                   total moved
-                </div>
+                </span>
+                <span className="order-2 font-mono text-xl font-semibold text-text sm:order-1 sm:text-2xl">
+                  <Tonnage volumeKg={champion.totalVolumeKg} unit={unit} />
+                </span>
               </div>
             </div>
           </SpotlightCard>
@@ -160,7 +190,7 @@ export function Standings({
                       )}
                     </div>
                     <div className="truncate font-mono text-xs text-muted">
-                      {e.name ? `${e.name} · ${e.epithet}` : "Unranked fighter"}
+                      <FighterLine entry={e} />
                     </div>
                   </div>
                   <div className="shrink-0 font-mono text-sm font-semibold text-text">
@@ -213,7 +243,7 @@ export function Standings({
                       )}
                     </div>
                     <div className="truncate font-mono text-xs text-muted">
-                      {e.name ? `${e.name} · ${e.epithet}` : "Unranked fighter"}
+                      <FighterLine entry={e} />
                     </div>
                   </div>
                   <div className="shrink-0 text-right">
