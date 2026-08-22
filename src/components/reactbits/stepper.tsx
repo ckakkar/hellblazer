@@ -272,7 +272,7 @@ function StepIndicator({
           },
         }}
         transition={{ duration: 0.3 }}
-        className="flex size-8 items-center justify-center rounded-full border border-border font-mono text-sm font-semibold tabular-nums"
+        className="flex size-8 items-center justify-center rounded-full border border-border font-mono text-sm font-medium tabular-nums"
       >
         {status === "complete" ? (
           <CheckIcon className="size-4 text-bg" />

@@ -218,7 +218,7 @@ function Chip({ tone, children }: { tone: "you" | "next"; children: string }) {
   return (
     <span
       className={cn(
-        "shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider",
+        "shrink-0 rounded-full px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider",
         tone === "you"
           ? "bg-accent text-bg"
           : "border border-accent/40 text-accent",

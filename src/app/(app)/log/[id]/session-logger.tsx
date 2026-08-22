@@ -37,6 +37,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
 import { ExercisePicker } from "@/components/exercise-picker";
+import { CountUp } from "@/components/reactbits/count-up";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import {
@@ -632,7 +633,15 @@ export function SessionLogger({
                 Force
               </div>
               <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
-                {Math.round(totalForce).toLocaleString()}
+                {/* Animates only when it changes, which on this screen means a
+                    set just landed — the move is the information, not the
+                    arrival. */}
+                <CountUp
+                  to={Math.round(totalForce)}
+                  animateOnMount={false}
+                  duration={0.7}
+                  separator=","
+                />
                 <span className="ml-1 font-mono text-[11px] lowercase text-muted">
                   {unit}
                 </span>
@@ -643,7 +652,7 @@ export function SessionLogger({
                 Sets
               </div>
               <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
-                {totalSets}
+                <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
               </div>
             </div>
             <div

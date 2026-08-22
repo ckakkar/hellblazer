@@ -19,3 +19,13 @@ Local changes to every file here:
 
 Only `motion` is required; no GSAP, three.js, or OGL. Keep it that way unless
 the WebGL cost is deliberately accepted.
+
+`count-up.tsx` additionally:
+
+- Renders the formatted target as real children when `animateOnMount={false}`,
+  so a server-rendered headline figure is never blank before hydration. With
+  the intro count enabled it stays empty on the server, because painting the
+  final number first would make hydration snap it back to zero.
+- Takes `animateOnMount`. For a value that changes while you watch it (the live
+  tonnage on `/log/[id]`), the move is the information, not the arrival, so the
+  spring is seeded at the current value and only runs on change.

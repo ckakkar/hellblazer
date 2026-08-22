@@ -136,7 +136,7 @@ export function Standings({
                 <span className="order-1 font-mono text-[10px] uppercase tracking-wide text-muted/70 sm:order-2">
                   total moved
                 </span>
-                <span className="order-2 font-mono text-xl font-semibold text-text sm:order-1 sm:text-2xl">
+                <span className="order-2 font-mono text-xl font-medium text-text sm:order-1 sm:text-2xl">
                   <Tonnage volumeKg={champion.totalVolumeKg} unit={unit} />
                 </span>
               </div>
@@ -182,7 +182,7 @@ export function Standings({
                       <FighterLine entry={e} />
                     </div>
                   </div>
-                  <div className="shrink-0 font-mono text-sm font-semibold text-text">
+                  <div className="shrink-0 font-mono text-sm font-medium text-text">
                     <Tonnage
                       volumeKg={e.totalVolumeKg}
                       unit={unit}

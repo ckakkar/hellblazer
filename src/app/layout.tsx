@@ -21,7 +21,9 @@ const archivo = Archivo({
 const plexMono = IBM_Plex_Mono({
   variable: "--font-plex-mono",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  // 400 and 500 only. Plex Mono is not variable, so every extra cut is another
+  // five subset files on the wire; nothing in the app renders mono above 500.
+  weight: ["400", "500"],
 });
 
 const bigShoulders = Big_Shoulders({

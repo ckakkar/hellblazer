@@ -4,8 +4,19 @@ import { useInView, useMotionValue, useReducedMotion, useSpring } from "motion/r
 import { useCallback, useEffect, useRef } from "react";
 
 /**
- * React Bits `CountUp`: springs a number up from `from` to `to` when it
- * scrolls into view. See ./README.md for provenance and local changes.
+ * React Bits `CountUp`: springs a number from `from` to `to`. See ./README.md
+ * for provenance and local changes.
+ *
+ * Two local fixes beyond the usual re-theming:
+ *
+ * 1. **Server-safe.** Upstream renders an empty `<span>` and only writes the
+ *    number in an effect, so on a server-rendered page the figure is blank
+ *    until hydration. That's fine for a decorative stat and bad for a headline
+ *    one, so the formatted target is rendered as real children too.
+ * 2. **`animateOnMount`.** For a value that changes while you watch it — the
+ *    live tonnage on the workout logger — counting from zero on first paint is
+ *    wrong; what carries information is the *move* when a set lands. Passing
+ *    `false` seeds the spring at the current value and animates only on change.
  */
 interface CountUpProps {
   to: number;
@@ -16,6 +27,8 @@ interface CountUpProps {
   className?: string;
   startWhen?: boolean;
   separator?: string;
+  /** false = don't count up on first paint; animate only when `to` changes. */
+  animateOnMount?: boolean;
   onStart?: () => void;
   onEnd?: () => void;
 }
@@ -29,12 +42,15 @@ export function CountUp({
   className = "",
   startWhen = true,
   separator = "",
+  animateOnMount = true,
   onStart,
   onEnd,
 }: CountUpProps) {
   const ref = useRef<HTMLSpanElement>(null);
   const reduceMotion = useReducedMotion();
-  const motionValue = useMotionValue(direction === "down" ? to : from);
+  const motionValue = useMotionValue(
+    animateOnMount ? (direction === "down" ? to : from) : to,
+  );
 
   const damping = 20 + 40 * (1 / duration);
   const stiffness = 100 * (1 / duration);
@@ -70,13 +86,15 @@ export function CountUp({
   // Reduced motion: paint the final number and skip the spring entirely.
   useEffect(() => {
     if (!ref.current) return;
-    ref.current.textContent = formatValue(
-      reduceMotion ? to : direction === "down" ? to : from,
-    );
-  }, [from, to, direction, formatValue, reduceMotion]);
+    if (reduceMotion || !animateOnMount) {
+      ref.current.textContent = formatValue(to);
+      return;
+    }
+    ref.current.textContent = formatValue(direction === "down" ? to : from);
+  }, [from, to, direction, formatValue, reduceMotion, animateOnMount]);
 
   useEffect(() => {
-    if (reduceMotion || !isInView || !startWhen) return;
+    if (reduceMotion || !isInView || !startWhen || !animateOnMount) return;
     onStart?.();
     const timeoutId = setTimeout(() => {
       motionValue.set(direction === "down" ? from : to);
@@ -101,7 +119,19 @@ export function CountUp({
     onEnd,
     duration,
     reduceMotion,
+    animateOnMount,
   ]);
+
+  // Live values: follow `to` after mount without replaying the intro.
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (animateOnMount) return;
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    motionValue.set(to);
+  }, [to, animateOnMount, motionValue]);
 
   useEffect(() => {
     if (reduceMotion) return;
@@ -111,7 +141,14 @@ export function CountUp({
     return () => unsubscribe();
   }, [springValue, formatValue, reduceMotion]);
 
-  return <span className={className} ref={ref} />;
+  // Only seed server-side content for the non-animating case. When the intro
+  // count is wanted, painting the final figure first would make hydration snap
+  // it back to zero before counting — worse than the brief blank it replaces.
+  return (
+    <span className={className} ref={ref}>
+      {animateOnMount ? null : formatValue(to)}
+    </span>
+  );
 }
 
 export default CountUp;
