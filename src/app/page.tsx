@@ -118,7 +118,7 @@ export default async function Landing({
           <section
             className="hb-reveal relative"
             style={{ animationDelay: "180ms" }}
-            aria-label={`The strength ladder: rank ${TIERS.length} down to rank 1`}
+            aria-label={`The bill: ${TIERS.length} fighters, main event first down to rank 1`}
           >
             {/* The bill. Ten names in bout order, top of the card first — the
                 artefact this whole app is themed on. The old version wrapped it
