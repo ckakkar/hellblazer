@@ -24,7 +24,6 @@ import {
   RefreshCw,
   Repeat2,
   Search,
-  Timer,
   Trash2,
   TriangleAlert,
   Trophy,
@@ -600,9 +599,9 @@ export function SessionLogger({
               title: e.target.value.trim() || null,
             })
           }
-          className="w-full bg-transparent font-display text-2xl font-semibold tracking-tight text-text focus:outline-none"
+          className="w-full bg-transparent font-impact text-3xl uppercase leading-none tracking-tight text-text focus:outline-none"
         />
-        <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-muted">
+        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted">
           <input
             type="date"
             defaultValue={session.date}
@@ -613,42 +612,57 @@ export function SessionLogger({
             }
             className="rounded-md border border-border bg-surface-2 px-2 py-1 font-mono text-xs text-text focus:border-accent/60 focus:outline-none"
           />
-          <span
-            className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-accent"
-            title="Workout time"
-            aria-label={`Elapsed ${formatElapsed(elapsed)}`}
-          >
-            <Timer className="size-3.5" />
-            {formatElapsed(elapsed)}
-          </span>
           {exercises.length > 0 && (
             <span className="font-mono text-xs text-muted">
-              {doneCount}/{exercises.length} exercises done
+              {doneCount}/{exercises.length} done
             </span>
           )}
         </div>
 
-        {/* Live power HUD */}
-        <div className="mt-3 flex items-stretch gap-3">
-          <div className="flex-1 overflow-hidden rounded-lg border border-border bg-surface px-4 py-3">
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-              Total force
+        {/* Live readout. Three figures side by side under one rule rather than
+            two bordered boxes: mid-set this gets glanced at, not read, so the
+            numbers sit on a shared baseline where the eye can take all three at
+            once. The clock is the only accent — it's the thing that's moving. */}
+        <div className="mt-4">
+          <div className="h-0.5 bg-text/85" />
+          <div className="mt-px h-px bg-border" />
+          <div className="flex items-end justify-between gap-3 py-3">
+            <div className="min-w-0">
+              <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
+                Force
+              </div>
+              <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
+                {Math.round(totalForce).toLocaleString()}
+                <span className="ml-1 font-mono text-[11px] lowercase text-muted">
+                  {unit}
+                </span>
+              </div>
             </div>
-            <div className="mt-0.5 font-impact text-[2rem] leading-none text-accent tabular-nums">
-              {Math.round(totalForce).toLocaleString()}
-              <span className="ml-1 text-base text-muted">{unit}</span>
+            <div className="min-w-0 text-right">
+              <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
+                Sets
+              </div>
+              <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
+                {totalSets}
+              </div>
+            </div>
+            <div
+              className="min-w-0 text-right"
+              title="Workout time"
+              aria-label={`Elapsed ${formatElapsed(elapsed)}`}
+            >
+              <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
+                Clock
+              </div>
+              <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-accent">
+                {formatElapsed(elapsed)}
+              </div>
             </div>
           </div>
-          <div className="rounded-lg border border-border bg-surface px-4 py-3 text-right">
-            <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-              Sets
-            </div>
-            <div className="mt-0.5 font-impact text-[2rem] leading-none text-text tabular-nums">
-              {totalSets}
-            </div>
-          </div>
+          <div className="h-px bg-border" />
+          <div className="mt-px h-0.5 bg-text/85" />
         </div>
-        <p className="mt-2 text-[11px] font-medium uppercase tracking-[0.18em] text-accent/70">
+        <p className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
           {hype}
         </p>
 
@@ -695,8 +709,11 @@ export function SessionLogger({
         ) : null}
       </div>
 
-      {/* Exercise queue */}
-      <div className="grid gap-3">
+      {/* Exercise queue. Finished work and locked work are list rows; only the
+          exercise you're actually on is lifted into a block. Previously all
+          three states were similarly-sized cards, so the queue had no shape and
+          you had to read it to find your place. */}
+      <div className="border-t border-border">
         {exercises.map((ex, i) => {
           const isDone = completed.has(ex.seId);
           const isCurrent = i === currentIndex;
@@ -717,17 +734,14 @@ export function SessionLogger({
               <button
                 key={ex.seId}
                 onClick={() => setActiveSeId(ex.seId)}
-                className="group flex items-center gap-3 rounded-lg border border-border bg-surface p-4 text-left transition-colors hover:border-accent/40"
+                className="group flex w-full items-baseline gap-3 border-b border-border py-3 text-left transition-colors hover:bg-surface/60"
               >
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent/10 text-accent">
-                  <Check className="size-4" />
-                </span>
+                <Check className="size-3.5 shrink-0 translate-y-0.5 text-accent" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-medium text-text">
+                    <span className="truncate font-display text-[15px] uppercase tracking-wide text-muted">
                       {ex.name}
                     </span>
-                    <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
                     {advanceBadge}
                     {hasPR && (
                       <Badge variant="accent" className="gap-1">
@@ -736,18 +750,18 @@ export function SessionLogger({
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-0.5 truncate font-mono text-xs text-muted">
+                  <div className="mt-0.5 truncate font-mono text-[11px] tabular-nums text-muted">
                     {workingSets.length > 0
                       ? workingSets
                           .map(
                             (s) =>
                               `${trimNum(Number(s.weight) || 0)}×${s.reps ?? 0}`,
                           )
-                          .join(" · ")
+                          .join("  ·  ")
                       : "skipped"}
                   </div>
                 </div>
-                <Pencil className="size-4 shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100" />
+                <Pencil className="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100" />
               </button>
             );
           }
@@ -756,13 +770,18 @@ export function SessionLogger({
             return (
               <div
                 key={ex.seId}
-                className="rounded-lg border border-accent/40 bg-accent/[0.04] p-4 shadow-glow"
+                className="my-3 rounded-lg border border-accent/40 bg-accent/[0.05] p-4"
               >
-                <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-accent">
-                  Up next · {i + 1} of {exercises.length}
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
+                    On the bar
+                  </span>
+                  <span className="font-mono text-[10px] tabular-nums text-muted">
+                    {i + 1} / {exercises.length}
+                  </span>
                 </div>
-                <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                  <span className="text-base font-semibold text-text">
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="font-impact text-2xl uppercase leading-none text-text">
                     {ex.name}
                   </span>
                   <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
@@ -801,24 +820,18 @@ export function SessionLogger({
             <div
               key={ex.seId}
               className={cn(
-                "flex items-center gap-3 rounded-lg border border-border bg-surface/50 p-4",
-                isLocked && "opacity-55",
+                "flex items-baseline gap-3 border-b border-border py-3",
+                isLocked && "opacity-45",
               )}
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border text-muted">
-                <Lock className="size-3.5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm text-text">{ex.name}</span>
-                  <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
-                  {advanceBadge}
-                </div>
-                <div className="mt-0.5 text-xs text-muted">
-                  Finish the current exercise first
-                </div>
+              <Lock className="size-3 shrink-0 translate-y-0.5 text-muted" />
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
+                  {ex.name}
+                </span>
+                {advanceBadge}
               </div>
-              <span className="shrink-0 font-mono text-xs text-muted">
+              <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
                 {i + 1}
               </span>
             </div>
@@ -835,17 +848,15 @@ export function SessionLogger({
       {/* Advance: bonus movement beyond the program, this session only */}
       <button
         onClick={() => setPicker(true)}
-        className="mt-4 flex w-full items-center gap-3 rounded-lg border border-dashed border-accent/40 bg-accent/[0.04] px-4 py-3.5 text-left transition-colors hover:border-accent/60 hover:bg-accent/[0.07]"
+        className="mt-4 flex w-full items-center gap-3 rounded-lg border border-dashed border-border px-4 py-3.5 text-left transition-colors hover:border-accent/50 hover:bg-surface"
       >
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-accent/40 bg-accent/10 text-accent">
-          <ChevronsUp className="size-4" />
-        </span>
+        <ChevronsUp className="size-4 shrink-0 text-muted" />
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span className="font-display text-sm font-semibold text-text">
+            <span className="font-display text-[15px] uppercase tracking-wide text-text">
               Advance
             </span>
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent/70">
+            <span className="font-mono text-[10px] tracking-[0.2em] text-muted">
               前進
             </span>
           </div>
@@ -1233,10 +1244,10 @@ function SetRow({
       )}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-1.5 font-mono text-xs font-medium text-muted">
+        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
           {set.isWarmup ? "Warm-up" : `Set ${index + 1}`}
           {isPR && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-accent px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-bg">
+            <span className="inline-flex items-center gap-1 rounded-[2px] bg-accent px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-bg">
               <Zap className="size-2.5" />
               PR
             </span>
@@ -1284,8 +1295,8 @@ function SetRow({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <div className="mb-1 text-[10px] uppercase tracking-wide text-muted">
-            Weight ({unit})
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+            Weight · {unit}
           </div>
           <NumberStepper
             ariaLabel="weight"
@@ -1296,7 +1307,7 @@ function SetRow({
           />
         </div>
         <div>
-          <div className="mb-1 text-[10px] uppercase tracking-wide text-muted">
+          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
             Reps
           </div>
           <NumberStepper

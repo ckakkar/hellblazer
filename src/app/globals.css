@@ -35,9 +35,13 @@
 
   --radius-lg: 0.625rem;
 
+  /* A printed-ink accent doesn't bloom. This used to throw a 30px halo of
+     accent behind every primary button and active nav item, which is the one
+     effect that most reliably reads as neon; it's now a tight edge plus a
+     shallow lift, so the glow still marks the live thing without haloing. */
   --shadow-glow:
-    0 0 0 1px rgb(var(--accent-rgb) / 0.22),
-    0 0 30px -8px rgb(var(--accent-rgb) / 0.6);
+    0 0 0 1px rgb(var(--accent-rgb) / 0.18),
+    0 1px 10px -6px rgb(var(--accent-rgb) / 0.35);
 
   /* Premium depth: a faint glass top-edge highlight + a soft layered drop, so
      surfaces read as gently raised over the near-black base. */

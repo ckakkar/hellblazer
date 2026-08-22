@@ -63,7 +63,7 @@ export function SessionStarter({
           pending && chosen === "freeform" && "border-accent/60",
         )}
       >
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted">
           {pending && chosen === "freeform" ? (
             <Loader2 className="size-5 animate-spin" />
           ) : (
@@ -71,7 +71,9 @@ export function SessionStarter({
           )}
         </div>
         <div>
-          <div className="text-sm font-medium text-text">Freeform battle</div>
+          <div className="font-display text-[15px] uppercase tracking-wide text-text">
+            Freeform battle
+          </div>
           <div className="text-xs text-muted">
             Start empty and add exercises as you go
             {hasActiveProgram && (
@@ -86,7 +88,7 @@ export function SessionStarter({
 
       {templates.length > 0 && (
         <div>
-          <div className="mb-2 mt-2 px-1 text-xs font-medium uppercase tracking-wide text-muted">
+          <div className="mb-2 mt-2 px-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
             {hasActiveProgram ? "From your block" : "From a template"}
           </div>
           <div className="grid gap-3">
@@ -112,7 +114,7 @@ export function SessionStarter({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate text-sm font-medium text-text">
+                        <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
                           {t.name}
                         </span>
                         {t.day_label && (

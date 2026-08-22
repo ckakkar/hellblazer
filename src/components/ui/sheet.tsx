@@ -120,7 +120,9 @@ export function Sheet({
           {/* Grabber handle: bottom-sheet affordance on mobile */}
           <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="text-sm font-medium text-text">{title}</h2>
+            <h2 className="truncate font-display text-lg uppercase tracking-wide text-text">
+              {title}
+            </h2>
             <button
               type="button"
               onClick={onClose}
