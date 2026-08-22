@@ -373,6 +373,18 @@ label {
   .hb-phrase:first-child {
     opacity: 1;
   }
+
+  /* Scroll-revealed copy must never be left dimmed for someone who has asked
+     for less motion. ScrollReveal already branches to a static paragraph in JS,
+     but a hook that resolves a tick late would leave real body copy sitting at
+     base opacity in the meantime — so the guarantee lives in CSS, where it
+     cannot fail to apply. */
+  .hb-scroll-reveal,
+  .hb-scroll-reveal span {
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
 }
 
 /* ── The bootloader sheet ─────────────────────────────────────────────────

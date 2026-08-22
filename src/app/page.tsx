@@ -3,6 +3,7 @@ import { getUser } from "@/lib/auth";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { BlurText } from "@/components/reactbits/blur-text";
 import { SplitFlapText } from "@/components/reactbits/split-flap-text";
+import { ScrollReveal } from "@/components/reactbits/scroll-reveal";
 import { TIERS } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { Flame } from "lucide-react";
@@ -170,10 +171,15 @@ export default async function Landing({
               })}
             </ol>
 
-            <p className="mt-4 text-[13px] leading-6 text-muted">
-              You start off the card entirely. Log real sets, get weighed in,
-              and take a rung off somebody.
-            </p>
+            {/* Blur off here: this sits at the very bottom of a long page and
+                the passage is short, so the fade alone carries it. */}
+            <ScrollReveal
+              enableBlur={false}
+              baseRotation={0}
+              className="mt-4 text-[13px] leading-6 text-muted"
+            >
+              {`You start off the card entirely. Log real sets, get weighed in, and take a rung off somebody.`}
+            </ScrollReveal>
           </section>
         </div>
 
