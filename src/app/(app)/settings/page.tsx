@@ -1,7 +1,5 @@
 import { Download, LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
 import { getUnit, getAccent } from "@/lib/settings";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
@@ -9,14 +7,12 @@ import { getEvalGate } from "@/lib/data/evaluation";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { getNotificationState } from "@/lib/data/push";
 import { signOut } from "@/lib/actions/auth";
-import { PageHeader, SectionLabel } from "@/components/ui/page-header";
+import { getTier } from "@/lib/tiers";
+import { ProfileIdentity } from "@/components/tier/profile-identity";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  SettingsGroup,
+  SettingsRow,
+} from "@/components/ui/settings-list";
 import { UnitToggle } from "./unit-toggle";
 import { ThemeSelector } from "./theme-selector";
 import { ProfileDetails } from "./profile-details";
@@ -46,16 +42,38 @@ export default async function ProfilePage() {
     ? { id: active.program.id, name: active.program.name }
     : null;
 
+  // Google is the only sign-in method, so the account picture and name are the
+  // best identity we have; the profile row overrides them once it's filled in.
+  const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  const avatarUrl =
+    typeof meta.avatar_url === "string"
+      ? meta.avatar_url
+      : typeof meta.picture === "string"
+        ? meta.picture
+        : null;
+  const googleName =
+    typeof meta.full_name === "string"
+      ? meta.full_name
+      : typeof meta.name === "string"
+        ? meta.name
+        : null;
+
   return (
     <div className="mx-auto max-w-2xl">
-      <PageHeader
-        title="Profile"
-        subtitle="Your rank, your settings, your reset switches."
+      <ProfileIdentity
+        name={profile?.display_name ?? googleName}
+        ringName={profile?.username ?? null}
+        email={user?.email ?? null}
+        avatarUrl={avatarUrl}
+        tier={getTier(profile?.tier)}
+        className="mb-8"
       />
 
-      <div className="grid gap-6">
+      <div className="grid gap-7">
         <section>
-          <SectionLabel>Strength rank</SectionLabel>
+          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+            Strength rank
+          </h2>
           <TierEvaluator
             currentTierKey={profile?.tier ?? null}
             rationale={profile?.tier_rationale ?? null}
@@ -64,24 +82,17 @@ export default async function ProfilePage() {
           />
         </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>About you</CardTitle>
-            <CardDescription>
-              Your ring name for King of the Hill, plus the details that
-              calibrate your strength rank.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5">
-            <div className="grid gap-1.5">
-              <span className="text-xs font-medium text-muted">Ring name</span>
-              <UsernameField current={profile?.username ?? null} />
-            </div>
+        <SettingsGroup
+          label="About you"
+          caption="Your ring name shows on King of the Hill. The rest calibrates your strength rank."
+        >
+          <SettingsRow label="Ring name">
+            <UsernameField current={profile?.username ?? null} />
+          </SettingsRow>
+          <SettingsRow label="Details">
             <ProfileDetails
               displayName={profile?.display_name ?? null}
-              sex={
-                (profile?.sex as "male" | "female" | "other" | null) ?? null
-              }
+              sex={(profile?.sex as "male" | "female" | "other" | null) ?? null}
               age={
                 profile?.birth_year
                   ? new Date().getFullYear() - profile.birth_year
@@ -89,110 +100,87 @@ export default async function ProfilePage() {
               }
               heightCm={profile?.height_cm ?? null}
             />
-          </CardContent>
-        </Card>
+          </SettingsRow>
+        </SettingsGroup>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Accent theme</CardTitle>
-            <CardDescription>
-              Fly the colours of a Kengan Association company. It runs through
-              the whole app.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <SettingsGroup
+          label="Preferences"
+          caption="Weights are always stored in kg and converted for display."
+        >
+          <SettingsRow label="Units" control={<UnitToggle current={unit} />} />
+          <SettingsRow
+            label="Accent"
+            hint="Fly the colours of a Kengan Association company."
+          >
             <ThemeSelector current={accent} />
-          </CardContent>
-        </Card>
+          </SettingsRow>
+        </SettingsGroup>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Units</CardTitle>
-            <CardDescription>
-              Weights are always stored in kg and converted for display.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <UnitToggle current={unit} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Notifications</CardTitle>
-            <CardDescription>
-              A daily push reminder when your programmed workout is due.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+        <SettingsGroup
+          label="Notifications"
+          caption="A daily push reminder when your programmed workout is due."
+        >
+          <SettingsRow label="Daily reminder">
             <NotificationsManager
               reminderHour={notifications.reminderHour}
               vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
             />
-          </CardContent>
-        </Card>
+          </SettingsRow>
+        </SettingsGroup>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Bodyweight log</CardTitle>
-            <CardDescription>
-              Track bodyweight over time: it feeds your strength evaluation.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
+        <section>
+          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+            Bodyweight
+          </h2>
+          <div className="grid gap-4 rounded-lg border border-border bg-surface p-4">
             <BodyweightChart logs={logs} unit={unit} />
             <BodyweightManager logs={logs} unit={unit} />
-          </CardContent>
-        </Card>
+          </div>
+          <p className="px-1 pt-2 text-[12px] leading-5 text-muted">
+            Tracked over time, and fed into your strength evaluation.
+          </p>
+        </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Export your data</CardTitle>
-            <CardDescription>
-              Download every logged set as a CSV, weights in kg, yours to keep.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <a
-              href="/api/export"
-              download
-              className={cn(buttonVariants({ variant: "secondary" }))}
-            >
-              <Download className="size-4" />
-              Export CSV
-            </a>
-          </CardContent>
-        </Card>
-
-        <Card className="border-danger/20">
-          <CardHeader>
-            <CardTitle>Reset &amp; danger zone</CardTitle>
-            <CardDescription>
-              Restart your current block or wipe your logged history.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <DangerZone activeProgram={activeProgram} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Account</CardTitle>
-            <CardDescription>{user?.email}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-lg border border-danger/30 px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-danger/10"
+        <SettingsGroup label="Account">
+          <SettingsRow
+            label="Export your data"
+            hint="Every logged set as a CSV, weights in kg."
+            control={
+              <a
+                href="/api/export"
+                download
+                className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text transition-colors hover:border-accent/40 hover:text-accent"
               >
-                <LogOut className="size-4" />
-                Sign out
-              </button>
-            </form>
-          </CardContent>
-        </Card>
+                <Download className="size-4" />
+                Export
+              </a>
+            }
+          />
+          <SettingsRow
+            label="Signed in"
+            hint={user?.email ?? undefined}
+            control={
+              <form action={signOut}>
+                <button
+                  type="submit"
+                  className="inline-flex items-center gap-2 rounded-lg border border-danger/30 px-3 py-2 text-sm text-danger transition-colors hover:bg-danger/10"
+                >
+                  <LogOut className="size-4" />
+                  Sign out
+                </button>
+              </form>
+            }
+          />
+        </SettingsGroup>
+
+        <section>
+          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-danger/80">
+            Danger zone
+          </h2>
+          <div className="rounded-lg border border-danger/25 bg-surface p-4">
+            <DangerZone activeProgram={activeProgram} />
+          </div>
+        </section>
       </div>
     </div>
   );

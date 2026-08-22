@@ -12,7 +12,7 @@ import { LadderStanding } from "@/components/tier/ladder-standing";
 import { OneRepMaxBoard } from "@/components/one-rep-max-board";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ChartCard } from "@/components/ui/chart-card";
-import { StatCard } from "@/components/ui/stat-card";
+import { Tape, TapeRow } from "@/components/ui/tape";
 import {
   OneRepMaxChart,
   VolumeBarsChart,
@@ -75,7 +75,14 @@ export default async function ProgressPage({
             body="Log some working sets and your 1RM and volume trends will appear here."
           />
         ) : (
-          <ExerciseTab exerciseId={selectedExercise} unit={unit} />
+          <ExerciseTab
+            exerciseId={selectedExercise}
+            exerciseName={
+              loggedExercises.find((e) => e.exercise_id === selectedExercise)
+                ?.exercise_name ?? "This lift"
+            }
+            unit={unit}
+          />
         )
       ) : (
         <MuscleTab muscle={selectedMuscle} unit={unit} />
@@ -93,33 +100,45 @@ export default async function ProgressPage({
 
 async function ExerciseTab({
   exerciseId,
+  exerciseName,
   unit,
 }: {
   exerciseId: string;
+  exerciseName: string;
   unit: "kg" | "lb";
 }) {
   const { points, pr } = await getExerciseProgression(exerciseId);
 
   return (
     <div className="grid gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard
+      {/* A lift's personal records are a tale of the tape by any other name, so
+          they're set as one: the lift is named, and the records read down a
+          column instead of sitting in four equal boxes. */}
+      <Tape title={`${exerciseName} · personal records`}>
+        <TapeRow
+          label="Best 1RM"
+          value={trimNum(toDisplayWeight(pr.bestEst1rm, unit))}
+          unit={unit}
+          note="estimated, Epley"
+        />
+        <TapeRow
           label="Heaviest"
           value={trimNum(toDisplayWeight(pr.topWeight, unit))}
           unit={unit}
+          note="single working set"
         />
-        <StatCard
-          label="Best est. 1RM"
-          value={trimNum(toDisplayWeight(pr.bestEst1rm, unit))}
-          unit={unit}
-          highlight
+        <TapeRow
+          label="Best set"
+          value={formatVolume(pr.bestSetVolume, unit).split(" ")[0]}
+          unit={formatVolume(pr.bestSetVolume, unit).split(" ")[1]}
+          note="weight × reps"
         />
-        <StatCard
-          label="Best set volume"
-          value={formatVolume(pr.bestSetVolume, unit)}
+        <TapeRow
+          label="Sessions"
+          value={pr.sessionsLogged}
+          note="with this lift logged"
         />
-        <StatCard label="Sessions" value={pr.sessionsLogged} />
-      </div>
+      </Tape>
 
       <ChartCard
         title="Estimated 1RM"
@@ -157,23 +176,25 @@ async function MuscleTab({
     <div className="grid gap-4">
       {hasMuscleData ? (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-            <StatCard
-              label="This week"
+          <Tape title={`${MUSCLE_LABEL[muscle]} · this week`}>
+            <TapeRow
+              label="Sets"
               value={trimNum(Math.round((lastWeek?.sets ?? 0) * 10) / 10)}
-              unit="sets"
-              highlight={isWeakPoint(muscle)}
+              note="working sets this week"
             />
-            <StatCard
+            <TapeRow
               label="12-wk avg"
               value={trimNum(Math.round(avgSets * 10) / 10)}
               unit="sets/wk"
+              note="your running rate"
             />
-            <StatCard
-              label="This week vol"
-              value={formatVolume(lastWeek?.volume ?? 0, unit)}
+            <TapeRow
+              label="Tonnage"
+              value={formatVolume(lastWeek?.volume ?? 0, unit).split(" ")[0]}
+              unit={formatVolume(lastWeek?.volume ?? 0, unit).split(" ")[1]}
+              note="this week"
             />
-          </div>
+          </Tape>
 
           <ChartCard
             title={`${MUSCLE_LABEL[muscle]}: weekly sets & volume`}
