@@ -82,7 +82,7 @@ export function ProgramDetail({
               await updateProgram({ id: program.id, name: val });
             });
         }}
-        className="mb-5 w-full bg-transparent font-display text-2xl font-semibold tracking-tight text-text focus:outline-none"
+        className="mb-5 w-full bg-transparent font-impact text-3xl uppercase leading-none text-text focus:outline-none"
       />
 
       <ProgramProgressCard progress={progress} />

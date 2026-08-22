@@ -122,7 +122,9 @@ export function TemplatesManager({
                 className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
-                  <div className="text-sm font-medium text-text">{p.name}</div>
+                  <div className="font-display text-[15px] uppercase tracking-wide text-text">
+                    {p.name}
+                  </div>
                   <p className="mt-0.5 text-xs leading-5 text-muted">
                     {p.description}
                   </p>
@@ -295,7 +297,7 @@ function TemplateCard({
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate text-sm font-medium text-text">
+              <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
                 {template.name}
               </span>
               {template.day_label && (

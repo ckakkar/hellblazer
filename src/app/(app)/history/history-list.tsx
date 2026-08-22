@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { CalendarDays, ChevronRight, Search } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { CalendarDays, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +80,10 @@ export function HistoryList({
         </Select>
       </div>
 
-      <div className="grid gap-3">
+      {/* The full record. A history screen is a table you read down — the
+          previous card-per-session layout made every row the same weight and
+          buried the numbers you actually scan for. */}
+      <div className="border-t border-border">
         {filtered.map((s) => (
           <Link
             key={s.session_id}
@@ -90,36 +92,29 @@ export function HistoryList({
                 ? `/history/${s.session_id}`
                 : `/log/${s.session_id}`
             }
+            className="group flex items-baseline gap-3 border-b border-border py-3 transition-colors hover:bg-surface/60"
           >
-            <Card className="flex items-center gap-4 p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99] active:border-accent/40">
-              <div className="flex size-11 shrink-0 flex-col items-center justify-center rounded-lg bg-surface-2 font-mono">
-                <span className="text-[10px] uppercase text-muted">
-                  {s.session_date
-                    ? format(parseISO(s.session_date), "MMM")
-                    : ""}
-                </span>
-                <span className="text-sm font-semibold text-text">
-                  {s.session_date ? format(parseISO(s.session_date), "d") : ""}
-                </span>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate text-sm font-medium text-text">
-                    {s.title ?? "Session"}
-                  </span>
-                  {!s.finished_at && (
-                    <Badge variant="accent">In progress</Badge>
-                  )}
-                  {!s.template_id && <Badge variant="muted">freeform</Badge>}
-                </div>
-                <div className="mt-0.5 font-mono text-xs text-muted">
-                  {s.working_sets ?? 0} sets ·{" "}
-                  {formatVolume(Number(s.total_volume ?? 0), unit)}
-                  {s.duration_min ? ` · ${s.duration_min}min` : ""}
-                </div>
-              </div>
-              <ChevronRight className="size-4 shrink-0 text-muted" />
-            </Card>
+            <span className="w-14 shrink-0 font-mono text-[11px] uppercase tabular-nums text-muted">
+              {s.session_date
+                ? format(parseISO(s.session_date), "dd MMM")
+                : "--"}
+            </span>
+            <span className="flex min-w-0 flex-1 items-baseline gap-2">
+              <span className="truncate font-display text-[15px] uppercase tracking-wide text-text transition-colors group-hover:text-accent">
+                {s.title ?? "Session"}
+              </span>
+              {!s.finished_at && <Badge variant="accent">Live</Badge>}
+              {!s.template_id && <Badge variant="muted">freeform</Badge>}
+            </span>
+            <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
+              {s.working_sets ?? 0} sets
+            </span>
+            <span className="hidden w-20 shrink-0 text-right font-mono text-[11px] tabular-nums text-text sm:inline">
+              {formatVolume(Number(s.total_volume ?? 0), unit)}
+            </span>
+            <span className="hidden w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted md:inline">
+              {s.duration_min ? `${s.duration_min}m` : "—"}
+            </span>
           </Link>
         ))}
         {filtered.length === 0 && (

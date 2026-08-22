@@ -1,6 +1,7 @@
 "use client";
 
 import { Crown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { CountUp } from "@/components/reactbits/count-up";
 import { SpotlightCard } from "@/components/reactbits/spotlight-card";
 import type { LeaderboardEntry } from "@/lib/data/leaderboard";
@@ -87,14 +88,6 @@ export function Standings({
             className="rounded-xl border border-accent/25 bg-surface shadow-card"
             spotlightOpacity={0.13}
           >
-            <div
-              aria-hidden
-              className="pointer-events-none absolute -right-16 -top-16 size-52 rounded-full opacity-60 blur-[70px]"
-              style={{
-                background:
-                  "radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.28), transparent)",
-              }}
-            />
             {/* Wraps on phones: the tonnage drops to its own row rather than
                 stealing width from the ring name, which is the one thing on
                 this card that must never be clipped. */}
@@ -124,9 +117,7 @@ export function Standings({
                     {champion.username}
                   </span>
                   {isMe(champion) && (
-                    <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-bg">
-                      You
-                    </span>
+                    <Badge variant="accent">You</Badge>
                   )}
                 </div>
                 {/* Wraps rather than truncates: this is the hero card, and a
@@ -184,9 +175,7 @@ export function Standings({
                         {e.username}
                       </span>
                       {isMe(e) && (
-                        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-bg">
-                          You
-                        </span>
+                        <Badge variant="accent">You</Badge>
                       )}
                     </div>
                     <div className="truncate font-mono text-xs text-muted">
@@ -209,56 +198,49 @@ export function Standings({
 
       {/* ── The rest of the ladder ─────────────────────────────────────── */}
       {rest.length > 0 && (
-        <ol className="flex flex-col gap-2">
-          {rest.map((e, i) => {
-            const place = i + 4;
-            return (
-              <SpotlightCard
-                as="li"
-                key={`${e.username}-${place}`}
-                className={cn(
-                  "hb-reveal min-w-0 rounded-xl border bg-surface shadow-card transition-colors",
-                  isMe(e)
-                    ? "border-accent/50 bg-accent/[0.05]"
-                    : "border-border hover:border-accent/30",
-                )}
-                // Cap the stagger so row 40 doesn't wait a second and a half.
-                style={{ animationDelay: `${Math.min(240 + i * 35, 700)}ms` }}
-              >
-                <div className="relative flex items-center gap-3.5 p-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2">
-                    <span className="font-impact text-base leading-none tabular-nums text-muted/70">
-                      {place}
+        <>
+          {/* Below the podium a leaderboard is a standings table, so it's set
+              as one. Forty bordered cards, each with its own entrance delay,
+              made the tail of the ladder harder to read than the top of it. */}
+          <div className="flex items-baseline justify-between gap-2 border-b border-text/85 px-1 pb-2">
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+              The rest of the ladder
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+              Total moved
+            </span>
+          </div>
+          <ol>
+            {rest.map((e, i) => {
+              const place = i + 4;
+              return (
+                <li
+                  key={`${e.username}-${place}`}
+                  className={cn(
+                    "flex items-baseline gap-3 border-b border-border px-1 py-2.5 transition-colors",
+                    isMe(e) ? "bg-accent/[0.06]" : "hover:bg-surface/60",
+                  )}
+                >
+                  <span className="w-6 shrink-0 font-mono text-[11px] tabular-nums text-muted">
+                    {place}
+                  </span>
+                  <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                    <span className="min-w-0 truncate font-display text-[15px] uppercase tracking-wide text-text">
+                      {e.username}
                     </span>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="min-w-0 truncate text-sm font-semibold text-text">
-                        {e.username}
-                      </span>
-                      {isMe(e) && (
-                        <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-bg">
-                          You
-                        </span>
-                      )}
-                    </div>
-                    <div className="truncate font-mono text-xs text-muted">
-                      <FighterLine entry={e} />
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-mono text-sm font-semibold text-text">
-                      <Tonnage volumeKg={e.totalVolumeKg} unit={unit} />
-                    </div>
-                    <div className="font-mono text-[10px] uppercase tracking-wide text-muted/70">
-                      total moved
-                    </div>
-                  </div>
-                </div>
-              </SpotlightCard>
-            );
-          })}
-        </ol>
+                    {isMe(e) && <Badge variant="accent">You</Badge>}
+                  </span>
+                  <span className="hidden min-w-0 max-w-[38%] truncate font-mono text-[11px] text-muted sm:block">
+                    <FighterLine entry={e} />
+                  </span>
+                  <span className="shrink-0 font-mono text-[13px] tabular-nums text-text">
+                    <Tonnage volumeKg={e.totalVolumeKg} unit={unit} />
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
       )}
     </div>
   );

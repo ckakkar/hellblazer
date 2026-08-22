@@ -46,7 +46,7 @@ export default async function SessionDetailPage({
 
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-text">
+          <h1 className="font-impact text-3xl uppercase leading-none text-text">
             {session.title ?? "Session"}
           </h1>
           <div className="mt-1 font-mono text-xs text-muted">
@@ -86,7 +86,7 @@ export default async function SessionDetailPage({
             <Card key={se.id} className="overflow-hidden">
               <div className="flex items-center justify-between gap-2 border-b border-border p-4">
                 <div className="min-w-0">
-                  <div className="truncate text-sm font-medium text-text">
+                  <div className="truncate font-display text-[15px] uppercase tracking-wide text-text">
                     {se.exercise?.name ?? "Exercise"}
                   </div>
                   {se.exercise && (

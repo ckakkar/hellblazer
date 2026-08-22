@@ -29,29 +29,25 @@ export default async function LeaderboardPage() {
       />
 
       {!profile?.username && (
-        <Card className="mb-4 flex flex-col items-start gap-3 border-accent/20 bg-accent/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Trophy className="mt-0.5 size-5 shrink-0 text-accent" />
-            <div>
-              <div className="text-sm font-medium text-text">
-                Claim your ring name
-              </div>
-              <p className="mt-0.5 text-sm text-muted">
-                Set a ring name in your profile to take your place among the
-                fighters.
-              </p>
+        <Card className="mb-4 flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-display text-base uppercase tracking-wide text-text">
+              You&apos;re not on the card
             </div>
+            <p className="mt-0.5 text-sm text-muted">
+              Claim a ring name and your tonnage joins the ladder.
+            </p>
           </div>
           <Link href="/settings" className="shrink-0">
-            <Button variant="secondary">Go to Profile</Button>
+            <Button variant="secondary">Claim a ring name</Button>
           </Link>
         </Card>
       )}
 
       {myPlace > 0 && (
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3.5 py-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <div className="mb-4 inline-flex items-baseline gap-2 border-b border-border pb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
           Your standing
-          <span className="font-impact text-sm leading-none text-accent">
+          <span className="font-impact text-base leading-none text-accent">
             #{myPlace}
           </span>
           <span className="text-muted/60">of {entries.length}</span>
