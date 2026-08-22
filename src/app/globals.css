@@ -7,15 +7,19 @@
    the html[data-accent] blocks below for the selectable palettes.
    Colors are emitted as CSS custom properties so recharts can read them too. */
 @theme {
-  --color-bg: #0a0908;
-  --color-surface: #100f0e;
-  --color-surface-2: #181615;
-  --color-border: #262220;
-  --color-text: #efece8;
-  --color-muted: #86807a;
+  /* The neutral ramp is warm, not grey. Every step carries a little red/brown
+     so the dark reads as an unlit arena floor rather than the generic
+     near-black every dark dashboard is built on. --color-text is canvas bone
+     (poster stock), not white. */
+  --color-bg: #0b0908;
+  --color-surface: #14100e;
+  --color-surface-2: #1d1815;
+  --color-border: #2b2320;
+  --color-text: #ece5d8;
+  --color-muted: #8d8378;
   --color-accent: rgb(var(--accent-rgb));
   --color-accent-dim: rgb(var(--accent-dim-rgb));
-  --color-danger: #ff5470;
+  --color-danger: #e5484d;
   --color-warn: #f5a524;
 
   --color-chart-1: rgb(var(--accent-rgb));
@@ -23,11 +27,11 @@
   --color-chart-3: #d98b57;
   --color-chart-4: #61656f;
 
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, "JetBrains Mono", monospace;
-  --font-display: var(--font-bricolage), var(--font-geist-sans), ui-sans-serif,
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "IBM Plex Mono", monospace;
+  --font-display: var(--font-big-shoulders), var(--font-archivo), ui-sans-serif,
     sans-serif;
-  --font-impact: var(--font-anton), var(--font-bricolage), sans-serif;
+  --font-impact: var(--font-big-shoulders), var(--font-archivo), sans-serif;
 
   --radius-lg: 0.625rem;
 
@@ -52,9 +56,12 @@
 :root {
   color-scheme: dark;
   /* Default accent: Crimson (blood). Space-separated channels so it composes
-     into rgb(var(--accent-rgb) / <alpha>) anywhere translucency is needed. */
-  --accent-rgb: 255 45 58;
-  --accent-dim-rgb: 179 20 31;
+     into rgb(var(--accent-rgb) / <alpha>) anywhere translucency is needed.
+     Tuned to a printed-ink red rather than a screen neon: the old #ff2d3a sat
+     right on the stock "dark UI + hot vermilion" look, and pulling it toward
+     poster ink is most of what stops the palette reading as off-the-shelf. */
+  --accent-rgb: 223 45 40;
+  --accent-dim-rgb: 150 26 24;
   --accent-glow: rgb(var(--accent-rgb) / 0.18);
 }
 
@@ -62,16 +69,16 @@
    Set on <html data-accent="…"> from Settings. Each only needs to redefine the
    two channel vars; everything else (utilities, glows, charts) derives. */
 html[data-accent="crimson"] {
-  --accent-rgb: 255 45 58;
-  --accent-dim-rgb: 179 20 31;
+  --accent-rgb: 223 45 40;
+  --accent-dim-rgb: 150 26 24;
 }
 html[data-accent="ember"] {
-  --accent-rgb: 255 122 41;
-  --accent-dim-rgb: 179 77 18;
+  --accent-rgb: 232 108 38;
+  --accent-dim-rgb: 156 68 20;
 }
 html[data-accent="gold"] {
-  --accent-rgb: 245 176 40;
-  --accent-dim-rgb: 169 118 26;
+  --accent-rgb: 226 160 44;
+  --accent-dim-rgb: 154 105 26;
 }
 html[data-accent="green"] {
   /* Pastel bottle green */
@@ -127,11 +134,18 @@ label {
   font-variant-numeric: tabular-nums;
 }
 
+/* Big Shoulders is variable and ships at 400 by default, where Anton only ever
+   had one heavy cut. Both display roles therefore pin their own weight, so
+   every existing `font-display` / `font-impact` call site keeps the heft it was
+   written against. The face is condensed, so it also wants a touch of positive
+   tracking in caps to stop the verticals fusing. */
 .font-display {
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: 0.005em;
 }
 .font-impact {
-  letter-spacing: 0.005em;
+  font-weight: 800;
+  letter-spacing: 0.012em;
 }
 
 /* ── Signature motion (CSS only, no libs) ─────────────────────────────────

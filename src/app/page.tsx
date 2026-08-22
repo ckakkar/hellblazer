@@ -3,7 +3,6 @@ import { getUser } from "@/lib/auth";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 import { BlurText } from "@/components/reactbits/blur-text";
 import { SplitFlapText } from "@/components/reactbits/split-flap-text";
-import { SpotlightCard } from "@/components/reactbits/spotlight-card";
 import { TIERS } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { Flame } from "lucide-react";
@@ -36,15 +35,6 @@ export default async function Landing({
 
   return (
     <main className="relative flex min-h-dvh flex-col overflow-hidden">
-      {/* one restrained heat-source: a crimson glow behind the ladder */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute right-[-10%] top-[-10%] h-[620px] w-[620px] rounded-full opacity-50 blur-[130px] sm:opacity-70"
-        style={{
-          background:
-            "radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.20), transparent)",
-        }}
-      />
 
       <div className="relative mx-auto flex w-full max-w-6xl flex-1 flex-col px-6">
         <header className="flex items-center gap-2 py-7">
@@ -60,12 +50,10 @@ export default async function Landing({
           {/* ── Pitch ─────────────────────────────────────────────── */}
           <section className="min-w-0 max-w-xl">
             <div
-              className="hb-reveal flex items-center gap-3 text-xs font-medium uppercase tracking-[0.28em] text-muted"
+              className="hb-reveal font-mono text-[11px] uppercase tracking-[0.2em] text-muted"
               style={{ animationDelay: "40ms" }}
             >
-              <span className="text-accent">力</span>
-              <span className="h-px w-8 bg-border" />
-              The strength ladder
+              Tonight&rsquo;s card
             </div>
 
             {/* React Bits SplitFlapText: a departure board naming the fighters
@@ -104,12 +92,13 @@ export default async function Landing({
             </h1>
 
             <p
-              className="hb-reveal mt-7 max-w-md text-base leading-7 text-muted sm:text-lg"
+              className="hb-reveal mt-7 max-w-md text-base leading-7 text-muted sm:text-[17px]"
               style={{ animationDelay: "200ms" }}
             >
-              Log every set like it counts. Your numbers get weighed and ranked
-              against the deadliest fighters in the ring, climb from Rei to
-              Kuroki, one honest rep at a time.
+              Every set you log goes on the tape: tonnage, working sets,
+              estimated 1RM. Your numbers get weighed against ten of the
+              deadliest fighters in the ring, and you climb only when they say
+              you&rsquo;ve earned it.
             </p>
 
             <div className="hb-reveal mt-9" style={{ animationDelay: "290ms" }}>
@@ -131,89 +120,60 @@ export default async function Landing({
             style={{ animationDelay: "180ms" }}
             aria-label={`The strength ladder: rank ${TIERS.length} down to rank 1`}
           >
-            <SpotlightCard
-              className="rounded-xl border border-border bg-surface/60 p-3 backdrop-blur-sm sm:p-4"
-              spotlightOpacity={0.1}
-            >
-              <div className="relative mb-3 flex items-center justify-between px-1">
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                  Rank ladder
-                </span>
-                <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-                  {String(TIERS.length).padStart(2, "0")} → 01
-                </span>
-              </div>
+            {/* The bill. Ten names in bout order, top of the card first — the
+                artefact this whole app is themed on. The old version wrapped it
+                in a spotlight card and hung a progress bar off every rung, but
+                a bar whose width just restates the rank number beside it is
+                decoration; the running order is the information, so the list is
+                set as a bill and the bars are gone. */}
+            <div className="flex items-baseline justify-between border-b border-text/85 pb-2">
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+                The bill
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
+                Main event first
+              </span>
+            </div>
 
-              <ol className="relative space-y-1">
-                {ladder.map((t) => {
-                  const top = t.rank === TIERS.length;
-                  const pct = Math.round((t.rank / TIERS.length) * 100);
-                  const tag = t.epithet;
-                  return (
-                    <li
-                      key={t.key}
-                      className="hb-reveal"
-                      style={{ animationDelay: `${(t.rank - 1) * 45 + 260}ms` }}
+            <ol>
+              {ladder.map((t, i) => {
+                const top = t.rank === TIERS.length;
+                return (
+                  <li
+                    key={t.key}
+                    className={cn(
+                      "flex items-baseline gap-3 border-b border-border py-2.5",
+                      top && "border-b-text/30",
+                    )}
+                  >
+                    <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted">
+                      {String(t.rank).padStart(2, "0")}
+                    </span>
+                    <span
+                      className={cn(
+                        "min-w-0 flex-1 truncate font-impact uppercase leading-none",
+                        top ? "text-2xl text-accent" : "text-lg text-text",
+                      )}
                     >
-                      <div
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-2.5 py-2",
-                          top && "bg-accent/[0.07] shadow-glow",
-                        )}
-                      >
-                        <span className="w-5 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted">
-                          {String(t.rank).padStart(2, "0")}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span
-                              className={cn(
-                                "truncate font-impact uppercase leading-none tracking-tight",
-                                top ? "text-lg text-accent" : "text-sm text-text",
-                              )}
-                              style={
-                                top
-                                  ? undefined
-                                  : {
-                                      opacity:
-                                        0.45 + (0.55 * t.rank) / TIERS.length,
-                                    }
-                              }
-                            >
-                              {t.name}
-                            </span>
-                            {tag && (
-                              <span
-                                className={cn(
-                                  "hidden shrink-0 font-mono text-[10px] tracking-wide sm:block",
-                                  top ? "text-accent/80" : "text-muted/70",
-                                )}
-                              >
-                                {tag}
-                              </span>
-                            )}
-                          </div>
-                          <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-surface-2">
-                            <div
-                              className="h-full rounded-full bg-accent"
-                              style={{
-                                width: `${pct}%`,
-                                opacity: 0.3 + (0.7 * t.rank) / TIERS.length,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ol>
+                      {t.name}
+                    </span>
+                    <span
+                      className={cn(
+                        "hidden shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] sm:block",
+                        top ? "text-accent" : "text-muted",
+                      )}
+                    >
+                      {i === 0 ? "Main event" : t.epithet}
+                    </span>
+                  </li>
+                );
+              })}
+            </ol>
 
-              <p className="relative mt-3 px-1 text-[11px] leading-5 text-muted">
-                You enter unranked. Earn your rung, then keep climbing. There is
-                always someone stronger.
-              </p>
-            </SpotlightCard>
+            <p className="mt-4 text-[13px] leading-6 text-muted">
+              You start off the card entirely. Log real sets, get weighed in,
+              and take a rung off somebody.
+            </p>
           </section>
         </div>
 

@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { format, parseISO, startOfISOWeek } from "date-fns";
-import { ChevronRight, Dumbbell, Flame, Sparkles } from "lucide-react";
+import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import {
   getCurrentWeekSetsPerMuscle,
   getMuscleBalance,
@@ -11,11 +10,11 @@ import { getProfile } from "@/lib/data/profile";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { OnboardingHero } from "./onboarding-hero";
 import { PRESETS } from "@/lib/presets";
-import { TierLadder } from "@/components/tier/tier-ui";
+import { FightCardHero } from "@/components/tier/fight-card-hero";
 import { getTier } from "@/lib/tiers";
 import { getUnit } from "@/lib/settings";
-import { PageHeader, SectionLabel } from "@/components/ui/page-header";
-import { StatCard } from "@/components/ui/stat-card";
+import { SectionLabel } from "@/components/ui/page-header";
+import { Tape, TapeRow, Delta, BarRow, type DeltaTone } from "@/components/ui/tape";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,18 +61,61 @@ export default async function DashboardPage() {
   });
 
   const weekStart = startOfISOWeek(new Date());
-  const thisWeek = summaries.filter(
-    (s) => s.session_date && parseISO(s.session_date) >= weekStart,
-  );
-  const volumeThisWeek = thisWeek.reduce(
-    (n, s) => n + Number(s.total_volume ?? 0),
-    0,
-  );
-  const workingSetsThisWeek = thisWeek.reduce(
-    (n, s) => n + Number(s.working_sets ?? 0),
-    0,
-  );
+  const prevWeekStart = subWeeks(weekStart, 1);
+
+  // A tale of the tape is a comparison by definition, so every figure is
+  // measured against the same window one week back. The old dashboard showed
+  // three bare totals with nothing to read them against.
+  const inWeek = (from: Date, to?: Date) =>
+    summaries.filter((s) => {
+      if (!s.session_date) return false;
+      const d = parseISO(s.session_date);
+      return d >= from && (!to || d < to);
+    });
+  const thisWeek = inWeek(weekStart);
+  const lastWeek = inWeek(prevWeekStart, weekStart);
+
+  const sum = (rows: typeof summaries, key: "total_volume" | "working_sets") =>
+    rows.reduce((n, s) => n + Number(s[key] ?? 0), 0);
+
+  const volumeThisWeek = sum(thisWeek, "total_volume");
+  const volumeLastWeek = sum(lastWeek, "total_volume");
+  const workingSetsThisWeek = sum(thisWeek, "working_sets");
+  const workingSetsLastWeek = sum(lastWeek, "working_sets");
+
+  /** Percent move on last week, or null when there's no baseline to compare. */
+  const move = (now: number, before: number) =>
+    before > 0 ? Math.round(((now - before) / before) * 100) : null;
+
+  const toneOf = (pct: number | null): DeltaTone =>
+    pct === null || pct === 0 ? "flat" : pct > 0 ? "gain" : "loss";
+
+  const deltaLabel = (pct: number | null) =>
+    pct === null ? "first week" : pct === 0 ? "level" : `${Math.abs(pct)}%`;
+
+  const volumeMove = move(volumeThisWeek, volumeLastWeek);
+  const setsMove = move(workingSetsThisWeek, workingSetsLastWeek);
+
+  // Sessions read against the active program's weekly target, not last week —
+  // "4 of 5 programmed" is the honest measure of a training week.
+  const sessionTarget = activeProgress?.daysPerWeek ?? null;
+  const sessionsTone: DeltaTone = sessionTarget
+    ? thisWeek.length >= sessionTarget
+      ? "gain"
+      : "loss"
+    : "flat";
+
   const setsByMuscle = new Map(weeklySets.map((m) => [m.muscle, m.sets]));
+  const weakPointRows = WEAK_POINTS.map((m) => ({
+    muscle: m,
+    label: MUSCLE_LABEL[m],
+    sets: Math.round((setsByMuscle.get(m) ?? 0) * 10) / 10,
+  }));
+  const weakPointMax = Math.max(1, ...weakPointRows.map((r) => r.sets));
+  // Only the muscle actually trailing the group gets marked, so the accent
+  // still means one thing.
+  const weakPointMin = Math.min(...weakPointRows.map((r) => r.sets));
+
   const recent = summaries.slice(0, 6);
 
   // Daily lifted tonnage (canonical kg) for the volume-trend windows, the card
@@ -93,34 +135,7 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Dashboard"
-        subtitle={`Week of ${format(weekStart, "MMM d")}`}
-        action={
-          <Link href="/log">
-            <Button>
-              <Dumbbell className="size-4" />
-              Log workout
-            </Button>
-          </Link>
-        }
-      />
-
-      <Link
-        href="/settings"
-        className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3 transition-colors hover:border-accent/40"
-      >
-        <span className="shrink-0 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-          Rank
-        </span>
-        <span className="min-w-0 truncate font-impact text-lg uppercase leading-none text-accent">
-          {tier ? tier.name : "Unranked"}
-        </span>
-        <TierLadder
-          rank={tier?.rank ?? 0}
-          className="ml-auto w-24 shrink-0 sm:w-40"
-        />
-      </Link>
+      <FightCardHero tier={tier} className="mb-7" />
 
       {isNewUser ? (
         <OnboardingHero
@@ -137,66 +152,69 @@ export default async function DashboardPage() {
           />
         </div>
       ) : (
-        <Card className="mb-6 flex flex-col items-start gap-3 border-accent/20 bg-accent/[0.03] p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
-            <Sparkles className="mt-0.5 size-5 shrink-0 text-accent" />
-            <div>
-              <div className="text-sm font-medium text-text">
-                No active program
-              </div>
-              <p className="mt-0.5 text-sm text-muted">
-                Pick one of your programs and make it active, or load a fresh
-                starter split to run for the next few weeks.
-              </p>
+        <Card className="mb-6 flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="font-display text-base uppercase tracking-wide text-text">
+              Nothing programmed
             </div>
+            <p className="mt-0.5 text-sm text-muted">
+              Pick a split and it schedules your week for you.
+            </p>
           </div>
           <Link href="/programs" className="shrink-0">
-            <Button variant="secondary">Go to Programs</Button>
+            <Button variant="secondary">Choose a split</Button>
           </Link>
         </Card>
       )}
 
-      {/* This-week summary */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Sessions"
-          value={thisWeek.length}
-          countTo={thisWeek.length}
-          hint="this week"
-          icon={<Dumbbell className="size-4" />}
-        />
-        <StatCard
-          label="Volume"
+      <Tape title={`Tale of the tape · week of ${format(weekStart, "MMM d")}`}>
+        <TapeRow
+          label="Tonnage"
           value={formatVolume(volumeThisWeek, unit).split(" ")[0]}
-          unit={unit}
-          hint="this week"
+          unit={formatVolume(volumeThisWeek, unit).split(" ")[1]}
+          note={volumeMove === null ? undefined : "vs last week"}
+          delta={
+            <Delta tone={toneOf(volumeMove)}>{deltaLabel(volumeMove)}</Delta>
+          }
         />
-        <StatCard
+        <TapeRow
           label="Working sets"
           value={workingSetsThisWeek}
-          countTo={workingSetsThisWeek}
-          hint="this week"
+          note={setsMove === null ? undefined : "vs last week"}
+          delta={<Delta tone={toneOf(setsMove)}>{deltaLabel(setsMove)}</Delta>}
         />
-      </div>
+        <TapeRow
+          label="Sessions"
+          value={sessionTarget ? `${thisWeek.length}/${sessionTarget}` : thisWeek.length}
+          note={sessionTarget ? "programmed" : "no active program"}
+          delta={
+            sessionTarget ? (
+              <Delta tone={sessionsTone}>
+                {thisWeek.length >= sessionTarget
+                  ? "on pace"
+                  : `${sessionTarget - thisWeek.length} to go`}
+              </Delta>
+            ) : undefined
+          }
+        />
+      </Tape>
 
-      {/* Weak points */}
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {WEAK_POINTS.map((m) => {
-          const sets = Math.round((setsByMuscle.get(m) ?? 0) * 10) / 10;
-          return (
-            <StatCard
-              key={m}
-              label={MUSCLE_LABEL[m]}
-              value={sets}
-              countTo={sets}
-              unit="sets"
-              highlight
-              icon={<Flame className="size-4" />}
-              hint="weak-point focus"
+      {/* Weak points: four numbers on one scale, so the shortfall is visible
+          as a gap rather than four separate figures to hold in your head. */}
+      <section className="mt-7">
+        <SectionLabel>Weak points · this week</SectionLabel>
+        <div className="border-y border-border py-1">
+          {weakPointRows.map((r) => (
+            <BarRow
+              key={r.muscle}
+              label={r.label}
+              value={r.sets}
+              max={weakPointMax}
+              low={r.sets === weakPointMin && weakPointMax > weakPointMin}
             />
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      </section>
 
       {/* Charts */}
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -224,26 +242,27 @@ export default async function DashboardPage() {
         <VolumeTrendCard daily={dailyVolume} unit={unit} />
       </div>
 
-      {/* Recent sessions */}
-      <div className="mt-8">
+      {/* The log. A record book is a table, not six identical cards stacked —
+          reading down a column of dates and tonnages is the whole point. */}
+      <section className="mt-8">
         <SectionLabel
           action={
             <Link
               href="/history"
-              className="font-mono text-[11px] uppercase tracking-wide text-muted transition-colors hover:text-accent"
+              className="font-mono text-[11px] uppercase tracking-wide text-muted underline-offset-4 transition-colors hover:text-accent hover:underline"
             >
-              View all →
+              Full record
             </Link>
           }
         >
-          Recent sessions
+          Latest bouts
         </SectionLabel>
         {recent.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted">
-            No sessions logged yet.
-          </Card>
+          <p className="border-y border-border py-8 text-center text-sm text-muted">
+            Nothing logged yet. Your first session starts the record.
+          </p>
         ) : (
-          <div className="grid gap-2">
+          <div className="border-t border-border">
             {recent.map((s) => (
               <Link
                 key={s.session_id}
@@ -252,33 +271,31 @@ export default async function DashboardPage() {
                     ? `/history/${s.session_id}`
                     : `/log/${s.session_id}`
                 }
+                className="group flex items-baseline gap-3 border-b border-border py-3 transition-colors hover:bg-surface/60"
               >
-                <Card className="flex items-center gap-3 p-3 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99] active:border-accent/40">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 font-mono text-xs text-muted">
-                    {s.session_date ? format(parseISO(s.session_date), "d") : ""}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="truncate text-sm text-text">
-                        {s.title ?? "Session"}
-                      </span>
-                      {!s.finished_at && (
-                        <Badge variant="accent">In progress</Badge>
-                      )}
-                      {!s.template_id && <Badge variant="muted">freeform</Badge>}
-                    </div>
-                    <div className="font-mono text-xs text-muted">
-                      {s.working_sets ?? 0} sets ·{" "}
-                      {formatVolume(Number(s.total_volume ?? 0), unit)}
-                    </div>
-                  </div>
-                  <ChevronRight className="size-4 shrink-0 text-muted" />
-                </Card>
+                <span className="w-14 shrink-0 font-mono text-[11px] uppercase tabular-nums text-muted">
+                  {s.session_date
+                    ? format(parseISO(s.session_date), "dd MMM")
+                    : "--"}
+                </span>
+                <span className="flex min-w-0 flex-1 items-baseline gap-2">
+                  <span className="truncate font-display text-[15px] uppercase tracking-wide text-text transition-colors group-hover:text-accent">
+                    {s.title ?? "Session"}
+                  </span>
+                  {!s.finished_at && <Badge variant="accent">Live</Badge>}
+                  {!s.template_id && <Badge variant="muted">freeform</Badge>}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
+                  {s.working_sets ?? 0} sets
+                </span>
+                <span className="hidden w-20 shrink-0 text-right font-mono text-[11px] tabular-nums text-text sm:inline">
+                  {formatVolume(Number(s.total_volume ?? 0), unit)}
+                </span>
               </Link>
             ))}
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 }

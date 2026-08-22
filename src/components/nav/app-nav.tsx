@@ -74,7 +74,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
           {NAV_SECTIONS.map((section, i) => (
             <div key={i} className="flex flex-col gap-1">
               {section.title && (
-                <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted/60">
+                <div className="px-3 pb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted/60">
                   {section.title}
                 </div>
               )}
@@ -135,7 +135,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden rounded-[26px] md:hidden">
+      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden rounded-[14px] md:hidden">
         {BOTTOM_NAV.map((item) => {
           const active = isActive(item.href);
           const isLog = item.href === "/log";
@@ -157,7 +157,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
               </span>
               <span
                 className={cn(
-                  "text-[10px] font-medium",
+                  "font-mono text-[9px] uppercase tracking-[0.08em]",
                   active ? "text-accent" : "text-muted",
                   isLog && "text-accent",
                 )}

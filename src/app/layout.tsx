@@ -1,37 +1,32 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Geist,
-  Geist_Mono,
-  Bricolage_Grotesque,
-  Anton,
-} from "next/font/google";
+import { Archivo, IBM_Plex_Mono, Big_Shoulders } from "next/font/google";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
 import { getAccent } from "@/lib/settings";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+/* ── The fight-card stack ──────────────────────────────────────────────────
+   Three faces, all out of the signage-and-print lineage a fight promotion
+   actually draws on, rather than the house faces every dark dashboard ships
+   with. Body is Archivo (a grotesque cut for print/signage), data is IBM Plex
+   Mono (warm, real tabular figures), and the display role is Big Shoulders —
+   condensed Chicago-signage caps that read like an arena board. Big Shoulders
+   is variable, so one family covers both the display and impact weights
+   instead of loading a second face for the heavy end. */
+const archivo = Archivo({
+  variable: "--font-archivo",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plexMono = IBM_Plex_Mono({
+  variable: "--font-plex-mono",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
 });
 
-// Display face: carries the Hell Blazer personality, used with restraint.
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
+const bigShoulders = Big_Shoulders({
+  variable: "--font-big-shoulders",
   subsets: ["latin"],
-  weight: ["500", "600", "700", "800"],
-});
-
-// Impact face: heavy condensed, for the moments that should hit.
-const anton = Anton({
-  variable: "--font-anton",
-  subsets: ["latin"],
-  weight: "400",
 });
 
 export const metadata: Metadata = {
@@ -84,7 +79,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-accent={accent}
-      className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} ${anton.variable} h-full antialiased`}
+      className={`${archivo.variable} ${plexMono.variable} ${bigShoulders.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-bg text-text">
         <PwaRegister />

@@ -2,15 +2,18 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/* Hard-edged mono stamps rather than pills: on a card built out of rules and
+   tables, a rounded-full badge is the one shape that has nowhere to belong.
+   These read as annotations struck onto a record book. */
 const badgeVariants = cva(
-  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+  "inline-flex items-center gap-1 whitespace-nowrap rounded-[2px] border px-1.5 py-px font-mono text-[10px] uppercase leading-[1.45] tracking-[0.1em]",
   {
     variants: {
       variant: {
         default: "border-border bg-surface-2 text-muted",
-        accent: "border-accent/30 bg-accent/10 text-accent",
-        warn: "border-warn/30 bg-warn/10 text-warn",
-        muted: "border-transparent bg-surface-2 text-muted",
+        accent: "border-accent/45 bg-accent/10 text-accent",
+        warn: "border-warn/40 bg-warn/10 text-warn",
+        muted: "border-border/70 bg-transparent text-muted",
       },
     },
     defaultVariants: { variant: "default" },
