@@ -31,3 +31,24 @@ export function ChartEmpty({ message }: { message: string }) {
     </div>
   );
 }
+
+/**
+ * Width for a Y-axis gutter, sized to the widest label it actually has to
+ * hold.
+ *
+ * The charts used to pair a fixed `width` with a negative left margin to
+ * reclaim recharts' default padding. That silently clips the leading character
+ * whenever a label outgrows the gutter — which is exactly what happened to lb
+ * bodyweights ("230.5" rendering as "30.5"). Pass the values and, if the axis
+ * has one, the same tickFormatter the axis uses.
+ *
+ * 7px per character is the measured advance of the mono face at the 11px axis
+ * size, plus room for the tick gap.
+ */
+export function axisWidthFor(
+  values: number[],
+  format: (v: number) => string = (v) => String(v),
+): number {
+  const widest = Math.max(2, ...values.map((v) => format(v).length));
+  return Math.max(36, widest * 7 + 16);
+}

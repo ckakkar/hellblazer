@@ -72,15 +72,16 @@ export function BodyweightManager({
       {logs.length > 0 && (
         <ul className="mt-4 divide-y divide-border rounded-lg border border-border">
           {logs.map((l) => (
-            <li
-              key={l.id}
-              className="flex items-center justify-between px-4 py-2.5"
-            >
-              <span className="font-mono text-sm text-muted">
-                {format(parseISO(l.date), "EEE, MMM d, yyyy")}
+            // `justify-between` with no gap and nothing to stop either side
+            // wrapping put the date hard against the weight at 360px and broke
+            // both onto two lines at 320px. The date now truncates, the reading
+            // never wraps, and the two are held apart.
+            <li key={l.id} className="flex items-center gap-3 px-4 py-2.5">
+              <span className="min-w-0 flex-1 truncate font-mono text-sm text-muted">
+                {format(parseISO(l.date), "d MMM yyyy")}
               </span>
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-sm text-text">
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="whitespace-nowrap font-mono text-sm tabular-nums text-text">
                   {trimNum(toDisplayWeight(l.weight_kg, unit))} {unit}
                 </span>
                 <ConfirmIconButton

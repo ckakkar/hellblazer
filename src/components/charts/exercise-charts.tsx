@@ -13,7 +13,13 @@ import {
   YAxis,
 } from "recharts";
 import { kgToLb, type Unit } from "@/lib/units";
-import { AXIS_TICK, ChartEmpty, GRID_STROKE, TooltipBox } from "./chart-kit";
+import {
+  AXIS_TICK,
+  ChartEmpty,
+  GRID_STROKE,
+  TooltipBox,
+  axisWidthFor,
+} from "./chart-kit";
 
 type Point = { date: string; est1rm: number; volume: number };
 
@@ -35,9 +41,13 @@ export function OneRepMaxChart({
   if (chartData.length === 0)
     return <ChartEmpty message="No working sets logged for this exercise yet." />;
 
+  // Same clipping trap as the bodyweight chart: a fixed axis pulled left by a
+  // negative margin cuts the leading digit off long lb figures.
+  const yWidth = axisWidthFor(chartData.map((d) => d.est1rm));
+
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
+      <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
         <defs>
           <linearGradient id="oneRmFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.26} />
@@ -56,7 +66,7 @@ export function OneRepMaxChart({
           tick={AXIS_TICK}
           tickLine={false}
           axisLine={false}
-          width={44}
+          width={yWidth}
           domain={["auto", "auto"]}
         />
         <Tooltip
@@ -97,9 +107,12 @@ export function VolumeBarsChart({
   if (chartData.length === 0)
     return <ChartEmpty message="No volume logged for this exercise yet." />;
 
+  const volTick = (v: number) => (v >= 1000 ? `${v / 1000}k` : `${v}`);
+  const yWidth = axisWidthFor(chartData.map((d) => d.volume), volTick);
+
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
+      <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
         <XAxis
           dataKey="date"
@@ -112,8 +125,8 @@ export function VolumeBarsChart({
           tick={AXIS_TICK}
           tickLine={false}
           axisLine={false}
-          width={44}
-          tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : `${v}`)}
+          width={yWidth}
+          tickFormatter={volTick}
         />
         <Tooltip
           cursor={{ fill: "rgba(255,255,255,0.03)" }}
