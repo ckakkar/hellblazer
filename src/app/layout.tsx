@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, IBM_Plex_Mono, Big_Shoulders } from "next/font/google";
+import { Archivo, IBM_Plex_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
@@ -26,11 +27,14 @@ const plexMono = IBM_Plex_Mono({
   weight: ["400", "500"],
 });
 
-const bigShoulders = Big_Shoulders({
+const bigShoulders = localFont({
+  src: "./fonts/big-shoulders-latin.woff2",
   variable: "--font-big-shoulders",
-  subsets: ["latin"],
-  // Next does not ship fallback metrics for this family. Disabling the
-  // unsupported adjustment keeps development and builds warning-free.
+  weight: "100 900",
+  style: "normal",
+  display: "swap",
+  fallback: ["Arial Narrow", "Arial", "sans-serif"],
+  // The local variable font is stable and needs no generated metric override.
   adjustFontFallback: false,
 });
 

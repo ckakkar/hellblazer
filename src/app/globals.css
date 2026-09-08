@@ -192,6 +192,10 @@ body {
   animation: hb-fighter-swap 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+.hb-dossier-switch {
+  animation: hb-dossier-switch 360ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+}
+
 @keyframes hb-fighter-swap {
   from {
     opacity: 0;
@@ -205,8 +209,25 @@ body {
   }
 }
 
+@keyframes hb-dossier-switch {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: contrast(1.12);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: contrast(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hb-fighter-swap {
+    animation: none;
+  }
+
+  .hb-dossier-switch {
     animation: none;
   }
 }

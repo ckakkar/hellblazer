@@ -41,21 +41,36 @@ export function FighterArt({
       {variant !== "thumbnail" && (
         <div className="hb-fighter-aura absolute inset-[12%_5%_4%_18%] -z-10" />
       )}
-      <Image
-        src={art.src}
-        alt={alt}
-        fill
-        loading={priority ? "eager" : "lazy"}
-        fetchPriority={priority ? "high" : "auto"}
-        placeholder="blur"
-        sizes={sizes}
-        className={cn(
-          "object-cover object-center contrast-[1.05]",
-          variant !== "thumbnail" &&
-            "drop-shadow-[0_28px_42px_rgba(0,0,0,0.8)]",
-          imageClassName,
-        )}
-      />
+      {variant === "thumbnail" ? (
+        <Image
+          src={art.src}
+          alt={alt}
+          width={112}
+          height={112}
+          loading="lazy"
+          placeholder="blur"
+          sizes={sizes}
+          className={cn(
+            "h-full w-full object-cover object-center contrast-[1.05]",
+            imageClassName,
+          )}
+        />
+      ) : (
+        <Image
+          src={art.src}
+          alt={alt}
+          width={art.src.width}
+          height={art.src.height}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          placeholder="blur"
+          sizes={sizes}
+          className={cn(
+            "absolute inset-0 h-full w-full object-cover object-center contrast-[1.05] drop-shadow-[0_28px_42px_rgba(0,0,0,0.8)]",
+            imageClassName,
+          )}
+        />
+      )}
       {variant !== "thumbnail" && (
         <div className="hb-portrait-fade absolute inset-0" />
       )}
