@@ -85,10 +85,13 @@ export default async function LogPage() {
       : null;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <PageHeader
         title="Start a workout"
-        subtitle="Jump into your program, a template, or go freeform."
+        subtitle="Choose the card, inspect the work, then step into the session with every target ready."
+        eyebrow="Enter the arena"
+        index="02"
+        stat={{ value: options.length, label: "ready cards" }}
       />
 
       {activeProgress && hasProgramNext && (

@@ -30,7 +30,7 @@ export function SettingsGroup({
       <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
         {label}
       </h2>
-      <div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-surface">
+      <div className="hb-panel-cut divide-y divide-border overflow-hidden border border-border bg-surface">
         {children}
       </div>
       {caption && (
@@ -86,7 +86,7 @@ export function SettingsRow({
     return (
       <Link
         href={href}
-        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-surface-2"
+        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-accent/[0.035]"
       >
         {head}
       </Link>

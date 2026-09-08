@@ -61,6 +61,7 @@ export interface SplitFlapTextProps extends HTMLAttributes<HTMLDivElement> {
   fontSize?: number | string;
   loop?: boolean;
   padTo?: number;
+  onPhraseChange?: (index: number) => void;
 }
 
 const DEFAULT_WORDS = ['LAUNCH READY', 'SYNC ONLINE', 'SIGNAL LIVE'];
@@ -155,6 +156,7 @@ const SplitFlapText = ({
   fontSize = 52,
   loop = true,
   padTo = 12,
+  onPhraseChange,
   className = '',
   style = {},
   ...props
@@ -341,6 +343,7 @@ const SplitFlapText = ({
         if (nextIndex >= normalizedPhrases.length && !loop) return;
 
         phraseIndex = nextIndex % normalizedPhrases.length;
+        onPhraseChange?.(phraseIndex);
         const animationDuration = animateTo(normalizedPhrases[phraseIndex]);
         scheduleNext(safeCycleDelay + animationDuration);
       }, delay);
@@ -352,7 +355,7 @@ const SplitFlapText = ({
       cancelled = true;
       clearAnimation();
     };
-  }, [normalizedPhrases, width, loop, cycleDelay, flipDuration, stagger, flipsPerChar, charset, prefersReducedMotion]);
+  }, [normalizedPhrases, width, loop, cycleDelay, flipDuration, stagger, flipsPerChar, charset, prefersReducedMotion, onPhraseChange]);
 
   const settledText = tiles
     .map(tile => tile.current)

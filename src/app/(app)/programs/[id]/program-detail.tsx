@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet } from "@/components/ui/sheet";
+import { PageHeader } from "@/components/ui/page-header";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { StartWorkoutButton } from "@/components/program/start-workout-button";
 import {
@@ -63,7 +64,7 @@ export function ProgramDetail({
     : null;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <Link
         href="/programs"
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-text"
@@ -72,17 +73,25 @@ export function ProgramDetail({
         Programs
       </Link>
 
-      <input
-        defaultValue={program.name}
-        aria-label="Program name"
-        onBlur={(e) => {
-          const val = e.target.value.trim();
-          if (val && val !== program.name)
-            start(async () => {
-              await updateProgram({ id: program.id, name: val });
-            });
-        }}
-        className="mb-5 w-full bg-transparent font-impact text-3xl uppercase leading-none text-text focus:outline-none"
+      <PageHeader
+        eyebrow="Campaign dossier"
+        index="03/A"
+        subtitle="Edit the block, control its calendar, and inspect the weekly order."
+        stat={{ value: days.length, label: days.length === 1 ? "training day" : "training days" }}
+        title={
+          <input
+            defaultValue={program.name}
+            aria-label="Program name"
+            onBlur={(e) => {
+              const val = e.target.value.trim();
+              if (val && val !== program.name)
+                start(async () => {
+                  await updateProgram({ id: program.id, name: val });
+                });
+            }}
+            className="w-full min-w-0 bg-transparent font-impact uppercase text-text focus:outline-none"
+          />
+        }
       />
 
       <ProgramProgressCard progress={progress} />

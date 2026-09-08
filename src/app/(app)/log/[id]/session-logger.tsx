@@ -38,6 +38,7 @@ import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CountUp } from "@/components/reactbits/count-up";
+import { RestTimer } from "@/components/workout/rest-timer";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import {
@@ -53,6 +54,12 @@ import type {
   LastPerformance,
   SessionDetail,
 } from "@/lib/data/sessions";
+import {
+  getQueuedSets,
+  queueSet,
+  removeQueuedSet,
+  type PendingSetWrite,
+} from "@/lib/offline-set-queue";
 import {
   addSessionExercise,
   deleteSet,
@@ -235,22 +242,43 @@ export function SessionLogger({
 
   const weightStep = unit === "lb" ? 5 : 2.5;
 
+  const toQueuedWrite = useCallback(
+    (seId: string, set: LocalSet, setNumber: number): PendingSetWrite => ({
+      id: set.id,
+      sessionId: session.id,
+      sessionExerciseId: seId,
+      setNumber,
+      weightKg: fromDisplayWeight(
+        Number.isFinite(set.weight ?? NaN) ? (set.weight as number) : 0,
+        unit,
+      ),
+      reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
+      rpe: set.rpe,
+      isWarmup: set.isWarmup,
+      updatedAt: Date.now(),
+    }),
+    [session.id, unit],
+  );
+
   const persist = useCallback(
     (seId: string, set: LocalSet, setNumber: number) => {
+      const write = toQueuedWrite(seId, set, setNumber);
       setInFlight((n) => n + 1);
-      return saveSet({
-        id: set.id,
-        sessionExerciseId: seId,
-        setNumber,
-        weightKg: fromDisplayWeight(
-          Number.isFinite(set.weight ?? NaN) ? (set.weight as number) : 0,
-          unit,
-        ),
-        reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
-        rpe: set.rpe,
-        isWarmup: set.isWarmup,
-      })
-        .then(() => {
+      return queueSet(write)
+        .catch(() => undefined)
+        .then(() =>
+          saveSet({
+            id: write.id,
+            sessionExerciseId: write.sessionExerciseId,
+            setNumber: write.setNumber,
+            weightKg: write.weightKg,
+            reps: write.reps,
+            rpe: write.rpe,
+            isWarmup: write.isWarmup,
+          }),
+        )
+        .then(async () => {
+          await removeQueuedSet(set.id).catch(() => undefined);
           setFailed((prev) => {
             if (!prev.has(set.id)) return prev;
             const next = new Set(prev);
@@ -259,14 +287,77 @@ export function SessionLogger({
           });
         })
         .catch(() => {
-          // Never swallow this. A set that didn't reach the server is a set the
-          // lifter will lose, and mid-workout they have no other way to tell.
+          // Keep the device copy and expose the failed upload. The row can now
+          // survive a reload, but the lifter still deserves honest sync status.
           setFailed((prev) => new Set(prev).add(set.id));
         })
         .finally(() => setInFlight((n) => Math.max(0, n - 1)));
     },
-    [unit],
+    [toQueuedWrite],
   );
+
+  // Restore device-local writes before the lifter touches the screen. Queued
+  // values win over the older server snapshot, then replay automatically when
+  // a connection is available. This is what makes closing an offline PWA safe.
+  useEffect(() => {
+    let cancelled = false;
+    void getQueuedSets(session.id)
+      .then((writes) => {
+        if (cancelled || writes.length === 0) return;
+        const next = ref.current.map((exercise) => {
+          const pending = writes.filter(
+            (write) => write.sessionExerciseId === exercise.seId,
+          );
+          if (pending.length === 0) return exercise;
+
+          const sets = [...exercise.sets];
+          for (const write of pending) {
+            const restored: LocalSet = {
+              id: write.id,
+              weight: toDisplayWeight(write.weightKg, unit),
+              reps: write.reps,
+              rpe: write.rpe,
+              isWarmup: write.isWarmup,
+            };
+            const existing = sets.findIndex((set) => set.id === write.id);
+            if (existing >= 0) sets[existing] = restored;
+            else {
+              sets.splice(
+                Math.min(write.setNumber - 1, sets.length),
+                0,
+                restored,
+              );
+            }
+          }
+          return { ...exercise, sets };
+        });
+        ref.current = next;
+        setExercises(next);
+        setFailed((prev) => {
+          const restored = new Set(prev);
+          writes.forEach((write) => restored.add(write.id));
+          return restored;
+        });
+
+        if (navigator.onLine) {
+          for (const write of writes) {
+            const exercise = next.find(
+              (candidate) => candidate.seId === write.sessionExerciseId,
+            );
+            const set = exercise?.sets.find(
+              (candidate) => candidate.id === write.id,
+            );
+            if (exercise && set) {
+              void persist(exercise.seId, set, write.setNumber);
+            }
+          }
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [persist, session.id, unit]);
 
   // Re-send every set that failed. Numbers are recomputed from current
   // positions, so a retry after a delete still writes the right set_number.
@@ -281,16 +372,6 @@ export function SessionLogger({
       }
     }
   }, [persist]);
-
-  // Last line of defence: warn before the tab closes while sets are still
-  // unsaved. The pagehide flush covers the happy path, but if the write is
-  // failing, leaving is what actually destroys the data.
-  useEffect(() => {
-    if (failed.size === 0) return;
-    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [failed]);
 
   // Coming back from a dead connection is the common case (a gym basement),
   // so retry automatically rather than making them find the button.
@@ -407,18 +488,25 @@ export function SessionLogger({
   }
 
   function updateSet(seId: string, setId: string, patch: Partial<LocalSet>) {
-    setExercises((prev) =>
-      prev.map((ex) =>
-        ex.seId !== seId
-          ? ex
-          : {
-              ...ex,
-              sets: ex.sets.map((s) =>
-                s.id === setId ? { ...s, ...patch } : s,
-              ),
-            },
-      ),
+    const next = ref.current.map((ex) =>
+      ex.seId !== seId
+        ? ex
+        : {
+            ...ex,
+            sets: ex.sets.map((s) =>
+              s.id === setId ? { ...s, ...patch } : s,
+            ),
+          },
     );
+    ref.current = next;
+    setExercises(next);
+    const exercise = next.find((ex) => ex.seId === seId);
+    const setIndex = exercise?.sets.findIndex((set) => set.id === setId) ?? -1;
+    if (exercise && setIndex >= 0) {
+      void queueSet(
+        toQueuedWrite(seId, exercise.sets[setIndex], setIndex + 1),
+      ).catch(() => undefined);
+    }
     scheduleSave(seId, setId);
   }
 
@@ -453,6 +541,7 @@ export function SessionLogger({
 
   function removeSet(seId: string, setId: string) {
     void deleteSet({ id: setId }).catch(() => {});
+    void removeQueuedSet(setId).catch(() => undefined);
     // Cancel any debounced save still queued for the row being deleted, so it
     // can't resurrect the set after the delete lands.
     const queued = timers.current.get(setId);
@@ -588,9 +677,13 @@ export function SessionLogger({
   const doneCount = exercises.filter((e) => completed.has(e.seId)).length;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-3xl">
       {/* Session header */}
-      <div className="mb-5">
+      <div className="hb-ink-noise relative mb-6 overflow-hidden border-y-2 border-text/80 bg-surface/45 p-4 sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3 font-mono text-[9px] uppercase tracking-[0.22em] text-accent">
+          <span className="flex items-center gap-2"><span className="size-1.5 animate-pulse rounded-full bg-accent" />Live session</span>
+          <span className="text-muted/60">in the corner</span>
+        </div>
         <input
           defaultValue={session.title ?? "Session"}
           aria-label="Session title"
@@ -600,7 +693,7 @@ export function SessionLogger({
               title: e.target.value.trim() || null,
             })
           }
-          className="w-full bg-transparent font-impact text-3xl uppercase leading-none tracking-tight text-text focus:outline-none"
+          className="w-full bg-transparent font-impact text-4xl uppercase leading-[0.82] tracking-tight text-text focus:outline-none sm:text-5xl"
         />
         <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted">
           <input
@@ -674,6 +767,7 @@ export function SessionLogger({
         <p className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
           {hype}
         </p>
+        <RestTimer />
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (
@@ -688,8 +782,8 @@ export function SessionLogger({
                 save.
               </strong>{" "}
               {online
-                ? "Your log is safe on this screen until you retry."
-                : "You're offline. They'll go up automatically when you reconnect."}
+                ? "Saved on this device. Retry the upload when you're ready."
+                : "Saved on this device. They'll upload when you reconnect."}
             </span>
             <Button
               size="sm"
@@ -708,7 +802,7 @@ export function SessionLogger({
         ) : !online ? (
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs text-warn">
             <CloudOff className="size-3.5 shrink-0" />
-            Offline. Keep logging, sets go up when you reconnect.
+            Offline. Keep logging—sets are saved on this device.
           </div>
         ) : inFlight > 0 ? (
           <div className="mt-3 flex items-center gap-2 px-1 font-mono text-[11px] text-muted">
@@ -779,7 +873,7 @@ export function SessionLogger({
             return (
               <div
                 key={ex.seId}
-                className="my-3 rounded-lg border border-accent/40 bg-accent/[0.05] p-4"
+                className="hb-panel-cut my-3 border border-accent/40 bg-accent/[0.05] p-4"
               >
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
@@ -848,7 +942,7 @@ export function SessionLogger({
         })}
 
         {exercises.length === 0 && (
-          <div className="rounded-lg border border-dashed border-border bg-surface p-8 text-center text-sm text-muted">
+          <div className="hb-panel-cut border border-dashed border-border bg-surface p-8 text-center text-sm text-muted">
             No exercises yet. Add your first movement to begin.
           </div>
         )}
@@ -857,7 +951,7 @@ export function SessionLogger({
       {/* Advance: bonus movement beyond the program, this session only */}
       <button
         onClick={() => setPicker(true)}
-        className="mt-4 flex w-full items-center gap-3 rounded-lg border border-dashed border-border px-4 py-3.5 text-left transition-colors hover:border-accent/50 hover:bg-surface"
+        className="hb-panel-cut mt-4 flex w-full items-center gap-3 border border-dashed border-border px-4 py-3.5 text-left transition-colors hover:border-accent/50 hover:bg-surface"
       >
         <ChevronsUp className="size-4 shrink-0 text-muted" />
         <div className="min-w-0">
@@ -878,7 +972,7 @@ export function SessionLogger({
       {/* Finish bar */}
       <div
         className={cn(
-          "mt-8 flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between",
+          "hb-panel-cut mt-8 flex flex-col gap-3 border p-4 sm:flex-row sm:items-center sm:justify-between",
           allDone ? "border-accent/40 bg-accent/[0.04]" : "border-border bg-surface",
         )}
       >

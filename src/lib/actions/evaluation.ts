@@ -218,7 +218,7 @@ Respond with ONLY a JSON object of exactly this shape:
     };
 
     let tierKey = (parsed.tier ?? "").toLowerCase().trim();
-    if (!TIER_KEYS.includes(tierKey)) {
+    if (!(TIER_KEYS as readonly string[]).includes(tierKey)) {
       const byName = TIERS.find(
         (t) =>
           parsed.tier &&

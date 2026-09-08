@@ -1,10 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { getTier } from "@/lib/tiers";
+import { getTier, type TierKey } from "@/lib/tiers";
 
 export type LeaderboardEntry = {
   username: string;
   totalVolumeKg: number;
-  tierKey: string | null;
+  tierKey: TierKey | null;
   name: string | null;
   epithet: string | null;
   rank: number | null;

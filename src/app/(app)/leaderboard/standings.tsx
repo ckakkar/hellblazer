@@ -4,6 +4,7 @@ import { Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CountUp } from "@/components/reactbits/count-up";
 import { SpotlightCard } from "@/components/reactbits/spotlight-card";
+import { FighterArt } from "@/components/tier/fighter-art";
 import type { LeaderboardEntry } from "@/lib/data/leaderboard";
 import { kgToLb, type Unit } from "@/lib/units";
 import { cn } from "@/lib/utils";
@@ -85,9 +86,17 @@ export function Standings({
             card's own overflow-hidden spotlight layer. */}
         <div className="hb-champion relative rounded-xl">
           <SpotlightCard
-            className="rounded-xl border border-accent/25 bg-surface shadow-card"
+            className="hb-panel-cut overflow-hidden border border-accent/25 bg-surface shadow-card"
             spotlightOpacity={0.13}
           >
+            {champion.tierKey && (
+              <FighterArt
+                fighterKey={champion.tierKey}
+                variant="card"
+                className="absolute inset-y-0 right-[-8%] w-[56%] opacity-30 sm:right-0 sm:w-[42%]"
+                imageClassName="object-[center_20%] grayscale"
+              />
+            )}
             {/* Wraps on phones: the tonnage drops to its own row rather than
                 stealing width from the ring name, which is the one thing on
                 this card that must never be clipped. */}
@@ -96,7 +105,7 @@ export function Standings({
                 <Crown className="size-7 sm:size-8" />
               </div>
 
-              <div className="min-w-0 flex-1">
+              <div className="relative z-10 min-w-0 flex-1 sm:max-w-[62%]">
                 <div className="font-mono text-[10px] uppercase tracking-[0.24em] text-accent/80">
                   Strongest in the ring
                 </div>
@@ -166,9 +175,17 @@ export function Standings({
                 )}
               >
                 <div className="relative flex items-center gap-3.5 p-4">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 font-impact text-base leading-none text-text">
-                    {i + 2}
-                  </div>
+                  {e.tierKey ? (
+                    <FighterArt
+                      fighterKey={e.tierKey}
+                      variant="thumbnail"
+                      className="h-12 w-11 shrink-0 border border-border bg-black"
+                    />
+                  ) : (
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 font-impact text-base leading-none text-text">
+                      {i + 2}
+                    </div>
+                  )}
                   <div className="min-w-0 flex-1">
                     <div className="flex min-w-0 items-center gap-2">
                       <span className="min-w-0 truncate text-sm font-semibold text-text">
@@ -224,6 +241,13 @@ export function Standings({
                   <span className="w-6 shrink-0 font-mono text-[11px] tabular-nums text-muted">
                     {place}
                   </span>
+                  {e.tierKey && (
+                    <FighterArt
+                      fighterKey={e.tierKey}
+                      variant="thumbnail"
+                      className="h-9 w-8 shrink-0 border border-border bg-black opacity-75"
+                    />
+                  )}
                   <span className="flex min-w-0 flex-1 items-baseline gap-2">
                     <span className="min-w-0 truncate font-display text-[15px] uppercase tracking-wide text-text">
                       {e.username}

@@ -55,7 +55,7 @@ export function HistoryList({
 
   return (
     <div>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-6 flex flex-col gap-3 border-y border-border bg-surface/45 p-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input
@@ -83,8 +83,11 @@ export function HistoryList({
       {/* The full record. A history screen is a table you read down — the
           previous card-per-session layout made every row the same weight and
           buried the numbers you actually scan for. */}
-      <div className="border-t border-border">
-        {filtered.map((s) => (
+      <div className="border-t-2 border-text/75">
+        <div className="hidden grid-cols-[3rem_4rem_1fr_5rem_6rem_3rem] gap-3 border-b border-border py-2 font-mono text-[9px] uppercase tracking-[0.16em] text-muted/55 md:grid">
+          <span>No.</span><span>Date</span><span>Bout</span><span className="text-right">Sets</span><span className="text-right">Volume</span><span className="text-right">Time</span>
+        </div>
+        {filtered.map((s, index) => (
           <Link
             key={s.session_id}
             href={
@@ -92,8 +95,9 @@ export function HistoryList({
                 ? `/history/${s.session_id}`
                 : `/log/${s.session_id}`
             }
-            className="group flex items-baseline gap-3 border-b border-border py-3 transition-colors hover:bg-surface/60"
+            className="group flex items-baseline gap-3 border-b border-border py-3.5 transition-colors hover:bg-surface/60 md:grid md:grid-cols-[3rem_4rem_1fr_5rem_6rem_3rem]"
           >
+            <span className="hidden font-impact text-lg tabular-nums text-muted/35 md:inline">{String(filtered.length - index).padStart(2, "0")}</span>
             <span className="w-14 shrink-0 font-mono text-[11px] uppercase tabular-nums text-muted">
               {s.session_date
                 ? format(parseISO(s.session_date), "dd MMM")
@@ -106,7 +110,7 @@ export function HistoryList({
               {!s.finished_at && <Badge variant="accent">Live</Badge>}
               {!s.template_id && <Badge variant="muted">freeform</Badge>}
             </span>
-            <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
+            <span className="shrink-0 text-right font-mono text-[11px] tabular-nums text-muted">
               {s.working_sets ?? 0} sets
             </span>
             <span className="hidden w-20 shrink-0 text-right font-mono text-[11px] tabular-nums text-text sm:inline">

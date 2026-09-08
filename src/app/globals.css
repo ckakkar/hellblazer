@@ -106,11 +106,114 @@ html {
 }
 
 body {
-  background: var(--color-bg);
+  background:
+    radial-gradient(circle at 78% -10%, rgb(var(--accent-rgb) / 0.07), transparent 28rem),
+    var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+.hb-app-shell {
+  background-image:
+    linear-gradient(90deg, rgb(255 255 255 / 0.012) 1px, transparent 1px),
+    linear-gradient(rgb(255 255 255 / 0.009) 1px, transparent 1px);
+  background-size: 72px 72px;
+}
+
+.hb-nav-rail {
+  background-image:
+    linear-gradient(180deg, rgb(var(--accent-rgb) / 0.055), transparent 15rem),
+    repeating-linear-gradient(135deg, transparent 0 22px, rgb(255 255 255 / 0.012) 22px 23px);
+}
+
+/* ── Arena composition ────────────────────────────────────────────────────
+   These surfaces are intentionally asymmetrical. They give cinematic pages a
+   real focal point while the logger and form-heavy screens stay quiet. */
+.hb-arena {
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 0.018) 1px, transparent 1px) 0 0 / 72px 100%,
+    linear-gradient(180deg, rgb(var(--accent-rgb) / 0.08), transparent 34rem);
+}
+
+.hb-ink-noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.055;
+  mix-blend-mode: screen;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
+}
+
+.hb-panel-cut {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+
+.hb-page-head {
+  background:
+    linear-gradient(105deg, rgb(var(--accent-rgb) / 0.09), transparent 36%),
+    repeating-linear-gradient(
+      112deg,
+      transparent 0 46px,
+      rgb(255 255 255 / 0.018) 46px 47px
+    ),
+    rgb(20 16 14 / 0.62);
+}
+
+.hb-page-head::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: min(38%, 24rem);
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--color-accent));
+  opacity: 0.85;
+}
+
+.hb-fighter-aura {
+  border-radius: 48% 52% 46% 54%;
+  background:
+    radial-gradient(circle at 58% 38%, rgb(255 255 255 / 0.12), transparent 20%),
+    radial-gradient(circle, rgb(var(--accent-rgb) / 0.42), transparent 68%);
+  filter: blur(22px);
+  transform: rotate(-9deg);
+}
+
+.hb-portrait-fade {
+  background:
+    linear-gradient(to bottom, var(--color-bg) 0, transparent 12%, transparent 78%, var(--color-bg) 100%),
+    linear-gradient(to right, var(--color-bg) 0, transparent 24%, transparent 82%, var(--color-bg) 100%);
+}
+
+.hb-fighter-swap {
+  animation: hb-fighter-swap 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes hb-fighter-swap {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, 0, 0) scale(0.985);
+    filter: contrast(1.2);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+    filter: contrast(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hb-fighter-swap {
+    animation: none;
+  }
+}
+
+.hb-roster-number {
+  -webkit-text-stroke: 1px rgb(255 255 255 / 0.16);
+  color: transparent;
 }
 
 /* Native-app feel on iOS: no grey tap flash, no long-press callout menu. */
@@ -272,31 +375,63 @@ label {
   }
 }
 
-/* ── Loading: the plate-loaded bar ────────────────────────────────────────
-   Every route loader is one barbell being loaded. Plates fly in from outside
-   the frame and seat against the collars, innermost first, while the counter
-   climbs with them. All of it is CSS on a server-rendered SVG, so it paints on
-   the very first frame of a navigation with no client bundle and no rAF.
-
-   The weight is real: a 20 kg bar plus 25/20/15 per side is exactly 140. */
-.hb-plate {
-  /* Resting state is *loaded*. The keyframes supply the fly-in, so when the
-     reduced-motion rule below collapses the duration, plates stay on the bar
-     instead of vanishing. */
-  opacity: 1;
-  animation: hb-plate-load 2.8s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+/* Route loader: an official card being called, with no weight/plate counter. */
+.hb-loader-card {
+  width: min(100%, 31rem);
+  background:
+    linear-gradient(110deg, rgb(var(--accent-rgb) / 0.09), transparent 45%),
+    var(--color-surface);
 }
-@keyframes hb-plate-load {
+
+.hb-loader-scan {
+  transform-origin: left;
+  animation: hb-loader-scan 1.35s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+
+.hb-loader-mark {
+  animation: hb-loader-mark 1.35s steps(2, end) infinite;
+}
+
+.hb-loader-plate {
+  opacity: 1;
+  animation: hb-loader-plate 2.7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.hb-loader-phrase {
+  opacity: 0;
+  animation: hb-loader-phrase 2.7s linear infinite;
+}
+
+@keyframes hb-loader-scan {
   0% {
-    transform: translateX(var(--hb-plate-from));
-    opacity: 0;
+    transform: scaleX(0);
+    opacity: 0.35;
   }
-  6% {
+  55% {
+    transform: scaleX(1);
     opacity: 1;
   }
-  20% {
-    transform: translateX(0);
+  100% {
+    transform: scaleX(1);
+    opacity: 0;
   }
+}
+
+@keyframes hb-loader-mark {
+  50% {
+    color: var(--color-accent);
+  }
+}
+
+@keyframes hb-loader-plate {
+  0% {
+    transform: translateX(var(--hb-loader-from));
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  24%,
   86% {
     transform: translateX(0);
     opacity: 1;
@@ -307,73 +442,25 @@ label {
   }
 }
 
-/* The counter is a real animated integer: @property makes --hb-kg
-   interpolatable, counter-reset reads it, and ::after prints it. No JS, and it
-   steps in lockstep with the plates seating above it. */
-@property --hb-kg {
-  syntax: "<integer>";
-  initial-value: 140;
-  inherits: false;
-}
-.hb-kg {
-  --hb-kg: 140;
-  counter-reset: hb-kg var(--hb-kg);
-  animation: hb-kg-load 2.8s linear infinite;
-}
-.hb-kg::after {
-  content: counter(hb-kg);
-}
-@keyframes hb-kg-load {
+@keyframes hb-loader-phrase {
   0%,
-  19% {
-    --hb-kg: 20;
-  }
-  20%,
-  25% {
-    --hb-kg: 70;
-  }
-  26%,
-  31% {
-    --hb-kg: 110;
-  }
-  32%,
-  100% {
-    --hb-kg: 140;
-  }
-}
-
-/* Stacked call-outs cross-fading in place, so nothing reflows as they cycle. */
-.hb-phrase {
-  opacity: 0;
-  animation: hb-phrase 8.4s linear infinite;
-}
-@keyframes hb-phrase {
-  0%,
-  1% {
+  4% {
     opacity: 0;
-    transform: translateY(5px);
+    transform: translateY(4px);
   }
-  5%,
-  28% {
+  10%,
+  26% {
     opacity: 1;
     transform: none;
   }
-  33%,
+  32%,
   100% {
     opacity: 0;
-    transform: translateY(-5px);
+    transform: translateY(-4px);
   }
 }
-@media (prefers-reduced-motion: reduce) {
-  /* Durations collapse to ~0 above, which would leave every phrase parked on
-     its final (invisible) keyframe. Pin the first one on instead. */
-  .hb-phrase {
-    opacity: 0;
-  }
-  .hb-phrase:first-child {
-    opacity: 1;
-  }
 
+@media (prefers-reduced-motion: reduce) {
   /* Scroll-revealed copy must never be left dimmed for someone who has asked
      for less motion. ScrollReveal already branches to a static paragraph in JS,
      but a hook that resolves a tick late would leave real body copy sitting at

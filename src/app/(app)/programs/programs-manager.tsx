@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { Sheet } from "@/components/ui/sheet";
-import { PageHeader, EmptyState } from "@/components/ui/page-header";
+import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { format } from "date-fns";
@@ -50,7 +50,13 @@ export function ProgramsManager({
     <div>
       <PageHeader
         title="Programs"
-        subtitle="Build a training block, set how many weeks to run it, and go."
+        subtitle="Build the campaign: sequence your training days, set the duration, and make every week count."
+        eyebrow="Training architecture"
+        index="03"
+        stat={{
+          value: programs.length,
+          label: programs.length === 1 ? "block" : "blocks",
+        }}
         action={
           <Button
             onClick={() => setCreating(true)}
@@ -78,24 +84,25 @@ export function ProgramsManager({
 
       {/* Starter programs: load a proven split (any number of times) */}
       {presets.length > 0 && (
-        <Card className="mb-6 border-accent/20 bg-accent/[0.03] p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-text">
-            <Sparkles className="size-4 text-accent" />
-            Starter programs
+        <Card className="mb-8 overflow-hidden border-accent/20 bg-accent/[0.025]">
+          <div className="flex items-start gap-3 border-b border-border px-5 py-4">
+            <Sparkles className="mt-0.5 size-4 shrink-0 text-accent" />
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">Promoter&apos;s picks</div>
+              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">
+                Proven strength-first campaigns, ready to become your active block.
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-xs text-muted">
-            Load a proven, strength-first split. It becomes a ready-to-run
-            active program. Load any of them again whenever you want a fresh
-            block.
-          </p>
-          <div className="mt-3 grid gap-3">
-            {presets.map((p) => (
+          <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {presets.map((p, presetIndex) => (
               <div
                 key={p.id}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="relative flex min-h-48 flex-col bg-surface p-5"
               >
+                <span aria-hidden className="absolute right-3 top-1 font-impact text-6xl text-text/[0.035]">{String(presetIndex + 1).padStart(2, "0")}</span>
                 <div className="min-w-0">
-                  <div className="font-display text-[15px] uppercase tracking-wide text-text">
+                  <div className="max-w-[80%] font-display text-lg uppercase leading-tight tracking-wide text-text">
                     {p.name}
                   </div>
                   <p className="mt-0.5 text-xs leading-5 text-muted">
@@ -108,7 +115,7 @@ export function ProgramsManager({
                 </div>
                 <Button
                   variant="secondary"
-                  className="shrink-0"
+                  className="mt-auto w-full"
                   disabled={pending}
                   onClick={() => {
                     setLoadingId(p.id);
@@ -142,14 +149,13 @@ export function ProgramsManager({
         />
       ) : (
         <div className="grid gap-3">
-          <div className="px-1 text-xs font-medium uppercase tracking-wide text-muted">
-            All programs · tap “Make active” to switch
-          </div>
-          {programs.map((p) => (
+          <SectionLabel>All programs · tap “Make active” to switch</SectionLabel>
+          {programs.map((p, programIndex) => (
             <Card
               key={p.id}
-              className="flex items-center gap-3 p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]"
+              className="group flex items-center gap-3 overflow-hidden p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]"
             >
+              <span className="w-7 shrink-0 font-impact text-xl tabular-nums text-muted/45 group-hover:text-accent">{String(programIndex + 1).padStart(2, "0")}</span>
               <Link href={`/programs/${p.id}`} className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">

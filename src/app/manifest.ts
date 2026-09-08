@@ -24,5 +24,21 @@ export default function manifest(): MetadataRoute.Manifest {
       },
       { src: "/apple-icon.png", sizes: "180x180", type: "image/png" },
     ],
+    shortcuts: [
+      {
+        name: "Start workout",
+        short_name: "Train",
+        description: "Open the workout launcher",
+        url: "/log",
+        icons: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
+      },
+      {
+        name: "View progress",
+        short_name: "Progress",
+        description: "Open your strength record and fighter rank",
+        url: "/progress",
+        icons: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
+      },
+    ],
   };
 }

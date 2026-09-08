@@ -55,7 +55,10 @@ export default async function ProgressPage({
     <div>
       <PageHeader
         title="Progress"
-        subtitle="Estimated 1RM, volume and per-muscle trends over time."
+        subtitle="Read the evidence: strength peaks, volume trends, muscle balance, and the rung you hold."
+        eyebrow="Performance intelligence"
+        index="06"
+        stat={{ value: oneRepMaxes.length, label: "tracked lifts" }}
       />
 
       <LadderStanding tierKey={profile?.tier ?? null} />

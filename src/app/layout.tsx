@@ -29,6 +29,9 @@ const plexMono = IBM_Plex_Mono({
 const bigShoulders = Big_Shoulders({
   variable: "--font-big-shoulders",
   subsets: ["latin"],
+  // Next does not ship fallback metrics for this family. Disabling the
+  // unsupported adjustment keeps development and builds warning-free.
+  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {

@@ -21,12 +21,17 @@ function useActive() {
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="flex items-center gap-2">
-      <span className="flex size-6 items-center justify-center rounded-md border border-accent/40 text-accent">
+    <Link href="/dashboard" className="group flex items-center gap-3">
+      <span className="hb-panel-cut flex size-8 items-center justify-center border border-accent/50 bg-accent/[0.06] text-accent transition-colors group-hover:bg-accent/15">
         <Flame className="size-3.5" />
       </span>
-      <span className="font-display text-sm font-semibold uppercase tracking-[0.2em] text-text">
-        Hell&nbsp;Blazer
+      <span>
+        <span className="block font-display text-sm font-semibold uppercase tracking-[0.2em] text-text">
+          Hell&nbsp;Blazer
+        </span>
+        <span className="mt-0.5 block font-mono text-[8px] uppercase tracking-[0.22em] text-muted/60">
+          Personal fight record
+        </span>
       </span>
     </Link>
   );
@@ -43,10 +48,10 @@ function SidebarLink({
     <Link
       href={item.href}
       className={cn(
-        "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "group relative flex items-center gap-3 border-l-2 px-3 py-2.5 text-sm font-medium transition-colors",
         active
-          ? "bg-accent/10 text-accent"
-          : "text-muted hover:bg-surface-2 hover:text-text",
+          ? "border-accent bg-gradient-to-r from-accent/15 to-transparent text-text"
+          : "border-transparent text-muted hover:border-border hover:bg-surface/50 hover:text-text",
       )}
     >
       <item.icon
@@ -55,7 +60,8 @@ function SidebarLink({
           active ? "text-accent" : "text-muted group-hover:text-text",
         )}
       />
-      {item.label}
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      <span className={cn("font-mono text-[9px] tabular-nums", active ? "text-accent" : "text-muted/45")}>{item.code}</span>
     </Link>
   );
 }
@@ -66,15 +72,15 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hb-glass fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border px-3 py-5 md:flex">
+      <aside className="hb-glass hb-nav-rail fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border px-3 py-5 md:flex">
         <div className="px-2">
           <Brand />
         </div>
-        <nav className="mt-7 flex flex-1 flex-col gap-5">
+        <nav className="mt-9 flex flex-1 flex-col gap-6">
           {NAV_SECTIONS.map((section, i) => (
             <div key={i} className="flex flex-col gap-1">
               {section.title && (
-                <div className="px-3 pb-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted/60">
+                <div className="px-3 pb-1.5 font-mono text-[9px] uppercase tracking-[0.22em] text-muted/50">
                   {section.title}
                 </div>
               )}
@@ -135,7 +141,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
       </header>
 
       {/* Mobile bottom nav */}
-      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden rounded-[14px] md:hidden">
+      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden border-t border-text/20 md:hidden">
         {BOTTOM_NAV.map((item) => {
           const active = isActive(item.href);
           const isLog = item.href === "/log";

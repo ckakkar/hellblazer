@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronUp, ChevronDown, Crown, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TIERS, getTier, MAX_RANK } from "@/lib/tiers";
+import { FighterArt } from "@/components/tier/fighter-art";
 
 const byRank = (r: number) => TIERS.find((t) => t.rank === r) ?? null;
 
@@ -21,24 +22,29 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
   const ladder = [...TIERS].sort((a, b) => b.rank - a.rank);
 
   return (
-    <section className="mb-6 overflow-hidden rounded-xl border border-border bg-surface">
-      <div className="relative border-b border-border p-5">
+    <section className="hb-panel-cut mb-6 overflow-hidden border border-border bg-surface">
+      <div className="hb-ink-noise relative isolate min-h-64 overflow-hidden border-b border-border p-5">
+        <FighterArt
+          fighterKey={current?.key ?? "ohma"}
+          className="absolute inset-y-0 right-[-12%] w-[68%] opacity-35 sm:right-0 sm:w-[45%]"
+          imageClassName="object-[center_20%] grayscale"
+        />
         {/* faint kanji watermark, same language as the rank hero */}
         <div
           aria-hidden
-          className="pointer-events-none absolute -right-3 -top-6 select-none font-display text-[7rem] font-bold leading-none text-white/[0.03]"
+          className="pointer-events-none absolute -left-3 -top-7 select-none font-display text-[8rem] font-bold leading-none text-white/[0.035]"
         >
           位
         </div>
 
-        <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+        <div className="relative z-10 flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-text/60">
           <Swords className="size-3.5 text-accent" />
           Your standing
         </div>
 
         {current ? (
           <>
-            <div className="mt-2 flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
+            <div className="relative z-10 mt-10 flex max-w-[74%] flex-wrap items-end justify-between gap-x-4 gap-y-1 sm:max-w-[62%]">
               <div className="min-w-0">
                 <div className="font-impact text-4xl uppercase leading-none text-accent sm:text-5xl">
                   {current.name}
@@ -56,7 +62,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
             </div>
 
             {/* above / below callout */}
-            <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="relative z-10 mt-5 grid grid-cols-2 gap-2 sm:max-w-[72%]">
               <Neighbor
                 dir="up"
                 label={atSummit ? "At the summit" : "Chasing"}
@@ -75,7 +81,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
             </div>
           </>
         ) : (
-          <div className="mt-2">
+          <div className="relative z-10 mt-10 max-w-[70%]">
             <div className="font-impact text-4xl uppercase leading-none text-muted sm:text-5xl">
               Unranked
             </div>
@@ -105,15 +111,26 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
             <li key={t.key}>
               <div
                 className={cn(
-                  "flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors",
+                  "flex items-center gap-3 border-b border-border/55 px-2.5 py-2.5 transition-colors last:border-0",
                   isYou && "bg-accent/[0.08] shadow-glow",
                 )}
               >
-                {/* rail node */}
-                <span className="flex w-4 shrink-0 justify-center">
+                <span className="relative h-12 w-10 shrink-0">
+                  <FighterArt
+                    fighterKey={t.key}
+                    variant="thumbnail"
+                    className={cn(
+                      "absolute inset-0 border bg-black",
+                      isYou
+                        ? "border-accent"
+                        : conquered
+                          ? "border-border opacity-80"
+                          : "border-border opacity-45 grayscale",
+                    )}
+                  />
                   <span
                     className={cn(
-                      "size-2.5 rounded-full ring-2 ring-bg",
+                      "absolute bottom-1 left-1 size-2.5 rounded-full ring-2 ring-bg",
                       isYou
                         ? "bg-accent"
                         : conquered
@@ -182,8 +199,8 @@ function Neighbor({
   return (
     <div
       className={cn(
-        "rounded-lg border p-3",
-        emphasis ? "border-accent/25 bg-accent/[0.04]" : "border-border",
+        "border-l-2 p-3",
+        emphasis ? "border-accent bg-accent/[0.04]" : "border-border bg-bg/30",
       )}
     >
       <div

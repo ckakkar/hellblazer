@@ -1,10 +1,15 @@
 /* Hell Blazer service worker: offline shell + web push.
    Hand-rolled (no build step) so it stays framework-agnostic. */
-const VERSION = "hb-v1";
+const VERSION = "hb-v3";
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/icon.png", "/apple-icon.png"];
+const PRECACHE = [
+  OFFLINE_URL,
+  "/icon.png",
+  "/apple-icon.png",
+  "/art/fighters/ohma.webp",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -37,22 +42,22 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Page loads: network-first, fall back to any cached copy, then offline page.
+  // Never cache Next build output. Production filenames are hashed, while dev
+  // chunk URLs are stable; either way the framework owns their lifecycle.
+  if (url.pathname.startsWith("/_next/")) return;
+
+  // Page loads are network-only with the explicit offline document as fallback.
+  // Caching authenticated HTML risks replaying another point-in-time session.
   if (req.mode === "navigate") {
     event.respondWith(
-      fetch(req).catch(async () => {
-        const cached = await caches.match(req);
-        return cached || (await caches.match(OFFLINE_URL));
-      }),
+      fetch(req).catch(() => caches.match(OFFLINE_URL)),
     );
     return;
   }
 
-  // Immutable build assets + media: cache-first, fill the cache in the
-  // background. Dynamic data (RSC payloads, API) falls through to the network.
-  const isStatic =
-    url.pathname.startsWith("/_next/static") ||
-    /\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf|css|js)$/.test(url.pathname);
+  // Only authored media/fonts are cache-first. JS and CSS always stay on the
+  // network so a deployment can never mix two application revisions.
+  const isStatic = /\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf)$/.test(url.pathname);
   if (isStatic) {
     event.respondWith(
       caches.match(req).then(
@@ -60,8 +65,10 @@ self.addEventListener("fetch", (event) => {
           cached ||
           fetch(req)
             .then((res) => {
-              const copy = res.clone();
-              caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy));
+              if (res.ok) {
+                const copy = res.clone();
+                caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy));
+              }
               return res;
             })
             .catch(() => cached),

@@ -9,7 +9,7 @@ import { TIER_KEYS } from "@/lib/tiers";
 export async function setTier(input: { tierKey: string; rationale?: string }) {
   const v = z
     .object({
-      tierKey: z.enum(TIER_KEYS as [string, ...string[]]),
+      tierKey: z.enum(TIER_KEYS),
       rationale: z.string().max(4000).optional(),
     })
     .parse(input);

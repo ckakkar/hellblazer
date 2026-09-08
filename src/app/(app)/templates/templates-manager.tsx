@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { ExercisePicker } from "@/components/exercise-picker";
-import { PageHeader, EmptyState } from "@/components/ui/page-header";
+import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
 import type { TemplateWithExercises } from "@/lib/data/templates";
@@ -77,7 +77,13 @@ export function TemplatesManager({
     <div>
       <PageHeader
         title="Templates"
-        subtitle="Your split. Build a day, add exercises, prescribe sets & reps."
+        subtitle="Build the blueprints behind your split: movements, order, working sets, and rep targets."
+        eyebrow="Day blueprints"
+        index="04"
+        stat={{
+          value: templates.length,
+          label: templates.length === 1 ? "template" : "templates",
+        }}
         action={
           <Button onClick={() => setCreating((v) => !v)}>
             <Plus className="size-4" />
@@ -110,19 +116,23 @@ export function TemplatesManager({
 
       {/* Starter routines */}
       {presets.length > 0 && (
-        <Card className="mb-6 border-accent/20 bg-accent/[0.03] p-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-text">
+        <Card className="mb-8 overflow-hidden border-accent/20 bg-accent/[0.025]">
+          <div className="flex items-center gap-3 border-b border-border px-5 py-4">
             <Sparkles className="size-4 text-accent" />
-            Starter routines
+            <div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">Ready-made corners</div>
+              <p className="mt-1 text-xs text-muted">Load a complete split, then tailor every day to your own fight.</p>
+            </div>
           </div>
-          <div className="mt-3 grid gap-3">
-            {presets.map((p) => (
+          <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
+            {presets.map((p, presetIndex) => (
               <div
                 key={p.id}
-                className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="relative flex min-h-44 flex-col bg-surface p-5"
               >
+                <span aria-hidden className="absolute right-3 top-1 font-impact text-6xl text-text/[0.035]">{String(presetIndex + 1).padStart(2, "0")}</span>
                 <div className="min-w-0">
-                  <div className="font-display text-[15px] uppercase tracking-wide text-text">
+                  <div className="max-w-[80%] font-display text-lg uppercase leading-tight tracking-wide text-text">
                     {p.name}
                   </div>
                   <p className="mt-0.5 text-xs leading-5 text-muted">
@@ -135,7 +145,7 @@ export function TemplatesManager({
                 </div>
                 <Button
                   variant="secondary"
-                  className="shrink-0"
+                  className="mt-auto w-full"
                   disabled={pending}
                   onClick={() => {
                     setLoadingId(p.id);
@@ -169,16 +179,7 @@ export function TemplatesManager({
         />
       ) : currentSplit.length > 0 ? (
         <>
-          <div className="mb-3 flex items-center gap-2 px-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-accent">
-              Your split
-            </span>
-            {activeProgramName && (
-              <span className="min-w-0 truncate text-xs text-muted">
-                · {activeProgramName}
-              </span>
-            )}
-          </div>
+          <SectionLabel>{activeProgramName ? `Your split · ${activeProgramName}` : "Your split"}</SectionLabel>
           <div className="grid gap-4">
             {currentSplit.map((t) => (
               <TemplateCard

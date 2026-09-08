@@ -17,7 +17,13 @@ export default async function HistoryPage() {
     <div>
       <PageHeader
         title="History"
-        subtitle="Every logged session, most recent first."
+        subtitle="Every completed bout, every working set, and every number that put your name on the card."
+        eyebrow="Official fight ledger"
+        index="07"
+        stat={{
+          value: sessions.length,
+          label: sessions.length === 1 ? "bout" : "bouts",
+        }}
       />
       <HistoryList
         sessions={sessions}

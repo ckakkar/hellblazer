@@ -55,7 +55,10 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
     <div>
       <PageHeader
         title="Exercises"
-        subtitle="The shared library plus your custom movements. Tap a movement to see how it's performed."
+        subtitle="Your complete movement arsenal. Search by target, inspect the cue, or forge a custom exercise."
+        eyebrow="Movement arsenal"
+        index="05"
+        stat={{ value: exercises.length, label: "movements" }}
         action={
           <Button onClick={() => setCreating(true)}>
             <Plus className="size-4" />
@@ -64,7 +67,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         }
       />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mb-6 flex flex-col gap-3 border-y border-border bg-surface/45 p-3 sm:flex-row">
         <div className="relative flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input
@@ -88,11 +91,12 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         </Select>
       </div>
 
-      <div className="grid gap-5">
+      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
         {groups.map((g) => (
           <section key={g.muscle}>
-            <h2 className="mb-2 px-1 font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
-              {MUSCLE_LABEL[g.muscle]}
+            <h2 className="mb-2 flex items-center justify-between px-1 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
+              <span>{MUSCLE_LABEL[g.muscle]}</span>
+              <span className="text-muted/45">{String(g.items.length).padStart(2, "0")}</span>
             </h2>
             <Card className="divide-y divide-border overflow-hidden">
               {g.items.map((e) => (

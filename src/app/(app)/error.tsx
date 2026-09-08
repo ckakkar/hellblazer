@@ -17,14 +17,16 @@ export default function AppError({
   }, [error]);
 
   return (
-    <div className="flex min-h-[60dvh] flex-col items-center justify-center px-6 text-center">
-      <div className="flex size-12 items-center justify-center rounded-full border border-border bg-surface text-muted">
+    <div className="hb-panel-cut relative flex min-h-[60dvh] flex-col items-start justify-end overflow-hidden border-y-2 border-text/80 bg-surface/50 px-6 py-10 text-left sm:px-10">
+      <span aria-hidden className="absolute -right-4 -top-12 font-impact text-[14rem] leading-none text-text/[0.025]">ERR</span>
+      <div className="flex size-12 items-center justify-center border border-danger/30 bg-danger/5 text-danger">
         <TriangleAlert className="size-5" />
       </div>
-      <h1 className="mt-5 font-display text-xl font-semibold tracking-tight text-text">
+      <div className="mt-6 font-mono text-[9px] uppercase tracking-[0.24em] text-danger">Connection fault</div>
+      <h1 className="mt-2 font-impact text-5xl uppercase leading-[0.82] text-text sm:text-6xl">
         Something didn&apos;t load
       </h1>
-      <p className="mt-2 max-w-sm text-sm text-muted">
+      <p className="mt-3 max-w-md text-sm leading-6 text-muted">
         A temporary hiccup talking to the server, usually a one-off. Try again.
       </p>
       <div className="mt-6 flex items-center gap-2">

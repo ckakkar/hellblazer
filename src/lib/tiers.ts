@@ -1,5 +1,20 @@
+export const TIER_KEYS = [
+  "rei",
+  "setsuna",
+  "hatsumi",
+  "gaolang",
+  "julius",
+  "raian",
+  "wakatsuki",
+  "ohma",
+  "agito",
+  "kuroki",
+] as const;
+
+export type TierKey = (typeof TIER_KEYS)[number];
+
 export type Tier = {
-  key: string;
+  key: TierKey;
   name: string;
   epithet: string;
   rank: number;
@@ -81,7 +96,6 @@ export const TIERS: Tier[] = [
   },
 ];
 
-export const TIER_KEYS = TIERS.map((t) => t.key);
 export const MAX_RANK = TIERS.length;
 
 export function getTier(key: string | null | undefined): Tier | null {

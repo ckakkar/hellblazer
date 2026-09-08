@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
+import { FighterArt } from "@/components/tier/fighter-art";
 
 /* ── The card ──────────────────────────────────────────────────────────────
    Who you are on the bill, set as the top of the bill. This used to be a thin
@@ -23,56 +24,68 @@ export function FightCardHero({
   const next = TIERS.find((t) => t.rank === rank + 1);
 
   return (
-    <section className={cn("relative", className)}>
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted">
-          {tier ? `Rank ${String(rank).padStart(2, "0")}` : "Unranked"}
-        </span>
-        <Link
-          href="/settings"
-          className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted underline-offset-4 transition-colors hover:text-accent hover:underline"
-        >
-          {tier ? "Re-weigh" : "Get weighed in"}
-        </Link>
-      </div>
-
-      <h1
-        className={cn(
-          "mt-1.5 font-impact uppercase leading-[0.86] tracking-tight",
-          tier ? "text-text" : "text-muted",
-          // The longest name on the ladder is "Wakatsuki Takeshi"; the display
-          // face is condensed enough to hold it on one line by 400px.
-          "text-[2.75rem] sm:text-6xl",
-        )}
-      >
-        {tier ? tier.name : "No rank yet"}
-      </h1>
-
-      <p className="mt-2 font-mono text-[11px] uppercase tracking-[0.16em] text-accent">
-        {tier ? tier.epithet : "Log a few sessions, then ask for a verdict"}
-      </p>
-
-      {/* Rungs, then the name of whoever is one rung up. The ladder is the
-          only place the climb is legible as a distance rather than a number. */}
-      <div className="mt-5 flex items-center gap-3">
-        <div className="flex min-w-0 flex-1 gap-[3px]">
-          {TIERS.map((t) => (
-            <span
-              key={t.key}
-              className={cn(
-                "h-1.5 flex-1",
-                t.rank <= rank ? "bg-accent" : "bg-surface-2",
-              )}
-            />
-          ))}
+    <section
+      className={cn(
+        "hb-ink-noise relative isolate min-h-64 overflow-hidden border-y-2 border-text/80",
+        className,
+      )}
+    >
+      <div className="absolute inset-x-0 top-0 h-px bg-border" />
+      <FighterArt
+        fighterKey={tier?.key ?? "ohma"}
+        className="absolute inset-y-0 right-[-12%] w-[72%] opacity-75 sm:right-[-4%] sm:w-[58%]"
+        imageClassName="scale-[1.04] object-[center_20%]"
+      />
+      <div className="relative z-10 flex min-h-64 max-w-[72%] flex-col justify-between py-5 sm:max-w-[58%] sm:py-6">
+        <div>
+          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
+            <span className="h-px w-8 bg-accent" />
+            Your corner
+          </div>
+          <div className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-text/60">
+            {tier ? `Official rank · ${String(rank).padStart(2, "0")}` : "Status · unranked"}
+          </div>
+          <h1
+            className={cn(
+              "mt-1 font-impact text-[3.35rem] uppercase leading-[0.78] tracking-[-0.025em] sm:text-7xl",
+              tier ? "text-text" : "text-text/70",
+            )}
+          >
+            {tier ? tier.name : "No name on the bill"}
+          </h1>
+          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
+            {tier ? tier.epithet : "Log the work. Demand a verdict."}
+          </p>
         </div>
-        {next && (
-          <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
-            Next&nbsp;·&nbsp;
-            <span className="text-text">{next.name.split(" ")[0]}</span>
-          </span>
-        )}
+
+        <div className="mt-7">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <Link
+              href="/settings"
+              className="font-mono text-[10px] uppercase tracking-[0.16em] text-text/60 underline-offset-4 transition-colors hover:text-accent hover:underline"
+            >
+              {tier ? "Demand a new verdict" : "Get weighed in"}
+            </Link>
+            {next && (
+              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text/55">
+                Target · <span className="text-text">{next.name.split(" ")[0]}</span>
+              </span>
+            )}
+          </div>
+          <div className="flex gap-[3px]">
+            {TIERS.map((t) => (
+              <span
+                key={t.key}
+                className={cn(
+                  "h-1.5 flex-1 skew-x-[-12deg]",
+                  t.rank <= rank ? "bg-accent" : "bg-text/15",
+                )}
+              />
+            ))}
+          </div>
+        </div>
       </div>
+      <div className="absolute inset-x-0 bottom-0 h-px bg-border" />
     </section>
   );
 }

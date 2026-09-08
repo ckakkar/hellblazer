@@ -59,7 +59,7 @@ export default async function ProfilePage() {
         : null;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div>
       <ProfileIdentity
         name={profile?.display_name ?? googleName}
         ringName={profile?.username ?? null}
@@ -69,7 +69,8 @@ export default async function ProfilePage() {
         className="mb-8"
       />
 
-      <div className="grid gap-7">
+      <div className="grid gap-7 lg:grid-cols-12 lg:items-start">
+        <div className="grid gap-7 lg:col-span-7">
         <section>
           <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
             Strength rank
@@ -103,6 +104,21 @@ export default async function ProfilePage() {
           </SettingsRow>
         </SettingsGroup>
 
+        <section>
+          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
+            Bodyweight
+          </h2>
+          <div className="hb-panel-cut grid gap-4 border border-border bg-surface p-4">
+            <BodyweightChart logs={logs} unit={unit} />
+            <BodyweightManager logs={logs} unit={unit} />
+          </div>
+          <p className="px-1 pt-2 text-[12px] leading-5 text-muted">
+            Tracked over time, and fed into your strength evaluation.
+          </p>
+        </section>
+        </div>
+
+        <aside className="grid gap-7 lg:col-span-5 lg:sticky lg:top-8">
         <SettingsGroup
           label="Preferences"
           caption="Weights are always stored in kg and converted for display."
@@ -127,19 +143,6 @@ export default async function ProfilePage() {
             />
           </SettingsRow>
         </SettingsGroup>
-
-        <section>
-          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-            Bodyweight
-          </h2>
-          <div className="grid gap-4 rounded-lg border border-border bg-surface p-4">
-            <BodyweightChart logs={logs} unit={unit} />
-            <BodyweightManager logs={logs} unit={unit} />
-          </div>
-          <p className="px-1 pt-2 text-[12px] leading-5 text-muted">
-            Tracked over time, and fed into your strength evaluation.
-          </p>
-        </section>
 
         <SettingsGroup label="Account">
           <SettingsRow
@@ -177,10 +180,11 @@ export default async function ProfilePage() {
           <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-danger/80">
             Danger zone
           </h2>
-          <div className="rounded-lg border border-danger/25 bg-surface p-4">
+          <div className="hb-panel-cut border border-danger/25 bg-surface p-4">
             <DangerZone activeProgram={activeProgram} />
           </div>
         </section>
+        </aside>
       </div>
     </div>
   );

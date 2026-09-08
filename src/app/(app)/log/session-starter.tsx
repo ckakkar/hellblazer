@@ -59,10 +59,11 @@ export function SessionStarter({
         disabled={pending}
         onClick={() => begin(null)}
         className={cn(
-          "group flex items-center gap-4 rounded-lg border border-border bg-surface p-5 text-left transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]",
+          "hb-panel-cut group relative flex min-h-36 items-end gap-4 overflow-hidden border border-border bg-surface p-5 text-left transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]",
           pending && chosen === "freeform" && "border-accent/60",
         )}
       >
+        <span aria-hidden className="absolute -right-2 -top-8 font-impact text-[8rem] leading-none text-text/[0.025]">00</span>
         <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted">
           {pending && chosen === "freeform" ? (
             <Loader2 className="size-5 animate-spin" />
@@ -99,7 +100,7 @@ export function SessionStarter({
                 <div
                   key={t.id}
                   className={cn(
-                    "overflow-hidden rounded-lg border bg-surface transition-colors",
+                    "hb-panel-cut overflow-hidden border bg-surface transition-colors",
                     expanded ? "border-accent/40" : "border-border",
                   )}
                 >

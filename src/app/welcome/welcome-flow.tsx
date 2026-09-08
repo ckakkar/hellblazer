@@ -11,6 +11,7 @@ import { cn, selectAllOnFocus } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/local-date";
 import { fromDisplayWeight, type Unit } from "@/lib/units";
 import { completeOnboarding } from "@/lib/actions/profile";
+import { FighterArt } from "@/components/tier/fighter-art";
 
 type Sex = "male" | "female" | "other";
 
@@ -99,9 +100,26 @@ export function WelcomeFlow({
         }}
       />
 
-      <div className="w-full max-w-md">
-        <div className="mb-7 text-center">
-          <span className="mx-auto mb-4 flex size-11 items-center justify-center rounded-xl border border-accent/40 bg-accent/10 text-accent">
+      <div className="grid w-full max-w-5xl overflow-hidden border-y-2 border-text/80 bg-surface/35 lg:grid-cols-[1.12fr_0.88fr]">
+        <section className="relative hidden min-h-[42rem] overflow-hidden border-r border-border lg:block">
+          <FighterArt
+            fighterKey="ohma"
+            variant="hero"
+            priority
+            className="absolute inset-0"
+            imageClassName="object-[center_22%]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/15 to-transparent" />
+          <div className="absolute inset-x-0 bottom-0 z-10 p-8">
+            <div className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.26em] text-accent"><span className="h-px w-8 bg-accent" />Registration card</div>
+            <div className="mt-4 font-impact text-6xl uppercase leading-[0.78] text-text">No spectators.<span className="block text-accent">You&apos;re fighting.</span></div>
+            <p className="mt-5 max-w-md text-sm leading-6 text-text/70">Build the identity the record will carry. Everything here stays editable after weigh-in.</p>
+          </div>
+        </section>
+
+        <div className="w-full p-4 sm:p-7 lg:flex lg:flex-col lg:justify-center">
+        <div className="mb-7 text-center lg:hidden">
+          <span className="hb-panel-cut mx-auto mb-4 flex size-11 items-center justify-center border border-accent/40 bg-accent/10 text-accent">
             <Flame className="size-5" />
           </span>
           <BlurText
@@ -117,7 +135,7 @@ export function WelcomeFlow({
           </p>
         </div>
 
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card sm:p-6">
+        <div className="hb-panel-cut border border-border bg-surface p-5 shadow-card sm:p-6">
           <Stepper
             disableStepIndicators={saving}
             renderFooter={({ isFirstStep, isLastStep, back, next, complete }) => (
@@ -282,6 +300,7 @@ export function WelcomeFlow({
         >
           Skip for now
         </button>
+        </div>
       </div>
     </main>
   );

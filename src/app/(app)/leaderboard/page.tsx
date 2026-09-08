@@ -25,7 +25,10 @@ export default async function LeaderboardPage() {
     <div>
       <PageHeader
         title="King of the Hill"
-        subtitle="Every fighter with a ring name, ranked by total volume moved."
+        subtitle="The Association table. Every claimed ring name ranked by the iron they have moved."
+        eyebrow="Association standings"
+        index="08"
+        stat={{ value: entries.length, label: "fighters" }}
       />
 
       {!profile?.username && (

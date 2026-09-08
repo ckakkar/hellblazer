@@ -23,7 +23,7 @@ export default async function AppLayout({
   if (!onboarded) redirect("/welcome");
 
   return (
-    <div className="min-h-dvh">
+    <div className="hb-app-shell min-h-dvh">
       {/* ambient crimson spotlight from the top, subtle arena drama */}
       <div
         aria-hidden
@@ -36,7 +36,7 @@ export default async function AppLayout({
       <RealtimeSync userId={user.id} />
       <AppNav userEmail={user.email} />
       <div className="md:pl-60">
-        <main className="mx-auto w-full max-w-6xl px-4 pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:px-6 md:pt-8 md:pb-12">
+        <main className="mx-auto w-full max-w-7xl px-4 pt-[calc(env(safe-area-inset-top)+4rem)] pb-[calc(env(safe-area-inset-bottom)+7rem)] sm:px-6 md:pt-8 md:pb-12 lg:px-8">
           {/* Streamed so its lookup never blocks the page content. */}
           <Suspense fallback={null}>
             <ResumeBannerSlot />

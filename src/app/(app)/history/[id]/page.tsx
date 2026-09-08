@@ -7,6 +7,7 @@ import { getUnit } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import { DeleteSessionButton } from "./delete-session-button";
@@ -35,7 +36,7 @@ export default async function SessionDetailPage({
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-4xl">
       <Link
         href="/history"
         className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-text"
@@ -44,19 +45,14 @@ export default async function SessionDetailPage({
         History
       </Link>
 
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-impact text-3xl uppercase leading-none text-text">
-            {session.title ?? "Session"}
-          </h1>
-          <div className="mt-1 font-mono text-xs text-muted">
-            {session.date ? format(parseISO(session.date), "EEEE, MMM d, yyyy") : ""}
-            {" · "}
-            {totalSets} sets · {formatVolume(totalVolume, unit)}
-            {session.duration_min ? ` · ${session.duration_min}min` : ""}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
+      <PageHeader
+        title={session.title ?? "Session"}
+        eyebrow="Bout record"
+        index="07/A"
+        subtitle={session.date ? format(parseISO(session.date), "EEEE, MMM d, yyyy") : undefined}
+        stat={{ value: totalSets, label: "working sets" }}
+        action={
+          <div className="flex items-center gap-2">
           <ShareCardButton
             sessionId={session.id}
             title={session.title ?? "Session"}
@@ -68,14 +64,21 @@ export default async function SessionDetailPage({
             </Button>
           </Link>
           <DeleteSessionButton sessionId={session.id} />
-        </div>
+          </div>
+        }
+      />
+
+      <div className="mb-6 grid grid-cols-2 gap-px border-y border-border bg-border sm:grid-cols-3">
+        <div className="bg-bg px-4 py-3"><div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted">Total moved</div><div className="mt-1 font-impact text-2xl text-text">{formatVolume(totalVolume, unit)}</div></div>
+        <div className="bg-bg px-4 py-3"><div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted">Exercises</div><div className="mt-1 font-impact text-2xl text-text">{session.session_exercise.length}</div></div>
+        <div className="col-span-2 bg-bg px-4 py-3 sm:col-span-1"><div className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted">Duration</div><div className="mt-1 font-impact text-2xl text-text">{session.duration_min ? `${session.duration_min} min` : "--"}</div></div>
       </div>
 
       {session.notes && (
         <Card className="mb-4 p-4 text-sm text-muted">{session.notes}</Card>
       )}
 
-      <div className="grid gap-3">
+      <div className="grid items-start gap-4 lg:grid-cols-2">
         {session.session_exercise.map((se) => {
           const working = se.set.filter((s) => !s.is_warmup);
           const exVolume = working.reduce(
