@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
  * Rebuilt on `motion` rather than the upstream GSAP + ScrollTrigger. GSAP is
  * roughly 60KB gzipped once ScrollTrigger is in, which is a lot to spend on one
  * reveal, and this repo deliberately ships `motion` as its only animation
- * dependency — so the scrub is `useScroll`, which is passive and only does work
+ * dependency, so the scrub is `useScroll`, which is passive and only does work
  * while the element is actually on screen.
  *
  * The word progress is scrubbed to scroll position, not fired once on entry:
@@ -91,7 +91,7 @@ function Revealed({
   const ref = useRef<HTMLParagraphElement>(null);
   // Completion has to be *reachable*. Ending the range at the viewport centre
   // means an element near the bottom of a short page never gets there, so its
-  // last words stay stuck at base opacity — unreadable text, permanently. The
+  // last words stay stuck at base opacity and remain unreadable. The
   // range therefore closes once the block has risen only a fifth of the way up
   // the viewport, which anything that scrolls into view at all will reach.
   const { scrollYProgress } = useScroll({

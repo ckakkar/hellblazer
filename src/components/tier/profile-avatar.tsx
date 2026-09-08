@@ -6,7 +6,7 @@ import { useState } from "react";
 /**
  * The account picture, with the lifter's initial as a fallback. Google avatar
  * URLs do expire, and a broken-image glyph at the top of the profile is worse
- * than no picture at all — so a load failure falls back to the initial rather
+ * than no picture at all, so a load failure falls back to the initial rather
  * than rendering the browser's placeholder.
  *
  * Client-only for the sake of `onError`; the rest of the header stays a server

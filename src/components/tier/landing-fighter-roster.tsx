@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Crosshair, Quote } from "lucide-react";
 import { FighterArt } from "@/components/tier/fighter-art";
 import { FIGHTER_DOSSIERS } from "@/lib/fighter-dossiers";
-import { TIERS, type TierKey } from "@/lib/tiers";
+import { formatFighterNumber, TIERS, type TierKey } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 
 const BILL = [...TIERS].sort((a, b) => b.rank - a.rank);
@@ -82,7 +82,7 @@ export function LandingFighterRoster() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline gap-2">
                     <span className="font-mono text-[9px] tabular-nums text-muted">
-                      {String(entry.rank).padStart(2, "0")}
+                      {formatFighterNumber(entry.rank)}
                     </span>
                     <span className="font-impact text-[15px] uppercase leading-[0.9] sm:block sm:w-full sm:truncate sm:text-lg sm:leading-none lg:w-auto">
                       {entry.name}
@@ -119,13 +119,13 @@ export function LandingFighterRoster() {
             aria-hidden
             className="absolute -right-2 -top-8 -z-10 font-impact text-[13rem] leading-none text-text/[0.035] sm:text-[17rem]"
           >
-            {String(fighter.rank).padStart(2, "0")}
+            {formatFighterNumber(fighter.rank)}
           </span>
 
           <div className="relative flex min-h-[34rem] max-w-2xl flex-col justify-end px-5 pb-6 pt-60 sm:px-8 sm:pb-8 sm:pt-80 lg:min-h-[38rem] lg:w-[61%] lg:justify-center lg:px-10 lg:py-12">
             <div className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.22em] text-accent">
               <span className="h-px w-8 bg-accent" />
-              Official rank · {String(fighter.rank).padStart(2, "0")}
+              Official rank · {formatFighterNumber(fighter.rank)}
             </div>
             <h3 className="mt-4 font-impact text-4xl uppercase leading-[0.86] text-text sm:text-5xl lg:text-6xl">
               {fighter.name}

@@ -96,7 +96,7 @@ export default async function DashboardPage() {
   const volumeMove = move(volumeThisWeek, volumeLastWeek);
   const setsMove = move(workingSetsThisWeek, workingSetsLastWeek);
 
-  // Sessions read against the active program's weekly target, not last week —
+  // Sessions read against the active program's weekly target, not last week,
   // "4 of 5 programmed" is the honest measure of a training week.
   const sessionTarget = activeProgress?.daysPerWeek ?? null;
   const sessionsTone: DeltaTone = sessionTarget
@@ -242,7 +242,7 @@ export default async function DashboardPage() {
         <VolumeTrendCard daily={dailyVolume} unit={unit} />
       </div>
 
-      {/* The log. A record book is a table, not six identical cards stacked —
+      {/* The log. A record book is a table, not six identical cards stacked,
           reading down a column of dates and tonnages is the whole point. */}
       <section className="mt-8">
         <SectionLabel

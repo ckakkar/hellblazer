@@ -23,11 +23,11 @@ export function ChartCard({
     <Card className={cn("flex flex-col", className)}>
       <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-3.5">
         <div className="min-w-0">
-          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
+          <h3 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
             {title}
           </h3>
           {subtitle && (
-            <p className="mt-1 text-xs text-muted/80">{subtitle}</p>
+            <p className="mt-1.5 text-xs leading-5 text-muted/80">{subtitle}</p>
           )}
         </div>
         {action}

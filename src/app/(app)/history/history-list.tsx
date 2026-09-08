@@ -80,7 +80,7 @@ export function HistoryList({
         </Select>
       </div>
 
-      {/* The full record. A history screen is a table you read down — the
+      {/* The full record. A history screen is a table you read down, with the
           previous card-per-session layout made every row the same weight and
           buried the numbers you actually scan for. */}
       <div className="border-t-2 border-text/75">
@@ -117,7 +117,7 @@ export function HistoryList({
               {formatVolume(Number(s.total_volume ?? 0), unit)}
             </span>
             <span className="hidden w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted md:inline">
-              {s.duration_min ? `${s.duration_min}m` : "—"}
+              {s.duration_min ? `${s.duration_min}m` : "Not timed"}
             </span>
           </Link>
         ))}

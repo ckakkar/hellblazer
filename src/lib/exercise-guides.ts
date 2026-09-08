@@ -15,13 +15,13 @@
 const GUIDES: Record<string, string> = {
   // ── Chest ───────────────────────────────────────────────────────────────
   "barbell bench press":
-    "Lie back with your eyes under the bar, feet planted, and pull your shoulder blades down and together so your upper back stays tight against the bench. Unrack, lower the bar under control to the lower half of your chest with your elbows around 45–75° from your torso, then press back over your shoulders. Keep the blades pinned throughout: the bench does the supporting, not your shoulders.",
+    "Lie back with your eyes under the bar, feet planted, and pull your shoulder blades down and together so your upper back stays tight against the bench. Unrack, lower the bar under control to the lower half of your chest with your elbows around 45 to 75° from your torso, then press back over your shoulders. Keep the blades pinned throughout: the bench does the supporting, not your shoulders.",
   "incline barbell press":
-    "Set the bench to 30–45° and take the same tight, blades-back setup as a flat press. Lower the bar to your upper chest just below the collarbone, then press back up and slightly back over your shoulders. The steeper the incline the more front delt takes over, so 30° keeps the work on your upper chest.",
+    "Set the bench to 30 to 45° and take the same tight, blades-back setup as a flat press. Lower the bar to your upper chest just below the collarbone, then press back up and slightly back over your shoulders. The steeper the incline the more front delt takes over, so 30° keeps the work on your upper chest.",
   "incline dumbbell press":
-    "On a 30–45° bench, start with the dumbbells at the outside of your upper chest, wrists stacked over your elbows. Press up and slightly inward until the bells are over your shoulders without clanging them together, then lower under control until you feel a stretch across your chest. Dumbbells punish sloppy shoulders: keep your blades pulled down into the bench.",
+    "On a 30 to 45° bench, start with the dumbbells at the outside of your upper chest, wrists stacked over your elbows. Press up and slightly inward until the bells are over your shoulders without clanging them together, then lower under control until you feel a stretch across your chest. Dumbbells punish sloppy shoulders: keep your blades pulled down into the bench.",
   "decline barbell press":
-    "Lock your legs into the pads on a 15–30° decline and set your blades back as you would on a flat press. Lower the bar to your lower chest, keeping your elbows tucked a touch closer than on flat, and press back up. The shortened range makes it feel heavy fast, so add weight more conservatively than you would on flat bench.",
+    "Lock your legs into the pads on a 15 to 30° decline and set your blades back as you would on a flat press. Lower the bar to your lower chest, keeping your elbows tucked a touch closer than on flat, and press back up. The shortened range makes it feel heavy fast, so add weight more conservatively than you would on flat bench.",
   "machine chest press":
     "Set the seat so the handles sit at mid-chest height and your wrists stay in line with your elbows. Press out until your arms are almost locked, then return under control until you feel a stretch, letting the pad support your back the whole way. The fixed path means you can push closer to failure safely: use that instead of adding a heave.",
   "smith machine bench press":
@@ -37,7 +37,7 @@ const GUIDES: Record<string, string> = {
   "dumbbell bench press":
     "Lie flat with the dumbbells at the outside of your chest, blades pulled down and together. Press up and slightly inward until they're over your shoulders, then lower under control until you feel a stretch across your chest. Dumbbells let each side work independently, so match the depth on both rather than chasing the stronger arm.",
   "decline dumbbell press":
-    "Lock your legs into the pads on a 15–30° decline and start with the bells at the outside of your lower chest. Press up and slightly inward, then lower under control. Getting heavy dumbbells into position on a decline is the risky part: have someone hand them to you, or kick them up one at a time.",
+    "Lock your legs into the pads on a 15 to 30° decline and start with the bells at the outside of your lower chest. Press up and slightly inward, then lower under control. Getting heavy dumbbells into position on a decline is the risky part: have someone hand them to you, or kick them up one at a time.",
   "dumbbell floor press":
     "Lie on the floor with the dumbbells at your chest and your knees bent. Press up until your arms are almost locked, then lower until your upper arms touch the floor and pause for a beat. The floor caps the range before the shoulder gets stretched, which is why it's the pressing variation to reach for when your shoulders are cranky.",
   "incline cable fly":
@@ -154,7 +154,7 @@ const GUIDES: Record<string, string> = {
   "dumbbell curl":
     "Stand or sit tall with a dumbbell in each hand, palms forward or rotating up as you go. Curl with your elbows fixed at your sides, squeeze at the top, then lower slowly all the way down. Alternating arms lets you keep the tempo honest when the set gets hard.",
   "incline dumbbell curl":
-    "Set a bench to around 45–60° and lie back with your arms hanging straight down behind your torso. Curl without letting your elbows drift forward, then lower all the way back to that stretched position. The stretch at the bottom is the whole reason for this variation, so don't cut the range short.",
+    "Set a bench to around 45 to 60° and lie back with your arms hanging straight down behind your torso. Curl without letting your elbows drift forward, then lower all the way back to that stretched position. The stretch at the bottom is the whole reason for this variation, so don't cut the range short.",
   "lean-forward cable curl":
     "Set a low pulley, take the handle and step forward so your arm hangs slightly behind your body with the cable taut. Curl up with a fixed elbow, then lower under control back into that stretch. Like the incline curl, it loads the long head where it's longest, expect to need less weight than a standing curl.",
   "cable curl":

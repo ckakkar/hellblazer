@@ -98,6 +98,15 @@ export const TIERS: Tier[] = [
 
 export const MAX_RANK = TIERS.length;
 
+/** Public fight-card number. The strongest fighter is number 1. */
+export function getFighterNumber(rank: number) {
+  return MAX_RANK + 1 - rank;
+}
+
+export function formatFighterNumber(rank: number) {
+  return String(getFighterNumber(rank)).padStart(2, "0");
+}
+
 export function getTier(key: string | null | undefined): Tier | null {
   if (!key) return null;
   return TIERS.find((t) => t.key === key) ?? null;

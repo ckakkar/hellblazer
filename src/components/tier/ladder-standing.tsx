@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { ChevronUp, ChevronDown, Crown, Swords } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { TIERS, getTier, MAX_RANK } from "@/lib/tiers";
+import {
+  formatFighterNumber,
+  getFighterNumber,
+  TIERS,
+  getTier,
+  MAX_RANK,
+} from "@/lib/tiers";
 import { FighterArt } from "@/components/tier/fighter-art";
 
 const byRank = (r: number) => TIERS.find((t) => t.rank === r) ?? null;
@@ -53,11 +59,11 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                   {current.epithet}
                 </div>
                 <div className="mt-1.5 font-mono text-xs text-muted">
-                  Rank {rank} / {MAX_RANK} · {current.blurb}
+                  Rank {getFighterNumber(rank)} / {MAX_RANK} · {current.blurb}
                 </div>
               </div>
               <span className="shrink-0 rounded-md border border-accent/40 bg-accent/[0.07] px-2.5 py-1 font-mono text-xs tabular-nums text-accent">
-                #{rank}
+                #{getFighterNumber(rank)}
               </span>
             </div>
 
@@ -141,7 +147,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                 </span>
 
                 <span className="w-5 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted/70">
-                  {String(t.rank).padStart(2, "0")}
+                  {formatFighterNumber(t.rank)}
                 </span>
 
                 <span
@@ -218,7 +224,7 @@ function Neighbor({
         </span>
         {rank !== null && (
           <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
-            #{rank}
+            #{getFighterNumber(rank)}
           </span>
         )}
       </div>

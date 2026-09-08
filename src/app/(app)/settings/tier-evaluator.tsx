@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { TierLadder } from "@/components/tier/tier-ui";
 import { cn } from "@/lib/utils";
-import { getTier, MAX_RANK } from "@/lib/tiers";
+import { getFighterNumber, getTier, MAX_RANK } from "@/lib/tiers";
 import { evaluateTier, type EvalResult } from "@/lib/actions/evaluation";
 import { setTier } from "@/lib/actions/profile";
 import {
@@ -121,7 +121,7 @@ export function TierEvaluator({
                 {current.epithet}
               </div>
               <div className="mt-1 font-mono text-xs text-muted">
-                Rank {current.rank} / {MAX_RANK} · {current.blurb}
+                Rank {getFighterNumber(current.rank)} / {MAX_RANK} · {current.blurb}
               </div>
             </>
           ) : (
@@ -234,7 +234,7 @@ export function TierEvaluator({
               </div>
             )}
             <div className="mt-1 font-mono text-xs text-muted">
-              Rank {result.rank} / {MAX_RANK}
+              Rank {getFighterNumber(result.rank)} / {MAX_RANK}
             </div>
             <TierLadder rank={result.rank} className="mt-4" />
             <p className="mt-4 text-sm text-text">{result.rationale}</p>

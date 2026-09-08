@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { format, parseISO } from "date-fns";
 import { getSessionDetail } from "@/lib/data/sessions";
 import { getProfile } from "@/lib/data/profile";
-import { getTier } from "@/lib/tiers";
+import { formatFighterNumber, getTier } from "@/lib/tiers";
 import { getUnit, getAccent } from "@/lib/settings";
 import { ACCENTS } from "@/lib/accents";
 import { kgToLb } from "@/lib/units";
@@ -182,7 +182,7 @@ export async function GET(
               letterSpacing: 3,
             }}
           >
-            {tier ? `RANK ${String(tier.rank).padStart(2, "0")}` : "UNRANKED"}
+            {tier ? `RANK ${formatFighterNumber(tier.rank)}` : "UNRANKED"}
           </div>
         </div>
 

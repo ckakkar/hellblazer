@@ -13,8 +13,8 @@ import { useCallback, useEffect, useRef } from "react";
  *    number in an effect, so on a server-rendered page the figure is blank
  *    until hydration. That's fine for a decorative stat and bad for a headline
  *    one, so the formatted target is rendered as real children too.
- * 2. **`animateOnMount`.** For a value that changes while you watch it — the
- *    live tonnage on the workout logger — counting from zero on first paint is
+ * 2. **`animateOnMount`.** For a value that changes while you watch it, the
+ *    live tonnage on the workout logger, counting from zero on first paint is
  *    wrong; what carries information is the *move* when a set lands. Passing
  *    `false` seeds the spring at the current value and animates only on change.
  */
@@ -143,7 +143,7 @@ export function CountUp({
 
   // Only seed server-side content for the non-animating case. When the intro
   // count is wanted, painting the final figure first would make hydration snap
-  // it back to zero before counting — worse than the brief blank it replaces.
+  // it back to zero before counting, worse than the brief blank it replaces.
   return (
     <span className={className} ref={ref}>
       {animateOnMount ? null : formatValue(to)}

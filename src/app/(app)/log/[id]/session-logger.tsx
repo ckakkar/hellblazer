@@ -716,7 +716,7 @@ export function SessionLogger({
         {/* Live readout. Three figures side by side under one rule rather than
             two bordered boxes: mid-set this gets glanced at, not read, so the
             numbers sit on a shared baseline where the eye can take all three at
-            once. The clock is the only accent — it's the thing that's moving. */}
+            once. The clock is the only accent because it is the thing moving. */}
         <div className="mt-4">
           <div className="h-0.5 bg-text/85" />
           <div className="mt-px h-px bg-border" />
@@ -727,7 +727,7 @@ export function SessionLogger({
               </div>
               <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
                 {/* Animates only when it changes, which on this screen means a
-                    set just landed — the move is the information, not the
+                    set just landed. The move is the information, not the
                     arrival. */}
                 <CountUp
                   to={Math.round(totalForce)}
@@ -802,7 +802,7 @@ export function SessionLogger({
         ) : !online ? (
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs text-warn">
             <CloudOff className="size-3.5 shrink-0" />
-            Offline. Keep logging—sets are saved on this device.
+            Offline. Keep logging. Sets are saved on this device.
           </div>
         ) : inFlight > 0 ? (
           <div className="mt-3 flex items-center gap-2 px-1 font-mono text-[11px] text-muted">

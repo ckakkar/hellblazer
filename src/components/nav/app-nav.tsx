@@ -26,10 +26,10 @@ function Brand() {
         <Flame className="size-3.5" />
       </span>
       <span>
-        <span className="block font-display text-sm font-semibold uppercase tracking-[0.2em] text-text">
+        <span className="block font-display text-[15px] font-semibold uppercase tracking-[0.15em] text-text">
           Hell&nbsp;Blazer
         </span>
-        <span className="mt-0.5 block font-mono text-[8px] uppercase tracking-[0.22em] text-muted/60">
+        <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.16em] text-muted/60">
           Personal fight record
         </span>
       </span>
@@ -80,7 +80,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
           {NAV_SECTIONS.map((section, i) => (
             <div key={i} className="flex flex-col gap-1">
               {section.title && (
-                <div className="px-3 pb-1.5 font-mono text-[9px] uppercase tracking-[0.22em] text-muted/50">
+                <div className="px-3 pb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted/50">
                   {section.title}
                 </div>
               )}

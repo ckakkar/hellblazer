@@ -10,7 +10,7 @@ import { getAccent } from "@/lib/settings";
    Three faces, all out of the signage-and-print lineage a fight promotion
    actually draws on, rather than the house faces every dark dashboard ships
    with. Body is Archivo (a grotesque cut for print/signage), data is IBM Plex
-   Mono (warm, real tabular figures), and the display role is Big Shoulders —
+   Mono (warm, real tabular figures), and the display role is Big Shoulders,
    condensed Chicago-signage caps that read like an arena board. Big Shoulders
    is variable, so one family covers both the display and impact weights
    instead of loading a second face for the heavy end. */

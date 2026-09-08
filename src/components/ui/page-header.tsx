@@ -21,7 +21,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "hb-page-head relative mb-8 isolate overflow-hidden border-y-2 border-text/80 px-4 py-5 sm:px-6 sm:py-7",
+        "hb-page-head relative mb-8 isolate overflow-hidden rounded-xl border border-text/10 px-5 py-6 shadow-card sm:px-7 sm:py-8",
         className,
       )}
     >
@@ -35,16 +35,16 @@ export function PageHeader({
       )}
       <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 max-w-3xl">
-          <div className="mb-3 flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.28em] text-accent">
+          <div className="mb-3 flex items-center gap-3 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-accent">
             <span className="h-px w-8 bg-accent" />
             {eyebrow}
             {index && <span className="text-muted/60">file {index}</span>}
           </div>
-          <h1 className="font-impact text-[3.15rem] uppercase leading-[0.78] tracking-[-0.02em] text-text sm:text-[4.75rem]">
+          <h1 className="font-impact text-[3.15rem] uppercase leading-[0.82] tracking-[-0.025em] text-text sm:text-[4.75rem]">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-4 max-w-xl text-sm leading-6 text-text/65 sm:text-[15px]">
+            <p className="mt-4 max-w-xl text-pretty text-[15px] leading-6 text-text/70 sm:text-base sm:leading-7">
               {subtitle}
             </p>
           )}
@@ -56,7 +56,7 @@ export function PageHeader({
                 <div className="font-impact text-3xl leading-none tabular-nums text-text">
                   {stat.value}
                 </div>
-                <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
+                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
                   {stat.label}
                 </div>
               </div>
@@ -86,7 +86,7 @@ export function SectionLabel({
         className,
       )}
     >
-      <span className="font-mono text-[11px] font-medium uppercase tracking-[0.16em] text-muted">
+      <span className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
         {children}
       </span>
       {action}
@@ -109,9 +109,9 @@ export function EmptyState({
     <div className="hb-panel-cut relative flex min-h-56 flex-col items-start justify-end overflow-hidden border border-dashed border-border bg-surface/50 px-6 py-7 text-left">
       <span aria-hidden className="absolute -right-3 -top-8 font-impact text-[9rem] leading-none text-text/[0.025]">00</span>
       {icon && <div className="mb-5 flex size-10 items-center justify-center border border-border bg-bg text-accent">{icon}</div>}
-      <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-muted">No record found</div>
-      <h3 className="mt-2 font-display text-lg uppercase tracking-wide text-text">{title}</h3>
-      {body && <p className="mt-1 max-w-md text-sm leading-6 text-muted">{body}</p>}
+      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">No record found</div>
+      <h3 className="mt-2 font-display text-xl uppercase tracking-[0.035em] text-text">{title}</h3>
+      {body && <p className="mt-1.5 max-w-md text-sm leading-6 text-muted">{body}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );

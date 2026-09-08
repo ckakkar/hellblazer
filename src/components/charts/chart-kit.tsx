@@ -38,7 +38,7 @@ export function ChartEmpty({ message }: { message: string }) {
  *
  * The charts used to pair a fixed `width` with a negative left margin to
  * reclaim recharts' default padding. That silently clips the leading character
- * whenever a label outgrows the gutter — which is exactly what happened to lb
+ * whenever a label outgrows the gutter, which is exactly what happened to lb
  * bodyweights ("230.5" rendering as "30.5"). Pass the values and, if the axis
  * has one, the same tickFormatter the axis uses.
  *

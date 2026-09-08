@@ -1,4 +1,4 @@
-import { TIERS, type Tier } from "@/lib/tiers";
+import { formatFighterNumber, TIERS, type Tier } from "@/lib/tiers";
 import { FighterArt } from "./fighter-art";
 import { ProfileAvatar } from "./profile-avatar";
 import { cn } from "@/lib/utils";
@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 /* ── Profile identity ──────────────────────────────────────────────────────
    A profile screen should open by showing you who you are. This one opened
    with the word "Profile" and a subtitle, which is a document heading, not an
-   identity — so the header is now the lifter: their picture, the name they
+   identity, so the header is now the lifter: their picture, the name they
    fight under, and the rung they currently hold.
 
    The avatar comes from the Google account, since that is the only sign-in
@@ -69,7 +69,7 @@ export function ProfileIdentity({
         <span>
           <span className="block font-mono text-[9px] uppercase tracking-[0.2em] text-muted">Official rank</span>
           <span className="mt-1 block font-impact text-3xl leading-none tabular-nums text-text">
-            {tier ? String(rank).padStart(2, "0") : "--"}
+            {tier ? formatFighterNumber(rank) : "00"}
           </span>
         </span>
         <span

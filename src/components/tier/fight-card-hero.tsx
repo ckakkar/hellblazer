@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { TIERS, type Tier } from "@/lib/tiers";
+import { formatFighterNumber, TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { FighterArt } from "@/components/tier/fighter-art";
 
@@ -43,7 +43,7 @@ export function FightCardHero({
             Your corner
           </div>
           <div className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-text/60">
-            {tier ? `Official rank · ${String(rank).padStart(2, "0")}` : "Status · unranked"}
+            {tier ? `Official rank · ${formatFighterNumber(rank)}` : "Status · unranked"}
           </div>
           <h1
             className={cn(

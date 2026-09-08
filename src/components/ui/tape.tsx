@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
    rule-bracketed table rather than a StatCard grid: label, figure, and the
    move against last week on one line each.
 
-   The accent earns its place here. It marks exactly one thing — ground gained
-   on the previous week — which is why the palette can afford to stay otherwise
+   The accent earns its place here. It marks exactly one thing: ground gained
+   on the previous week. That lets the palette stay otherwise
    monochrome. Flat and losing weeks are set in muted, so a red line in the
    tape always means the same thing at a glance. */
 
@@ -23,7 +23,7 @@ export function Delta({
   children: React.ReactNode;
   className?: string;
 }) {
-  const glyph = tone === "gain" ? "▲" : tone === "loss" ? "▼" : "—";
+  const glyph = tone === "gain" ? "▲" : tone === "loss" ? "▼" : "•";
   return (
     <span
       className={cn(
@@ -112,7 +112,7 @@ export function TapeRow({
 /* ── Weak-point bars ───────────────────────────────────────────────────────
    Four numbers on a shared scale, which is the one thing four separate stat
    cards could never show: whether a muscle is actually behind the others. The
-   bar is the comparison, so it carries information the figure alone doesn't —
+   bar is the comparison, so it carries information the figure alone does not.
    unlike a rank bar whose width just restates the rank beside it. */
 export function BarRow({
   label,
