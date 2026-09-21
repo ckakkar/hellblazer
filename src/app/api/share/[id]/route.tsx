@@ -9,44 +9,61 @@ import { kgToLb } from "@/lib/units";
 
 export const dynamic = "force-dynamic";
 
-/** Pull the Anton (impact) face for the big numbers; null on any failure so the
- *  card still renders with the built-in default font. */
-async function loadAnton(): Promise<ArrayBuffer | null> {
+/** Big Shoulders at the app's impact weight, for the big numbers. The app
+ *  self-hosts it as woff2, which the image renderer can't read, so this pulls
+ *  Google's static TTF cut instead. Null on any failure so the card still
+ *  renders in the default face. */
+async function fetchDisplayFont(): Promise<ArrayBuffer | null> {
   try {
-    const css = await fetch("https://fonts.googleapis.com/css2?family=Anton", {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
-    }).then((r) => r.text());
+    const css = await fetch(
+      "https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@800",
+      // A bare UA gets TTF; a browser UA would get woff2.
+      { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" } },
+    ).then((r) => r.text());
     const url = css.match(/src:\s*url\(([^)]+)\)/)?.[1];
     if (!url) return null;
-    return await fetch(url).then((r) => r.arrayBuffer());
+    const res = await fetch(url);
+    return res.ok ? await res.arrayBuffer() : null;
   } catch {
     return null;
   }
 }
 
-const BG = "#0a0908";
-const SURFACE = "#100f0e";
-const BORDER = "#262220";
-const TEXT = "#efece8";
-const MUTED = "#86807a";
+// Fetched once per warm instance rather than on every card. A failure isn't
+// kept, so the next render retries.
+let displayFont: Promise<ArrayBuffer | null> | null = null;
+function loadDisplayFont(): Promise<ArrayBuffer | null> {
+  displayFont ??= fetchDisplayFont().then((font) => {
+    if (!font) displayFont = null;
+    return font;
+  });
+  return displayFont;
+}
+
+// The fight-card palette from globals.css: warm neutrals, bone text.
+const BG = "#0b0908";
+const SURFACE = "#14100e";
+const BORDER = "#2b2320";
+const TEXT = "#ece5d8";
+const MUTED = "#8d8378";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const [session, profile, unit, accentKey, anton] = await Promise.all([
+  const [session, profile, unit, accentKey, displayFontData] = await Promise.all([
     getSessionDetail(id),
     getProfile(),
     getUnit(),
     getAccent(),
-    loadAnton(),
+    loadDisplayFont(),
   ]);
   if (!session) return new Response("Not found", { status: 404 });
 
   const accent = ACCENTS.find((a) => a.key === accentKey)?.swatch ?? ACCENTS[0].swatch;
   const tier = getTier(profile?.tier);
-  const impact = anton ? "Anton" : undefined;
+  const impact = displayFontData ? "Big Shoulders" : undefined;
 
   // Aggregate working sets → volume, count, and the best set per exercise.
   let volumeKg = 0;
@@ -92,8 +109,10 @@ export async function GET(
     width: 1080,
     height: 1350,
   };
-  if (anton) {
-    options.fonts = [{ name: "Anton", data: anton, weight: 400, style: "normal" }];
+  if (displayFontData) {
+    options.fonts = [
+      { name: "Big Shoulders", data: displayFontData, weight: 800, style: "normal" },
+    ];
   }
 
   return new ImageResponse(
@@ -297,7 +316,7 @@ export async function GET(
           style={{
             display: "flex",
             flexDirection: "column",
-            marginTop: 52,
+            marginTop: 40,
             flexGrow: 1,
           }}
         >
@@ -320,7 +339,8 @@ export async function GET(
                 alignItems: "center",
                 justifyContent: "space-between",
                 borderTop: `2px solid ${BORDER}`,
-                padding: "22px 0",
+                // Sized so five lifts still leave room for the rank footer.
+                padding: "13px 0",
               }}
             >
               <div
