@@ -1,5 +1,13 @@
 import { Fragment } from "react";
-import { addDays, format, isAfter, isSameDay, startOfISOWeek, subWeeks } from "date-fns";
+import {
+  addDays,
+  format,
+  isAfter,
+  isSameDay,
+  parseISO,
+  startOfISOWeek,
+  subWeeks,
+} from "date-fns";
 import type { SessionSummary } from "@/lib/data/sessions";
 
 // Render a full trailing year; mobile reveals the recent 6 months, desktop the
@@ -51,8 +59,11 @@ function monthGroups(slice: DayCell[][]): { label: string; span: number }[] {
  */
 export function ConsistencyHeatmap({
   summaries,
+  today: todayIso,
 }: {
   summaries: SessionSummary[];
+  /** The lifter's local date (`YYYY-MM-DD`); this renders on the server. */
+  today: string;
 }) {
   const setsByDay = new Map<string, number>();
   for (const s of summaries) {
@@ -63,7 +74,7 @@ export function ConsistencyHeatmap({
     );
   }
 
-  const today = new Date();
+  const today = parseISO(todayIso);
   const startWeek = startOfISOWeek(subWeeks(today, WEEKS - 1));
 
   const weeks: DayCell[][] = Array.from({ length: WEEKS }).map((_, w) => {

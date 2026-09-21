@@ -4,6 +4,8 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { addDays, differenceInCalendarDays, format, parseISO } from "date-fns";
 import { getAuthedContext } from "@/lib/auth";
+import { getTimeZone, getToday } from "@/lib/settings";
+import { dateInTimeZone } from "@/lib/local-date";
 import type { TablesUpdate } from "@/lib/database.types";
 
 /** Ensure at most one active program: clear any others for this user. */
@@ -119,7 +121,7 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
       .eq("id", v.id)
       .maybeSingle();
     if (existing && !existing.start_date) {
-      patch.start_date = new Date().toISOString().slice(0, 10);
+      patch.start_date = await getToday();
     }
     const { error } = await supabase
       .from("program")
@@ -154,6 +156,9 @@ export async function skipWorkout(input: { programDayId: string }) {
     user_id: user.id,
     program_id: pd.program_id,
     program_day_id: programDayId,
+    // The lifter's day, not the DB's UTC current_date, so a skip lands in
+    // the same program week as the sessions around it.
+    date: await getToday(),
   });
   if (error) throw error;
   revalidatePath("/programs");
@@ -205,9 +210,14 @@ export async function resumeProgram(input: { id: string }) {
 
   const patch: TablesUpdate<"program"> = { paused_at: null };
   if (p.start_date) {
+    // Calendar days in the lifter's timezone, matching start_date.
+    const tz = await getTimeZone();
     const pausedForDays = Math.max(
       0,
-      differenceInCalendarDays(new Date(), new Date(p.paused_at)),
+      differenceInCalendarDays(
+        parseISO(dateInTimeZone(new Date(), tz)),
+        parseISO(dateInTimeZone(new Date(p.paused_at), tz)),
+      ),
     );
     if (pausedForDays > 0) {
       patch.start_date = format(
@@ -287,7 +297,7 @@ export async function resetProgram(input: { id: string }) {
   const { error } = await supabase
     .from("program")
     .update({
-      start_date: new Date().toISOString().slice(0, 10),
+      start_date: await getToday(),
       paused_at: null,
     })
     .eq("id", id);

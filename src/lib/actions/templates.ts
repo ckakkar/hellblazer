@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
 import { getPreset } from "@/lib/presets";
+import { getToday } from "@/lib/settings";
 import type { TablesUpdate } from "@/lib/database.types";
 
 export async function createTemplate(input: {
@@ -361,7 +362,7 @@ export async function loadPreset(input: { presetId: string }) {
       user_id: user.id,
       name: preset.name,
       duration_weeks: preset.weeks ?? 8,
-      start_date: new Date().toISOString().slice(0, 10),
+      start_date: await getToday(),
       is_active: true,
     })
     .select("id")

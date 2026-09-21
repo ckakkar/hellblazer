@@ -4,7 +4,8 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
-import { getAccent } from "@/lib/settings";
+import { TimezoneSync } from "@/components/timezone-sync";
+import { getAccent, getTimeZone } from "@/lib/settings";
 
 /* ── The fight-card stack ──────────────────────────────────────────────────
    Three faces, all out of the signage-and-print lineage a fight promotion
@@ -83,7 +84,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const accent = await getAccent();
+  const [accent, timeZone] = await Promise.all([getAccent(), getTimeZone()]);
   return (
     <html
       lang="en"
@@ -92,6 +93,7 @@ export default async function RootLayout({
     >
       <body className="min-h-full bg-bg text-text">
         <PwaRegister />
+        <TimezoneSync serverTimeZone={timeZone} />
         {/* Installed-app boot sequence. Renders server-side so it paints on the
             first frame of a cold PWA start, then lifts itself once the app is
             up; a browser tab never sees it. */}

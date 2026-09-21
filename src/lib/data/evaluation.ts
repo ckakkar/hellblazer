@@ -1,5 +1,6 @@
 import { addDays, differenceInCalendarDays, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { getToday } from "@/lib/settings";
 import {
   EVAL_COOLDOWN_DAYS,
   hasUnlimitedEvaluations,
@@ -116,6 +117,7 @@ export type TrainingProfile = {
  */
 export async function getTrainingProfile(): Promise<TrainingProfile> {
   const supabase = await createClient();
+  const today = parseISO(await getToday());
 
   const [bwRes, sessionsRes, progRes, programRes, weeklyRes, profileRes] =
     await Promise.all([
@@ -152,7 +154,7 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
   const totalSessions = sessions.length;
   const firstSessionDate = sessions[0]?.session_date ?? null;
   const lastSessionDate = sessions[totalSessions - 1]?.session_date ?? null;
-  const cutoff28 = subDays(new Date(), 28);
+  const cutoff28 = subDays(today, 28);
   const sessionsLast28d = sessions.filter(
     (s) => s.session_date && parseISO(s.session_date) >= cutoff28,
   ).length;
@@ -246,7 +248,7 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
     let currentWeek: number | null = null;
     if (p.start_date) {
       const daysSince = differenceInCalendarDays(
-        new Date(),
+        today,
         parseISO(p.start_date),
       );
       currentWeek = Math.min(

@@ -5,6 +5,8 @@ import {
   parseISO,
 } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { getTimeZone } from "@/lib/settings";
+import { dateInTimeZone } from "@/lib/local-date";
 import type { Database } from "@/lib/database.types";
 
 export type Program = Database["public"]["Tables"]["program"]["Row"];
@@ -79,7 +81,14 @@ export async function getProgramProgress(
   const totalWeeks = program.duration_weeks;
   const isPaused = Boolean(program.paused_at);
   // While paused the clock freezes: everything is computed as of the pause.
-  const nowRef = program.paused_at ? new Date(program.paused_at) : new Date();
+  // Taken as a date in the lifter's timezone, the calendar sessions and
+  // start_date are both in, so the week rolls over at their midnight.
+  const nowRef = parseISO(
+    dateInTimeZone(
+      program.paused_at ? new Date(program.paused_at) : new Date(),
+      await getTimeZone(),
+    ),
+  );
 
   let currentWeek: number | null = null;
   let weekStart: string | null = null;

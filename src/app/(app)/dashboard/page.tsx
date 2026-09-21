@@ -12,7 +12,7 @@ import { OnboardingHero } from "./onboarding-hero";
 import { PRESETS } from "@/lib/presets";
 import { FightCardHero } from "@/components/tier/fight-card-hero";
 import { getTier } from "@/lib/tiers";
-import { getUnit } from "@/lib/settings";
+import { getToday, getUnit } from "@/lib/settings";
 import { SectionLabel } from "@/components/ui/page-header";
 import { Tape, TapeRow, Delta, BarRow, type DeltaTone } from "@/components/ui/tape";
 import { ChartCard } from "@/components/ui/chart-card";
@@ -37,6 +37,7 @@ export default async function DashboardPage() {
     programs,
     profile,
     unit,
+    today,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
     getMuscleBalance(4),
@@ -45,6 +46,7 @@ export default async function DashboardPage() {
     getPrograms(),
     getProfile(),
     getUnit(),
+    getToday(),
   ]);
   const tier = getTier(profile?.tier);
 
@@ -60,7 +62,8 @@ export default async function DashboardPage() {
     weeks: p.weeks ?? 8,
   });
 
-  const weekStart = startOfISOWeek(new Date());
+  // The lifter's week, not the server's: sessions are dated in local time.
+  const weekStart = startOfISOWeek(parseISO(today));
   const prevWeekStart = subWeeks(weekStart, 1);
 
   // A tale of the tape is a comparison by definition, so every figure is
@@ -224,7 +227,7 @@ export default async function DashboardPage() {
           className="lg:col-span-2"
           bodyClassName="p-4"
         >
-          <ConsistencyHeatmap summaries={summaries} />
+          <ConsistencyHeatmap summaries={summaries} today={today} />
         </ChartCard>
         <ChartCard
           title="Weekly sets per muscle"

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getToday } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
@@ -84,7 +85,7 @@ export async function GET() {
     );
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = await getToday();
   return new NextResponse(lines.join("\n"), {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

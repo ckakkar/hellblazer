@@ -1,9 +1,15 @@
-import { format, startOfISOWeek, subWeeks } from "date-fns";
+import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { getToday } from "@/lib/settings";
 import { MUSCLE_CHART_ORDER, type Muscle } from "@/lib/muscles";
 
 function isoWeekKey(d: Date): string {
   return format(startOfISOWeek(d), "yyyy-MM-dd");
+}
+
+/** Today in the lifter's timezone, since the view buckets by local session date. */
+async function lifterNow(): Promise<Date> {
+  return parseISO(await getToday());
 }
 
 export type MuscleSets = { muscle: Muscle; sets: number; volume: number };
@@ -15,7 +21,7 @@ export type MuscleSets = { muscle: Muscle; sets: number; volume: number };
  */
 export async function getCurrentWeekSetsPerMuscle(): Promise<MuscleSets[]> {
   const supabase = await createClient();
-  const weekKey = isoWeekKey(new Date());
+  const weekKey = isoWeekKey(await lifterNow());
   const { data, error } = await supabase
     .from("v_weekly_sets_per_muscle")
     .select("muscle, sets, volume")
@@ -47,7 +53,7 @@ export type MuscleBalanceRow = { muscle: Muscle; sets: number; volume: number };
  */
 export async function getMuscleBalance(weeks = 4): Promise<MuscleBalanceRow[]> {
   const supabase = await createClient();
-  const cutoff = isoWeekKey(subWeeks(new Date(), weeks - 1));
+  const cutoff = isoWeekKey(subWeeks(await lifterNow(), weeks - 1));
   const { data, error } = await supabase
     .from("v_weekly_sets_per_muscle")
     .select("muscle, sets, volume")
@@ -80,7 +86,8 @@ export async function getMuscleWeeklySeries(
   weeks = 12,
 ): Promise<MuscleWeekPoint[]> {
   const supabase = await createClient();
-  const cutoff = isoWeekKey(subWeeks(new Date(), weeks - 1));
+  const now = await lifterNow();
+  const cutoff = isoWeekKey(subWeeks(now, weeks - 1));
   const { data, error } = await supabase
     .from("v_weekly_sets_per_muscle")
     .select("week, sets, volume")
@@ -99,7 +106,7 @@ export async function getMuscleWeeklySeries(
   }
   const out: MuscleWeekPoint[] = [];
   for (let i = weeks - 1; i >= 0; i--) {
-    const key = isoWeekKey(subWeeks(new Date(), i));
+    const key = isoWeekKey(subWeeks(now, i));
     const hit = byWeek.get(key);
     out.push({ week: key, sets: hit?.sets ?? 0, volume: hit?.volume ?? 0 });
   }
