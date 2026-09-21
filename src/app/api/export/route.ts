@@ -4,6 +4,8 @@ import { getToday } from "@/lib/settings";
 
 export const dynamic = "force-dynamic";
 
+const EXPORT_PAGE = 1000;
+
 /** RFC-4180 CSV cell: quote when it contains a comma, quote or newline. */
 function cell(v: unknown): string {
   const s = v == null ? "" : String(v);
@@ -35,19 +37,28 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return new NextResponse("Unauthorized", { status: 401 });
 
-  const { data, error } = await supabase
-    .from("set")
-    .select(
-      `set_number, weight_kg, reps, rpe, is_warmup, created_at,
-       session_exercise:session_exercise_id (
-         exercise:exercise_id ( name, primary_muscle ),
-         session:session_id ( date, title )
-       )`,
-    )
-    .order("created_at", { ascending: true });
-  if (error) return new NextResponse("Export failed", { status: 500 });
-
-  const rows = (data ?? []) as unknown as ExportRow[];
+  // Paged: PostgREST caps a single response (1,000 rows by default), and one
+  // unpaged read silently exported only the oldest sets once a lifter had
+  // more. Steps by the rows actually returned, so a lower server cap still
+  // walks the whole log; id breaks created_at ties so pages never overlap.
+  const rows: ExportRow[] = [];
+  for (;;) {
+    const { data, error } = await supabase
+      .from("set")
+      .select(
+        `set_number, weight_kg, reps, rpe, is_warmup, created_at,
+         session_exercise:session_exercise_id (
+           exercise:exercise_id ( name, primary_muscle ),
+           session:session_id ( date, title )
+         )`,
+      )
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(rows.length, rows.length + EXPORT_PAGE - 1);
+    if (error) return new NextResponse("Export failed", { status: 500 });
+    if (!data || data.length === 0) break;
+    rows.push(...(data as unknown as ExportRow[]));
+  }
   const header = [
     "date",
     "session",
