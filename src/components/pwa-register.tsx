@@ -27,9 +27,14 @@ export function PwaRegister() {
       return;
     }
 
+    // Reload only when a new worker replaces an old one, so the page matches
+    // the deploy it now talks to. On a first visit there is no old worker:
+    // the fresh one claiming the page also fires controllerchange, and
+    // reloading then would just flash the page (or drop a half-filled form).
+    const hadController = Boolean(navigator.serviceWorker.controller);
     let reloading = false;
     const adoptFreshWorker = () => {
-      if (reloading) return;
+      if (!hadController || reloading) return;
       reloading = true;
       window.location.reload();
     };
