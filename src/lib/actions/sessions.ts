@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getAuthedContext } from "@/lib/auth";
+import { getLastPerformances, type LastPerformance } from "@/lib/data/sessions";
 import type { TablesUpdate } from "@/lib/database.types";
 
 /**
@@ -100,11 +101,15 @@ export async function startSession(input: {
   redirect(`/log/${session.id}`);
 }
 
-/** Appends an exercise to the session; returns the new row id for optimistic UI. */
+/**
+ * Appends an exercise to the session. Returns the new row id, plus the lifter's
+ * last performance on that movement so the logger can show the "last:" target
+ * and copy it forward, same as for exercises the session started with.
+ */
 export async function addSessionExercise(input: {
   sessionId: string;
   exerciseId: string;
-}): Promise<{ id: string }> {
+}): Promise<{ id: string; lastPerformance: LastPerformance | null }> {
   const { sessionId, exerciseId } = z
     .object({ sessionId: z.string().uuid(), exerciseId: z.string().uuid() })
     .parse(input);
@@ -130,7 +135,8 @@ export async function addSessionExercise(input: {
     .select("id")
     .single();
   if (error) throw error;
-  return { id: data.id };
+  const previous = await getLastPerformances([exerciseId], sessionId);
+  return { id: data.id, lastPerformance: previous[exerciseId] ?? null };
 }
 
 export async function removeSessionExercise(input: { id: string }) {
@@ -313,7 +319,13 @@ export async function finishSession(input: {
   if (v.durationMin !== undefined && v.durationMin !== null) {
     patch.duration_min = v.durationMin;
   }
-  await supabase.from("session").update(patch).eq("id", v.sessionId);
+  // Checked, not fire-and-forget: redirecting to the finished view after a
+  // failed write would show the session as done while it stays in progress.
+  const { error } = await supabase
+    .from("session")
+    .update(patch)
+    .eq("id", v.sessionId);
+  if (error) throw error;
   revalidatePath("/dashboard");
   revalidatePath("/history");
   redirect(`/history/${v.sessionId}`);

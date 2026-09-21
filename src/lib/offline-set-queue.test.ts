@@ -2,6 +2,7 @@ import "fake-indexeddb/auto";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   getQueuedSets,
+  nextStamp,
   queueSet,
   removeQueuedSet,
   type PendingSetWrite,
@@ -64,5 +65,43 @@ describe("offline set queue", () => {
     await removeQueuedSet("done");
 
     expect(await getQueuedSets("session-a")).toEqual([]);
+  });
+
+  it("removes the uploaded write when nothing newer was queued", async () => {
+    const uploaded = { ...write("same", "session-a", 1), updatedAt: nextStamp() };
+    await queueSet(uploaded);
+    await removeQueuedSet("same", uploaded.updatedAt);
+
+    expect(await getQueuedSets("session-a")).toEqual([]);
+  });
+
+  it("keeps an edit queued while an older upload was in flight", async () => {
+    // Upload of 100kg starts; the lifter corrects it to 102.5kg before it lands.
+    const uploading = { ...write("same", "session-a", 1, 100), updatedAt: nextStamp() };
+    await queueSet(uploading);
+    const edited = { ...write("same", "session-a", 1, 102.5), updatedAt: nextStamp() };
+    await queueSet(edited);
+
+    // The 100kg upload succeeds. Its cleanup must not take the newer edit.
+    await removeQueuedSet("same", uploading.updatedAt);
+
+    expect(await getQueuedSets("session-a")).toMatchObject([
+      { id: "same", weightKg: 102.5 },
+    ]);
+  });
+
+  it("stamps strictly increase within one millisecond", () => {
+    const stamps = Array.from({ length: 5 }, () => nextStamp());
+    for (let i = 1; i < stamps.length; i++) {
+      expect(stamps[i]).toBeGreaterThan(stamps[i - 1]);
+    }
+  });
+
+  it("queues deletes alongside writes", async () => {
+    await queueSet({ ...write("gone", "session-a", 0), deleted: true });
+
+    expect(await getQueuedSets("session-a")).toMatchObject([
+      { id: "gone", deleted: true },
+    ]);
   });
 });

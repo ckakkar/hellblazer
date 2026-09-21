@@ -10,6 +10,7 @@ import {
   useTransition,
 } from "react";
 import { format, parseISO } from "date-fns";
+import { unstable_rethrow } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -56,6 +57,7 @@ import type {
 } from "@/lib/data/sessions";
 import {
   getQueuedSets,
+  nextStamp,
   queueSet,
   removeQueuedSet,
   type PendingSetWrite,
@@ -156,6 +158,18 @@ export function SessionLogger({
     detail: string;
   } | null>(null);
   const removalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A change that needs the server and couldn't reach it (add, swap, remove,
+  // finish). Shown as a toast above the exercise sheet, since most of these
+  // are triggered from inside it.
+  const [notice, setNotice] = useState<string | null>(null);
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // "last:" targets for movements added mid-session, which the page's
+  // server-rendered lastPerformances never included.
+  const [addedLast, setAddedLast] = useState<Record<string, LastPerformance>>(
+    {},
+  );
+  const lastFor = (exerciseId: string): LastPerformance | undefined =>
+    addedLast[exerciseId] ?? lastPerformances[exerciseId];
   const hype = pickHype(session.id);
 
   const [exercises, setExercises] = useState<LocalExercise[]>(() =>
@@ -227,6 +241,9 @@ export function SessionLogger({
   }, [exercises]);
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const pendingSaves = useRef<Map<string, string>>(new Map());
+  // Deleted sets whose delete the server hasn't confirmed: set id → its
+  // session_exercise id. They're gone from the screen, so retries look here.
+  const pendingDeletes = useRef<Map<string, string>>(new Map());
 
   // Save health. `failed` holds the ids of sets the server never accepted, so
   // they can be retried and, crucially, shown.
@@ -255,10 +272,19 @@ export function SessionLogger({
       reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
       rpe: set.rpe,
       isWarmup: set.isWarmup,
-      updatedAt: Date.now(),
+      updatedAt: nextStamp(),
     }),
     [session.id, unit],
   );
+
+  const clearFailed = useCallback((setId: string) => {
+    setFailed((prev) => {
+      if (!prev.has(setId)) return prev;
+      const next = new Set(prev);
+      next.delete(setId);
+      return next;
+    });
+  }, []);
 
   const persist = useCallback(
     (seId: string, set: LocalSet, setNumber: number) => {
@@ -278,13 +304,10 @@ export function SessionLogger({
           }),
         )
         .then(async () => {
-          await removeQueuedSet(set.id).catch(() => undefined);
-          setFailed((prev) => {
-            if (!prev.has(set.id)) return prev;
-            const next = new Set(prev);
-            next.delete(set.id);
-            return next;
-          });
+          // Only clears the copy this upload carried. A newer edit queued
+          // meanwhile stays on the device until its own upload lands.
+          await removeQueuedSet(set.id, write.updatedAt).catch(() => undefined);
+          clearFailed(set.id);
         })
         .catch(() => {
           // Keep the device copy and expose the failed upload. The row can now
@@ -293,7 +316,45 @@ export function SessionLogger({
         })
         .finally(() => setInFlight((n) => Math.max(0, n - 1)));
     },
-    [toQueuedWrite],
+    [toQueuedWrite, clearFailed],
+  );
+
+  // Deletes go through the device queue too, as a tombstone, so a set removed
+  // offline stays removed after a reload instead of reappearing from the
+  // server's copy. Actions run in call order, so an earlier save of the same
+  // set can't land after this.
+  const persistDelete = useCallback(
+    (seId: string, setId: string) => {
+      const tombstone: PendingSetWrite = {
+        id: setId,
+        sessionId: session.id,
+        sessionExerciseId: seId,
+        setNumber: 0,
+        weightKg: 0,
+        reps: 0,
+        rpe: null,
+        isWarmup: false,
+        updatedAt: nextStamp(),
+        deleted: true,
+      };
+      pendingDeletes.current.set(setId, seId);
+      setInFlight((n) => n + 1);
+      return queueSet(tombstone)
+        .catch(() => undefined)
+        .then(() => deleteSet({ id: setId }))
+        .then(async () => {
+          await removeQueuedSet(setId, tombstone.updatedAt).catch(
+            () => undefined,
+          );
+          pendingDeletes.current.delete(setId);
+          clearFailed(setId);
+        })
+        .catch(() => {
+          setFailed((prev) => new Set(prev).add(setId));
+        })
+        .finally(() => setInFlight((n) => Math.max(0, n - 1)));
+    },
+    [session.id, clearFailed],
   );
 
   // Restore device-local writes before the lifter touches the screen. Queued
@@ -304,13 +365,28 @@ export function SessionLogger({
     void getQueuedSets(session.id)
       .then((writes) => {
         if (cancelled || writes.length === 0) return;
+        // A write whose exercise no longer exists has nothing to attach to:
+        // drop it, rather than raise a "didn't save" warning no retry can clear.
+        const known = new Set(ref.current.map((exercise) => exercise.seId));
+        for (const write of writes) {
+          if (!known.has(write.sessionExerciseId)) {
+            void removeQueuedSet(write.id).catch(() => undefined);
+          }
+        }
+        const live = writes.filter((write) => known.has(write.sessionExerciseId));
+        if (live.length === 0) return;
+        const upserts = live.filter((write) => !write.deleted);
+        const deletes = live.filter((write) => write.deleted);
+        const deletedIds = new Set(deletes.map((write) => write.id));
+
         const next = ref.current.map((exercise) => {
-          const pending = writes.filter(
+          const pending = upserts.filter(
             (write) => write.sessionExerciseId === exercise.seId,
           );
-          if (pending.length === 0) return exercise;
+          const hasDeleted = exercise.sets.some((set) => deletedIds.has(set.id));
+          if (pending.length === 0 && !hasDeleted) return exercise;
 
-          const sets = [...exercise.sets];
+          const sets = exercise.sets.filter((set) => !deletedIds.has(set.id));
           for (const write of pending) {
             const restored: LocalSet = {
               id: write.id,
@@ -333,14 +409,20 @@ export function SessionLogger({
         });
         ref.current = next;
         setExercises(next);
+        for (const write of deletes) {
+          pendingDeletes.current.set(write.id, write.sessionExerciseId);
+        }
         setFailed((prev) => {
           const restored = new Set(prev);
-          writes.forEach((write) => restored.add(write.id));
+          live.forEach((write) => restored.add(write.id));
           return restored;
         });
 
         if (navigator.onLine) {
-          for (const write of writes) {
+          for (const write of deletes) {
+            void persistDelete(write.sessionExerciseId, write.id);
+          }
+          for (const write of upserts) {
             const exercise = next.find(
               (candidate) => candidate.seId === write.sessionExerciseId,
             );
@@ -357,12 +439,17 @@ export function SessionLogger({
     return () => {
       cancelled = true;
     };
-  }, [persist, session.id, unit]);
+  }, [persist, persistDelete, session.id, unit]);
 
-  // Re-send every set that failed. Numbers are recomputed from current
+  // Re-send every change that failed. Numbers are recomputed from current
   // positions, so a retry after a delete still writes the right set_number.
   const retryFailed = useCallback(() => {
     for (const setId of failedRef.current) {
+      const deletedFrom = pendingDeletes.current.get(setId);
+      if (deletedFrom) {
+        void persistDelete(deletedFrom, setId);
+        continue;
+      }
       for (const ex of ref.current) {
         const idx = ex.sets.findIndex((s) => s.id === setId);
         if (idx >= 0) {
@@ -371,7 +458,7 @@ export function SessionLogger({
         }
       }
     }
-  }, [persist]);
+  }, [persist, persistDelete]);
 
   // Coming back from a dead connection is the common case (a gym basement),
   // so retry automatically rather than making them find the button.
@@ -413,9 +500,29 @@ export function SessionLogger({
   useEffect(
     () => () => {
       if (removalTimer.current) clearTimeout(removalTimer.current);
+      if (noticeTimer.current) clearTimeout(noticeTimer.current);
     },
     [],
   );
+
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    noticeTimer.current = setTimeout(() => setNotice(null), 6000);
+  }, []);
+
+  /**
+   * Structural changes (adding, swapping or removing a movement, finishing)
+   * need the server; only set values queue on the device. Say so up front
+   * rather than failing after a network timeout.
+   */
+  function needsConnection(what: string): boolean {
+    if (navigator.onLine) return false;
+    showNotice(
+      `You're offline. ${what} needs a connection. Sets you log still save on this device.`,
+    );
+    return true;
+  }
 
   // Tick the workout clock once a second while the logger is open.
   useEffect(() => {
@@ -514,7 +621,7 @@ export function SessionLogger({
     const ex = ref.current.find((e) => e.seId === seId);
     if (!ex) return;
     const prev = ex.sets[ex.sets.length - 1];
-    const last = lastPerformances[ex.exerciseId]?.sets[ex.sets.length];
+    const last = lastFor(ex.exerciseId)?.sets[ex.sets.length];
     const seed: LocalSet = {
       id: crypto.randomUUID(),
       weight: prev
@@ -540,22 +647,16 @@ export function SessionLogger({
   }
 
   function removeSet(seId: string, setId: string) {
-    void deleteSet({ id: setId }).catch(() => {});
-    void removeQueuedSet(setId).catch(() => undefined);
     // Cancel any debounced save still queued for the row being deleted, so it
     // can't resurrect the set after the delete lands.
     const queued = timers.current.get(setId);
     if (queued) clearTimeout(queued);
     timers.current.delete(setId);
     pendingSaves.current.delete(setId);
-    // Drop it from the failed list too, or a deleted row would keep the
-    // "didn't save" warning up forever with nothing left to retry.
-    setFailed((prev) => {
-      if (!prev.has(setId)) return prev;
-      const next = new Set(prev);
-      next.delete(setId);
-      return next;
-    });
+    // A failed save of this row is moot now; the delete (below) tracks its own
+    // failure, so the warning only stays up if the delete itself doesn't land.
+    clearFailed(setId);
+    void persistDelete(seId, setId);
 
     // Renumber the survivors. Computed out here, not inside the state updater:
     // updaters must be pure, and React may invoke them more than once per
@@ -574,13 +675,23 @@ export function SessionLogger({
   function addExercise(exerciseId: string) {
     const meta = exerciseLibrary.find((e) => e.id === exerciseId);
     if (!meta) return;
+    if (needsConnection("Adding a movement")) return;
     startNav(async () => {
-      const { id } = await addSessionExercise({
-        sessionId: session.id,
-        exerciseId,
-      });
-      setExercises((prev) => [
-        ...prev,
+      // Caught here: a throw inside a transition goes to the error boundary,
+      // which would replace the whole logger mid-workout.
+      let added: Awaited<ReturnType<typeof addSessionExercise>>;
+      try {
+        added = await addSessionExercise({ sessionId: session.id, exerciseId });
+      } catch {
+        showNotice(`Couldn't add ${meta.name}. Check your connection and try again.`);
+        return;
+      }
+      const { id, lastPerformance } = added;
+      if (lastPerformance) {
+        setAddedLast((prev) => ({ ...prev, [exerciseId]: lastPerformance }));
+      }
+      const next = [
+        ...ref.current,
         {
           seId: id,
           exerciseId,
@@ -589,7 +700,9 @@ export function SessionLogger({
           note: null,
           sets: [],
         },
-      ]);
+      ];
+      ref.current = next;
+      setExercises(next);
       // Mark it as bonus "Advance" work and jump straight into logging it.
       setAdvanceIds((prev) => new Set(prev).add(id));
       setActiveSeId(id);
@@ -597,35 +710,79 @@ export function SessionLogger({
   }
 
   function removeExercise(seId: string) {
-    void removeSessionExercise({ id: seId }).catch(() => {});
-    setExercises((prev) => prev.filter((e) => e.seId !== seId));
+    if (needsConnection("Removing a movement")) return;
+    const index = ref.current.findIndex((e) => e.seId === seId);
+    const removed = ref.current[index];
+    if (!removed) return;
+    const wasCompleted = completed.has(seId);
+    // Hold its pending saves: if the removal lands they'd be writing to a row
+    // that's gone; if it fails they're re-armed below.
+    const heldSaves = removed.sets
+      .map((s) => s.id)
+      .filter((id) => pendingSaves.current.has(id));
+    for (const id of heldSaves) {
+      const t = timers.current.get(id);
+      if (t) clearTimeout(t);
+      timers.current.delete(id);
+      pendingSaves.current.delete(id);
+    }
+
+    const next = ref.current.filter((e) => e.seId !== seId);
+    ref.current = next;
+    setExercises(next);
     setCompleted((prev) => {
-      const next = new Set(prev);
-      next.delete(seId);
-      return next;
+      const without = new Set(prev);
+      without.delete(seId);
+      return without;
     });
     setActiveSeId((cur) => (cur === seId ? null : cur));
+
+    removeSessionExercise({ id: seId })
+      .then(() => {
+        // Its sets went with it (cascade), so their device copies and any
+        // "didn't save" flags have nothing left to sync.
+        for (const s of removed.sets) {
+          void removeQueuedSet(s.id).catch(() => undefined);
+          pendingDeletes.current.delete(s.id);
+          clearFailed(s.id);
+        }
+      })
+      .catch(() => {
+        const restored = [...ref.current];
+        restored.splice(Math.min(index, restored.length), 0, removed);
+        ref.current = restored;
+        setExercises(restored);
+        if (wasCompleted) setCompleted((prev) => new Set(prev).add(seId));
+        for (const id of heldSaves) scheduleSave(seId, id);
+        showNotice(
+          `Couldn't remove ${removed.name}, so it's back in the queue. Try again with a connection.`,
+        );
+      });
   }
 
   function swap(seId: string, newExerciseId: string) {
     const meta = exerciseLibrary.find((e) => e.id === newExerciseId);
     if (!meta) return;
-    void swapSessionExercise({
-      sessionExerciseId: seId,
-      newExerciseId,
-    }).catch(() => {});
-    setExercises((prev) =>
-      prev.map((e) =>
-        e.seId === seId
-          ? {
-              ...e,
-              exerciseId: newExerciseId,
-              name: meta.name,
-              primaryMuscle: meta.primary_muscle,
-            }
-          : e,
-      ),
-    );
+    if (needsConnection("Swapping a movement")) return;
+    const before = ref.current.find((e) => e.seId === seId);
+    if (!before) return;
+    const relabel = (exerciseId: string, name: string, primaryMuscle: Muscle) => {
+      const next = ref.current.map((e) =>
+        e.seId === seId ? { ...e, exerciseId, name, primaryMuscle } : e,
+      );
+      ref.current = next;
+      setExercises(next);
+    };
+
+    relabel(newExerciseId, meta.name, meta.primary_muscle);
+    swapSessionExercise({ sessionExerciseId: seId, newExerciseId }).catch(() => {
+      // The server still has the old movement, and the logged sets belong to
+      // it. Showing the new name would misattribute them.
+      relabel(before.exerciseId, before.name, before.primaryMuscle);
+      showNotice(
+        `Couldn't swap to ${meta.name}. Your sets are still logged under ${before.name}.`,
+      );
+    });
   }
 
   function endExercise(seId: string) {
@@ -641,16 +798,28 @@ export function SessionLogger({
       setConfirmFinish(true);
       return;
     }
+    if (needsConnection("Finishing the session")) return;
     setConfirmFinish(false);
     setFinishing(true);
     setVictory(randomVictory());
     setTimeout(() => {
       startNav(async () => {
-        // Auto-record the live clock unless a duration was typed by hand.
-        await finishSession({
-          sessionId: session.id,
-          durationMin: duration ?? elapsedMin,
-        });
+        try {
+          // Auto-record the live clock unless a duration was typed by hand.
+          await finishSession({
+            sessionId: session.id,
+            durationMin: duration ?? elapsedMin,
+          });
+        } catch (err) {
+          // Success arrives as a redirect, which rejects this promise; let
+          // the router have it. Anything else is a real failure.
+          unstable_rethrow(err);
+          setVictory(null);
+          setFinishing(false);
+          showNotice(
+            "Couldn't finish the session. Your sets are safe; try again in a moment.",
+          );
+        }
       });
     }, 1100);
   }
@@ -691,7 +860,7 @@ export function SessionLogger({
             updateSessionMeta({
               sessionId: session.id,
               title: e.target.value.trim() || null,
-            })
+            }).catch(() => showNotice("Couldn't save the session title."))
           }
           className="w-full bg-transparent font-impact text-4xl uppercase leading-[0.82] tracking-tight text-text focus:outline-none sm:text-5xl"
         />
@@ -702,7 +871,10 @@ export function SessionLogger({
             aria-label="Session date"
             onBlur={(e) =>
               e.target.value &&
-              updateSessionMeta({ sessionId: session.id, date: e.target.value })
+              updateSessionMeta({
+                sessionId: session.id,
+                date: e.target.value,
+              }).catch(() => showNotice("Couldn't save the session date."))
             }
             className="rounded-md border border-border bg-surface-2 px-2 py-1 font-mono text-xs text-text focus:border-accent/60 focus:outline-none"
           />
@@ -778,8 +950,8 @@ export function SessionLogger({
             <TriangleAlert className="size-4 shrink-0 text-danger" />
             <span className="min-w-0 flex-1 text-xs text-text">
               <strong className="font-medium text-danger">
-                {failed.size} {failed.size === 1 ? "set" : "sets"} didn&apos;t
-                save.
+                {failed.size} {failed.size === 1 ? "change" : "changes"}{" "}
+                didn&apos;t save.
               </strong>{" "}
               {online
                 ? "Saved on this device. Retry the upload when you're ready."
@@ -824,7 +996,7 @@ export function SessionLogger({
           const isAdvance = advanceIds.has(ex.seId);
           const hasPR = ex.sets.some((s) => prSets.has(s.id));
           const workingSets = ex.sets.filter((s) => !s.isWarmup);
-          const last = lastPerformances[ex.exerciseId];
+          const last = lastFor(ex.exerciseId);
           const advanceBadge = isAdvance ? (
             <Badge variant="accent" className="gap-1">
               <ChevronsUp className="size-3" />
@@ -1004,8 +1176,9 @@ export function SessionLogger({
         {confirmFinish ? (
           <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             <p className="text-xs text-danger sm:text-right">
-              {failed.size} {failed.size === 1 ? "set is" : "sets are"} still
-              unsaved. Finishing now loses {failed.size === 1 ? "it" : "them"}.
+              {failed.size} {failed.size === 1 ? "change is" : "changes are"}{" "}
+              still unsaved. Finishing now loses{" "}
+              {failed.size === 1 ? "it" : "them"}.
             </p>
             <div className="flex gap-2">
               <Button
@@ -1056,7 +1229,7 @@ export function SessionLogger({
           key={active.seId}
           exercise={active}
           exerciseLibrary={exerciseLibrary}
-          lastPerformance={lastPerformances[active.exerciseId] ?? null}
+          lastPerformance={lastFor(active.exerciseId) ?? null}
           unit={unit}
           weightStep={weightStep}
           flashId={flashId}
@@ -1071,32 +1244,51 @@ export function SessionLogger({
         />
       )}
 
-      {/* REMOVAL: a PR broke; brief limiter-release callout */}
-      {removal && (
+      {/* Toasts above the exercise sheet: a sync notice, and the REMOVAL
+          callout when a PR breaks. Stacked so both can show at once. */}
+      {(notice || removal) && (
         <Portal>
-          <div
-            className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex justify-center px-4"
-            role="status"
-            aria-live="polite"
-          >
-            <div className="hb-slam pointer-events-auto flex items-center gap-3 rounded-xl border border-accent/40 bg-surface/95 px-4 py-2.5 shadow-glow backdrop-blur">
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                <Zap className="size-4" />
-              </span>
-              <div className="min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="font-impact text-lg uppercase leading-none tracking-tight text-accent">
-                    Removal
+          <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex flex-col items-center gap-2 px-4">
+            {notice && (
+              <div
+                role="alert"
+                className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-warn/40 bg-surface/95 px-4 py-2.5 shadow-raised backdrop-blur"
+              >
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
+                <p className="min-w-0 flex-1 text-xs leading-5 text-text">
+                  {notice}
+                </p>
+                <button
+                  onClick={() => setNotice(null)}
+                  aria-label="Dismiss"
+                  className="-mr-1 shrink-0 rounded p-1 text-muted transition-colors hover:text-text"
+                >
+                  <X className="size-3.5" />
+                </button>
+              </div>
+            )}
+            {removal && (
+              <div role="status" aria-live="polite">
+                <div className="hb-slam pointer-events-auto flex items-center gap-3 rounded-xl border border-accent/40 bg-surface/95 px-4 py-2.5 shadow-glow backdrop-blur">
+                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
+                    <Zap className="size-4" />
                   </span>
-                  <span className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
-                    {removal.name}
-                  </span>
-                </div>
-                <div className="mt-0.5 font-mono text-xs text-text">
-                  {removal.detail}
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-2">
+                      <span className="font-impact text-lg uppercase leading-none tracking-tight text-accent">
+                        Removal
+                      </span>
+                      <span className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
+                        {removal.name}
+                      </span>
+                    </div>
+                    <div className="mt-0.5 font-mono text-xs text-text">
+                      {removal.detail}
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </Portal>
       )}

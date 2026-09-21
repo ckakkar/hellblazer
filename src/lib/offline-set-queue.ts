@@ -11,8 +11,22 @@ export type PendingSetWrite = {
   reps: number;
   rpe: number | null;
   isWarmup: boolean;
+  /** Write stamp from {@link nextStamp}; orders edits to the same set. */
   updatedAt: number;
+  /** A queued delete: the set was removed but the server hasn't confirmed it. */
+  deleted?: boolean;
 };
+
+let lastStamp = 0;
+
+/**
+ * Strictly increasing write stamp. Two edits inside one millisecond still get
+ * distinct, ordered stamps, which {@link removeQueuedSet} relies on.
+ */
+export function nextStamp(): number {
+  lastStamp = Math.max(Date.now(), lastStamp + 1);
+  return lastStamp;
+}
 
 function openQueue(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -63,9 +77,39 @@ export async function queueSet(write: PendingSetWrite) {
   await transaction("readwrite", (store) => store.put(write));
 }
 
-export async function removeQueuedSet(id: string) {
+/**
+ * Drop a set's queued write once the server has it. Pass the stamp of the
+ * write that was uploaded as `upTo`: an edit queued while that upload was in
+ * flight carries a newer stamp and is kept, because if its own upload then
+ * fails, the device copy is the only one left. Omit `upTo` to drop the entry
+ * whatever it holds (the set's exercise was removed, say).
+ */
+export async function removeQueuedSet(id: string, upTo?: number) {
   if (typeof indexedDB === "undefined") return;
-  await transaction("readwrite", (store) => store.delete(id));
+  const db = await openQueue();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const request = store.get(id);
+    request.onsuccess = () => {
+      const current = request.result as PendingSetWrite | undefined;
+      if (current && (upTo === undefined || current.updatedAt <= upTo)) {
+        store.delete(id);
+      }
+    };
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
 }
 
 export async function getQueuedSets(sessionId: string) {
