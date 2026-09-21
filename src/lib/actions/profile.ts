@@ -3,26 +3,70 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
-import { TIER_KEYS } from "@/lib/tiers";
+import { createServiceClient } from "@/lib/supabase/service";
+import { getTier, type TierKey } from "@/lib/tiers";
 
-/** Accept a proposed tier (from an evaluation) as the user's new rank. */
-export async function setTier(input: { tierKey: string; rationale?: string }) {
-  const v = z
-    .object({
-      tierKey: z.enum(TIER_KEYS),
-      rationale: z.string().max(4000).optional(),
-    })
-    .parse(input);
-  const { supabase, user } = await getAuthedContext();
-  const { error } = await supabase.from("profile").upsert({
-    user_id: user.id,
-    tier: v.tierKey,
-    tier_rationale: v.rationale ?? null,
-    tier_evaluated_at: new Date().toISOString(),
-  });
+export type AcceptTierResult =
+  | { ok: true; tierKey: TierKey }
+  | { ok: false; error: "no_verdict" | "not_configured" };
+
+/**
+ * Accept the judge's latest verdict as the lifter's rank. Takes no rank from
+ * the client: it promotes whatever `evaluateTier` recorded in
+ * `profile.pending_tier`, which only the server can write. Rank columns are
+ * closed to the lifter's own token, so these writes go through the service
+ * client, scoped to the caller.
+ */
+export async function acceptTier(): Promise<AcceptTierResult> {
+  const { user } = await getAuthedContext();
+  const svc = createServiceClient();
+  if (!svc) return { ok: false, error: "not_configured" };
+
+  const { data: profile, error } = await svc
+    .from("profile")
+    .select("tier, pending_tier, pending_tier_rationale")
+    .eq("user_id", user.id)
+    .maybeSingle();
   if (error) throw error;
+  const proposed = getTier(profile?.pending_tier);
+  if (!proposed) return { ok: false, error: "no_verdict" };
+
+  // The ratchet again, at accept time: a verdict delivered before a later
+  // promotion must not undo it.
+  const current = getTier(profile?.tier);
+  const keepCurrent = current !== null && current.rank > proposed.rank;
+  const { error: upErr } = await svc
+    .from("profile")
+    .update({
+      ...(keepCurrent
+        ? {}
+        : {
+            tier: proposed.key,
+            tier_rationale: profile?.pending_tier_rationale ?? null,
+            tier_evaluated_at: new Date().toISOString(),
+          }),
+      pending_tier: null,
+      pending_tier_rationale: null,
+    })
+    .eq("user_id", user.id);
+  if (upErr) throw upErr;
+
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  revalidatePath("/leaderboard");
+  return { ok: true, tierKey: keepCurrent ? current.key : proposed.key };
+}
+
+/** Turn down the judge's latest verdict: the rank stays as it is. */
+export async function declineTier() {
+  const { user } = await getAuthedContext();
+  const svc = createServiceClient();
+  if (!svc) return;
+  const { error } = await svc
+    .from("profile")
+    .update({ pending_tier: null, pending_tier_rationale: null })
+    .eq("user_id", user.id);
+  if (error) throw error;
 }
 
 /**

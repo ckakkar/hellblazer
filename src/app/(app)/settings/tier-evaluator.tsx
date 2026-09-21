@@ -16,7 +16,7 @@ import { TierLadder } from "@/components/tier/tier-ui";
 import { cn } from "@/lib/utils";
 import { getFighterNumber, getTier, MAX_RANK } from "@/lib/tiers";
 import { evaluateTier, type EvalResult } from "@/lib/actions/evaluation";
-import { setTier } from "@/lib/actions/profile";
+import { acceptTier, declineTier } from "@/lib/actions/profile";
 import {
   EVAL_COOLDOWN_DAYS,
   daysUntil,
@@ -49,12 +49,18 @@ export function TierEvaluator({
     });
   }
 
+  // Neither call names a rank: the server acts on the verdict it recorded.
   function accept() {
     if (!result?.ok) return;
     startAccept(async () => {
-      await setTier({ tierKey: result.tierKey, rationale: result.rationale });
+      await acceptTier();
       setResult(null);
     });
+  }
+
+  function decline() {
+    setResult(null);
+    void declineTier().catch(() => undefined);
   }
 
   const direction =
@@ -264,7 +270,7 @@ export function TierEvaluator({
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => setResult(null)}
+                onClick={decline}
                 className="w-full sm:w-auto"
               >
                 Keep {current ? current.name : "unranked"}

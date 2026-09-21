@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
+import { createServiceClient } from "@/lib/supabase/service";
 import { getEvalGate, getTrainingProfile } from "@/lib/data/evaluation";
 import { EVAL_COOLDOWN_DAYS, daysUntil } from "@/lib/evaluation-rules";
 import { getProfile } from "@/lib/data/profile";
@@ -25,7 +26,9 @@ export type EvalResult =
 /**
  * Manually-triggered strength evaluation. Sends the user's full training
  * snapshot to DeepSeek and returns a proposed tier for the user to accept or
- * reject; the rank itself is only persisted by `setTier` on accept.
+ * reject. The verdict is stored server-side as `profile.pending_tier`, and
+ * `acceptTier` can only promote what is stored there: the client never names
+ * a rank, so it can't award itself one.
  *
  * Rate-limited by `getEvalGate`: you need a finished workout logged since your
  * last evaluation, and at most one evaluation every EVAL_COOLDOWN_DAYS days.
@@ -36,7 +39,7 @@ export type EvalResult =
  * there.
  */
 export async function evaluateTier(): Promise<EvalResult> {
-  const { supabase, user } = await getAuthedContext(); // RLS scopes the data
+  const { user } = await getAuthedContext(); // RLS scopes the data reads
 
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
@@ -45,6 +48,17 @@ export async function evaluateTier(): Promise<EvalResult> {
       error: "not_configured",
       message:
         "DeepSeek isn't connected yet. Add a DEEPSEEK_API_KEY to enable evaluations.",
+    };
+  }
+  // Checked before the model call: without it the verdict can't be recorded,
+  // so asking for one would only burn tokens.
+  const svc = createServiceClient();
+  if (!svc) {
+    return {
+      ok: false,
+      error: "not_configured",
+      message:
+        "The judge can't record verdicts here. Add SUPABASE_SERVICE_ROLE_KEY to enable evaluations.",
     };
   }
 
@@ -233,12 +247,28 @@ Respond with ONLY a JSON object of exactly this shape:
       tier = currentTier;
     }
 
-    // Start the cooldown. Stamped here: on a delivered verdict, rather than
-    // on accept, so declining a verdict can't buy a free re-roll. Failures
-    // above return early and cost the lifter nothing.
-    await supabase
-      .from("profile")
-      .upsert({ user_id: user.id, evaluation_run_at: new Date().toISOString() });
+    const rationale = parsed.rationale ?? "";
+
+    // Record the verdict for acceptTier, and start the cooldown. Stamped
+    // here, on a delivered verdict rather than on accept, so declining can't
+    // buy a free re-roll. Failures above return early and cost nothing.
+    const { error: recordErr } = await svc.from("profile").upsert(
+      {
+        user_id: user.id,
+        evaluation_run_at: new Date().toISOString(),
+        pending_tier: tier.key,
+        pending_tier_rationale: rationale.slice(0, 4000),
+      },
+      { onConflict: "user_id" },
+    );
+    if (recordErr) {
+      console.error("Recording the verdict failed", recordErr);
+      return {
+        ok: false,
+        error: "failed",
+        message: "The judge ruled but the verdict didn't record. Try again.",
+      };
+    }
     revalidatePath("/settings");
 
     return {
@@ -246,7 +276,7 @@ Respond with ONLY a JSON object of exactly this shape:
       tierKey: tier.key,
       tierName: tier.name,
       rank: tier.rank,
-      rationale: parsed.rationale ?? "",
+      rationale,
       highlights: Array.isArray(parsed.highlights)
         ? parsed.highlights.slice(0, 4).map(String)
         : [],
