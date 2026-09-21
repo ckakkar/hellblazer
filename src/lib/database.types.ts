@@ -82,6 +82,8 @@ export type Database = {
           evaluation_run_at: string | null
           height_cm: number | null
           onboarded_at: string | null
+          pending_tier: string | null
+          pending_tier_rationale: string | null
           reminder_hour: number | null
           sex: string | null
           tier: string | null
@@ -97,6 +99,8 @@ export type Database = {
           evaluation_run_at?: string | null
           height_cm?: number | null
           onboarded_at?: string | null
+          pending_tier?: string | null
+          pending_tier_rationale?: string | null
           reminder_hour?: number | null
           sex?: string | null
           tier?: string | null
@@ -112,6 +116,8 @@ export type Database = {
           evaluation_run_at?: string | null
           height_cm?: number | null
           onboarded_at?: string | null
+          pending_tier?: string | null
+          pending_tier_rationale?: string | null
           reminder_hour?: number | null
           sex?: string | null
           tier?: string | null
@@ -613,12 +619,38 @@ export type Database = {
       }
     }
     Functions: {
-      leaderboard: {
-        Args: Record<PropertyKey, never>
+      exercise_stats: {
+        Args: { p_exclude_session?: string }
         Returns: {
-          username: string | null
-          tier: string | null
-          total_volume: number | null
+          best_est_1rm: number
+          best_reps: number
+          best_set_volume: number
+          best_weight_kg: number
+          exercise_id: string
+          exercise_name: string
+          first_est_1rm: number
+          last_est_1rm: number
+          primary_muscle: Database["public"]["Enums"]["muscle_group"]
+          sessions_logged: number
+          top_weight_kg: number
+        }[]
+      }
+      last_performances: {
+        Args: { p_exclude_session?: string; p_exercise_ids: string[] }
+        Returns: {
+          exercise_id: string
+          reps: number
+          session_date: string
+          set_number: number
+          weight_kg: number
+        }[]
+      }
+      leaderboard: {
+        Args: never
+        Returns: {
+          tier: string
+          total_volume: number
+          username: string
         }[]
       }
     }

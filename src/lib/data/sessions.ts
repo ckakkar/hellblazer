@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import type { Exercise } from "@/lib/data/exercises";
+import { getExerciseStats } from "@/lib/data/exercise-stats";
 
 export type Session = Database["public"]["Tables"]["session"]["Row"];
 export type SessionExercise =
@@ -109,33 +110,23 @@ export type ExercisePR = { bestWeightKg: number; bestEst1rm: number };
 export async function getExercisePRs(
   excludeSessionId: string,
 ): Promise<Record<string, ExercisePR>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("v_working_set")
-    .select("exercise_id, weight_kg, est_1rm")
-    .neq("session_id", excludeSessionId);
-  if (error) throw error;
-
+  const stats = await getExerciseStats(excludeSessionId);
   const result: Record<string, ExercisePR> = {};
-  for (const row of data ?? []) {
-    if (!row.exercise_id) continue;
-    const w = Number(row.weight_kg ?? 0);
-    const e = Number(row.est_1rm ?? 0);
-    const cur = result[row.exercise_id];
-    if (!cur) {
-      result[row.exercise_id] = { bestWeightKg: w, bestEst1rm: e };
-    } else {
-      if (w > cur.bestWeightKg) cur.bestWeightKg = w;
-      if (e > cur.bestEst1rm) cur.bestEst1rm = e;
-    }
+  for (const s of stats) {
+    result[s.exercise_id] = {
+      bestWeightKg: Number(s.top_weight_kg),
+      bestEst1rm: Number(s.best_est_1rm),
+    };
   }
   return result;
 }
 
 /**
  * The most recent prior working-set performance for each of the given
- * exercises. Powers the inline "last: 60kg×5" target on the log screen.
- * One query, grouped in memory by exercise → latest session.
+ * exercises. Powers the inline "last: 60kg×5" target on the log screen. The
+ * `last_performances()` RPC picks each exercise's latest session in Postgres,
+ * so a movement not trained for months still finds its numbers (a raw read
+ * of recent sets could run past the row cap before reaching it).
  */
 export async function getLastPerformances(
   exerciseIds: string[],
@@ -143,45 +134,23 @@ export async function getLastPerformances(
 ): Promise<Record<string, LastPerformance>> {
   if (exerciseIds.length === 0) return {};
   const supabase = await createClient();
-
-  let query = supabase
-    .from("v_working_set")
-    .select("exercise_id, session_id, session_date, set_number, weight_kg, reps")
-    .in("exercise_id", exerciseIds)
-    .order("session_date", { ascending: false })
-    .order("set_number", { ascending: true });
-  if (excludeSessionId) query = query.neq("session_id", excludeSessionId);
-
-  const { data, error } = await query;
+  const { data, error } = await supabase.rpc("last_performances", {
+    p_exercise_ids: exerciseIds,
+    ...(excludeSessionId ? { p_exclude_session: excludeSessionId } : {}),
+  });
   if (error) throw error;
 
   const result: Record<string, LastPerformance> = {};
   for (const row of data ?? []) {
-    if (
-      !row.exercise_id ||
-      !row.session_date ||
-      row.weight_kg == null ||
-      row.reps == null ||
-      row.set_number == null
-    )
-      continue;
-    const existing = result[row.exercise_id];
-    // Rows are session_date DESC, so the first date we see per exercise is the
-    // latest; keep only sets from that session.
-    if (!existing) {
-      result[row.exercise_id] = {
-        session_date: row.session_date,
-        sets: [
-          { set_number: row.set_number, weight_kg: row.weight_kg, reps: row.reps },
-        ],
-      };
-    } else if (existing.session_date === row.session_date) {
-      existing.sets.push({
-        set_number: row.set_number,
-        weight_kg: row.weight_kg,
-        reps: row.reps,
-      });
-    }
+    const entry = (result[row.exercise_id] ??= {
+      session_date: row.session_date,
+      sets: [],
+    });
+    entry.sets.push({
+      set_number: row.set_number,
+      weight_kg: Number(row.weight_kg),
+      reps: row.reps,
+    });
   }
   return result;
 }

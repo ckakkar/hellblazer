@@ -1,6 +1,7 @@
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/settings";
+import { getExerciseStats } from "@/lib/data/exercise-stats";
 import { MUSCLE_CHART_ORDER, type Muscle } from "@/lib/muscles";
 
 function isoWeekKey(d: Date): string {
@@ -138,42 +139,21 @@ export type Exercise1RM = {
 /**
  * Every exercise the user has logged a working set against, with their all-time
  * best estimated 1RM (Epley) and the set that produced it, ranked strongest
- * first. Powers the Progress "1RM board". One pass over `v_working_set`.
+ * first. Powers the Progress "1RM board".
  */
 export async function getAllExercise1RMs(): Promise<Exercise1RM[]> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("v_working_set")
-    .select("exercise_id, exercise_name, primary_muscle, weight_kg, reps, est_1rm");
-  if (error) throw error;
-
-  const byExercise = new Map<string, Exercise1RM>();
-  for (const r of data ?? []) {
-    if (!r.exercise_id) continue;
-    const e1rm = Number(r.est_1rm ?? 0);
-    const w = Number(r.weight_kg ?? 0);
-    const reps = Number(r.reps ?? 0);
-    const cur = byExercise.get(r.exercise_id);
-    if (!cur) {
-      byExercise.set(r.exercise_id, {
-        exerciseId: r.exercise_id,
-        name: r.exercise_name ?? "Exercise",
-        primaryMuscle: (r.primary_muscle as Muscle) ?? "chest",
-        bestEst1rm: e1rm,
-        bestWeightKg: w,
-        bestReps: reps,
-        topWeightKg: w,
-      });
-    } else {
-      if (e1rm > cur.bestEst1rm) {
-        cur.bestEst1rm = e1rm;
-        cur.bestWeightKg = w;
-        cur.bestReps = reps;
-      }
-      if (w > cur.topWeightKg) cur.topWeightKg = w;
-    }
-  }
-  return [...byExercise.values()].sort((a, b) => b.bestEst1rm - a.bestEst1rm);
+  const stats = await getExerciseStats();
+  return stats
+    .map((s) => ({
+      exerciseId: s.exercise_id,
+      name: s.exercise_name,
+      primaryMuscle: s.primary_muscle,
+      bestEst1rm: Number(s.best_est_1rm),
+      bestWeightKg: Number(s.best_weight_kg),
+      bestReps: s.best_reps,
+      topWeightKg: Number(s.top_weight_kg),
+    }))
+    .sort((a, b) => b.bestEst1rm - a.bestEst1rm);
 }
 
 /** 1RM progression, volume-per-session and PRs for one exercise. */

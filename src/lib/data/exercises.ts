@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
+import { getExerciseStats } from "@/lib/data/exercise-stats";
 
 export type Exercise = Database["public"]["Tables"]["exercise"]["Row"];
 
@@ -14,25 +15,12 @@ export async function getExercises(): Promise<Exercise[]> {
   return data ?? [];
 }
 
-/** Distinct exercises that the user has actually logged sets against. */
+/** Distinct exercises that the user has actually logged sets against, by name. */
 export async function getLoggedExercises(): Promise<
   { exercise_id: string; exercise_name: string }[]
 > {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("v_working_set")
-    .select("exercise_id, exercise_name")
-    .order("exercise_name", { ascending: true });
-  if (error) throw error;
-
-  const seen = new Map<string, string>();
-  for (const row of data ?? []) {
-    if (row.exercise_id && row.exercise_name && !seen.has(row.exercise_id)) {
-      seen.set(row.exercise_id, row.exercise_name);
-    }
-  }
-  return [...seen].map(([exercise_id, exercise_name]) => ({
-    exercise_id,
-    exercise_name,
-  }));
+  const stats = await getExerciseStats();
+  return stats
+    .map((s) => ({ exercise_id: s.exercise_id, exercise_name: s.exercise_name }))
+    .sort((a, b) => a.exercise_name.localeCompare(b.exercise_name));
 }

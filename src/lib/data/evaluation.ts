@@ -1,6 +1,7 @@
 import { addDays, differenceInCalendarDays, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/settings";
+import { getExerciseStats } from "@/lib/data/exercise-stats";
 import {
   EVAL_COOLDOWN_DAYS,
   hasUnlimitedEvaluations,
@@ -119,7 +120,7 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
   const supabase = await createClient();
   const today = parseISO(await getToday());
 
-  const [bwRes, sessionsRes, progRes, programRes, weeklyRes, profileRes] =
+  const [bwRes, sessionsRes, exerciseStats, programRes, weeklyRes, profileRes] =
     await Promise.all([
       supabase
         .from("bodyweight_log")
@@ -131,10 +132,10 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .from("v_session_summary")
         .select("session_date, total_volume, working_sets")
         .order("session_date", { ascending: true }),
-      supabase
-        .from("v_exercise_progression")
-        .select("exercise_name, best_est_1rm, top_weight, best_set_volume, session_date")
-        .order("session_date", { ascending: true }),
+      // Per-exercise summary aggregated in Postgres. Reading one row per
+      // exercise-session in date order used to hit the row cap and drop the
+      // NEWEST lifts first, so the judge ruled on stale numbers.
+      getExerciseStats(),
       supabase
         .from("program")
         .select("name, duration_weeks, start_date")
@@ -175,49 +176,15 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         )
       : 0;
 
-  // Per-exercise aggregation
-  const map = new Map<
-    string,
-    {
-      best: number;
-      top: number;
-      bestVol: number;
-      sessions: Set<string>;
-      first: number;
-      last: number;
-    }
-  >();
-  for (const r of progRes.data ?? []) {
-    const name = r.exercise_name;
-    if (!name) continue;
-    const est = Number(r.best_est_1rm ?? 0);
-    const cur = map.get(name);
-    if (!cur) {
-      map.set(name, {
-        best: est,
-        top: Number(r.top_weight ?? 0),
-        bestVol: Number(r.best_set_volume ?? 0),
-        sessions: new Set(r.session_date ? [r.session_date] : []),
-        first: est,
-        last: est,
-      });
-    } else {
-      cur.best = Math.max(cur.best, est);
-      cur.top = Math.max(cur.top, Number(r.top_weight ?? 0));
-      cur.bestVol = Math.max(cur.bestVol, Number(r.best_set_volume ?? 0));
-      if (r.session_date) cur.sessions.add(r.session_date);
-      cur.last = est; // rows are date-ascending
-    }
-  }
-  const lifts: LiftStat[] = [...map.entries()]
-    .map(([exercise, v]) => ({
-      exercise,
-      bestEst1rmKg: Math.round(v.best * 10) / 10,
-      topWeightKg: Math.round(v.top * 10) / 10,
-      bestSetVolumeKg: Math.round(v.bestVol),
-      sessions: v.sessions.size,
-      firstEst1rmKg: Math.round(v.first * 10) / 10,
-      lastEst1rmKg: Math.round(v.last * 10) / 10,
+  const lifts: LiftStat[] = exerciseStats
+    .map((x) => ({
+      exercise: x.exercise_name,
+      bestEst1rmKg: Math.round(Number(x.best_est_1rm) * 10) / 10,
+      topWeightKg: Math.round(Number(x.top_weight_kg) * 10) / 10,
+      bestSetVolumeKg: Math.round(Number(x.best_set_volume)),
+      sessions: x.sessions_logged,
+      firstEst1rmKg: Math.round(Number(x.first_est_1rm) * 10) / 10,
+      lastEst1rmKg: Math.round(Number(x.last_est_1rm) * 10) / 10,
     }))
     .sort((a, b) => b.bestEst1rmKg - a.bestEst1rmKg)
     .slice(0, 24);
