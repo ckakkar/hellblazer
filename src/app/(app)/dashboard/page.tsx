@@ -146,15 +146,19 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-10">
-      <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
+      {/* The hero, and the next workout overlapping its foot on a phone: one
+          screen that says who you are and what to do next, with Start in
+          thumb reach. Side by side from `lg`. */}
+      <div className="grid lg:grid-cols-[1.35fr_1fr] lg:gap-3">
         <FightCardHero tier={tier} />
         {isNewUser ? null : activeProgress ? (
           <ProgramProgressCard
             progress={activeProgress}
             href={`/programs/${activeProgress.program.id}`}
+            className="hb-overlap relative z-10 -mt-14 md:mt-3 lg:mt-0"
           />
         ) : (
-          <section className="flex flex-col justify-between gap-5 rounded-3xl bg-surface p-5 sm:p-6">
+          <section className="hb-overlap relative z-10 -mt-14 flex flex-col justify-between gap-5 rounded-3xl bg-surface p-5 sm:p-6 md:mt-3 lg:mt-0">
             <div>
               <h2 className="text-[1.375rem] font-semibold tracking-[-0.02em] text-text">
                 Nothing programmed

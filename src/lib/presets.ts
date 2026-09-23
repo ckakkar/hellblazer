@@ -6,6 +6,8 @@
  * (back · biceps · triceps · side delts): heavy compounds first (3-6), then
  * isolation in hypertrophy ranges (8-20).
  */
+import type { TierKey } from "@/lib/tiers";
+
 export type PresetExercise = {
   name: string;
   sets: number;
@@ -22,6 +24,8 @@ export type PresetDay = {
 export type Preset = {
   id: string;
   name: string;
+  /** The fighter whose style names the program; their portrait fronts its card. */
+  fighter: TierKey;
   description: string;
   weeks?: number;
   days: PresetDay[];
@@ -31,6 +35,7 @@ export const PRESETS: Preset[] = [
   {
     id: "back-arm-strength",
     name: "Niko Style · Back & Arm Strength",
+    fighter: "ohma",
     weeks: 8,
     description:
       "5-day weak-point split: back · biceps · triceps · side delts. Heavy compounds first (3-6), isolation after in hypertrophy ranges.",
@@ -172,6 +177,7 @@ export const PRESETS: Preset[] = [
   {
     id: "upper-lower-4",
     name: "Hatsumi Aikido · Upper/Lower 4-Day",
+    fighter: "hatsumi",
     weeks: 8,
     description:
       "The gold-standard 4-day split. Two upper + two lower days, heavy strength work up top then hypertrophy volume, the best frequency/recovery balance for natural strength gains.",
@@ -236,6 +242,7 @@ export const PRESETS: Preset[] = [
   {
     id: "ppl-6",
     name: "Kaiwan Style · Push/Pull/Legs ×2",
+    fighter: "kuroki",
     weeks: 8,
     description:
       "PPLPPL: the highest-frequency hypertrophy-strength split. Each muscle trained twice weekly: a heavy strength day and a higher-volume day. For advanced lifters who recover well.",
@@ -316,6 +323,7 @@ export const PRESETS: Preset[] = [
   {
     id: "full-body-5",
     name: "Formless · Full-Body 5-Day",
+    fighter: "agito",
     weeks: 8,
     description:
       "Five full-body days, each led by one heavy lift (squat, bench, deadlift, overhead press, weighted pull-up) at 3-5 reps, then moderate compounds and isolation. Every major muscle gets 10-17 hard sets a week, pushing and pulling evenly; biceps, triceps and side delts get direct work every session.",
@@ -462,6 +470,7 @@ export const PRESETS: Preset[] = [
   {
     id: "dumbbell-home-5",
     name: "Kure Clan · Dumbbell Home Circuit",
+    fighter: "raian",
     weeks: 8,
     description:
       "A dumbbell-only, home-friendly 5-day split, glute & leg focused with dedicated shoulders/arms, back/core, and posterior-chain days. No machines, no barbell: just a pair of dumbbells.",

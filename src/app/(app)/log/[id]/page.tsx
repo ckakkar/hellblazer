@@ -7,6 +7,8 @@ import {
 } from "@/lib/data/sessions";
 import { getExercises } from "@/lib/data/exercises";
 import { getUnit } from "@/lib/settings";
+import { getProfile } from "@/lib/data/profile";
+import { getTier } from "@/lib/tiers";
 import { SessionLogger } from "./session-logger";
 
 export const metadata: Metadata = { title: "Workout" };
@@ -19,11 +21,12 @@ export default async function LoggerPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, exerciseLibrary, unit, exercisePRs] = await Promise.all([
+  const [session, exerciseLibrary, unit, exercisePRs, profile] = await Promise.all([
     getSessionDetail(id),
     getExercises(),
     getUnit(),
     getExercisePRs(id),
+    getProfile(),
   ]);
   if (!session) notFound();
 
@@ -39,6 +42,7 @@ export default async function LoggerPage({
       lastPerformances={lastPerformances}
       exercisePRs={exercisePRs}
       unit={unit}
+      fighter={getTier(profile?.tier)?.key ?? "ohma"}
     />
   );
 }

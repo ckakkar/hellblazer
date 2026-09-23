@@ -13,9 +13,11 @@ import { PauseResumeButton } from "./program-controls";
 export function ProgramProgressCard({
   progress,
   href,
+  className,
 }: {
   progress: ProgramProgress;
   href?: string;
+  className?: string;
 }) {
   const {
     program,
@@ -44,7 +46,7 @@ export function ProgramProgressCard({
         : `Week ${currentWeek} of ${totalWeeks}`;
 
   return (
-    <section className="rounded-3xl bg-surface p-5 sm:p-6">
+    <section className={cn("rounded-3xl bg-surface p-5 sm:p-6", className)}>
       <div className="flex items-center justify-between gap-3 text-[13px]">
         {href ? (
           <Link
@@ -76,7 +78,7 @@ export function ProgramProgressCard({
       ) : nextDay?.template_id ? (
         <>
           <p className="mt-5 text-[13px] text-muted">
-            {weekComplete ? "Next week, first up" : "Up next"}
+            {weekComplete ? "Next week, first bout" : "Next bout"}
           </p>
           <h2 className="mt-0.5 text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-text">
             {nextName}
@@ -115,7 +117,7 @@ export function ProgramProgressCard({
               label="Start workout"
               variant="accent"
               size="lg"
-              className="flex-1"
+              className="hb-glow flex-1"
             />
             <SkipWorkoutButton programDayId={nextDay.id} size="lg" variant="secondary" />
           </div>

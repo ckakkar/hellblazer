@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TierLadder } from "@/components/tier/tier-ui";
+import { FighterArt } from "@/components/tier/fighter-art";
 import { cn } from "@/lib/utils";
 import { getTier, MAX_RANK } from "@/lib/tiers";
 import { evaluateTier, type EvalResult } from "@/lib/actions/evaluation";
@@ -170,34 +171,49 @@ export function TierEvaluator({
       )}
 
       {result && result.ok && (
-        <div className="rounded-2xl bg-surface-2">
-          <div className="p-5">
-            <div className="flex items-center gap-2 text-[13px] text-muted">
+        <div className="overflow-hidden rounded-2xl bg-surface-2 [--hb-fade:var(--color-surface-2)]">
+          {/* The reveal: the judged fighter pushes in and their name lands
+              like a poster, then the reasoning and the choice. */}
+          <div className="relative h-64">
+            <div className="hb-victory-art absolute inset-0">
+              <FighterArt
+                fighterKey={getTier(result.tierKey)?.key ?? "ohma"}
+                variant="card"
+                fade="bottom"
+                className="absolute inset-0"
+                imageClassName="object-[center_14%]"
+              />
+            </div>
+            <div className="absolute inset-x-5 bottom-3">
+            <div className="flex items-center gap-2 text-[13px] text-text/75">
               Verdict
               {direction === "up" && (
-                <span className="inline-flex items-center gap-0.5 text-accent">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-accent py-0.5 pl-1.5 pr-2 font-medium text-black">
                   <ArrowUpRight className="size-3.5" /> promotion
                 </span>
               )}
               {direction === "down" && (
-                <span className="inline-flex items-center gap-0.5 text-danger">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-danger py-0.5 pl-1.5 pr-2 font-medium text-black">
                   <ArrowDownRight className="size-3.5" /> fallen
                 </span>
               )}
               {direction === "same" && (
-                <span className="inline-flex items-center gap-0.5 text-muted">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-white/[0.14] py-0.5 pl-1.5 pr-2 font-medium text-text backdrop-blur-md">
                   <Minus className="size-3.5" /> same rank
                 </span>
               )}
             </div>
-            <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-text">
+            <div className="hb-victory-word font-display mt-1.5 text-[2.25rem] leading-[0.95] text-text">
               {result.tierName}
             </div>
-            <div className="tnum mt-0.5 text-[15px] text-muted">
+            <div className="tnum mt-1 text-[15px] text-text/70">
               {getTier(result.tierKey)?.epithet ? `${getTier(result.tierKey)!.epithet}, ` : ""}
               rank {result.rank} of {MAX_RANK}
             </div>
-            <TierLadder rank={result.rank} className="mt-4" />
+            </div>
+          </div>
+          <div className="p-5 pt-4">
+            <TierLadder rank={result.rank} />
             <p className="mt-4 text-[15px] leading-[1.5] text-text">{result.rationale}</p>
             {result.highlights.length > 0 && (
               <ul className="mt-3 grid gap-1.5">

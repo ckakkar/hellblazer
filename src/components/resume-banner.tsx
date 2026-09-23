@@ -19,7 +19,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
     start(async () => void (await discardSession({ id: session.id })));
 
   return (
-    <div className="mb-6 flex items-center gap-3 rounded-2xl bg-surface py-3 pl-4 pr-2">
+    <div className="hb-resume mb-6 flex items-center gap-3 rounded-2xl bg-surface py-3 pl-4 pr-2">
       <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-medium text-text">

@@ -139,7 +139,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
                 aria-label={item.label}
                 className="flex items-center justify-center"
               >
-                <span className="flex size-11 items-center justify-center rounded-full bg-accent text-black">
+                <span className="hb-glow flex size-11 items-center justify-center rounded-full bg-accent text-black">
                   <Plus className="size-5" strokeWidth={2.5} />
                 </span>
               </Link>

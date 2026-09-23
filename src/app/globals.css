@@ -272,6 +272,194 @@ button,
   }
 }
 
+/* ── Home hero ────────────────────────────────────────────────────────────
+   On a phone the rank hero runs edge to edge and up under the clear top bar
+   and status bar, so the fighter owns the top of the screen. A workout in
+   progress puts its banner above the page, and then the hero stays in the
+   flow instead of covering it. */
+.hb-hero-bleed {
+  --hb-gutter: 1rem;
+}
+@media (min-width: 400px) {
+  .hb-hero-bleed {
+    --hb-gutter: 1.25rem;
+  }
+}
+@media (max-width: 767.98px) {
+  .hb-hero-bleed {
+    margin-inline: calc(-1 * var(--hb-gutter));
+    margin-top: calc(-1 * (env(safe-area-inset-top) + 3.75rem));
+    border-radius: 0;
+  }
+  main:has(.hb-resume) .hb-hero-bleed {
+    margin-inline: 0;
+    margin-top: 0;
+    border-radius: 1.75rem;
+  }
+}
+/* The card that overlaps the hero's foot: glass, so the portrait's fade
+   reads through its top edge. Opaque again where there's nothing under it. */
+@media (max-width: 767.98px) {
+  .hb-overlap {
+    background-color: rgb(20 20 22 / 0.78);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+  }
+}
+/* The one glowing control: the button that starts a workout. The glow is
+   the accent's own light, low and wide, not a neon edge. */
+.hb-glow {
+  box-shadow: 0 10px 30px -10px rgb(var(--accent-rgb) / 0.75);
+}
+
+/* Arrival: the portrait settles, the copy rises, the ladder fills to your
+   rank one step at a time. Once per visit; nothing loops. */
+.hb-hero-art {
+  animation: hb-hero-art 900ms var(--ease-out) both;
+}
+@keyframes hb-hero-art {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+}
+.hb-hero-rise {
+  animation: hb-hero-rise 560ms var(--ease-out) both;
+}
+@keyframes hb-hero-rise {
+  from {
+    opacity: 0;
+    translate: 0 12px;
+  }
+}
+.hb-hero-step {
+  transform-origin: left center;
+  animation: hb-hero-step 420ms var(--ease-out) both;
+}
+@keyframes hb-hero-step {
+  from {
+    transform: scaleX(0);
+  }
+}
+/* Scrolling, the portrait drifts at a fraction of the page's speed and dims,
+   so the hero reads as depth rather than a flat card. */
+@supports (animation-timeline: scroll()) {
+  @media (max-width: 767.98px) {
+    .hb-hero-parallax {
+      animation: hb-hero-parallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 70svh;
+    }
+  }
+}
+@keyframes hb-hero-parallax {
+  to {
+    transform: translateY(24%);
+    opacity: 0.2;
+  }
+}
+
+/* ── Victory ──────────────────────────────────────────────────────────────
+   The finish screen. The portrait pushes in, the result word slams down
+   skewed like a fight poster, one flash of the accent marks the impact, a
+   stroke draws under the word, then the numbers rise in. Plays once. */
+.hb-victory-art {
+  animation: hb-victory-art 1100ms var(--ease-out) both;
+}
+@keyframes hb-victory-art {
+  from {
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+.hb-victory-word {
+  transform: skewX(-8deg);
+  transform-origin: left bottom;
+  animation: hb-victory-word 420ms cubic-bezier(0.2, 0.9, 0.25, 1) 120ms both;
+}
+@keyframes hb-victory-word {
+  from {
+    opacity: 0;
+    scale: 1.35;
+    translate: -14px 0;
+  }
+}
+.hb-victory-flash {
+  opacity: 0;
+  animation: hb-victory-flash 700ms ease-out 220ms both;
+}
+@keyframes hb-victory-flash {
+  0% {
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.hb-victory-slash {
+  transform-origin: left center;
+  animation: hb-victory-slash 560ms var(--ease-out) 240ms both;
+}
+@keyframes hb-victory-slash {
+  from {
+    transform: scaleX(0);
+  }
+}
+.hb-victory-rise {
+  animation: hb-victory-rise 520ms var(--ease-out) both;
+}
+@keyframes hb-victory-rise {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+
+/* ── Removal: a personal record breaks ────────────────────────────────────
+   The banner drops in, a sheen crosses it once, and the screen's edge rings
+   in the accent for a beat. The one interruption the logger allows. */
+.hb-pr-banner {
+  animation: hb-pr-banner 440ms cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes hb-pr-banner {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.96);
+  }
+}
+.hb-pr-word {
+  display: inline-block;
+  transform: skewX(-8deg);
+}
+.hb-pr-sheen {
+  transform: translateX(-100%);
+  animation: hb-pr-sheen 900ms var(--ease-out) 220ms both;
+}
+@keyframes hb-pr-sheen {
+  to {
+    transform: translateX(400%);
+  }
+}
+.hb-pr-edge {
+  opacity: 0;
+  box-shadow:
+    inset 0 0 0 2px rgb(var(--accent-rgb) / 0.9),
+    inset 0 0 90px rgb(var(--accent-rgb) / 0.35);
+  animation: hb-pr-edge 1000ms ease-out both;
+}
+@keyframes hb-pr-edge {
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 /* ── Sheets ───────────────────────────────────────────────────────────────
    Rises from the bottom edge on phones, settles in as a dialog from `sm` up,
    and retreats the way it came. Entry uses @starting-style (no script, no
@@ -1207,6 +1395,9 @@ input[type="number"] {
     animation-delay: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .hb-hero-parallax {
+    animation: none !important;
   }
   /* Scroll-driven chrome isn't motion; keep the top bar legible. */
   .hb-topbar {

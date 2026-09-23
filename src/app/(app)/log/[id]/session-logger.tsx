@@ -39,6 +39,8 @@ import { Input } from "@/components/ui/input";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CountUp } from "@/components/reactbits/count-up";
 import { RestTimer } from "@/components/workout/rest-timer";
+import { VictoryScreen } from "@/components/workout/victory-screen";
+import type { TierKey } from "@/lib/tiers";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import {
@@ -133,12 +135,15 @@ export function SessionLogger({
   lastPerformances,
   exercisePRs,
   unit,
+  fighter,
 }: {
   session: SessionDetail;
   exerciseLibrary: Exercise[];
   lastPerformances: Record<string, LastPerformance>;
   exercisePRs: Record<string, ExercisePR>;
   unit: Unit;
+  /** The lifter's rank fighter, who stars in the finish screen. */
+  fighter: TierKey;
 }) {
   const [, startNav] = useTransition();
   const [finishing, setFinishing] = useState(false);
@@ -171,7 +176,8 @@ export function SessionLogger({
   const [prSets, setPrSets] = useState<Set<string>>(new Set());
   const [removal, setRemoval] = useState<{
     name: string;
-    detail: string;
+    label: string;
+    value: string;
   } | null>(null);
   const removalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // A change that needs the server and couldn't reach it (add, swap, remove,
@@ -582,11 +588,17 @@ export function SessionLogger({
 
       if (!kind) return;
       setPrSets((prev) => new Set(prev).add(set.id));
-      const detail =
+      setRemoval(
         kind === "weight"
-          ? `New heaviest: ${trimNum(wDisp)}${unit} × ${reps}`
-          : `New best estimated 1RM: ${Math.round(toDisplayWeight(e1rm, unit))}${unit}`;
-      setRemoval({ name, detail });
+          ? { name, label: "New heaviest", value: `${trimNum(wDisp)} ${unit} × ${reps}` }
+          : {
+              name,
+              label: "New best estimated 1RM",
+              value: `${Math.round(toDisplayWeight(e1rm, unit))} ${unit}`,
+            },
+      );
+      // A short buzz where the phone supports it (Android); iOS ignores it.
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate([30, 50, 90]);
       if (removalTimer.current) clearTimeout(removalTimer.current);
       removalTimer.current = setTimeout(() => setRemoval(null), 2600);
     },
@@ -838,7 +850,7 @@ export function SessionLogger({
           );
         }
       });
-    }, 1100);
+    }, 1700);
   }
 
   const totalSets = exercises.reduce(
@@ -1195,6 +1207,15 @@ export function SessionLogger({
           callout when a PR breaks. Stacked so both can show at once. */}
       {(notice || removal) && (
         <Portal>
+          {/* A PR rings the screen once in the accent: the record is the
+              one thing worth interrupting a set for. */}
+          {removal && (
+            <div
+              key={removal.value + removal.name}
+              aria-hidden
+              className="hb-pr-edge pointer-events-none fixed inset-0 z-[54]"
+            />
+          )}
           <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex flex-col items-center gap-2 px-4">
             {notice && (
               <div
@@ -1215,18 +1236,19 @@ export function SessionLogger({
               </div>
             )}
             {removal && (
-              <div role="status" aria-live="polite">
-                <div className="hb-landed pointer-events-auto flex items-center gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] py-2.5 pl-2.5 pr-4 shadow-raised backdrop-blur">
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-black">
-                    <Zap className="size-[18px]" />
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-baseline gap-2">
-                      <span className="font-display text-[17px] leading-none text-accent">Removal</span>
-                      <span className="truncate text-[13px] text-muted">{removal.name}</span>
-                    </div>
-                    <div className="tnum mt-1 text-[13px] text-text">{removal.detail}</div>
+              <div role="status" aria-live="polite" className="w-full max-w-md">
+                <div className="hb-pr-banner pointer-events-auto relative overflow-hidden rounded-2xl bg-[rgb(22_22_25/0.96)] py-3.5 pl-5 pr-4 shadow-raised backdrop-blur">
+                  <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-accent" />
+                  <span
+                    aria-hidden
+                    className="hb-pr-sheen absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/[0.12] to-transparent"
+                  />
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="hb-pr-word font-display text-[1.375rem] leading-none text-accent">Removal</span>
+                    <span className="truncate text-[13px] text-muted">{removal.name}</span>
                   </div>
+                  <p className="mt-3 text-[13px] text-muted">{removal.label}</p>
+                  <p className="font-display mt-1 text-[1.75rem] leading-none text-text">{removal.value}</p>
                 </div>
               </div>
             )}
@@ -1234,31 +1256,17 @@ export function SessionLogger({
         </Portal>
       )}
 
-      {/* VICTORY slam */}
       {victory && (
-        <Portal>
-          <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute inset-0 opacity-70"
-              style={{
-                maskImage:
-                  "radial-gradient(circle at 50% 45%, black, transparent 68%)",
-                WebkitMaskImage:
-                  "radial-gradient(circle at 50% 45%, black, transparent 68%)",
-              }}
-            />
-            <div className="hb-landed relative text-center">
-              <div className="font-display text-[3.25rem] leading-none text-text sm:text-7xl">
-                {victory}
-              </div>
-              <div className="tnum mt-4 text-[15px] text-muted">
-                {Math.round(totalForce).toLocaleString()} {unit}, {totalSets} sets,{" "}
-                {timeLabel}
-              </div>
-            </div>
-          </div>
-        </Portal>
+        <VictoryScreen
+          word={victory}
+          fighter={fighter}
+          records={prSets.size}
+          stats={[
+            { label: "Volume", value: Math.round(totalForce).toLocaleString(), unit },
+            { label: "Sets", value: String(totalSets) },
+            { label: "Time", value: timeLabel },
+          ]}
+        />
       )}
     </div>
   );
