@@ -269,21 +269,37 @@ button,
 }
 
 /* ── Loading: the bar ─────────────────────────────────────────────────────
-   Every route loader is one competition bar being loaded (PlateLoader). The
-   plates seat against the collars with a firm ease-out, heaviest first, and
-   the readout rolls up with each one, landing on its value as the plate
-   lands. Then it holds, and strips outermost first on a quick ease-in. One
-   3400ms cycle; every part below is a slice of it, in ms / 3400.
+   Every route loader is one competition bar being loaded (PlateLoader). Each
+   plate slides on from the end of the sleeve and glides to a firm stop, the
+   heavier ones slower. The readout swaps digits as each one seats: the new
+   figure rises in as the old one lifts away, and counting down runs the other
+   way. It holds, strips outermost first on an ease-in, and goes again. One
+   3400ms cycle; every part is a slice of it, in ms / 3400.
 
-   Resting styles are the loaded bar. Under reduced motion the animations are
-   switched off (not just shortened), so it stays loaded and reads 150. */
+   Only transform and opacity move, all on HTML elements, so the compositor
+   keeps it smooth while the main thread is busy with the incoming page.
+   Offsets are in % of each element's own width (plates) or em (digits),
+   which keeps every keyframe a plain value the compositor can run.
+
+   Resting styles are the loaded bar reading 150. Under reduced motion the
+   animations are switched off (not just shortened), which leaves exactly
+   that. */
 .hb-bar-loader {
   /* Held back a beat: a route that resolves in a blink never flashes it. */
-  animation: hb-fade-in 220ms var(--ease-out) 90ms both;
+  animation: hb-fade-in 240ms var(--ease-out) 90ms both;
+}
+.hb-bar {
+  container-type: inline-size;
+  /* One viewBox unit of the 440-wide drawing. */
+  --u: calc(100cqw / 440);
 }
 .hb-bar-part {
-  --hb-from: -56px;
-  --hb-to: -40px;
+  position: absolute;
+  left: calc(var(--x) * var(--u));
+  top: calc(var(--y) * var(--u));
+  width: calc(var(--w) * var(--u));
+  height: calc(var(--h) * var(--u));
+  border-radius: calc(3 * var(--u));
   /* Longhands on purpose: the build's CSS minifier mangles a nameless
      animation shorthand into "animation: none". */
   animation-duration: 3400ms;
@@ -291,9 +307,36 @@ button,
   animation-iteration-count: infinite;
   animation-fill-mode: both;
 }
-.hb-bar-part[data-side="r"] {
-  --hb-from: 56px;
-  --hb-to: 40px;
+/* A plate is edge-on here, so its rim catches light like a cylinder: lit
+   near the top, falling away at both ends. The face toward the centre of
+   the bar carries a hairline of light. */
+.hb-bar-hot {
+  background: linear-gradient(
+    rgb(var(--accent-dim-rgb)),
+    rgb(var(--accent-rgb)) 10%,
+    rgb(var(--accent-rgb)) 55%,
+    rgb(var(--accent-dim-rgb))
+  );
+  box-shadow: inset calc(-1 * var(--u)) 0 0 rgb(255 255 255 / 0.16);
+}
+.hb-bar-iron {
+  background: linear-gradient(#25252a, #46464c 10%, #2d2d32 55%, #18181b);
+  box-shadow: inset calc(-1 * var(--u)) 0 0 rgb(255 255 255 / 0.07);
+}
+.hb-bar-steel,
+.hb-bar-hub {
+  background: linear-gradient(#8f8e8a, #c9c7c2 38%, #4a4a4d);
+}
+.hb-bar-steel {
+  border-radius: calc(1.5 * var(--u));
+}
+.hb-bar-hub {
+  position: absolute;
+  left: calc(-1 * var(--u));
+  right: calc(-1 * var(--u));
+  top: calc(50% - 8 * var(--u));
+  height: calc(16 * var(--u));
+  border-radius: calc(1.5 * var(--u));
 }
 .hb-bar-p1 {
   animation-name: hb-bar-p1;
@@ -311,180 +354,522 @@ button,
   animation-name: hb-bar-clip;
 }
 @keyframes hb-bar-p1 {
-  0%,
-  1.76% {
-    transform: translateX(var(--hb-from));
+  0% {
+    transform: translateX(-630.77%);
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+    animation-timing-function: cubic-bezier(0.25, 0.75, 0.2, 1);
   }
-  4.71% {
+  4.235% {
     opacity: 1;
   }
-  12.35%,
-  87.65% {
+  14.118% {
     transform: none;
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
   }
-  94.71%,
+  80% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.25);
+  }
+  85.882% {
+    opacity: 1;
+  }
+  91.765% {
+    transform: translateX(-630.77%);
+    opacity: 0;
+  }
   100% {
-    transform: translateX(var(--hb-to));
+    transform: translateX(-630.77%);
     opacity: 0;
   }
 }
 @keyframes hb-bar-p2 {
-  0%,
-  8.82% {
-    transform: translateX(var(--hb-from));
+  0% {
+    transform: translateX(-618.18%);
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
   }
-  11.76% {
+  7.647% {
+    transform: translateX(-618.18%);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 0.75, 0.2, 1);
+  }
+  11.706% {
     opacity: 1;
   }
-  18.82%,
-  85.59% {
+  21.176% {
     transform: none;
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
   }
-  92.65%,
+  78.235% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.25);
+  }
+  83.824% {
+    opacity: 1;
+  }
+  89.412% {
+    transform: translateX(-618.18%);
+    opacity: 0;
+  }
   100% {
-    transform: translateX(var(--hb-to));
+    transform: translateX(-618.18%);
     opacity: 0;
   }
 }
 @keyframes hb-bar-p3 {
-  0%,
-  15.29% {
-    transform: translateX(var(--hb-from));
+  0% {
+    transform: translateX(-622.22%);
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
   }
-  18.24% {
+  14.706% {
+    transform: translateX(-622.22%);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 0.75, 0.2, 1);
+  }
+  18.588% {
     opacity: 1;
   }
-  24.71%,
-  83.53% {
+  27.647% {
     transform: none;
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
   }
-  90.59%,
+  76.471% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.25);
+  }
+  81.765% {
+    opacity: 1;
+  }
+  87.059% {
+    transform: translateX(-622.22%);
+    opacity: 0;
+  }
   100% {
-    transform: translateX(var(--hb-to));
+    transform: translateX(-622.22%);
     opacity: 0;
   }
 }
 @keyframes hb-bar-p4 {
-  0%,
-  21.76% {
-    transform: translateX(var(--hb-from));
+  0% {
+    transform: translateX(-920%);
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
   }
-  24.41% {
+  21.765% {
+    transform: translateX(-920%);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 0.75, 0.2, 1);
+  }
+  25.294% {
     opacity: 1;
   }
-  30%,
-  81.47% {
+  33.529% {
     transform: none;
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
   }
-  88.53%,
+  74.706% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.25);
+  }
+  79.412% {
+    opacity: 1;
+  }
+  84.118% {
+    transform: translateX(-920%);
+    opacity: 0;
+  }
   100% {
-    transform: translateX(var(--hb-to));
+    transform: translateX(-920%);
     opacity: 0;
   }
 }
 @keyframes hb-bar-clip {
-  0%,
-  28.24% {
-    transform: translateX(var(--hb-from));
+  0% {
+    transform: translateX(-444.44%);
     opacity: 0;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
   }
-  30.88% {
+  27.647% {
+    transform: translateX(-444.44%);
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 0.75, 0.2, 1);
+  }
+  31% {
     opacity: 1;
   }
-  35.88%,
-  79.41% {
+  38.824% {
     transform: none;
     opacity: 1;
-    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
   }
-  86.47%,
+  72.941% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.55, 0, 0.75, 0.25);
+  }
+  77.353% {
+    opacity: 1;
+  }
+  81.765% {
+    transform: translateX(-444.44%);
+    opacity: 0;
+  }
   100% {
-    transform: translateX(var(--hb-to));
+    transform: translateX(-444.44%);
     opacity: 0;
   }
 }
 
-/* The readout is a real animated integer: @property makes --hb-kg
-   interpolable, counter-reset reads it, ::after prints it. */
-@property --hb-kg {
-  syntax: "<integer>";
-  initial-value: 150;
-  inherits: false;
+/* The readout: 20, 70, 110, 140, 145, 150, landing as each plate seats. Each
+   digit position is a small window over the figures it will show; a change
+   rolls the old figure out and the new one in as a single strip, upward as
+   the weight climbs and downward as it's stripped. The window hugs the
+   numerals (their ink sits 0.134em to 0.845em down Archivo's line box) with a
+   hairline soft edge, so a figure vanishes right at the top or foot of the
+   number instead of trailing fragments above and below it. */
+.hb-bar-slot {
+  position: relative;
+  display: inline-block;
+  mask-image: linear-gradient(
+    transparent 0.07em,
+    #000 0.13em,
+    #000 0.85em,
+    transparent 0.91em
+  );
 }
-.hb-bar-kg {
-  counter-reset: hb-kg var(--hb-kg);
-  animation: hb-bar-kg 3400ms infinite both;
+.hb-bar-d {
+  position: absolute;
+  inset: 0 0 auto;
+  text-align: center;
+  opacity: 0;
+  animation-duration: 3400ms;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
 }
-.hb-bar-kg::after {
-  content: counter(hb-kg);
+.hb-bar-h0,
+.hb-bar-t4,
+.hb-bar-o0 {
+  opacity: 1;
 }
-@keyframes hb-bar-kg {
+.hb-bar-h0 {
+  animation-name: hb-bar-h0;
+}
+.hb-bar-t0 {
+  animation-name: hb-bar-t0;
+}
+.hb-bar-t1 {
+  animation-name: hb-bar-t1;
+}
+.hb-bar-t2 {
+  animation-name: hb-bar-t2;
+}
+.hb-bar-t3 {
+  animation-name: hb-bar-t3;
+}
+.hb-bar-t4 {
+  animation-name: hb-bar-t4;
+}
+.hb-bar-o0 {
+  animation-name: hb-bar-o0;
+}
+.hb-bar-o1 {
+  animation-name: hb-bar-o1;
+}
+@keyframes hb-bar-h0 {
   0% {
-    --hb-kg: 20;
+    opacity: 0;
+    transform: translateY(0.9em);
   }
-  1.76% {
-    --hb-kg: 20;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  17.588% {
+    opacity: 0;
+    transform: translateY(0.9em);
   }
-  12.35% {
-    --hb-kg: 70;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  17.647% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  18.82% {
-    --hb-kg: 110;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  28.824% {
+    opacity: 1;
+    transform: none;
   }
-  24.71% {
-    --hb-kg: 140;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  83.529% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  94.706% {
+    opacity: 1;
+    transform: translateY(0.9em);
+  }
+  94.765% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+}
+@keyframes hb-bar-t0 {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  10.588% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  17.647% {
+    opacity: 1;
+    transform: translateY(-0.9em);
+  }
+  17.706% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  83.471% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  83.529% {
+    opacity: 1;
+    transform: translateY(-0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  94.706% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hb-bar-t1 {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  10.529% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  10.588% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  17.647% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  24.118% {
+    opacity: 1;
+    transform: translateY(-0.9em);
+  }
+  24.176% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+}
+@keyframes hb-bar-t2 {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  17.588% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  17.647% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  24.118% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  35.294% {
+    opacity: 1;
+    transform: translateY(-0.9em);
+  }
+  35.353% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+}
+@keyframes hb-bar-t3 {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  24.059% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  24.118% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  35.294% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  46.471% {
+    opacity: 1;
+    transform: translateY(-0.9em);
+  }
+  46.529% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+}
+@keyframes hb-bar-t4 {
+  0% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  35.235% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  35.294% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  46.471% {
+    opacity: 1;
+    transform: none;
+  }
+  83.529% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  94.706% {
+    opacity: 1;
+    transform: translateY(0.9em);
+  }
+  94.765% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+}
+@keyframes hb-bar-o0 {
+  0% {
+    opacity: 1;
+    transform: none;
   }
   30% {
-    --hb-kg: 145;
-    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  35.88% {
-    --hb-kg: 150;
+  35.235% {
+    opacity: 0;
+    transform: translateY(0.9em);
   }
-  79.41% {
-    --hb-kg: 150;
-    animation-timing-function: linear;
+  35.294% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  86.47% {
-    --hb-kg: 145;
-    animation-timing-function: linear;
+  35.353% {
+    opacity: 0;
+    transform: translateY(-0.9em);
   }
-  88.53% {
-    --hb-kg: 140;
-    animation-timing-function: linear;
+  46.471% {
+    opacity: 1;
+    transform: none;
   }
-  90.59% {
-    --hb-kg: 110;
-    animation-timing-function: linear;
-  }
-  92.65% {
-    --hb-kg: 70;
-    animation-timing-function: linear;
-  }
-  94.71%,
   100% {
-    --hb-kg: 20;
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hb-bar-o1 {
+  0% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  29.941% {
+    opacity: 0;
+    transform: translateY(0.9em);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0.9em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  35.294% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  46.471% {
+    opacity: 1;
+    transform: translateY(-0.9em);
+  }
+  46.529% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-0.9em);
+  }
+}
+
+/* The number stays centred: while the hundreds place is empty the row sits
+   half a digit left, and eases over as the 1 arrives. */
+.hb-bar-readout {
+  animation: hb-bar-readout 3400ms linear infinite both;
+}
+@keyframes hb-bar-readout {
+  0% {
+    transform: translateX(-0.357em);
+  }
+  17.647% {
+    transform: translateX(-0.357em);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  28.824% {
+    transform: none;
+  }
+  83.529% {
+    transform: none;
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  94.706% {
+    transform: translateX(-0.357em);
+  }
+  100% {
+    transform: translateX(-0.357em);
   }
 }
 
@@ -493,52 +878,72 @@ button,
   opacity: 0;
 }
 .hb-bar-say-1 {
-  animation: hb-bar-say-1 3400ms var(--ease-out) infinite;
+  animation: hb-bar-say-1 3400ms linear infinite both;
 }
 .hb-bar-say-2 {
-  animation: hb-bar-say-2 3400ms var(--ease-out) infinite;
+  animation: hb-bar-say-2 3400ms linear infinite both;
 }
 @keyframes hb-bar-say-1 {
-  0%,
-  35.88% {
+  0% {
     opacity: 1;
     transform: none;
   }
-  40%,
-  93.53% {
+  36.471% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  }
+  41.176% {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-5px);
   }
-  93.82% {
-    transform: translateY(4px);
+  90.588% {
+    opacity: 0;
+    transform: translateY(5px);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  99.41%,
+  99.412% {
+    opacity: 1;
+    transform: none;
+  }
   100% {
     opacity: 1;
     transform: none;
   }
 }
 @keyframes hb-bar-say-2 {
-  0%,
-  37.06% {
+  0% {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(-5px);
   }
-  41.76%,
-  79.41% {
+  40% {
+    opacity: 0;
+    transform: translateY(5px);
+    animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  48.824% {
     opacity: 1;
     transform: none;
   }
-  83.53%,
+  71.765% {
+    opacity: 1;
+    transform: none;
+    animation-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  }
+  76.471% {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
   100% {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-5px);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .hb-bar-loader,
   .hb-bar-part,
-  .hb-bar-kg,
+  .hb-bar-d,
+  .hb-bar-readout,
   .hb-bar-say {
     animation: none !important;
   }

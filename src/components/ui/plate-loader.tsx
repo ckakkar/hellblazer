@@ -1,4 +1,4 @@
-import { ViewTransition } from "react";
+import { ViewTransition, type CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -6,42 +6,78 @@ import { cn } from "@/lib/utils";
  *
  * Deliberately a server component with zero client JS. `loading.tsx` is the
  * first thing the App Router streams for a navigation, so this has to paint
- * before any bundle for the destination route arrives. Every moving part is
- * CSS (the `.hb-bar-*` rules in globals.css) against this static SVG.
+ * before any bundle for the destination route arrives. The choreography is
+ * CSS (the `.hb-bar-*` rules in globals.css).
+ *
+ * It runs exactly while the main thread is busiest (the next page's payload
+ * and hydration), so everything that moves is an HTML element animating only
+ * transform and opacity, which the compositor runs off the main thread. The
+ * static bar is SVG; the plates, collars and readout digits are divs laid over
+ * it.
  *
  * The cycle is how a bar is really loaded: the 25s go on first, then 20s,
- * 15s, a change plate and the collars, and the readout counts every one of
- * them to a true 150 kg (20 kg bar, 25/20/15/2.5 a side, 2.5 kg collars).
- * It holds, then strips outermost first and goes again.
+ * 15s, a change plate and the collars, each slid on from the end of the
+ * sleeve, heavier ones slower. The readout changes digit by digit as each
+ * one seats, to a true 150 kg (20 kg bar, 25/20/15/2.5 a side, 2.5 kg
+ * collars). It holds, strips outermost first, and goes again.
  *
- * The base styles are the loaded bar. Reduced motion switches the animations
- * off entirely, which leaves a full, still bar reading 150 rather than an
- * empty one.
+ * The base styles are the loaded bar reading 150. Reduced motion switches the
+ * animations off entirely, which leaves exactly that.
  *
- * Geometry is symmetric about x=220 in a 440x120 viewBox, proportioned from
- * an IWF bar and plates (then thickened a touch so they read at phone size).
- * `LEFT` is the left side from the sleeve shoulder outward; the right mirrors.
+ * Geometry is in viewBox units of a 440x120 box, symmetric about x=220 and
+ * proportioned from an IWF bar and plates (thickened a touch so they read at
+ * phone size). Only the left side is described; the right is the same markup
+ * mirrored.
  */
 
-type Plate = {
+type Part = {
   part: "p1" | "p2" | "p3" | "p4" | "clip";
   x: number;
   w: number;
   h: number;
-  fill: string;
-  hub?: boolean;
+  finish: "hot" | "iron" | "steel";
 };
 
-const LEFT: Plate[] = [
-  { part: "p1", x: 83, w: 13, h: 100, fill: "url(#hb-bar-hot)", hub: true }, // 25 kg
-  { part: "p2", x: 71, w: 11, h: 100, fill: "url(#hb-bar-iron)", hub: true }, // 20 kg
-  { part: "p3", x: 61, w: 9, h: 100, fill: "url(#hb-bar-iron)", hub: true }, // 15 kg
-  { part: "p4", x: 55, w: 5, h: 38, fill: "url(#hb-bar-steel)" }, // 2.5 kg
-  { part: "clip", x: 45, w: 9, h: 24, fill: "url(#hb-bar-steel)" }, // collar, 2.5 kg
+const LEFT: Part[] = [
+  { part: "p1", x: 83, w: 13, h: 100, finish: "hot" }, // 25 kg
+  { part: "p2", x: 71, w: 11, h: 100, finish: "iron" }, // 20 kg
+  { part: "p3", x: 61, w: 9, h: 100, finish: "iron" }, // 15 kg
+  { part: "p4", x: 55, w: 5, h: 38, finish: "steel" }, // 2.5 kg change plate
+  { part: "clip", x: 45, w: 9, h: 24, finish: "steel" }, // collar, 2.5 kg
 ];
 
 const CY = 60;
-const mirror = (x: number, w: number) => 440 - x - w;
+
+function Side({ mirrored }: { mirrored?: boolean }) {
+  return (
+    <div className={cn("absolute inset-0", mirrored && "-scale-x-100")}>
+      {LEFT.map((p) => (
+        <div
+          key={p.part}
+          className={`hb-bar-part hb-bar-${p.part} hb-bar-${p.finish}`}
+          style={{ "--x": p.x, "--y": CY - p.h / 2, "--w": p.w, "--h": p.h } as CSSProperties}
+        >
+          {/* The steel hub insert stands just proud of each face. */}
+          {p.h === 100 && <div className="hb-bar-hub" />}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** One digit position: the figures it will show, stacked; CSS rolls between them. */
+function Slot({ place, digits }: { place: string; digits: string[] }) {
+  return (
+    <span className="hb-bar-slot">
+      <span className="invisible">0</span>
+      {digits.map((d, i) => (
+        <span key={i} className={`hb-bar-d hb-bar-${place}${i}`}>
+          {d}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function PlateLoader({
   label,
@@ -60,68 +96,51 @@ export function PlateLoader({
           className,
         )}
       >
-        <svg aria-hidden viewBox="0 0 440 120" className="w-full max-w-[25rem] overflow-visible">
-          <defs>
-            {/* Machined steel, kept darker than the readout below it. */}
-            <linearGradient id="hb-bar-steel" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#8f8e8a" />
-              <stop offset="38%" stopColor="#c9c7c2" />
-              <stop offset="100%" stopColor="#4a4a4d" />
-            </linearGradient>
-            {/* The 25s wear the accent, the way a red 25 does on a platform.
-                A plate is edge-on here, so its rim catches light like a
-                cylinder: lit near the top, falling away at both ends. */}
-            <linearGradient id="hb-bar-hot" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="rgb(var(--accent-dim-rgb))" />
-              <stop offset="10%" stopColor="rgb(var(--accent-rgb))" />
-              <stop offset="55%" stopColor="rgb(var(--accent-rgb))" />
-              <stop offset="100%" stopColor="rgb(var(--accent-dim-rgb))" />
-            </linearGradient>
-            <linearGradient id="hb-bar-iron" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#25252a" />
-              <stop offset="10%" stopColor="#46464c" />
-              <stop offset="55%" stopColor="#2d2d32" />
-              <stop offset="100%" stopColor="#18181b" />
-            </linearGradient>
-            <pattern id="hb-bar-knurl" width="2.5" height="2.5" patternUnits="userSpaceOnUse">
-              <path d="M0 2.5L2.5 0M0 0L2.5 2.5" stroke="#000" strokeWidth="0.5" />
-            </pattern>
-          </defs>
+        <div aria-hidden className="hb-bar relative aspect-[440/120] w-full max-w-[25rem]">
+          <svg viewBox="0 0 440 120" className="absolute inset-0 size-full overflow-visible">
+            <defs>
+              {/* Machined steel, kept darker than the readout below it. */}
+              <linearGradient id="hb-bar-steel" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#8f8e8a" />
+                <stop offset="38%" stopColor="#c9c7c2" />
+                <stop offset="100%" stopColor="#4a4a4d" />
+              </linearGradient>
+              <pattern id="hb-bar-knurl" width="2.5" height="2.5" patternUnits="userSpaceOnUse">
+                <path d="M0 2.5L2.5 0M0 0L2.5 2.5" stroke="#000" strokeWidth="0.5" />
+              </pattern>
+            </defs>
 
-          {/* Shaft, with the grip knurl and the centre knurl */}
-          <rect x="104" y={CY - 2.5} width="232" height="5" rx="2.5" fill="url(#hb-bar-steel)" />
-          <rect x="126" y={CY - 2.5} width="68" height="5" fill="url(#hb-bar-knurl)" opacity="0.5" />
-          <rect x="246" y={CY - 2.5} width="68" height="5" fill="url(#hb-bar-knurl)" opacity="0.5" />
-          <rect x="211" y={CY - 2.5} width="18" height="5" fill="url(#hb-bar-knurl)" opacity="0.35" />
+            {/* Shaft, with the grip knurl and the centre knurl */}
+            <rect x="104" y={CY - 2.5} width="232" height="5" rx="2.5" fill="url(#hb-bar-steel)" />
+            <rect x="126" y={CY - 2.5} width="68" height="5" fill="url(#hb-bar-knurl)" opacity="0.5" />
+            <rect x="246" y={CY - 2.5} width="68" height="5" fill="url(#hb-bar-knurl)" opacity="0.5" />
+            <rect x="211" y={CY - 2.5} width="18" height="5" fill="url(#hb-bar-knurl)" opacity="0.35" />
 
-          {/* Sleeves, their shoulders, and end caps */}
-          <rect x="22" y={CY - 5} width="74" height="10" rx="1.5" fill="url(#hb-bar-steel)" />
-          <rect x="344" y={CY - 5} width="74" height="10" rx="1.5" fill="url(#hb-bar-steel)" />
-          <rect x="96" y={CY - 8} width="8" height="16" rx="2" fill="url(#hb-bar-steel)" />
-          <rect x="336" y={CY - 8} width="8" height="16" rx="2" fill="url(#hb-bar-steel)" />
-          <rect x="20" y={CY - 5.5} width="3" height="11" rx="1" fill="#5c5c60" />
-          <rect x="417" y={CY - 5.5} width="3" height="11" rx="1" fill="#5c5c60" />
+            {/* Sleeves, their shoulders, and end caps */}
+            <rect x="22" y={CY - 5} width="74" height="10" rx="1.5" fill="url(#hb-bar-steel)" />
+            <rect x="344" y={CY - 5} width="74" height="10" rx="1.5" fill="url(#hb-bar-steel)" />
+            <rect x="96" y={CY - 8} width="8" height="16" rx="2" fill="url(#hb-bar-steel)" />
+            <rect x="336" y={CY - 8} width="8" height="16" rx="2" fill="url(#hb-bar-steel)" />
+            <rect x="20" y={CY - 5.5} width="3" height="11" rx="1" fill="#5c5c60" />
+            <rect x="417" y={CY - 5.5} width="3" height="11" rx="1" fill="#5c5c60" />
+          </svg>
+          <Side />
+          <Side mirrored />
+        </div>
 
-          {LEFT.flatMap((p) =>
-            (["l", "r"] as const).map((side) => {
-              const x = side === "l" ? p.x : mirror(p.x, p.w);
-              return (
-                <g key={`${p.part}${side}`} className={`hb-bar-part hb-bar-${p.part}`} data-side={side}>
-                  <rect x={x} y={CY - p.h / 2} width={p.w} height={p.h} rx={p.hub ? 3 : 1.5} fill={p.fill} />
-                  {/* The steel hub insert stands just proud of each face. */}
-                  {p.hub && (
-                    <rect x={x - 1} y={CY - 11} width={p.w + 2} height="22" rx="1.5" fill="url(#hb-bar-steel)" />
-                  )}
-                </g>
-              );
-            }),
-          )}
-        </svg>
-
-        {/* The weight on the bar, counting as each plate seats */}
-        <p aria-hidden className="mt-8 flex items-baseline justify-center gap-1.5">
-          <span className="hb-bar-kg font-display inline-block min-w-[3ch] text-right text-[clamp(3rem,14vw,4rem)] leading-none text-text" />
-          <span className="text-[17px] font-medium text-muted">kg</span>
+        {/* The weight on the bar. The number is centred on its own; the unit
+            trails it, balanced by an invisible twin on the left. */}
+        <p
+          aria-hidden
+          className="hb-bar-readout mt-8 flex items-baseline justify-center text-[clamp(3rem,14vw,4rem)] leading-none"
+        >
+          <span className="invisible pr-1.5 text-[17px] font-medium">kg</span>
+          <span className="font-display flex text-text">
+            <Slot place="h" digits={["1"]} />
+            <Slot place="t" digits={["2", "7", "1", "4", "5"]} />
+            <Slot place="o" digits={["0", "5"]} />
+          </span>
+          <span className="pl-1.5 text-[17px] font-medium text-muted">kg</span>
         </p>
 
         {/* Narrates the step on screen; stacked so nothing reflows */}
