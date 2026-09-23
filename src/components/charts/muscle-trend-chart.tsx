@@ -40,7 +40,7 @@ export function MuscleTrendChart({
     return <ChartEmpty message="No sets logged for this muscle in this window." />;
   }
 
-  const barColor = accent ? "var(--color-accent)" : "var(--color-surface-2)";
+  const barColor = accent ? "var(--color-text)" : "var(--color-surface-2)";
 
   return (
     <ResponsiveContainer width="100%" height={280}>

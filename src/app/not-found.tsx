@@ -3,22 +3,17 @@ import { Flame } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <main className="hb-arena relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-6 text-center">
-      <span aria-hidden className="absolute font-impact text-[min(52vw,28rem)] leading-none text-text/[0.025]">404</span>
-      <span className="hb-panel-cut relative flex size-10 items-center justify-center border border-accent/40 text-accent">
-        <Flame className="size-5" />
-      </span>
-      <h1 className="relative mt-6 font-impact text-7xl uppercase leading-[0.78] text-text sm:text-8xl">
-        Lost the fight
-      </h1>
-      <p className="mt-3 max-w-sm text-sm text-muted">
-        This page doesn&apos;t exist: or it was knocked out of the arena.
+    <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
+      <Flame className="size-7 text-accent" strokeWidth={2.25} />
+      <h1 className="font-display mt-6 text-[2.5rem] leading-tight text-text">Page not found</h1>
+      <p className="mt-2 max-w-sm text-[15px] text-muted">
+        This page doesn&apos;t exist, or it has moved.
       </p>
       <Link
         href="/dashboard"
-        className="hb-panel-cut relative mt-8 inline-flex items-center gap-2 bg-accent px-5 py-2.5 text-sm font-semibold text-bg shadow-glow transition-transform active:scale-95"
+        className="mt-8 inline-flex h-12 items-center rounded-xl bg-text px-5 text-[15px] font-medium text-bg transition-opacity active:opacity-75"
       >
-        Back to the dashboard
+        Go to your dashboard
       </Link>
     </main>
   );

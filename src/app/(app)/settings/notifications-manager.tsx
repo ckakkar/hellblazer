@@ -170,8 +170,8 @@ export function NotificationsManager({
 
   if (status === "ios-install") {
     return (
-      <div className="flex items-start gap-3 rounded-lg border border-border bg-surface-2/40 p-4">
-        <Smartphone className="mt-0.5 size-5 shrink-0 text-accent" />
+      <div className="flex items-start gap-3 rounded-xl bg-surface-2/60 p-4">
+        <Smartphone className="mt-0.5 size-5 shrink-0 text-muted" />
         <div className="text-sm text-muted">
           <p className="font-medium text-text">Add to Home Screen first</p>
           <p className="mt-1">
@@ -204,13 +204,13 @@ export function NotificationsManager({
       ) : (
         <>
           <div className="flex items-center gap-2 text-sm text-text">
-            <span className="flex size-6 items-center justify-center rounded-md border border-accent/40 bg-accent/10 text-accent">
+            <span className="flex size-6 items-center justify-center rounded-full bg-white/[0.08] text-text">
               <Bell className="size-3.5" />
             </span>
             Notifications are on for this device.
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface-2/40 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-2/60 px-4 py-3">
             <div className="min-w-0">
               <div className="text-sm text-text">Daily workout reminder</div>
               <div className="mt-0.5 text-xs text-muted">

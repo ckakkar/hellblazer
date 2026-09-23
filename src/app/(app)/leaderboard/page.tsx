@@ -4,7 +4,6 @@ import { getLeaderboard } from "@/lib/data/leaderboard";
 import { getProfile } from "@/lib/data/profile";
 import { getUnit } from "@/lib/settings";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Standings } from "./standings";
 
@@ -25,35 +24,27 @@ export default async function LeaderboardPage() {
     <div>
       <PageHeader
         title="King of the Hill"
-        subtitle="The Association table. Every claimed ring name ranked by the iron they have moved."
-        eyebrow="Association standings"
-        index="08"
-        stat={{ value: entries.length, label: "fighters" }}
+        subtitle="Everyone with a ring name, ranked by total volume lifted."
+        stat={
+          myPlace > 0
+            ? { value: `#${myPlace}`, label: `of ${entries.length}` }
+            : { value: entries.length, label: entries.length === 1 ? "lifter" : "lifters" }
+        }
       />
 
       {!profile?.username && (
-        <Card className="mb-4 flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mb-8 flex flex-col items-start gap-4 rounded-2xl bg-surface p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="font-display text-base uppercase tracking-wide text-text">
-              You&apos;re not on the card
-            </div>
-            <p className="mt-0.5 text-sm text-muted">
-              Claim a ring name and your tonnage joins the ladder.
+            <h2 className="text-[17px] font-semibold tracking-[-0.015em] text-text">
+              You&apos;re not on the board
+            </h2>
+            <p className="mt-0.5 text-[14px] text-muted">
+              Pick a ring name and your volume joins the standings.
             </p>
           </div>
           <Link href="/settings" className="shrink-0">
-            <Button variant="secondary">Claim a ring name</Button>
+            <Button variant="secondary">Pick a ring name</Button>
           </Link>
-        </Card>
-      )}
-
-      {myPlace > 0 && (
-        <div className="mb-4 inline-flex items-baseline gap-2 border-b border-border pb-1.5 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
-          Your standing
-          <span className="font-impact text-base leading-none text-accent">
-            #{myPlace}
-          </span>
-          <span className="text-muted/60">of {entries.length}</span>
         </div>
       )}
 

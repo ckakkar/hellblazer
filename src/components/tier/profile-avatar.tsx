@@ -23,7 +23,7 @@ export function ProfileAvatar({
 
   if (!src || failed) {
     return (
-      <span className="flex size-16 shrink-0 items-center justify-center rounded-full border border-border bg-surface-2 font-impact text-2xl text-muted">
+      <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-surface-2 font-display text-2xl text-muted">
         {initial}
       </span>
     );
@@ -37,7 +37,7 @@ export function ProfileAvatar({
       height={64}
       unoptimized
       onError={() => setFailed(true)}
-      className="size-16 shrink-0 rounded-full border border-border object-cover"
+      className="size-16 shrink-0 rounded-full object-cover"
     />
   );
 }

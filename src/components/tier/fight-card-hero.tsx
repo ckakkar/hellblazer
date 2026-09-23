@@ -1,18 +1,13 @@
 import Link from "next/link";
-import { formatFighterNumber, TIERS, type Tier } from "@/lib/tiers";
+import { MAX_RANK, TIERS, type Tier } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { FighterArt } from "@/components/tier/fighter-art";
 
-/* ── The card ──────────────────────────────────────────────────────────────
-   Who you are on the bill, set as the top of the bill. This used to be a thin
-   clickable strip above a grid of equal-weight stat boxes, which left the page
-   with no hero at all; a fight card always opens by naming the fighter, so the
-   rank name is the largest thing on the screen and everything below it is
-   supporting detail.
-
-   Deliberately not wrapped in a Card. It sits straight on the page ground with
-   a heavy rule beneath it, which is what stops the dashboard reading as a
-   stack of identical bordered rectangles. */
+/* ── Your rank ─────────────────────────────────────────────────────────────
+   The dashboard opens on who you are on the ladder: the fighter's portrait,
+   their name in the expanded cut, and ten thin steps with the ones you have
+   earned filled in. It is the one bold thing on the screen; everything below
+   it is quiet. */
 export function FightCardHero({
   tier,
   className,
@@ -25,67 +20,59 @@ export function FightCardHero({
 
   return (
     <section
-      className={cn(
-        "hb-ink-noise relative isolate min-h-64 overflow-hidden border-y-2 border-text/80",
-        className,
-      )}
+      className={cn("relative isolate overflow-hidden rounded-3xl bg-surface", className)}
+      style={{ ["--hb-fade" as string]: "var(--color-surface)" }}
     >
-      <div className="absolute inset-x-0 top-0 h-px bg-border" />
       <FighterArt
         fighterKey={tier?.key ?? "ohma"}
-        className="absolute inset-y-0 right-[-12%] w-[72%] opacity-75 sm:right-[-4%] sm:w-[58%]"
-        imageClassName="scale-[1.04] object-[center_20%]"
+        variant="hero"
+        priority
+        className="absolute inset-y-0 right-0 w-[64%] sm:w-[48%]"
+        imageClassName="object-[center_18%]"
       />
-      <div className="relative z-10 flex min-h-64 max-w-[72%] flex-col justify-between py-5 sm:max-w-[58%] sm:py-6">
+      <div className="relative flex min-h-[16rem] flex-col justify-between p-5 sm:min-h-[18rem] sm:p-7">
         <div>
-          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-accent">
-            <span className="h-px w-8 bg-accent" />
-            Your corner
-          </div>
-          <div className="mt-6 font-mono text-[10px] uppercase tracking-[0.2em] text-text/60">
-            {tier ? `Official rank · ${formatFighterNumber(rank)}` : "Status · unranked"}
-          </div>
+          <p className="text-[13px] font-medium text-muted">
+            {tier ? `Rank ${rank} of ${MAX_RANK}` : "Unranked"}
+          </p>
           <h1
             className={cn(
-              "mt-1 font-impact text-[3.35rem] uppercase leading-[0.78] tracking-[-0.025em] sm:text-7xl",
+              "font-display mt-1.5 max-w-[9ch] text-[clamp(2.125rem,9.6vw,2.625rem)] leading-[0.98] sm:text-[3.5rem]",
               tier ? "text-text" : "text-text/70",
             )}
           >
-            {tier ? tier.name : "No name on the bill"}
+            {tier ? tier.name : "No rank yet"}
           </h1>
-          <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.18em] text-accent">
-            {tier ? tier.epithet : "Log the work. Demand a verdict."}
+          <p className="mt-2 text-[15px] text-muted">
+            {tier ? tier.epithet : "Log a workout, then ask the judge."}
           </p>
         </div>
 
-        <div className="mt-7">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <Link
-              href="/settings"
-              className="font-mono text-[10px] uppercase tracking-[0.16em] text-text/60 underline-offset-4 transition-colors hover:text-accent hover:underline"
-            >
-              {tier ? "Demand a new verdict" : "Get weighed in"}
-            </Link>
-            {next && (
-              <span className="font-mono text-[9px] uppercase tracking-[0.14em] text-text/55">
-                Target · <span className="text-text">{next.name.split(" ")[0]}</span>
-              </span>
-            )}
-          </div>
-          <div className="flex gap-[3px]">
+        <div className="mt-8 max-w-[62%] sm:max-w-[50%]">
+          <div className="flex gap-1" aria-label={`Rank ${rank} of ${MAX_RANK}`}>
             {TIERS.map((t) => (
               <span
                 key={t.key}
                 className={cn(
-                  "h-1.5 flex-1 skew-x-[-12deg]",
-                  t.rank <= rank ? "bg-accent" : "bg-text/15",
+                  "h-1 flex-1 rounded-full",
+                  t.rank <= rank ? "bg-accent" : "bg-white/[0.12]",
                 )}
               />
             ))}
           </div>
+          <div className="mt-2.5 flex items-center justify-between gap-3 text-[13px]">
+            <span className="truncate text-muted">
+              {next ? `Next, ${next.name.split(" ")[0]}` : "Top of the ladder"}
+            </span>
+            <Link
+              href="/settings"
+              className="shrink-0 font-medium text-text transition-opacity hover:opacity-70"
+            >
+              {tier ? "Get judged" : "Get ranked"}
+            </Link>
+          </div>
         </div>
       </div>
-      <div className="absolute inset-x-0 bottom-0 h-px bg-border" />
     </section>
   );
 }

@@ -2,24 +2,21 @@ import { ImageResponse } from "next/og";
 import { format, parseISO } from "date-fns";
 import { getSessionDetail } from "@/lib/data/sessions";
 import { getProfile } from "@/lib/data/profile";
-import { formatFighterNumber, getTier } from "@/lib/tiers";
+import { MAX_RANK, getTier } from "@/lib/tiers";
 import { getUnit, getAccent } from "@/lib/settings";
 import { ACCENTS } from "@/lib/accents";
 import { kgToLb } from "@/lib/units";
 
 export const dynamic = "force-dynamic";
 
-/** Big Shoulders at the app's impact weight, for the big numbers. The app
- *  self-hosts it as woff2, which the image renderer can't read, so this pulls
- *  Google's static TTF cut instead. Null on any failure so the card still
- *  renders in the default face. */
-async function fetchDisplayFont(): Promise<ArrayBuffer | null> {
+/** One static TTF cut of Archivo from Google (the image renderer reads
+ *  neither the app's woff2 nor variable fonts). A bare UA gets TTF; a browser
+ *  UA would get woff2. Null on any failure so the card still renders. */
+async function fetchFont(query: string): Promise<ArrayBuffer | null> {
   try {
-    const css = await fetch(
-      "https://fonts.googleapis.com/css2?family=Big+Shoulders:wght@800",
-      // A bare UA gets TTF; a browser UA would get woff2.
-      { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" } },
-    ).then((r) => r.text());
+    const css = await fetch(`https://fonts.googleapis.com/css2?family=${query}`, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" },
+    }).then((r) => r.text());
     const url = css.match(/src:\s*url\(([^)]+)\)/)?.[1];
     if (!url) return null;
     const res = await fetch(url);
@@ -29,41 +26,49 @@ async function fetchDisplayFont(): Promise<ArrayBuffer | null> {
   }
 }
 
-// Fetched once per warm instance rather than on every card. A failure isn't
-// kept, so the next render retries.
-let displayFont: Promise<ArrayBuffer | null> | null = null;
-function loadDisplayFont(): Promise<ArrayBuffer | null> {
-  displayFont ??= fetchDisplayFont().then((font) => {
-    if (!font) displayFont = null;
-    return font;
+type CardFonts = { text: ArrayBuffer | null; display: ArrayBuffer | null };
+
+// Fetched once per warm instance rather than on every card. A failed load
+// isn't kept, so the next render retries.
+let fonts: Promise<CardFonts> | null = null;
+function loadFonts(): Promise<CardFonts> {
+  fonts ??= Promise.all([
+    fetchFont("Archivo:wght@500"),
+    fetchFont("Archivo:wdth,wght@125,700"),
+  ]).then(([text, display]) => {
+    if (!text || !display) fonts = null;
+    return { text, display };
   });
-  return displayFont;
+  return fonts;
 }
 
-// The fight-card palette from globals.css: warm neutrals, bone text.
-const BG = "#0b0908";
-const SURFACE = "#14100e";
-const BORDER = "#2b2320";
-const TEXT = "#ece5d8";
-const MUTED = "#8d8378";
+// The app's palette (globals.css): true black, graphite surface, bone text.
+const BG = "#000000";
+const SURFACE = "#121214";
+const LINE = "rgba(255,255,255,0.07)";
+const TEXT = "#f4f2ee";
+const MUTED = "#8e8c88";
+// lucide "flame", the app's mark
+const FLAME =
+  "M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const [session, profile, unit, accentKey, displayFontData] = await Promise.all([
+  const [session, profile, unit, accentKey, cardFonts] = await Promise.all([
     getSessionDetail(id),
     getProfile(),
     getUnit(),
     getAccent(),
-    loadDisplayFont(),
+    loadFonts(),
   ]);
   if (!session) return new Response("Not found", { status: 404 });
 
   const accent = ACCENTS.find((a) => a.key === accentKey)?.swatch ?? ACCENTS[0].swatch;
   const tier = getTier(profile?.tier);
-  const impact = displayFontData ? "Big Shoulders" : undefined;
+  const display = cardFonts.display ? "Archivo Expanded" : undefined;
 
   // Aggregate working sets → volume, count, and the best set per exercise.
   let volumeKg = 0;
@@ -109,11 +114,11 @@ export async function GET(
     width: 1080,
     height: 1350,
   };
-  if (displayFontData) {
-    options.fonts = [
-      { name: "Big Shoulders", data: displayFontData, weight: 800, style: "normal" },
-    ];
-  }
+  const loaded = [
+    cardFonts.text && { name: "Archivo", data: cardFonts.text, weight: 500 as const, style: "normal" as const },
+    cardFonts.display && { name: "Archivo Expanded", data: cardFonts.display, weight: 700 as const, style: "normal" as const },
+  ].filter((f): f is NonNullable<typeof f> => Boolean(f));
+  if (loaded.length > 0) options.fonts = loaded;
 
   return new ImageResponse(
     (
@@ -125,107 +130,34 @@ export async function GET(
           flexDirection: "column",
           backgroundColor: BG,
           color: TEXT,
-          padding: 72,
-          position: "relative",
-          fontFamily: "sans-serif",
-          overflow: "hidden",
+          padding: 76,
+          fontFamily: cardFonts.text ? "Archivo" : undefined,
         }}
       >
-        {/* top accent bar */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: 1080,
-            height: 14,
-            backgroundColor: accent,
-          }}
-        />
-        {/* faint kanji watermark */}
-        <div
-          style={{
-            position: "absolute",
-            right: -60,
-            bottom: -260,
-            fontSize: 680,
-            lineHeight: 1,
-            color: "rgba(255,255,255,0.035)",
-            fontFamily: impact,
-            display: "flex",
-          }}
-        >
-          力
-        </div>
-
         {/* header */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 22 }}>
-            <div
-              style={{
-                width: 66,
-                height: 66,
-                borderRadius: 16,
-                backgroundColor: accent,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: BG,
-                fontSize: 30,
-                fontWeight: 800,
-                fontFamily: impact,
-              }}
-            >
-              HB
-            </div>
-            <div style={{ fontSize: 30, fontWeight: 700, letterSpacing: 7, color: TEXT }}>
-              HELL BLAZER
-            </div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
+              <path d={FLAME} />
+            </svg>
+            <div style={{ fontSize: 32, color: TEXT }}>Hell Blazer</div>
           </div>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              border: `2px solid ${accent}`,
-              borderRadius: 9999,
-              padding: "12px 26px",
-              color: accent,
-              fontSize: 26,
-              fontWeight: 700,
-              letterSpacing: 3,
-            }}
-          >
-            {tier ? `RANK ${formatFighterNumber(tier.rank)}` : "UNRANKED"}
+          <div style={{ fontSize: 28, color: MUTED }}>
+            {tier ? `Rank ${tier.rank} of ${MAX_RANK}` : "Unranked"}
           </div>
         </div>
 
         {/* title */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 72 }}>
-          <div
-            style={{
-              color: MUTED,
-              fontSize: 26,
-              letterSpacing: 9,
-              textTransform: "uppercase",
-            }}
-          >
-            {dateStr}
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 88 }}>
+          <div style={{ color: MUTED, fontSize: 30 }}>{dateStr}</div>
           <div
             style={{
               color: TEXT,
-              fontSize: 78,
-              fontWeight: 800,
-              lineHeight: 1,
-              marginTop: 16,
-              fontFamily: impact,
-              textTransform: "uppercase",
+              fontSize: 80,
+              lineHeight: 1.04,
+              marginTop: 14,
+              fontFamily: display,
+              letterSpacing: -2,
             }}
           >
             {session.title ?? "Session"}
@@ -233,104 +165,48 @@ export async function GET(
         </div>
 
         {/* hero volume */}
-        <div style={{ display: "flex", flexDirection: "column", marginTop: 54 }}>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: 20 }}>
-            <div
-              style={{
-                color: accent,
-                fontSize: 172,
-                lineHeight: 0.86,
-                fontFamily: impact,
-                fontWeight: 800,
-              }}
-            >
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 64 }}>
+          <div style={{ color: MUTED, fontSize: 30 }}>Volume</div>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 18, marginTop: 8 }}>
+            <div style={{ color: TEXT, fontSize: 168, lineHeight: 0.9, fontFamily: display, letterSpacing: -6 }}>
               {displayVolume.toLocaleString()}
             </div>
-            <div
-              style={{
-                color: MUTED,
-                fontSize: 42,
-                fontWeight: 700,
-                marginBottom: 26,
-              }}
-            >
-              {unit}
-            </div>
-          </div>
-          <div
-            style={{
-              color: MUTED,
-              fontSize: 28,
-              letterSpacing: 7,
-              textTransform: "uppercase",
-              marginTop: 6,
-            }}
-          >
-            Total volume moved
+            <div style={{ color: MUTED, fontSize: 44, marginBottom: 18 }}>{unit}</div>
           </div>
         </div>
 
-        {/* stat tiles */}
-        <div style={{ display: "flex", gap: 22, marginTop: 52 }}>
-          {tiles.map(([label, value]) => (
+        {/* stats */}
+        <div
+          style={{
+            display: "flex",
+            marginTop: 56,
+            backgroundColor: SURFACE,
+            borderRadius: 32,
+            padding: "30px 0",
+          }}
+        >
+          {tiles.map(([label, value], i) => (
             <div
               key={label}
               style={{
                 display: "flex",
                 flexDirection: "column",
                 flex: 1,
-                border: `2px solid ${BORDER}`,
-                borderRadius: 22,
-                padding: "30px 32px",
-                backgroundColor: SURFACE,
+                padding: "0 34px",
+                borderLeft: i === 0 ? "none" : `2px solid ${LINE}`,
               }}
             >
-              <div
-                style={{
-                  color: TEXT,
-                  fontSize: 66,
-                  fontWeight: 800,
-                  lineHeight: 1,
-                  fontFamily: impact,
-                }}
-              >
+              <div style={{ color: MUTED, fontSize: 26 }}>{label}</div>
+              <div style={{ color: TEXT, fontSize: 56, lineHeight: 1, marginTop: 12, fontFamily: display, letterSpacing: -2 }}>
                 {value}
-              </div>
-              <div
-                style={{
-                  color: MUTED,
-                  fontSize: 24,
-                  letterSpacing: 4,
-                  textTransform: "uppercase",
-                  marginTop: 12,
-                }}
-              >
-                {label}
               </div>
             </div>
           ))}
         </div>
 
         {/* top lifts */}
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            marginTop: 40,
-            flexGrow: 1,
-          }}
-        >
-          <div
-            style={{
-              color: MUTED,
-              fontSize: 24,
-              letterSpacing: 6,
-              textTransform: "uppercase",
-              marginBottom: 6,
-            }}
-          >
-            Top lifts
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", marginTop: 44, flexGrow: 1 }}>
+          <div style={{ color: MUTED, fontSize: 26, marginBottom: 4 }}>Top lifts</div>
           {topLifts.map((l, i) => (
             <div
               key={i}
@@ -338,28 +214,13 @@ export async function GET(
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
-                borderTop: `2px solid ${BORDER}`,
+                borderTop: i === 0 ? "none" : `2px solid ${LINE}`,
                 // Sized so five lifts still leave room for the rank footer.
-                padding: "13px 0",
+                padding: "14px 0",
               }}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 20,
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <div style={{ color: "#524c45", fontSize: 26, fontWeight: 700, width: 34 }}>
-                  {String(i + 1)}
-                </div>
-                <div style={{ color: TEXT, fontSize: 34, fontWeight: 600 }}>
-                  {l.name}
-                </div>
-              </div>
-              <div style={{ color: TEXT, fontSize: 34, fontWeight: 700, flexShrink: 0 }}>
+              <div style={{ color: TEXT, fontSize: 34, flex: 1, minWidth: 0 }}>{l.name}</div>
+              <div style={{ color: TEXT, fontSize: 32, flexShrink: 0, fontFamily: display }}>
                 {`${trim(toDisp(l.weight))}${unit} × ${l.reps}`}
               </div>
             </div>
@@ -367,44 +228,14 @@ export async function GET(
         </div>
 
         {/* footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginTop: "auto",
-            paddingTop: 30,
-          }}
-        >
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", paddingTop: 28 }}>
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div
-              style={{
-                color: accent,
-                fontSize: 32,
-                fontWeight: 800,
-                fontFamily: impact,
-                textTransform: "uppercase",
-              }}
-            >
-              {tier ? tier.name : "Unranked fighter"}
+            <div style={{ color: tier ? accent : MUTED, fontSize: 34, fontFamily: display, letterSpacing: -1 }}>
+              {tier ? tier.name : "Unranked"}
             </div>
-            {tier ? (
-              <div
-                style={{
-                  color: MUTED,
-                  fontSize: 22,
-                  letterSpacing: 3,
-                  textTransform: "uppercase",
-                  marginTop: 4,
-                }}
-              >
-                {tier.epithet}
-              </div>
-            ) : null}
+            {tier ? <div style={{ color: MUTED, fontSize: 26, marginTop: 6 }}>{tier.epithet}</div> : null}
           </div>
-          <div style={{ color: MUTED, fontSize: 24, letterSpacing: 2 }}>
-            hellblazer.vercel.app
-          </div>
+          <div style={{ color: MUTED, fontSize: 26 }}>hellblazer.vercel.app</div>
         </div>
       </div>
     ),

@@ -1,5 +1,5 @@
-import { PlateLoader } from "@/components/ui/plate-loader";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 
 export default function Loading() {
-  return <PlateLoader label="King of the Hill" />;
+  return <PageSkeleton title="King of the Hill" />;
 }

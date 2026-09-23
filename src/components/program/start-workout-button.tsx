@@ -9,7 +9,7 @@ import { todayLocalISO } from "@/lib/local-date";
 export function StartWorkoutButton({
   programDayId,
   templateId,
-  label = "Enter the arena",
+  label = "Start workout",
   variant = "primary",
   size = "md",
   className,

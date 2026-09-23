@@ -67,21 +67,30 @@ export function ProgramDetail({
     <div className="mx-auto max-w-4xl">
       <Link
         href="/programs"
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted transition-colors hover:text-text"
+        transitionTypes={["nav-back"]}
+        className="-ml-1 mb-3 inline-flex h-9 items-center gap-1 rounded-full pl-1 pr-3 text-[15px] text-muted transition-colors hover:text-text"
       >
         <ArrowLeft className="size-4" />
         Programs
       </Link>
 
       <PageHeader
-        eyebrow="Campaign dossier"
-        index="03/A"
-        subtitle="Edit the block, control its calendar, and inspect the weekly order."
         stat={{ value: days.length, label: days.length === 1 ? "training day" : "training days" }}
         title={
-          <input
+          // A textarea so a long name wraps instead of clipping; it sizes to
+          // its content where supported, and Enter commits rather than
+          // inserting a newline.
+          <textarea
             defaultValue={program.name}
             aria-label="Program name"
+            rows={2}
+            data-display
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.currentTarget.blur();
+              }
+            }}
             onBlur={(e) => {
               const val = e.target.value.trim();
               if (val && val !== program.name)
@@ -89,7 +98,7 @@ export function ProgramDetail({
                   await updateProgram({ id: program.id, name: val });
                 });
             }}
-            className="w-full min-w-0 bg-transparent font-impact uppercase text-text focus:outline-none"
+            className="font-display block w-full min-w-0 resize-none overflow-hidden bg-transparent text-[1.75rem] leading-[1.1] text-text [field-sizing:content] focus:outline-none sm:text-[2.25rem]"
           />
         }
       />
@@ -140,10 +149,10 @@ export function ProgramDetail({
                     })
                   }
                   className={cn(
-                    "rounded-lg border px-3 py-1.5 text-sm transition-colors",
+                    "tnum h-9 rounded-full px-3.5 text-[13px] font-medium transition-colors",
                     program.duration_weeks === w
-                      ? "border-accent/50 bg-accent/10 text-accent"
-                      : "border-border text-muted hover:text-text",
+                      ? "bg-text text-bg"
+                      : "bg-surface-2 text-muted hover:text-text",
                   )}
                 >
                   {w} wks
@@ -216,14 +225,14 @@ export function ProgramDetail({
                   key={d.id}
                   className="flex items-center gap-3 px-4 py-3"
                 >
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface-2 font-mono text-xs text-muted">
+                  <span className="tnum flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] text-muted">
                     {i + 1}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm text-text">
                       {tmpl?.day_label || tmpl?.name || "Deleted template"}
                     </div>
-                    <div className="font-mono text-xs text-muted">
+                    <div className="tnum text-xs text-muted">
                       {tmpl ? `${tmpl.template_exercise.length} exercises` : "-"}
                     </div>
                   </div>
@@ -265,7 +274,7 @@ export function ProgramDetail({
                     onClick={() => setPreviewDayId(d.id)}
                     aria-label="Preview this day"
                     title="Preview this day"
-                    className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent"
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted transition-colors hover:text-text"
                   >
                     <Eye className="size-4" />
                   </button>

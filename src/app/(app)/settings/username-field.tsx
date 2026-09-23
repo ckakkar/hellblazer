@@ -51,14 +51,14 @@ export function UsernameField({ current }: { current: string | null }) {
           {pending ? (
             <Loader2 className="size-4 animate-spin" />
           ) : status === "saved" && !dirty ? (
-            <Check className="size-4 text-accent" />
+            <Check className="size-4 text-text" />
           ) : null}
           Save
         </Button>
       </div>
       <p className="text-xs">
         {status === "saved" ? (
-          <span className="text-accent">Saved: you&apos;re on the board.</span>
+          <span className="text-text">Saved. You&apos;re on the board.</span>
         ) : status === "taken" ? (
           <span className="text-danger">That ring name&apos;s taken. Try another.</span>
         ) : status === "invalid" ? (

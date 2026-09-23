@@ -39,8 +39,8 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
       <AreaChart data={data} margin={{ top: 8, right: 10, bottom: 4, left: 0 }}>
         <defs>
           <linearGradient id="bwFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--color-text)" stopOpacity={0.14} />
+            <stop offset="100%" stopColor="var(--color-text)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
@@ -72,11 +72,11 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
         <Area
           type="monotone"
           dataKey="weight"
-          stroke="var(--color-accent)"
+          stroke="var(--color-text)"
           strokeWidth={2}
           fill="url(#bwFill)"
-          dot={{ r: 2, fill: "var(--color-accent)", strokeWidth: 0 }}
-          activeDot={{ r: 4, fill: "var(--color-accent)", stroke: "var(--color-bg)" }}
+          dot={{ r: 2, fill: "var(--color-text)", strokeWidth: 0 }}
+          activeDot={{ r: 4, fill: "var(--color-text)", stroke: "var(--color-surface)", strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>

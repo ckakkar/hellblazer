@@ -1,16 +1,11 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-/* ── Tale of the tape ──────────────────────────────────────────────────────
-   The signature block. A fight card states its numbers as a bracketed table
-   with both corners side by side, never as a row of equal boxes, so this is a
-   rule-bracketed table rather than a StatCard grid: label, figure, and the
-   move against last week on one line each.
-
-   The accent earns its place here. It marks exactly one thing: ground gained
-   on the previous week. That lets the palette stay otherwise
-   monochrome. Flat and losing weeks are set in muted, so a red line in the
-   tape always means the same thing at a glance. */
+/* ── Stat rows ─────────────────────────────────────────────────────────────
+   A grouped list of figures: label on the left, the number in the expanded
+   cut on the right, and its move against last week beside it. The accent
+   marks one thing only, ground gained; flat and losing weeks stay muted, so
+   colour in this list always means the same thing. */
 
 export type DeltaTone = "gain" | "flat" | "loss";
 
@@ -23,18 +18,16 @@ export function Delta({
   children: React.ReactNode;
   className?: string;
 }) {
-  const glyph = tone === "gain" ? "▲" : tone === "loss" ? "▼" : "•";
+  const glyph = tone === "gain" ? "↑" : tone === "loss" ? "↓" : "";
   return (
     <span
       className={cn(
-        "flex items-center gap-1.5 font-mono text-[11px] tabular-nums",
+        "tnum inline-flex items-center gap-0.5 text-[13px] font-medium",
         tone === "gain" ? "text-accent" : "text-muted",
         className,
       )}
     >
-      <span aria-hidden className="text-[9px] leading-none">
-        {glyph}
-      </span>
+      {glyph && <span aria-hidden>{glyph}</span>}
       {children}
     </span>
   );
@@ -45,23 +38,20 @@ export function Tape({
   children,
   className,
 }: {
-  title: string;
+  title?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={cn("relative", className)}>
-      {/* Double rule: a heavy bar over a hairline. Poster furniture, and it
-          gives the block a top edge strong enough to hold the page without
-          wrapping everything in another bordered box. */}
-      <div className="h-0.5 bg-text/85" />
-      <div className="mt-px h-px bg-border" />
-      <h2 className="px-0.5 pt-2.5 font-mono text-[10px] font-medium uppercase tracking-[0.22em] text-muted">
-        {title}
-      </h2>
-      <dl className="mt-1">{children}</dl>
-      <div className="h-px bg-border" />
-      <div className="mt-px h-0.5 bg-text/85" />
+    <section className={className}>
+      {title && (
+        <h2 className="mb-3 px-1 text-[19px] font-semibold tracking-[-0.02em] text-text">
+          {title}
+        </h2>
+      )}
+      <dl className="divide-y divide-white/[0.06] rounded-2xl bg-surface px-4">
+        {children}
+      </dl>
     </section>
   );
 }
@@ -81,39 +71,24 @@ export function TapeRow({
   note?: string;
 }) {
   return (
-    <div className="flex items-baseline gap-3 border-b border-border/60 py-2.5 last:border-b-0">
-      <dt className="w-[6.75rem] shrink-0 font-mono text-[10px] uppercase tracking-[0.12em] text-muted sm:w-28">
-        {label}
+    <div className="flex items-center gap-3 py-3.5">
+      <dt className="min-w-0 flex-1">
+        <span className="block text-[15px] text-text">{label}</span>
+        {note && <span className="mt-0.5 block text-[13px] text-muted">{note}</span>}
       </dt>
-      <dd className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
-        <span className="flex items-baseline gap-1.5">
-          <span className="font-impact text-2xl leading-none tabular-nums text-text sm:text-[1.75rem]">
-            {value}
-          </span>
-          {unit && (
-            <span className="font-mono text-[11px] lowercase text-muted">
-              {unit}
-            </span>
-          )}
-        </span>
-        <span className="flex shrink-0 items-baseline gap-2 text-right">
-          {note && (
-            <span className="hidden font-mono text-[11px] text-muted sm:inline">
-              {note}
-            </span>
-          )}
-          {delta}
+      <dd className="flex shrink-0 items-baseline gap-2.5">
+        {delta}
+        <span className="flex items-baseline gap-1">
+          <span className="font-display text-[22px] leading-none text-text">{value}</span>
+          {unit && <span className="text-[13px] text-muted">{unit}</span>}
         </span>
       </dd>
     </div>
   );
 }
 
-/* ── Weak-point bars ───────────────────────────────────────────────────────
-   Four numbers on a shared scale, which is the one thing four separate stat
-   cards could never show: whether a muscle is actually behind the others. The
-   bar is the comparison, so it carries information the figure alone does not.
-   unlike a rank bar whose width just restates the rank beside it. */
+/* Four numbers on a shared scale: whether a muscle is actually behind the
+   others. The bar is the comparison, so it earns its place. */
 export function BarRow({
   label,
   value,
@@ -128,32 +103,24 @@ export function BarRow({
   /** Trailing the pack: the one state worth spending the accent on. */
   low?: boolean;
 }) {
-  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 2;
+  const pct = max > 0 ? Math.max(3, Math.round((value / max) * 100)) : 3;
   return (
-    <div className="flex items-center gap-3 py-2">
-      <span className="w-[6.75rem] shrink-0 truncate font-mono text-[10px] uppercase tracking-[0.12em] text-muted sm:w-28">
-        {label}
-      </span>
-      <span className="relative h-2.5 min-w-0 flex-1 bg-surface-2">
-        <span
-          className={cn(
-            "absolute inset-y-0 left-0",
-            low ? "bg-accent" : "bg-text/70",
-          )}
+    <div className="py-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className={cn("text-[15px]", low ? "text-text" : "text-text")}>{label}</span>
+        <span className="tnum text-[13px] text-muted">
+          <span className={cn("font-display mr-1 text-[17px]", low ? "text-accent" : "text-text")}>
+            {value}
+          </span>
+          {unit}
+        </span>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.07]">
+        <div
+          className={cn("h-full rounded-full", low ? "bg-accent" : "bg-text/75")}
           style={{ width: `${pct}%` }}
         />
-      </span>
-      <span
-        className={cn(
-          "w-12 shrink-0 text-right font-mono text-xs tabular-nums",
-          low ? "text-accent" : "text-text",
-        )}
-      >
-        {value}
-      </span>
-      <span className="hidden w-8 shrink-0 font-mono text-[10px] lowercase text-muted sm:inline">
-        {unit}
-      </span>
+      </div>
     </div>
   );
 }

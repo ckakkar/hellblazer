@@ -2,8 +2,23 @@
 
 import { useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import {
+  AnimatePresence,
+  motion,
+  useDragControls,
+  useReducedMotion,
+  type PanInfo,
+} from "motion/react";
 import { Portal } from "@/components/ui/portal";
 
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+/**
+ * Bottom sheet on phones, centred dialog from `sm` up. It rises from the edge
+ * it lives on and can be dragged back down by its handle or header (not by the
+ * body, so scrolling the content never fights the gesture). No springs: the
+ * motion eases out and stops.
+ */
 export function Sheet({
   open,
   onClose,
@@ -27,13 +42,14 @@ export function Sheet({
   });
 
   const panelRef = useRef<HTMLDivElement>(null);
+  const drag = useDragControls();
+  const reduce = useReducedMotion();
 
   useEffect(() => {
     if (!open) return;
 
-    // Return focus where it came from. Captured before we move focus, so
-    // closing the sheet puts the caret back on the button that opened it
-    // instead of dumping it at the top of the document.
+    // Return focus where it came from, so closing the sheet puts the caret
+    // back on the button that opened it.
     const opener = document.activeElement as HTMLElement | null;
 
     const focusables = () =>
@@ -46,8 +62,7 @@ export function Sheet({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") return onCloseRef.current();
       if (e.key !== "Tab") return;
-      // Trap Tab inside the panel. Without this, tabbing walks straight out of
-      // an aria-modal dialog into the page behind it.
+      // Trap Tab inside the panel, or it walks out of an aria-modal dialog.
       const items = focusables();
       if (items.length === 0) return;
       const first = items[0];
@@ -63,14 +78,12 @@ export function Sheet({
     };
     document.addEventListener("keydown", onKey);
 
-    // Move focus into the dialog. The panel itself (tabIndex -1) rather than
-    // the first field, so opening a sheet on mobile doesn't immediately summon
-    // the keyboard and cover the content.
+    // Focus the panel itself rather than the first field, so opening a sheet
+    // on mobile doesn't summon the keyboard over the content.
     panelRef.current?.focus({ preventScroll: true });
 
-    // iOS Safari ignores `body { overflow: hidden }`, the page keeps scrolling
-    // under the sheet. Pin the body at its current offset instead, then restore
-    // the scroll position on close.
+    // iOS Safari ignores `body { overflow: hidden }`; pin the body at its
+    // offset instead and restore the scroll position on close.
     const scrollY = window.scrollY;
     const { style } = document.body;
     const prev = {
@@ -92,52 +105,78 @@ export function Sheet({
       document.removeEventListener("keydown", onKey);
       Object.assign(style, prev);
       window.scrollTo(0, scrollY);
-      // Restore focus only if it's still inside the (now unmounting) sheet;
-      // if something else has claimed it since, leave it alone.
       if (opener?.isConnected) opener.focus({ preventScroll: true });
     };
   }, [open]);
 
-  if (!open) return null;
+  function onDragEnd(_: unknown, info: PanInfo) {
+    if (info.offset.y > 110 || info.velocity.y > 650) onClose();
+  }
+
+  const duration = reduce ? 0 : 0.32;
 
   return (
-    <Portal>
-      <div
-        className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-      >
-        <div
-          className="absolute inset-0 bg-black/70 backdrop-blur-md"
-          onClick={onClose}
-        />
-        <div
-          ref={panelRef}
-          tabIndex={-1}
-          className="hb-glass-strong relative z-10 flex max-h-[86dvh] w-full max-w-lg flex-col rounded-t-2xl border border-border pb-[env(safe-area-inset-bottom)] focus:outline-none sm:rounded-2xl sm:pb-0"
-        >
-          {/* Grabber handle: bottom-sheet affordance on mobile */}
-          <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-border sm:hidden" />
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <h2 className="truncate font-display text-lg uppercase tracking-wide text-text">
-              {title}
-            </h2>
-            <button
-              type="button"
+    <AnimatePresence>
+      {open && (
+        <Portal>
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+          >
+            <motion.div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={onClose}
-              aria-label="Close"
-              className="flex size-10 items-center justify-center rounded-lg text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 active:scale-90"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: reduce ? 0 : 0.24, ease: EASE }}
+            />
+            <motion.div
+              ref={panelRef}
+              tabIndex={-1}
+              className="hb-sheet relative z-10 flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-[1.75rem] pb-[env(safe-area-inset-bottom)] focus:outline-none sm:rounded-[1.75rem] sm:pb-0"
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ duration, ease: EASE }}
+              drag="y"
+              dragListener={false}
+              dragControls={drag}
+              dragConstraints={{ top: 0, bottom: 0 }}
+              dragElastic={{ top: 0, bottom: 0.7 }}
+              dragTransition={{ bounceStiffness: 500, bounceDamping: 50 }}
+              onDragEnd={onDragEnd}
             >
-              <X className="size-5" />
-            </button>
+              <div
+                className="shrink-0 touch-none cursor-grab active:cursor-grabbing"
+                onPointerDown={(e) => drag.start(e)}
+              >
+                <div className="mx-auto mt-2.5 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
+                <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-3 sm:pt-4">
+                  <h2 className="truncate text-[17px] font-semibold tracking-[-0.015em] text-text">
+                    {title}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    aria-label="Close"
+                    className="-mr-1.5 flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+                {children}
+              </div>
+              {footer && <div className="px-5 pb-4 pt-3">{footer}</div>}
+            </motion.div>
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            {children}
-          </div>
-          {footer && <div className="border-t border-border p-4">{footer}</div>}
-        </div>
-      </div>
-    </Portal>
+        </Portal>
+      )}
+    </AnimatePresence>
   );
 }

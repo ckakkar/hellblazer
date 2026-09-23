@@ -31,21 +31,20 @@ export function ProgressControls({
   }
 
   return (
-    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div role="tablist" className="inline-flex self-start rounded-full bg-white/[0.06] p-0.5">
         {(["exercise", "muscle"] as const).map((t) => (
           <button
             key={t}
+            role="tab"
             onClick={() => go({ tab: t })}
-            aria-pressed={tab === t}
+            aria-selected={tab === t}
             className={cn(
-              "rounded-md px-4 py-1.5 text-sm font-medium capitalize transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50",
-              tab === t
-                ? "bg-accent text-bg"
-                : "text-muted hover:text-text",
+              "h-8 rounded-full px-4 text-[13px] font-medium transition-colors",
+              tab === t ? "bg-white/[0.12] text-text" : "text-muted hover:text-text",
             )}
           >
-            {t}
+            {t === "exercise" ? "Lifts" : "Muscles"}
           </button>
         ))}
       </div>
@@ -73,7 +72,7 @@ export function ProgressControls({
           {MUSCLE_CHART_ORDER.map((m) => (
             <option key={m} value={m}>
               {MUSCLE_LABEL[m]}
-              {isWeakPoint(m) ? " ★" : ""}
+              {isWeakPoint(m) ? " (weak point)" : ""}
             </option>
           ))}
         </Select>

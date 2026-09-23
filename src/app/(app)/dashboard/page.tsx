@@ -1,9 +1,7 @@
+import { ViewTransition } from "react";
 import Link from "next/link";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
-import {
-  getCurrentWeekSetsPerMuscle,
-  getMuscleBalance,
-} from "@/lib/data/analytics";
+import { getCurrentWeekSetsPerMuscle } from "@/lib/data/analytics";
 import { getSessionSummaries } from "@/lib/data/sessions";
 import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
 import { getProfile } from "@/lib/data/profile";
@@ -14,15 +12,13 @@ import { FightCardHero } from "@/components/tier/fight-card-hero";
 import { getTier } from "@/lib/tiers";
 import { getToday, getUnit } from "@/lib/settings";
 import { SectionLabel } from "@/components/ui/page-header";
-import { Tape, TapeRow, Delta, BarRow, type DeltaTone } from "@/components/ui/tape";
+import { Delta, BarRow, type DeltaTone } from "@/components/ui/tape";
 import { ChartCard } from "@/components/ui/chart-card";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WeeklySetsChart } from "@/components/charts/weekly-sets-chart";
 import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
-import { MuscleBalanceRadar } from "@/components/charts/muscle-balance-radar";
 import { formatVolume } from "@/lib/units";
 import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
 
@@ -31,7 +27,6 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const [
     weeklySets,
-    muscleBalance,
     summaries,
     activeProgress,
     programs,
@@ -40,7 +35,6 @@ export default async function DashboardPage() {
     today,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
-    getMuscleBalance(4),
     getSessionSummaries(),
     getActiveProgramProgress(),
     getPrograms(),
@@ -136,77 +130,94 @@ export default async function DashboardPage() {
     volumeKg,
   }));
 
-  return (
-    <div>
-      <FightCardHero tier={tier} className="mb-7" />
+  const stats: { label: string; value: string; unit?: string; delta?: React.ReactNode }[] = [
+    {
+      label: "Volume",
+      value: formatVolume(volumeThisWeek, unit).split(" ")[0],
+      unit: formatVolume(volumeThisWeek, unit).split(" ")[1],
+      delta: <Delta tone={toneOf(volumeMove)}>{deltaLabel(volumeMove)}</Delta>,
+    },
+    {
+      label: "Working sets",
+      value: String(workingSetsThisWeek),
+      delta: <Delta tone={toneOf(setsMove)}>{deltaLabel(setsMove)}</Delta>,
+    },
+    {
+      label: "Sessions",
+      value: sessionTarget ? `${thisWeek.length}/${sessionTarget}` : String(thisWeek.length),
+      delta: sessionTarget ? (
+        <Delta tone={sessionsTone}>
+          {thisWeek.length >= sessionTarget ? "on pace" : `${sessionTarget - thisWeek.length} to go`}
+        </Delta>
+      ) : undefined,
+    },
+  ];
 
-      {isNewUser ? (
-        <OnboardingHero
-          featured={presetLite(featuredPreset)}
-          others={PRESETS.filter((p) => p.id !== featuredPreset.id).map(
-            presetLite,
-          )}
-        />
-      ) : activeProgress ? (
-        <div className="mb-6">
+  return (
+    <div className="space-y-10">
+      <div className="grid gap-3 lg:grid-cols-[1.35fr_1fr]">
+        <FightCardHero tier={tier} />
+        {isNewUser ? null : activeProgress ? (
           <ProgramProgressCard
             progress={activeProgress}
             href={`/programs/${activeProgress.program.id}`}
           />
-        </div>
-      ) : (
-        <Card className="mb-6 flex flex-col items-start gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="font-display text-base uppercase tracking-wide text-text">
-              Nothing programmed
+        ) : (
+          <section className="flex flex-col justify-between gap-5 rounded-3xl bg-surface p-5 sm:p-6">
+            <div>
+              <h2 className="text-[1.375rem] font-semibold tracking-[-0.02em] text-text">
+                Nothing programmed
+              </h2>
+              <p className="mt-1 text-[15px] text-muted">
+                Pick a split and it schedules your week for you.
+              </p>
             </div>
-            <p className="mt-0.5 text-sm text-muted">
-              Pick a split and it schedules your week for you.
-            </p>
-          </div>
-          <Link href="/programs" className="shrink-0">
-            <Button variant="secondary">Choose a split</Button>
-          </Link>
-        </Card>
+            <Link href="/programs">
+              <Button variant="secondary" size="lg" className="w-full">
+                Choose a split
+              </Button>
+            </Link>
+          </section>
+        )}
+      </div>
+
+      {isNewUser && (
+        <OnboardingHero
+          featured={presetLite(featuredPreset)}
+          others={PRESETS.filter((p) => p.id !== featuredPreset.id).map(presetLite)}
+        />
       )}
 
-      <Tape title={`Tale of the tape · week of ${format(weekStart, "MMM d")}`}>
-        <TapeRow
-          label="Tonnage"
-          value={formatVolume(volumeThisWeek, unit).split(" ")[0]}
-          unit={formatVolume(volumeThisWeek, unit).split(" ")[1]}
-          note={volumeMove === null ? undefined : "vs last week"}
-          delta={
-            <Delta tone={toneOf(volumeMove)}>{deltaLabel(volumeMove)}</Delta>
+      <section>
+        <SectionLabel
+          action={
+            <span className="text-[13px] text-muted">
+              Since {format(weekStart, "EEE d MMM")}
+            </span>
           }
-        />
-        <TapeRow
-          label="Working sets"
-          value={workingSetsThisWeek}
-          note={setsMove === null ? undefined : "vs last week"}
-          delta={<Delta tone={toneOf(setsMove)}>{deltaLabel(setsMove)}</Delta>}
-        />
-        <TapeRow
-          label="Sessions"
-          value={sessionTarget ? `${thisWeek.length}/${sessionTarget}` : thisWeek.length}
-          note={sessionTarget ? "programmed" : "no active program"}
-          delta={
-            sessionTarget ? (
-              <Delta tone={sessionsTone}>
-                {thisWeek.length >= sessionTarget
-                  ? "on pace"
-                  : `${sessionTarget - thisWeek.length} to go`}
-              </Delta>
-            ) : undefined
-          }
-        />
-      </Tape>
+        >
+          This week
+        </SectionLabel>
+        <div className="grid grid-cols-3 divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
+          {stats.map((st) => (
+            <div key={st.label} className="min-w-0 px-4">
+              <p className="truncate text-[13px] text-muted">{st.label}</p>
+              <p className="mt-1.5 flex items-baseline gap-1">
+                <span className="font-display text-[1.625rem] leading-none text-text sm:text-[2rem]">
+                  {st.value}
+                </span>
+                {st.unit && <span className="text-[13px] text-muted">{st.unit}</span>}
+              </p>
+              {st.delta && <div className="mt-1.5">{st.delta}</div>}
+            </div>
+          ))}
+        </div>
+      </section>
 
-      {/* Weak points: four numbers on one scale, so the shortfall is visible
-          as a gap rather than four separate figures to hold in your head. */}
-      <section className="mt-7">
-        <SectionLabel>Weak points · this week</SectionLabel>
-        <div className="border-y border-border py-1">
+      {/* Four muscles on one scale, so the one falling behind shows as a gap. */}
+      <section>
+        <SectionLabel>Weak points</SectionLabel>
+        <div className="rounded-2xl bg-surface px-4 py-1">
           {weakPointRows.map((r) => (
             <BarRow
               key={r.muscle}
@@ -219,81 +230,67 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      {/* Charts */}
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <section className="grid gap-3 lg:grid-cols-2">
         <ChartCard
-          title="Training consistency"
+          title="Consistency"
           subtitle="Working sets per day"
           className="lg:col-span-2"
-          bodyClassName="p-4"
+          bodyClassName="p-5 pt-4"
         >
           <ConsistencyHeatmap summaries={summaries} today={today} />
         </ChartCard>
-        <ChartCard
-          title="Weekly sets per muscle"
-          subtitle="This week · weak points highlighted · secondary ×0.5"
-          className="lg:col-span-2"
-        >
+        <ChartCard title="Sets per muscle" subtitle="This week, secondary muscles count half">
           <WeeklySetsChart data={weeklySets} />
         </ChartCard>
-        <ChartCard
-          title="Muscle balance"
-          subtitle="Avg weekly sets per muscle · last 4 weeks"
-        >
-          <MuscleBalanceRadar data={muscleBalance} />
-        </ChartCard>
         <VolumeTrendCard daily={dailyVolume} unit={unit} />
-      </div>
+      </section>
 
-      {/* The log. A record book is a table, not six identical cards stacked,
-          reading down a column of dates and tonnages is the whole point. */}
-      <section className="mt-8">
+      <section>
         <SectionLabel
           action={
             <Link
               href="/history"
-              className="font-mono text-[11px] uppercase tracking-wide text-muted underline-offset-4 transition-colors hover:text-accent hover:underline"
+              className="text-[13px] font-medium text-muted transition-colors hover:text-text"
             >
-              Full record
+              See all
             </Link>
           }
         >
-          Latest bouts
+          Recent sessions
         </SectionLabel>
         {recent.length === 0 ? (
-          <p className="border-y border-border py-8 text-center text-sm text-muted">
+          <p className="rounded-2xl bg-surface px-5 py-8 text-center text-[15px] text-muted">
             Nothing logged yet. Your first session starts the record.
           </p>
         ) : (
-          <div className="border-t border-border">
+          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
             {recent.map((s) => (
               <Link
                 key={s.session_id}
-                href={
-                  s.finished_at
-                    ? `/history/${s.session_id}`
-                    : `/log/${s.session_id}`
-                }
-                className="group flex items-baseline gap-3 border-b border-border py-3 transition-colors hover:bg-surface/60"
+                href={s.finished_at ? `/history/${s.session_id}` : `/log/${s.session_id}`}
+                transitionTypes={["nav-forward"]}
+                className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
               >
-                <span className="w-14 shrink-0 font-mono text-[11px] uppercase tabular-nums text-muted">
-                  {s.session_date
-                    ? format(parseISO(s.session_date), "dd MMM")
-                    : "--"}
-                </span>
-                <span className="flex min-w-0 flex-1 items-baseline gap-2">
-                  <span className="truncate font-display text-[15px] uppercase tracking-wide text-text transition-colors group-hover:text-accent">
-                    {s.title ?? "Session"}
-                  </span>
-                  {!s.finished_at && <Badge variant="accent">Live</Badge>}
-                  {!s.template_id && <Badge variant="muted">freeform</Badge>}
-                </span>
-                <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
-                  {s.working_sets ?? 0} sets
-                </span>
-                <span className="hidden w-20 shrink-0 text-right font-mono text-[11px] tabular-nums text-text sm:inline">
-                  {formatVolume(Number(s.total_volume ?? 0), unit)}
-                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <ViewTransition name={`session-${s.session_id}`} share="hb-morph" default="none">
+                      <span className="truncate text-[15px] font-medium text-text">
+                        {s.title ?? "Session"}
+                      </span>
+                    </ViewTransition>
+                    {!s.finished_at && <Badge variant="accent">Live</Badge>}
+                  </div>
+                  <p className="mt-0.5 text-[13px] text-muted">
+                    {s.session_date ? format(parseISO(s.session_date), "EEE d MMM") : "No date"}
+                    {!s.template_id ? ", freeform" : ""}
+                  </p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="tnum text-[15px] text-text">
+                    {formatVolume(Number(s.total_volume ?? 0), unit)}
+                  </p>
+                  <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                </div>
               </Link>
             ))}
           </div>

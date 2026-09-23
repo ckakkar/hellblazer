@@ -1,42 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, IBM_Plex_Mono } from "next/font/google";
-import localFont from "next/font/local";
+import { Archivo } from "next/font/google";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
 import { TimezoneSync } from "@/components/timezone-sync";
 import { getAccent, getTimeZone } from "@/lib/settings";
 
-/* ── The fight-card stack ──────────────────────────────────────────────────
-   Three faces, all out of the signage-and-print lineage a fight promotion
-   actually draws on, rather than the house faces every dark dashboard ships
-   with. Body is Archivo (a grotesque cut for print/signage), data is IBM Plex
-   Mono (warm, real tabular figures), and the display role is Big Shoulders,
-   condensed Chicago-signage caps that read like an arena board. Big Shoulders
-   is variable, so one family covers both the display and impact weights
-   instead of loading a second face for the heavy end. */
+/* One family, two widths. Archivo is variable on width as well as weight, so
+   the expanded cut that carries titles and numbers (a broadcast-scoreboard
+   width) and the text face are a single file. Replaces a three-face stack
+   (Archivo, IBM Plex Mono, Big Shoulders) and about 90 KB of font. */
 const archivo = Archivo({
   variable: "--font-archivo",
   subsets: ["latin"],
-});
-
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  // 400 and 500 only. Plex Mono is not variable, so every extra cut is another
-  // five subset files on the wire; nothing in the app renders mono above 500.
-  weight: ["400", "500"],
-});
-
-const bigShoulders = localFont({
-  src: "./fonts/big-shoulders-latin.woff2",
-  variable: "--font-big-shoulders",
-  weight: "100 900",
-  style: "normal",
+  axes: ["wdth"],
   display: "swap",
-  fallback: ["Arial Narrow", "Arial", "sans-serif"],
-  // The local variable font is stable and needs no generated metric override.
-  adjustFontFallback: false,
 });
 
 export const metadata: Metadata = {
@@ -66,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0908",
+  themeColor: "#000000",
   width: "device-width",
   initialScale: 1,
   // No maximumScale: pinch-zoom stays available for accessibility; the 16px
@@ -89,7 +67,7 @@ export default async function RootLayout({
     <html
       lang="en"
       data-accent={accent}
-      className={`${archivo.variable} ${plexMono.variable} ${bigShoulders.variable} h-full antialiased`}
+      className={`${archivo.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-bg text-text">
         <PwaRegister />

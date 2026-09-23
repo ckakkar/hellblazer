@@ -1,75 +1,59 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * A large title, iOS-style: the page names itself in the expanded cut and gets
+ * out of the way. `stat` sits beside it as a quiet read-out; `action` is the
+ * page's one primary control.
+ */
 export function PageHeader({
   title,
   subtitle,
   action,
-  eyebrow = "Official record",
-  index,
   stat,
   className,
 }: {
   title: React.ReactNode;
   subtitle?: string;
   action?: React.ReactNode;
-  eyebrow?: string;
-  index?: string;
   stat?: { value: React.ReactNode; label: string };
   className?: string;
 }) {
   return (
     <header
       className={cn(
-        "hb-page-head relative mb-8 isolate overflow-hidden rounded-xl border border-text/10 px-5 py-6 shadow-card sm:px-7 sm:py-8",
+        "mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between",
         className,
       )}
     >
-      {index && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -right-2 -top-7 -z-10 font-impact text-[8.5rem] leading-none text-text/[0.035] sm:right-5 sm:text-[11rem]"
-        >
-          {index}
-        </span>
-      )}
-      <div className="relative z-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 max-w-3xl">
-          <div className="mb-3 flex items-center gap-3 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-accent">
-            <span className="h-px w-8 bg-accent" />
-            {eyebrow}
-            {index && <span className="text-muted/60">file {index}</span>}
-          </div>
-          <h1 className="font-impact text-[3.15rem] uppercase leading-[0.82] tracking-[-0.025em] text-text sm:text-[4.75rem]">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="mt-4 max-w-xl text-pretty text-[15px] leading-6 text-text/70 sm:text-base sm:leading-7">
-              {subtitle}
-            </p>
-          )}
-        </div>
-        {(stat || action) && (
-          <div className="flex shrink-0 flex-wrap items-end gap-4 sm:flex-col sm:items-end">
-            {stat && (
-              <div className="min-w-24 border-l border-border pl-4 sm:border-l-0 sm:border-r sm:pl-0 sm:pr-4 sm:text-right">
-                <div className="font-impact text-3xl leading-none tabular-nums text-text">
-                  {stat.value}
-                </div>
-                <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
-                  {stat.label}
-                </div>
-              </div>
-            )}
-            {action}
-          </div>
+      <div className="min-w-0 max-w-2xl">
+        <h1 className="font-display text-[2.125rem] leading-[1.05] text-text sm:text-[2.75rem]">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="mt-2 max-w-xl text-[15px] leading-6 text-muted">
+            {subtitle}
+          </p>
         )}
       </div>
+      {(stat || action) && (
+        <div className="flex shrink-0 items-center gap-4">
+          {stat && (
+            <p className="text-[13px] text-muted">
+              <span className="font-display mr-1.5 text-[17px] text-text">
+                {stat.value}
+              </span>
+              {stat.label}
+            </p>
+          )}
+          {action}
+        </div>
+      )}
     </header>
   );
 }
 
-/** Mono uppercase micro-label for section headers, the instrument-panel eyebrow. */
+/** Section heading on the canvas, with an optional trailing action. */
 export function SectionLabel({
   children,
   action,
@@ -81,14 +65,11 @@ export function SectionLabel({
 }) {
   return (
     <div
-      className={cn(
-        "mb-3 flex items-center justify-between gap-2 px-1",
-        className,
-      )}
+      className={cn("mb-3 flex items-baseline justify-between gap-3 px-1", className)}
     >
-      <span className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
+      <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-text">
         {children}
-      </span>
+      </h2>
       {action}
     </div>
   );
@@ -106,12 +87,14 @@ export function EmptyState({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="hb-panel-cut relative flex min-h-56 flex-col items-start justify-end overflow-hidden border border-dashed border-border bg-surface/50 px-6 py-7 text-left">
-      <span aria-hidden className="absolute -right-3 -top-8 font-impact text-[9rem] leading-none text-text/[0.025]">00</span>
-      {icon && <div className="mb-5 flex size-10 items-center justify-center border border-border bg-bg text-accent">{icon}</div>}
-      <div className="font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">No record found</div>
-      <h3 className="mt-2 font-display text-xl uppercase tracking-[0.035em] text-text">{title}</h3>
-      {body && <p className="mt-1.5 max-w-md text-sm leading-6 text-muted">{body}</p>}
+    <div className="flex min-h-56 flex-col items-center justify-center rounded-2xl bg-surface px-6 py-10 text-center">
+      {icon && (
+        <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-surface-2 text-muted">
+          {icon}
+        </div>
+      )}
+      <h3 className="text-[17px] font-semibold tracking-[-0.015em] text-text">{title}</h3>
+      {body && <p className="mt-1.5 max-w-sm text-sm leading-6 text-muted">{body}</p>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );

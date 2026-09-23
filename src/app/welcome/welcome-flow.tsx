@@ -6,7 +6,6 @@ import { AtSign, Check, Flame, Loader2, Ruler, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Stepper, Step } from "@/components/reactbits/stepper";
-import { BlurText } from "@/components/reactbits/blur-text";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/local-date";
 import { fromDisplayWeight, type Unit } from "@/lib/units";
@@ -84,24 +83,14 @@ export function WelcomeFlow({
     // once there's room, so a small screen with the keyboard up scrolls
     // normally instead of clipping the step.
     <main
-      className="relative flex min-h-dvh flex-col items-center justify-center px-4"
+      className="relative flex min-h-dvh flex-col items-center justify-center px-5"
       style={{
         paddingTop: "calc(env(safe-area-inset-top) + 2rem)",
         paddingBottom: "calc(env(safe-area-inset-bottom) + 2rem)",
       }}
     >
-      {/* Ambient accent wash, matching the app shell */}
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10"
-        style={{
-          background:
-            "radial-gradient(120% 55% at 50% -8%, rgb(var(--accent-rgb) / 0.10), transparent 62%)",
-        }}
-      />
-
-      <div className="grid w-full max-w-5xl overflow-hidden border-y-2 border-text/80 bg-surface/35 lg:grid-cols-[1.12fr_0.88fr]">
-        <section className="relative hidden min-h-[42rem] overflow-hidden border-r border-border lg:block">
+      <div className="grid w-full max-w-5xl overflow-hidden lg:grid-cols-[1.12fr_0.88fr] lg:rounded-3xl lg:bg-surface">
+        <section className="relative hidden min-h-[42rem] overflow-hidden lg:block">
           <FighterArt
             fighterKey="ohma"
             variant="hero"
@@ -109,33 +98,27 @@ export function WelcomeFlow({
             className="absolute inset-0"
             imageClassName="object-[center_22%]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/15 to-transparent" />
-          <div className="absolute inset-x-0 bottom-0 z-10 p-8">
-            <div className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.26em] text-accent"><span className="h-px w-8 bg-accent" />Registration card</div>
-            <div className="mt-4 font-impact text-6xl uppercase leading-[0.78] text-text">No spectators.<span className="block text-accent">You&apos;re fighting.</span></div>
-            <p className="mt-5 max-w-md text-sm leading-6 text-text/70">Build the identity the record will carry. Everything here stays editable after weigh-in.</p>
+          <div className="absolute inset-x-0 bottom-0 z-10 p-10">
+            <div className="font-display text-5xl leading-[1] text-text">Set up your profile.</div>
+            <p className="mt-3 max-w-sm text-[15px] leading-6 text-muted">
+              Everything here is optional and you can change it later.
+            </p>
           </div>
         </section>
 
-        <div className="w-full p-4 sm:p-7 lg:flex lg:flex-col lg:justify-center">
-        <div className="mb-7 text-center lg:hidden">
-          <span className="hb-panel-cut mx-auto mb-4 flex size-11 items-center justify-center border border-accent/40 bg-accent/10 text-accent">
-            <Flame className="size-5" />
-          </span>
-          <BlurText
-            as="h1"
-            text="Enter the arena"
-            animateBy="words"
-            delay={120}
-            className="justify-center font-impact text-4xl uppercase leading-none tracking-tight text-text sm:text-5xl"
-          />
-          <p className="mt-3 text-sm text-muted">
-            A few details so the judge can rank you honestly. All of it is
-            optional and editable later.
+        <div className="w-full sm:p-7 lg:flex lg:flex-col lg:justify-center">
+        <div className="mb-8 lg:hidden">
+          <Flame className="mb-6 size-7 text-accent" strokeWidth={2.25} />
+          <h1 className="font-display text-[2.25rem] leading-[1.05] text-text">
+            Set up your profile
+          </h1>
+          <p className="mt-2 text-[15px] leading-6 text-muted">
+            A few details so the judge can rank you fairly. All optional, all
+            editable later.
           </p>
         </div>
 
-        <div className="hb-panel-cut border border-border bg-surface p-5 shadow-card sm:p-6">
+        <div className="rounded-3xl bg-surface p-5 sm:p-6 lg:bg-transparent lg:p-0">
           <Stepper
             disableStepIndicators={saving}
             renderFooter={({ isFirstStep, isLastStep, back, next, complete }) => (
@@ -159,7 +142,7 @@ export function WelcomeFlow({
                   ) : isLastStep ? (
                     <Check className="size-4" />
                   ) : null}
-                  {isLastStep ? "Enter the arena" : "Continue"}
+                  {isLastStep ? "Finish" : "Continue"}
                 </Button>
               </div>
             )}
@@ -176,7 +159,7 @@ export function WelcomeFlow({
                 autoComplete="name"
                 maxLength={60}
               />
-              <p className="mt-2 text-xs text-muted">
+              <p className="mt-2 text-[13px] leading-5 text-muted">
                 {email ? `Signed in as ${email}.` : "Private to your account."}
               </p>
 
@@ -192,7 +175,7 @@ export function WelcomeFlow({
                   autoCapitalize="none"
                   autoCorrect="off"
                 />
-                <p className="mt-2 text-xs text-muted">
+                <p className="mt-2 text-[13px] leading-5 text-muted">
                   This is the only thing other fighters see. Leave it blank to
                   stay off King of the Hill.
                 </p>
@@ -209,10 +192,8 @@ export function WelcomeFlow({
                     type="button"
                     onClick={() => setSex(sex === s.value ? null : s.value)}
                     className={cn(
-                      "h-10 rounded-lg border text-sm font-medium transition-colors active:scale-[0.97]",
-                      sex === s.value
-                        ? "border-accent/60 bg-accent/10 text-accent"
-                        : "border-border bg-surface-2 text-muted hover:text-text",
+                      "h-11 rounded-xl text-[15px] font-medium transition-colors",
+                      sex === s.value ? "bg-text text-bg" : "bg-surface-2 text-muted hover:text-text",
                     )}
                   >
                     {s.label}
@@ -234,7 +215,7 @@ export function WelcomeFlow({
                 />
               </div>
 
-              <p className="mt-3 text-xs text-muted">
+              <p className="mt-3 text-[13px] leading-5 text-muted">
                 Strength standards are sex- and age-relative. This only ever
                 makes your rank fairer: it never lowers it.
               </p>
@@ -257,7 +238,7 @@ export function WelcomeFlow({
                   max={260}
                   className="pr-12"
                 />
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted">
+                <span className="tnum pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] text-muted">
                   cm
                 </span>
               </div>
@@ -274,18 +255,18 @@ export function WelcomeFlow({
                     placeholder={`Your current weight in ${unit}`}
                     className="pr-12"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 font-mono text-xs text-muted">
+                  <span className="tnum pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-[13px] text-muted">
                     {unit}
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-muted">
+                <p className="mt-2 text-[13px] leading-5 text-muted">
                   The big lifts are judged bodyweight-relative, so this is the
                   single most useful number you can give the judge.
                 </p>
               </div>
 
               {error && (
-                <p className="mt-4 rounded-lg border border-danger/30 bg-danger/5 px-3 py-2 text-xs text-danger">
+                <p className="mt-4 rounded-xl bg-danger/10 px-3.5 py-2.5 text-[13px] text-danger">
                   {error}
                 </p>
               )}
@@ -296,7 +277,7 @@ export function WelcomeFlow({
         <button
           onClick={finish}
           disabled={saving}
-          className="mx-auto mt-5 block text-xs text-muted underline-offset-4 transition-colors hover:text-text hover:underline disabled:opacity-50"
+          className="mx-auto mt-6 block text-[14px] text-muted underline-offset-4 transition-colors hover:text-text hover:underline disabled:opacity-50"
         >
           Skip for now
         </button>
@@ -314,7 +295,7 @@ function FieldLabel({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="mb-2 flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
+    <div className="mb-2 flex items-center gap-1.5 text-[13px] font-medium text-muted">
       {icon}
       {children}
     </div>

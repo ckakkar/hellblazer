@@ -10,8 +10,8 @@ import {
   subWeeks,
 } from "date-fns";
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -19,8 +19,7 @@ import {
   YAxis,
 } from "recharts";
 import { kgToLb, type Unit } from "@/lib/units";
-import { Card } from "@/components/ui/card";
-import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 import { AXIS_TICK, ChartEmpty, GRID_STROKE, TooltipBox } from "./chart-kit";
 
 /** One calendar day of lifted tonnage, canonical kg. */
@@ -28,15 +27,16 @@ export type DayVolume = { date: string; volumeKg: number };
 
 type RangeKey = "7d" | "30d" | "1y";
 const RANGES: { key: RangeKey; label: string; sub: string }[] = [
-  { key: "7d", label: "Last 7 days", sub: "Daily tonnage · last 7 days" },
-  { key: "30d", label: "Last 30 days", sub: "Daily tonnage · last 30 days" },
-  { key: "1y", label: "Last year", sub: "Weekly tonnage · last 52 weeks" },
+  { key: "7d", label: "7D", sub: "Daily, last 7 days" },
+  { key: "30d", label: "30D", sub: "Daily, last 30 days" },
+  { key: "1y", label: "1Y", sub: "Weekly, last 52 weeks" },
 ];
 
 type Point = { label: string; volume: number };
 
 /**
- * Volume-over-time area chart with a rolling-window selector. Buckets by day
+ * Volume over time as bars (days are discrete; a smoothed line invented dips
+ * between sessions), with a rolling-window selector. Buckets by day
  * for the 7- and 30-day windows and by ISO week for the year, zero-filling
  * empty days/weeks so the axis stays continuous. All buckets are derived
  * client-side from the full daily series, so switching ranges is instant.
@@ -90,52 +90,49 @@ export function VolumeTrendCard({
 
   const meta = RANGES.find((r) => r.key === range)!;
   const empty = points.every((p) => p.volume === 0);
-  const showDots = points.length <= 31;
 
   return (
-    <Card className={["flex flex-col", className].filter(Boolean).join(" ")}>
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 px-5 py-3">
+    <section className={cn("flex flex-col rounded-2xl bg-surface", className)}>
+      <div className="flex items-start justify-between gap-3 px-5 pt-4">
         <div className="min-w-0">
-          <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
-            Volume trend
-          </h3>
-          <p className="mt-1 text-xs text-muted/80">{meta.sub}</p>
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-text">Volume</h3>
+          <p className="mt-0.5 text-[13px] text-muted">{meta.sub}</p>
         </div>
-        <Select
+        <div
+          role="radiogroup"
           aria-label="Volume time range"
-          value={range}
-          onChange={(e) => setRange(e.target.value as RangeKey)}
-          className="h-9 w-auto min-w-[124px] shrink-0 text-xs sm:text-xs"
+          className="flex shrink-0 rounded-full bg-white/[0.06] p-0.5"
         >
           {RANGES.map((r) => (
-            <option key={r.key} value={r.key}>
+            <button
+              key={r.key}
+              type="button"
+              role="radio"
+              aria-checked={range === r.key}
+              onClick={() => setRange(r.key)}
+              className={cn(
+                "tnum h-7 rounded-full px-2.5 text-[12px] font-medium transition-colors",
+                range === r.key ? "bg-white/[0.12] text-text" : "text-muted hover:text-text",
+              )}
+            >
               {r.label}
-            </option>
+            </button>
           ))}
-        </Select>
+        </div>
       </div>
 
       <div className="min-w-0 flex-1 p-2 pt-3">
         {empty ? (
           <ChartEmpty message="No volume logged in this window yet." />
         ) : (
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart
-              data={points}
-              margin={{ top: 8, right: 10, bottom: 4, left: -6 }}
-            >
-              <defs>
-                <linearGradient id="volFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.28} />
-                  <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={points} margin={{ top: 8, right: 12, bottom: 4, left: -6 }}>
+              <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.5} vertical={false} />
               <XAxis
                 dataKey="label"
                 tick={AXIS_TICK}
                 tickLine={false}
-                axisLine={{ stroke: "var(--color-border)" }}
+                axisLine={false}
                 minTickGap={range === "7d" ? 4 : 20}
                 interval="preserveStartEnd"
               />
@@ -147,32 +144,26 @@ export function VolumeTrendCard({
                 tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : `${v}`)}
               />
               <Tooltip
-                cursor={{ stroke: "var(--color-border)" }}
+                cursor={{ fill: "rgb(255 255 255 / 0.04)" }}
                 content={({ active, payload, label }) =>
                   active && payload?.length ? (
                     <TooltipBox label={label}>
-                      {Number(payload[0].value).toLocaleString()} {unit} volume
+                      {Number(payload[0].value).toLocaleString()} {unit}
                     </TooltipBox>
                   ) : null
                 }
               />
-              <Area
-                type="monotone"
+              <Bar
                 dataKey="volume"
-                stroke="var(--color-accent)"
-                strokeWidth={2}
-                fill="url(#volFill)"
-                dot={
-                  showDots
-                    ? { r: 2.5, fill: "var(--color-accent)", strokeWidth: 0 }
-                    : false
-                }
-                activeDot={{ r: 4, fill: "var(--color-accent)", stroke: "var(--color-bg)" }}
+                fill="var(--color-text)"
+                fillOpacity={0.85}
+                radius={[4, 4, 4, 4]}
+                maxBarSize={range === "7d" ? 28 : 14}
               />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         )}
       </div>
-    </Card>
+    </section>
   );
 }

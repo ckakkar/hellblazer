@@ -55,9 +55,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
     <div>
       <PageHeader
         title="Exercises"
-        subtitle="Your complete movement arsenal. Search by target, inspect the cue, or forge a custom exercise."
-        eyebrow="Movement arsenal"
-        index="05"
+        subtitle="Every movement, grouped by the muscle it trains. Tap one for how to do it."
         stat={{ value: exercises.length, label: "movements" }}
         action={
           <Button onClick={() => setCreating(true)}>
@@ -67,14 +65,14 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         }
       />
 
-      <div className="mb-6 flex flex-col gap-3 border-y border-border bg-surface/45 p-3 sm:flex-row">
+      <div className="mb-8 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search exercises…"
-            className="pl-9"
+            placeholder="Search exercises"
+            className="pl-10"
           />
         </div>
         <Select
@@ -91,14 +89,14 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         </Select>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
         {groups.map((g) => (
           <section key={g.muscle}>
-            <h2 className="mb-2 flex items-center justify-between px-1 font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
+            <h2 className="mb-2 flex items-center justify-between px-4 text-[13px] font-medium text-muted">
               <span>{MUSCLE_LABEL[g.muscle]}</span>
-              <span className="text-muted/45">{String(g.items.length).padStart(2, "0")}</span>
+              <span className="tnum text-muted/60">{g.items.length}</span>
             </h2>
-            <Card className="divide-y divide-border overflow-hidden">
+            <Card className="divide-y divide-white/[0.06] overflow-hidden">
               {g.items.map((e) => (
                 <ExerciseRow
                   key={e.id}
@@ -119,7 +117,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
           </section>
         ))}
         {groups.length === 0 && (
-          <p className="py-10 text-center text-sm text-muted">
+          <p className="py-10 text-center text-[15px] text-muted">
             No exercises match your search.
           </p>
         )}
@@ -134,10 +132,10 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
 }
 
 /**
- * One library row, with its how-to as a disclosure underneath.
+ * One exercise row, with its how-to as a disclosure underneath.
  *
  * The toggle is a button covering only the name and meta, never the whole row:
- * the delete control and the library badge sit outside it, since nesting
+ * the custom tag and delete control sit outside it, since nesting
  * interactive elements inside a button is invalid and breaks keyboard use.
  * Movements with no guide (any custom exercise) render as plain, inert text
  * rather than a control that opens nothing.
@@ -161,27 +159,25 @@ function ExerciseRow({
   const meta = (
     <>
       <div className="flex items-center gap-1.5">
-        <span className="truncate text-sm text-text">{e.name}</span>
+        <span className="truncate text-[15px] text-text">{e.name}</span>
         {guide && (
           <ChevronDown
             className={cn(
               "size-3.5 shrink-0 text-muted transition-transform duration-200",
-              open && "rotate-180 text-accent",
+              open && "rotate-180",
             )}
           />
         )}
       </div>
-      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-        {e.mechanic && <span className="text-xs text-muted">{e.mechanic}</span>}
-        {e.equipment && (
-          <span className="text-xs text-muted">· {e.equipment}</span>
-        )}
-        {e.default_rep_range && (
-          <span className="font-mono text-xs text-muted">
-            · {e.default_rep_range}
-          </span>
-        )}
-      </div>
+      <p className="tnum mt-0.5 truncate text-[13px] text-muted">
+        {[
+          e.mechanic ? e.mechanic.charAt(0).toUpperCase() + e.mechanic.slice(1) : null,
+          e.equipment,
+          e.default_rep_range ? `${e.default_rep_range} reps` : null,
+        ]
+          .filter(Boolean)
+          .join(", ")}
+      </p>
     </>
   );
 
@@ -203,25 +199,26 @@ function ExerciseRow({
         )}
         <div className="flex shrink-0 items-center gap-2">
           {e.secondary_muscles.length > 0 && (
-            <span className="hidden text-xs text-muted sm:inline">
+            <span className="hidden text-[13px] text-muted sm:inline">
               {e.secondary_muscles.map((m) => MUSCLE_LABEL[m]).join(", ")}
             </span>
           )}
-          {e.user_id ? (
-            <ConfirmIconButton
-              label="Delete exercise"
-              confirmLabel="Tap again to delete exercise"
-              disabled={deleting}
-              onConfirm={onDelete}
-            />
-          ) : (
-            <Badge variant="muted">library</Badge>
+          {e.user_id && (
+            <>
+              <Badge>Custom</Badge>
+              <ConfirmIconButton
+                label="Delete exercise"
+                confirmLabel="Tap again to delete exercise"
+                disabled={deleting}
+                onConfirm={onDelete}
+              />
+            </>
           )}
         </div>
       </div>
       {guide && open && (
-        <div id={guideId} className="hb-reveal px-4 pb-4">
-          <p className="border-l-2 border-accent/40 pl-3 text-sm leading-relaxed text-muted">
+        <div id={guideId} className="px-4 pb-4">
+          <p className="rounded-xl bg-white/[0.04] px-3.5 py-3 text-[14px] leading-[1.55] text-muted">
             {guide}
           </p>
         </div>
@@ -324,10 +321,8 @@ function CreateExerciseSheet({
                     })
                   }
                   className={cn(
-                    "rounded-full border px-2.5 py-1 text-xs transition-colors",
-                    active
-                      ? "border-accent/40 bg-accent/10 text-accent"
-                      : "border-border text-muted hover:text-text",
+                    "h-8 rounded-full px-3 text-[13px] font-medium transition-colors",
+                    active ? "bg-text text-bg" : "bg-surface-2 text-muted hover:text-text",
                   )}
                 >
                   {MUSCLE_LABEL[m]}

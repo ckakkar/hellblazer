@@ -36,11 +36,11 @@ export function MuscleBalanceRadar({ data }: { data: Row[] }) {
         />
         <Radar
           dataKey="sets"
-          stroke="var(--color-accent)"
+          stroke="var(--color-text)"
           strokeWidth={2}
-          fill="var(--color-accent)"
+          fill="var(--color-text)"
           fillOpacity={0.3}
-          dot={{ r: 2, fill: "var(--color-accent)", strokeWidth: 0 }}
+          dot={{ r: 2, fill: "var(--color-text)", strokeWidth: 0 }}
         />
         <Tooltip
           content={({ active, payload }) =>

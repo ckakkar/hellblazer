@@ -11,10 +11,9 @@ import {
   Swords,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { TierLadder } from "@/components/tier/tier-ui";
 import { cn } from "@/lib/utils";
-import { getFighterNumber, getTier, MAX_RANK } from "@/lib/tiers";
+import { getTier, MAX_RANK } from "@/lib/tiers";
 import { evaluateTier, type EvalResult } from "@/lib/actions/evaluation";
 import { acceptTier, declineTier } from "@/lib/actions/profile";
 import {
@@ -26,12 +25,15 @@ import {
 export function TierEvaluator({
   currentTierKey,
   rationale,
-  evaluatedAt,
+  evaluatedLabel,
   gate,
 }: {
   currentTierKey: string | null;
   rationale: string | null;
-  evaluatedAt: string | null;
+  /** When the current rank was awarded, pre-formatted on the server in the
+   *  lifter's timezone (formatting here would differ between server and
+   *  browser and break hydration). */
+  evaluatedLabel: string | null;
   gate: EvalGate;
 }) {
   const [pending, start] = useTransition();
@@ -89,70 +91,43 @@ export function TierEvaluator({
   return (
     <div className="grid gap-4">
       {/* Current rank hero */}
-      <Card className="overflow-hidden">
-        <div className="relative p-5">
-          <div
-            aria-hidden
-            className="hb-halftone pointer-events-none absolute inset-0 opacity-25"
-            style={{
-              maskImage:
-                "radial-gradient(circle at 85% 15%, black, transparent 60%)",
-              WebkitMaskImage:
-                "radial-gradient(circle at 85% 15%, black, transparent 60%)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-6 -top-8 select-none font-display text-[9rem] font-bold leading-none text-white/[0.03]"
-          >
-            力
-          </div>
-          <div className="flex flex-wrap items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-            Current rank
+      <div className="rounded-2xl bg-surface p-5">
+        <div>
+          <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
+            {current ? `Rank ${current.rank} of ${MAX_RANK}` : "Unranked"}
             {/* Past Julius the judge answers on demand: worth saying out loud,
                 it's the reward for clearing the wall. */}
             {gate.unlimited && (
-              <span className="inline-flex items-center gap-1 rounded-full border border-accent/35 px-2 py-0.5 text-accent">
+              <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">
                 <InfinityIcon className="size-3" />
-                judge unchained
+                Unlimited verdicts
               </span>
             )}
           </div>
           {current ? (
             <>
-              <div className="mt-1 font-impact text-4xl uppercase leading-none text-accent sm:text-5xl">
+              <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-text">
                 {current.name}
               </div>
-              <div className="mt-1 font-display text-sm font-semibold uppercase tracking-[0.12em] text-accent/80">
-                {current.epithet}
-              </div>
-              <div className="mt-1 font-mono text-xs text-muted">
-                Rank {getFighterNumber(current.rank)} / {MAX_RANK} · {current.blurb}
-              </div>
+              <div className="mt-0.5 text-[15px] text-muted">{current.epithet}</div>
             </>
           ) : (
             <>
-              <div className="mt-1 font-impact text-4xl uppercase leading-none text-muted">
-                Unranked
+              <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-muted">
+                No rank yet
               </div>
-              <div className="mt-1 text-xs text-muted">
-                Run an evaluation to be judged.
-              </div>
+              <div className="mt-0.5 text-[15px] text-muted">Ask the judge below.</div>
             </>
           )}
           <TierLadder rank={currentRank} className="mt-4" />
           {rationale && (
-            <p className="mt-4 border-l-2 border-accent/40 pl-3 text-sm italic text-muted">
-              “{rationale}”
-            </p>
+            <p className="mt-4 text-[15px] leading-[1.5] text-text/80">{rationale}</p>
           )}
-          {evaluatedAt && (
-            <p className="mt-2 font-mono text-[11px] text-muted/60">
-              last judged {new Date(evaluatedAt).toLocaleDateString()}
-            </p>
+          {evaluatedLabel && (
+            <p className="mt-2 text-[13px] text-muted">Judged {evaluatedLabel}</p>
           )}
         </div>
-      </Card>
+      </div>
 
       <div>
         <Button
@@ -168,56 +143,40 @@ export function TierEvaluator({
           ) : (
             <Lock className="size-4" />
           )}
-          {pending
-            ? "The judge deliberates…"
-            : gate.canRun
-              ? "Step forward to be judged"
-              : "The judge is closed"}
+          {pending ? "Judging" : gate.canRun ? "Get judged" : "Judge unavailable"}
         </Button>
-        <p className="mt-2 text-xs text-muted">{gateCopy}</p>
+        <p className="mt-2 text-[13px] leading-5 text-muted">{gateCopy}</p>
         {gate.canRun && (
-          <p className="mt-1 flex flex-wrap items-center gap-x-1.5 font-mono text-[11px] text-muted/60">
-            {gate.newWorkouts > 0 && (
-              <span>
-                {gate.newWorkouts} new{" "}
-                {gate.newWorkouts === 1 ? "workout" : "workouts"} to judge ·
-              </span>
-            )}
-            {gate.unlimited ? (
-              <>
-                <InfinityIcon className="size-3 text-accent" />
-                <span className="text-accent/80">
-                  unlimited verdicts · no cooldown, no requirements
-                </span>
-              </>
-            ) : (
-              <span>one evaluation every {EVAL_COOLDOWN_DAYS} days</span>
-            )}
+          <p className="tnum mt-1 text-[13px] text-muted/70">
+            {gate.newWorkouts > 0
+              ? `${gate.newWorkouts} new ${gate.newWorkouts === 1 ? "workout" : "workouts"} to judge. `
+              : ""}
+            {gate.unlimited
+              ? "No cooldown at your rank."
+              : `One verdict every ${EVAL_COOLDOWN_DAYS} days.`}
           </p>
         )}
       </div>
 
       {result && !result.ok && (
-        <Card
+        <p
           className={cn(
-            "p-4 text-sm",
-            result.error === "not_configured"
-              ? "border-warn/30 text-warn"
-              : "border-border text-muted",
+            "rounded-2xl bg-surface p-4 text-[14px]",
+            result.error === "not_configured" ? "text-warn" : "text-muted",
           )}
         >
           {result.message}
-        </Card>
+        </p>
       )}
 
       {result && result.ok && (
-        <Card className="hb-slam overflow-hidden border-accent/30">
+        <div className="rounded-2xl bg-surface-2">
           <div className="p-5">
-            <div className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-              The verdict
+            <div className="flex items-center gap-2 text-[13px] text-muted">
+              Verdict
               {direction === "up" && (
                 <span className="inline-flex items-center gap-0.5 text-accent">
-                  <ArrowUpRight className="size-3.5" /> ascended
+                  <ArrowUpRight className="size-3.5" /> promotion
                 </span>
               )}
               {direction === "down" && (
@@ -227,31 +186,27 @@ export function TierEvaluator({
               )}
               {direction === "same" && (
                 <span className="inline-flex items-center gap-0.5 text-muted">
-                  <Minus className="size-3.5" /> held
+                  <Minus className="size-3.5" /> same rank
                 </span>
               )}
             </div>
-            <div className="mt-1 font-impact text-5xl uppercase leading-none text-accent">
+            <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-text">
               {result.tierName}
             </div>
-            {getTier(result.tierKey)?.epithet && (
-              <div className="mt-1 font-display text-sm font-semibold uppercase tracking-[0.12em] text-accent/80">
-                {getTier(result.tierKey)!.epithet}
-              </div>
-            )}
-            <div className="mt-1 font-mono text-xs text-muted">
-              Rank {getFighterNumber(result.rank)} / {MAX_RANK}
+            <div className="tnum mt-0.5 text-[15px] text-muted">
+              {getTier(result.tierKey)?.epithet ? `${getTier(result.tierKey)!.epithet}, ` : ""}
+              rank {result.rank} of {MAX_RANK}
             </div>
             <TierLadder rank={result.rank} className="mt-4" />
-            <p className="mt-4 text-sm text-text">{result.rationale}</p>
+            <p className="mt-4 text-[15px] leading-[1.5] text-text">{result.rationale}</p>
             {result.highlights.length > 0 && (
               <ul className="mt-3 grid gap-1.5">
                 {result.highlights.map((h, i) => (
                   <li
                     key={i}
-                    className="flex items-start gap-2 text-xs text-muted"
+                    className="flex items-start gap-2 text-[13px] text-muted"
                   >
-                    <span className="mt-1 size-1 shrink-0 rounded-full bg-accent" />
+                    <span className="mt-2 size-1 shrink-0 rounded-full bg-muted" />
                     {h}
                   </li>
                 ))}
@@ -277,7 +232,7 @@ export function TierEvaluator({
               </Button>
             </div>
           </div>
-        </Card>
+        </div>
       )}
     </div>
   );

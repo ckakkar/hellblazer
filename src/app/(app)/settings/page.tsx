@@ -1,6 +1,8 @@
 import { Download, LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
-import { getUnit, getAccent } from "@/lib/settings";
+import { format, parseISO } from "date-fns";
+import { getUnit, getAccent, getTimeZone, getToday } from "@/lib/settings";
+import { dateInTimeZone } from "@/lib/local-date";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
 import { getEvalGate } from "@/lib/data/evaluation";
@@ -26,7 +28,7 @@ import { DangerZone } from "./danger-zone";
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
-  const [user, unit, accent, logs, profile, active, notifications, evalGate] =
+  const [user, unit, accent, logs, profile, active, notifications, evalGate, tz, today] =
     await Promise.all([
       getUser(),
       getUnit(),
@@ -36,7 +38,15 @@ export default async function ProfilePage() {
       getActiveProgramProgress(),
       getNotificationState(),
       getEvalGate(),
+      getTimeZone(),
+      getToday(),
     ]);
+
+  // Formatted here, in the lifter's timezone: a client component formatting
+  // the timestamp itself renders differently on the server and the phone.
+  const evaluatedLabel = profile?.tier_evaluated_at
+    ? format(parseISO(dateInTimeZone(new Date(profile.tier_evaluated_at), tz)), "d MMM yyyy")
+    : null;
 
   const activeProgram = active
     ? { id: active.program.id, name: active.program.name }
@@ -66,19 +76,17 @@ export default async function ProfilePage() {
         email={user?.email ?? null}
         avatarUrl={avatarUrl}
         tier={getTier(profile?.tier)}
-        className="mb-8"
+        className="mb-10"
       />
 
-      <div className="grid gap-7 lg:grid-cols-12 lg:items-start">
-        <div className="grid gap-7 lg:col-span-7">
+      <div className="grid gap-10 lg:grid-cols-12 lg:items-start">
+        <div className="grid gap-10 lg:col-span-7">
         <section>
-          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-            Strength rank
-          </h2>
+          <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">Strength rank</h2>
           <TierEvaluator
             currentTierKey={profile?.tier ?? null}
             rationale={profile?.tier_rationale ?? null}
-            evaluatedAt={profile?.tier_evaluated_at ?? null}
+            evaluatedLabel={evaluatedLabel}
             gate={evalGate}
           />
         </section>
@@ -105,20 +113,18 @@ export default async function ProfilePage() {
         </SettingsGroup>
 
         <section>
-          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-            Bodyweight
-          </h2>
-          <div className="hb-panel-cut grid gap-4 border border-border bg-surface p-4">
+          <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">Bodyweight</h2>
+          <div className="grid gap-4 rounded-2xl bg-surface p-4">
             <BodyweightChart logs={logs} unit={unit} />
-            <BodyweightManager logs={logs} unit={unit} />
+            <BodyweightManager logs={logs} unit={unit} today={today} />
           </div>
-          <p className="px-1 pt-2 text-[12px] leading-5 text-muted">
-            Tracked over time, and fed into your strength evaluation.
+          <p className="px-4 pt-2 text-[13px] leading-5 text-muted">
+            Used by the judge to rank you relative to your size.
           </p>
         </section>
         </div>
 
-        <aside className="grid gap-7 lg:col-span-5 lg:sticky lg:top-8">
+        <aside className="grid gap-10 lg:col-span-5 lg:sticky lg:top-8">
         <SettingsGroup
           label="Preferences"
           caption="Weights are always stored in kg and converted for display."
@@ -126,7 +132,7 @@ export default async function ProfilePage() {
           <SettingsRow label="Units" control={<UnitToggle current={unit} />} />
           <SettingsRow
             label="Accent"
-            hint="Fly the colours of a Kengan Association company."
+            hint="Named after the Kengan Association companies."
           >
             <ThemeSelector current={accent} />
           </SettingsRow>
@@ -152,7 +158,7 @@ export default async function ProfilePage() {
               <a
                 href="/api/export"
                 download
-                className="inline-flex items-center gap-2 rounded-lg border border-border bg-surface-2 px-3 py-2 text-sm text-text transition-colors hover:border-accent/40 hover:text-accent"
+                className="inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-[#242428]"
               >
                 <Download className="size-4" />
                 Export
@@ -166,7 +172,7 @@ export default async function ProfilePage() {
               <form action={signOut}>
                 <button
                   type="submit"
-                  className="inline-flex items-center gap-2 rounded-lg border border-danger/30 px-3 py-2 text-sm text-danger transition-colors hover:bg-danger/10"
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-danger/10 px-3.5 text-[14px] font-medium text-danger transition-colors hover:bg-danger/15"
                 >
                   <LogOut className="size-4" />
                   Sign out
@@ -177,10 +183,8 @@ export default async function ProfilePage() {
         </SettingsGroup>
 
         <section>
-          <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-danger/80">
-            Danger zone
-          </h2>
-          <div className="hb-panel-cut border border-danger/25 bg-surface p-4">
+          <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">Reset</h2>
+          <div className="rounded-2xl bg-surface p-4">
             <DangerZone activeProgram={activeProgram} />
           </div>
         </section>

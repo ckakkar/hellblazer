@@ -87,36 +87,36 @@ export function RestTimer() {
     <section
       aria-label="Rest timer"
       className={cn(
-        "relative mt-3 overflow-hidden border-y px-0.5 py-2.5",
-        finished ? "border-accent bg-accent/[0.08]" : "border-border",
+        "relative mt-3 overflow-hidden rounded-2xl px-4 py-3",
+        finished ? "bg-accent/[0.12]" : "bg-surface",
       )}
     >
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 bg-accent/[0.08] transition-[width] duration-300"
+        className="absolute inset-y-0 left-0 bg-white/[0.04] transition-[width] duration-300"
         style={{ width: `${progress}%` }}
       />
       <div className="relative flex items-center gap-3">
-        <TimerReset className={cn("size-4", finished ? "text-accent" : "text-muted")} />
         <div className="min-w-0 flex-1">
-          <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-            {finished ? "Back in" : running ? "Between rounds" : "Rest clock"}
+          <div className="flex items-center gap-1.5 text-[13px] text-muted">
+            <TimerReset className={cn("size-3.5", finished && "text-accent")} />
+            {finished ? "Rest's over" : running ? "Resting" : "Rest"}
           </div>
           <div
             className={cn(
-              "mt-0.5 font-impact text-3xl leading-none tabular-nums",
+              "font-display mt-1 text-[1.75rem] leading-none",
               finished ? "text-accent" : "text-text",
             )}
             aria-live="polite"
           >
-            {finished ? "TIME" : formatRestClock(remaining)}
+            {finished ? "Go" : formatRestClock(remaining)}
           </div>
         </div>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => adjust(-15)}
-            className="min-h-10 min-w-10 border border-border px-2 font-mono text-xs text-muted transition-colors hover:border-accent/50 hover:text-text"
+            className="tnum flex size-10 items-center justify-center rounded-full bg-white/[0.06] text-[13px] text-muted transition-colors hover:text-text active:bg-white/[0.1]"
             aria-label="Reduce rest duration by 15 seconds"
           >
             −15
@@ -124,7 +124,7 @@ export function RestTimer() {
           <button
             type="button"
             onClick={toggle}
-            className="flex size-11 items-center justify-center bg-accent text-bg transition-transform active:scale-95"
+            className="flex size-11 items-center justify-center rounded-full bg-accent text-black active:opacity-80"
             aria-label={running ? "Pause rest timer" : "Start rest timer"}
           >
             {running ? <Pause className="size-4" /> : <Play className="size-4 fill-current" />}
@@ -132,7 +132,7 @@ export function RestTimer() {
           <button
             type="button"
             onClick={() => adjust(15)}
-            className="min-h-10 min-w-10 border border-border px-2 font-mono text-xs text-muted transition-colors hover:border-accent/50 hover:text-text"
+            className="tnum flex size-10 items-center justify-center rounded-full bg-white/[0.06] text-[13px] text-muted transition-colors hover:text-text active:bg-white/[0.1]"
             aria-label="Increase rest duration by 15 seconds"
           >
             +15
@@ -140,7 +140,7 @@ export function RestTimer() {
           <button
             type="button"
             onClick={reset}
-            className="flex size-10 items-center justify-center text-muted transition-colors hover:text-text"
+            className="flex size-10 items-center justify-center rounded-full text-muted transition-colors hover:text-text"
             aria-label="Reset rest timer"
           >
             <RotateCcw className="size-3.5" />

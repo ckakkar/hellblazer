@@ -50,8 +50,8 @@ export function OneRepMaxChart({
       <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
         <defs>
           <linearGradient id="oneRmFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-accent)" stopOpacity={0.26} />
-            <stop offset="100%" stopColor="var(--color-accent)" stopOpacity={0} />
+            <stop offset="0%" stopColor="var(--color-text)" stopOpacity={0.14} />
+            <stop offset="100%" stopColor="var(--color-text)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
@@ -82,11 +82,11 @@ export function OneRepMaxChart({
         <Area
           type="monotone"
           dataKey="est1rm"
-          stroke="var(--color-accent)"
+          stroke="var(--color-text)"
           strokeWidth={2}
           fill="url(#oneRmFill)"
-          dot={{ r: 2.5, fill: "var(--color-accent)", strokeWidth: 0 }}
-          activeDot={{ r: 4.5, fill: "var(--color-accent)", stroke: "var(--color-bg)" }}
+          dot={{ r: 2.5, fill: "var(--color-text)", strokeWidth: 0 }}
+          activeDot={{ r: 4.5, fill: "var(--color-text)", stroke: "var(--color-surface)", strokeWidth: 2 }}
         />
       </AreaChart>
     </ResponsiveContainer>

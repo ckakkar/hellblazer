@@ -1,183 +1,80 @@
 "use client";
 
 import { useState } from "react";
-import { Crosshair, Quote } from "lucide-react";
 import { FighterArt } from "@/components/tier/fighter-art";
+import { Sheet } from "@/components/ui/sheet";
 import { FIGHTER_DOSSIERS } from "@/lib/fighter-dossiers";
-import { formatFighterNumber, TIERS, type TierKey } from "@/lib/tiers";
-import { cn } from "@/lib/utils";
+import { TIERS, type TierKey } from "@/lib/tiers";
 
 const BILL = [...TIERS].sort((a, b) => b.rank - a.rank);
 
+/**
+ * The ladder as a row of portraits you swipe through, strongest first. Tapping
+ * a fighter opens their dossier in a sheet.
+ */
 export function LandingFighterRoster() {
-  const [activeKey, setActiveKey] = useState<TierKey>("kuroki");
-  const fighter = BILL.find((entry) => entry.key === activeKey) ?? BILL[0];
-  const dossier = FIGHTER_DOSSIERS[fighter.key];
+  const [openKey, setOpenKey] = useState<TierKey | null>(null);
+  const open = openKey ? BILL.find((t) => t.key === openKey) ?? null : null;
+  const dossier = open ? FIGHTER_DOSSIERS[open.key] : null;
 
   return (
-    <section
-      className="hb-reveal relative z-10 mt-4 border-t-2 border-text/80 pt-px lg:mt-0"
-      style={{ animationDelay: "180ms" }}
-      aria-labelledby="fighter-roster-title"
-    >
-      <div className="flex flex-wrap items-end justify-between gap-3 border-y border-border py-3">
-        <div>
-          <p className="font-mono text-[9px] uppercase tracking-[0.24em] text-accent">
-            Choose your standard
-          </p>
-          <h2
-            id="fighter-roster-title"
-            className="mt-1 font-impact text-3xl uppercase leading-none text-text sm:text-4xl"
-          >
-            The mountain
-          </h2>
-        </div>
-        <div className="text-right">
-          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-            Ten names. No shortcuts.
-          </p>
-          <p className="mt-1 text-xs text-muted">
-            Pick a fighter. Take the corner order.
-          </p>
-        </div>
+    <section aria-labelledby="ladder-title" className="py-10">
+      <div className="mb-4 flex items-baseline justify-between gap-3 px-5 sm:px-8 lg:px-14 xl:px-20">
+        <h2 id="ladder-title" className="text-[22px] font-semibold tracking-[-0.02em] text-text">
+          The ladder
+        </h2>
+        <span className="text-[13px] text-muted">Ten fighters, weakest at the bottom</span>
       </div>
-
-      <div className="grid border-b border-border lg:grid-cols-[20rem_minmax(0,1fr)]">
-        <div
-          role="tablist"
-          aria-label="Kengan fighter roster"
-          className="grid grid-cols-2 gap-px bg-border/70 sm:grid-cols-5 lg:grid-cols-1 lg:border-r lg:border-border"
-        >
-          {BILL.map((entry) => {
-            const active = entry.key === activeKey;
-            return (
-              <button
-                key={entry.key}
-                id={`fighter-${entry.key}-tab`}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-controls="active-fighter-dossier"
-                onClick={() => setActiveKey(entry.key)}
-                className={cn(
-                  "group relative flex min-w-0 items-center gap-2.5 bg-bg px-2 py-2 text-left outline-none transition-colors duration-200 focus-visible:z-10 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-accent sm:flex-col sm:items-start sm:gap-2 sm:p-2.5 lg:flex-row lg:items-center lg:gap-3 lg:px-3 lg:py-2",
-                  active
-                    ? "bg-surface text-accent"
-                    : "text-text hover:bg-surface/70 hover:text-accent",
-                )}
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    "absolute inset-x-0 bottom-0 h-0.5 origin-left bg-accent transition-transform lg:inset-y-0 lg:left-0 lg:h-auto lg:w-0.5 lg:origin-top",
-                    active ? "scale-100" : "scale-0 group-hover:scale-100",
-                  )}
-                />
+      <ol className="flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:scroll-px-8 sm:px-8 lg:scroll-px-14 lg:px-14 xl:px-20">
+        {BILL.map((t) => (
+          <li key={t.key} className="w-[42%] shrink-0 snap-start sm:w-[30%] lg:w-[17%]">
+            <button
+              type="button"
+              onClick={() => setOpenKey(t.key)}
+              className="group block w-full text-left"
+              style={{ ["--hb-fade" as string]: "var(--color-surface)" }}
+            >
+              <span className="relative block aspect-[3/4] overflow-hidden rounded-2xl bg-surface">
                 <FighterArt
-                  fighterKey={entry.key}
-                  variant="thumbnail"
-                  className="h-11 w-12 shrink-0 border border-border bg-black transition-colors group-hover:border-accent/50 sm:h-14 sm:w-full lg:h-11 lg:w-12"
-                  imageClassName="transition duration-300 group-hover:scale-105"
+                  fighterKey={t.key}
+                  variant="card"
+                  fade="bottom"
+                  className="absolute inset-0"
+                  imageClassName="object-[center_20%] transition-transform duration-300 group-hover:scale-[1.03]"
                 />
-                <span className="min-w-0 flex-1">
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-mono text-[9px] tabular-nums text-muted">
-                      {formatFighterNumber(entry.rank)}
-                    </span>
-                    <span className="font-impact text-[15px] uppercase leading-[0.9] sm:block sm:w-full sm:truncate sm:text-lg sm:leading-none lg:w-auto">
-                      {entry.name}
-                    </span>
-                  </span>
-                  <span className="mt-1 hidden truncate font-mono text-[8px] uppercase tracking-[0.12em] text-muted lg:block">
-                    {entry.epithet}
-                  </span>
+                <span className="font-display absolute left-3 top-2.5 text-[15px] text-text/80">
+                  {t.rank}
                 </span>
-              </button>
-            );
-          })}
-        </div>
+              </span>
+              <span className="mt-2 block truncate px-0.5 text-[15px] font-medium text-text">{t.name}</span>
+              <span className="block truncate px-0.5 text-[13px] text-muted">{t.epithet}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
 
-        <article
-          key={fighter.key}
-          id="active-fighter-dossier"
-          role="tabpanel"
-          aria-labelledby={`fighter-${fighter.key}-tab`}
-          className="hb-dossier-switch hb-panel-cut relative isolate min-h-[34rem] overflow-hidden bg-surface lg:min-h-[38rem]"
-        >
-          <FighterArt
-            fighterKey={fighter.key}
-            variant="card"
-            priority
-            className="absolute inset-x-0 top-0 -z-10 h-[20rem] bg-black sm:h-[25rem] lg:inset-y-0 lg:left-auto lg:right-0 lg:h-auto lg:w-[62%]"
-            imageClassName="object-[center_18%] lg:object-center"
-          />
-          <div
-            aria-hidden
-            className="absolute inset-0 -z-10 bg-gradient-to-b from-transparent via-surface/75 to-surface lg:bg-gradient-to-r lg:from-surface lg:via-surface/95 lg:to-transparent"
-          />
-          <span
-            aria-hidden
-            className="absolute -right-2 -top-8 -z-10 font-impact text-[13rem] leading-none text-text/[0.035] sm:text-[17rem]"
-          >
-            {formatFighterNumber(fighter.rank)}
-          </span>
-
-          <div className="relative flex min-h-[34rem] max-w-2xl flex-col justify-end px-5 pb-6 pt-60 sm:px-8 sm:pb-8 sm:pt-80 lg:min-h-[38rem] lg:w-[61%] lg:justify-center lg:px-10 lg:py-12">
-            <div className="flex items-center gap-3 font-mono text-[9px] uppercase tracking-[0.22em] text-accent">
-              <span className="h-px w-8 bg-accent" />
-              Official rank · {formatFighterNumber(fighter.rank)}
-            </div>
-            <h3 className="mt-4 font-impact text-4xl uppercase leading-[0.86] text-text sm:text-5xl lg:text-6xl">
-              {fighter.name}
-            </h3>
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-              {fighter.epithet}
+      <Sheet open={open !== null} onClose={() => setOpenKey(null)} title={open?.name ?? ""}>
+        {open && dossier && (
+          <div className="px-5 pb-6">
+            <p className="text-[15px] text-muted">
+              {open.epithet}, rank {open.rank} of {TIERS.length}
             </p>
-            <p className="mt-5 max-w-xl text-sm leading-6 text-text/75 sm:text-base sm:leading-7">
-              {dossier.profile}
-            </p>
-
-            <dl className="mt-5 grid max-w-xl grid-cols-2 gap-px bg-border">
-              <div className="bg-bg/90 px-3 py-3">
-                <dt className="font-mono text-[8px] uppercase tracking-[0.18em] text-muted">
-                  Discipline
-                </dt>
-                <dd className="mt-1 text-sm font-medium text-text">
-                  {dossier.discipline}
-                </dd>
+            <p className="mt-4 text-[16px] leading-[1.5] text-text">{dossier.profile}</p>
+            <dl className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.05]">
+              <div className="flex items-baseline justify-between gap-4 px-4 py-3">
+                <dt className="text-[15px] text-muted">Style</dt>
+                <dd className="text-right text-[15px] text-text">{dossier.discipline}</dd>
               </div>
-              <div className="bg-bg/90 px-3 py-3">
-                <dt className="font-mono text-[8px] uppercase tracking-[0.18em] text-muted">
-                  Signature
-                </dt>
-                <dd className="mt-1 text-sm font-medium text-text">
-                  {dossier.signature}
-                </dd>
+              <div className="flex items-baseline justify-between gap-4 px-4 py-3">
+                <dt className="text-[15px] text-muted">Signature</dt>
+                <dd className="text-right text-[15px] text-text">{dossier.signature}</dd>
               </div>
             </dl>
-
-            <blockquote className="relative mt-4 max-w-xl border-l-2 border-accent bg-bg/80 px-4 py-3 backdrop-blur-sm">
-              <Quote className="absolute right-3 top-3 size-4 text-accent/35" />
-              <div className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.2em] text-accent">
-                <Crosshair className="size-3" /> Corner order
-              </div>
-              <p className="mt-2 pr-4 text-sm font-medium leading-5 text-text">
-                {dossier.cornerOrder}
-              </p>
-            </blockquote>
+            <h3 className="mt-6 text-[13px] font-medium text-muted">Training note</h3>
+            <p className="mt-1.5 text-[15px] leading-[1.5] text-text">{dossier.cornerOrder}</p>
           </div>
-        </article>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border py-5">
-        <p className="max-w-2xl text-sm leading-6 text-text/70">
-          You begin beneath the bill. Every honest session writes your name a
-          little higher.
-        </p>
-        <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-          Select · study · train
-        </span>
-      </div>
+        )}
+      </Sheet>
     </section>
   );
 }

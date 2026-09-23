@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-/** Shared tooltip shell: surface-2 with a 1px border, mono text. */
+/** Shared tooltip shell: a raised surface with tabular figures. */
 export function TooltipBox({
   label,
   children,
@@ -11,11 +11,11 @@ export function TooltipBox({
   children: ReactNode;
 }) {
   return (
-    <div className="rounded-lg border border-border bg-surface-2 px-3 py-2 shadow-xl">
+    <div className="rounded-xl bg-surface-2 px-3 py-2 shadow-raised">
       {label != null && (
-        <div className="mb-1 text-[11px] font-medium text-muted">{label}</div>
+        <div className="mb-1 text-[13px] font-medium text-muted">{label}</div>
       )}
-      <div className="font-mono text-xs tabular-nums text-text">{children}</div>
+      <div className="tnum text-[13px] font-medium text-text">{children}</div>
     </div>
   );
 }
@@ -42,8 +42,8 @@ export function ChartEmpty({ message }: { message: string }) {
  * bodyweights ("230.5" rendering as "30.5"). Pass the values and, if the axis
  * has one, the same tickFormatter the axis uses.
  *
- * 7px per character is the measured advance of the mono face at the 11px axis
- * size, plus room for the tick gap.
+ * 7px per character covers Archivo's tabular figures at the 11px axis size,
+ * plus room for the tick gap.
  */
 export function axisWidthFor(
   values: number[],

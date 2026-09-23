@@ -19,6 +19,7 @@ import {
 } from "@/components/charts/exercise-charts";
 import { MuscleTrendChart } from "@/components/charts/muscle-trend-chart";
 import { MuscleVolumeDonut } from "@/components/charts/muscle-volume-donut";
+import { MuscleBalanceRadar } from "@/components/charts/muscle-balance-radar";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
 import { ProgressControls } from "./progress-controls";
@@ -55,13 +56,9 @@ export default async function ProgressPage({
     <div>
       <PageHeader
         title="Progress"
-        subtitle="Read the evidence: strength peaks, volume trends, muscle balance, and the rung you hold."
-        eyebrow="Performance intelligence"
-        index="06"
+        subtitle="Strength and volume over time, lift by lift and muscle by muscle."
         stat={{ value: oneRepMaxes.length, label: "tracked lifts" }}
       />
-
-      <LadderStanding tierKey={profile?.tier ?? null} />
 
       <ProgressControls
         tab={tab}
@@ -92,11 +89,17 @@ export default async function ProgressPage({
       )}
 
       {oneRepMaxes.length > 0 && (
-        <div className="mt-8">
-          <SectionLabel>Strength board · every lift</SectionLabel>
+        <div className="mt-10">
+          <SectionLabel action={<span className="text-[13px] text-muted">Best estimated 1RM</span>}>
+            All lifts
+          </SectionLabel>
           <OneRepMaxBoard rows={oneRepMaxes} unit={unit} />
         </div>
       )}
+
+      <div className="mt-10">
+        <LadderStanding tierKey={profile?.tier ?? null} />
+      </div>
     </div>
   );
 }
@@ -117,7 +120,7 @@ async function ExerciseTab({
       {/* A lift's personal records are a tale of the tape by any other name, so
           they're set as one: the lift is named, and the records read down a
           column instead of sitting in four equal boxes. */}
-      <Tape title={`${exerciseName} · personal records`}>
+      <Tape title={`${exerciseName} records`}>
         <TapeRow
           label="Best 1RM"
           value={trimNum(toDisplayWeight(pr.bestEst1rm, unit))}
@@ -145,7 +148,7 @@ async function ExerciseTab({
 
       <ChartCard
         title="Estimated 1RM"
-        subtitle="Best working set per session · Epley"
+        subtitle="Best working set per session (Epley)"
       >
         <OneRepMaxChart data={points} unit={unit} />
       </ChartCard>
@@ -179,7 +182,7 @@ async function MuscleTab({
     <div className="grid gap-4">
       {hasMuscleData ? (
         <>
-          <Tape title={`${MUSCLE_LABEL[muscle]} · this week`}>
+          <Tape title={`${MUSCLE_LABEL[muscle]} this week`}>
             <TapeRow
               label="Sets"
               value={trimNum(Math.round((lastWeek?.sets ?? 0) * 10) / 10)}
@@ -200,8 +203,8 @@ async function MuscleTab({
           </Tape>
 
           <ChartCard
-            title={`${MUSCLE_LABEL[muscle]}: weekly sets & volume`}
-            subtitle="Sets (bars) with volume overlay · secondary muscles weighted 0.5"
+            title="Weekly sets and volume"
+            subtitle="Bars are sets, the line is volume. Secondary muscles count half."
           >
             <MuscleTrendChart
               data={points}
@@ -218,11 +221,11 @@ async function MuscleTab({
         />
       )}
 
-      <ChartCard
-        title="Volume distribution"
-        subtitle="Where your tonnage went · last 4 weeks"
-        bodyClassName="p-4"
-      >
+      <ChartCard title="Balance" subtitle="Average weekly sets per muscle, last 4 weeks">
+        <MuscleBalanceRadar data={balance} />
+      </ChartCard>
+
+      <ChartCard title="Where the volume went" subtitle="Last 4 weeks" bodyClassName="p-4">
         <MuscleVolumeDonut data={balance} unit={unit} />
       </ChartCard>
     </div>

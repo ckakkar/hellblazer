@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
  * sliding step transitions. See ./README.md for provenance and local changes.
  *
  * Re-themed onto the app's tokens: indicators and the connector run on the
- * accent channel rather than React Bits' fixed purple, and the footer buttons
+ * bone text colour rather than React Bits' fixed purple, and the footer buttons
  * are left to the caller (via `renderFooter`) so the app's own Button
  * primitive supplies them instead of a hard-coded green pill.
  */
@@ -262,17 +262,17 @@ function StepIndicator({
           },
           active: {
             scale: 1,
-            backgroundColor: "var(--color-accent)",
+            backgroundColor: "var(--color-text)",
             color: "var(--color-bg)",
           },
           complete: {
             scale: 1,
-            backgroundColor: "var(--color-accent)",
+            backgroundColor: "var(--color-text)",
             color: "var(--color-bg)",
           },
         }}
         transition={{ duration: 0.3 }}
-        className="flex size-8 items-center justify-center rounded-full border border-border font-mono text-sm font-medium tabular-nums"
+        className="tnum flex size-8 items-center justify-center rounded-full text-[13px] font-semibold"
       >
         {status === "complete" ? (
           <CheckIcon className="size-4 text-bg" />
@@ -293,9 +293,9 @@ function StepConnector({ isComplete }: { isComplete: boolean }) {
   };
 
   return (
-    <div className="relative mx-2 h-px flex-1 overflow-hidden bg-border">
+    <div className="relative mx-2 h-0.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
       <motion.div
-        className="absolute left-0 top-0 h-full bg-accent"
+        className="absolute left-0 top-0 h-full bg-text"
         variants={lineVariants}
         initial={false}
         animate={isComplete ? "complete" : "incomplete"}

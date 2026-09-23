@@ -16,14 +16,15 @@ const WEEKS = 52;
 const MOBILE_WEEKS = 26;
 const OLD = WEEKS - MOBILE_WEEKS; // columns hidden on mobile
 
+// A bone ramp rather than the accent: consistency is a record, not a live
+// event, so it reads in the neutral ink like the rest of the history.
 const LEVELS = [
-  "var(--color-surface-2)",
-  "rgb(var(--accent-rgb) / 0.30)",
-  "rgb(var(--accent-rgb) / 0.52)",
-  "rgb(var(--accent-rgb) / 0.78)",
-  "rgb(var(--accent-rgb))",
+  "rgb(255 255 255 / 0.06)",
+  "rgb(244 242 238 / 0.24)",
+  "rgb(244 242 238 / 0.45)",
+  "rgb(244 242 238 / 0.7)",
+  "rgb(244 242 238 / 0.95)",
 ];
-const CELL_RING = "inset 0 0 0 1px rgb(255 255 255 / 0.04)";
 
 function level(sets: number): number {
   if (sets <= 0) return 0;
@@ -136,23 +137,20 @@ export function ConsistencyHeatmap({
               return cell.future ? (
                 <div
                   key={cell.key}
-                  title={`${format(cell.date, "EEE, MMM d")} · upcoming`}
+                  title={`${format(cell.date, "EEE, MMM d")}, upcoming`}
                   className={`aspect-square rounded-[3px] opacity-40 ${hide}`}
-                  style={{ backgroundColor: LEVELS[0], boxShadow: CELL_RING }}
+                  style={{ backgroundColor: LEVELS[0] }}
                 />
               ) : (
                 <div
                   key={cell.key}
-                  title={`${format(cell.date, "EEE, MMM d")} · ${
+                  title={`${format(cell.date, "EEE, MMM d")}: ${
                     cell.sets > 0 ? `${Math.round(cell.sets)} sets` : "rest"
                   }`}
                   className={`aspect-square rounded-[3px] ${
-                    cell.isToday && cell.sets === 0 ? "ring-1 ring-accent/60" : ""
+                    cell.isToday && cell.sets === 0 ? "ring-1 ring-text/50" : ""
                   } ${hide}`}
-                  style={{
-                    backgroundColor: LEVELS[level(cell.sets)],
-                    boxShadow: CELL_RING,
-                  }}
+                  style={{ backgroundColor: LEVELS[level(cell.sets)] }}
                 />
               );
             })}
@@ -161,23 +159,19 @@ export function ConsistencyHeatmap({
       </div>
 
       {/* Footer: training-day count + Less→More legend */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-7 text-[11px] text-muted">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 pl-7 text-[13px] text-muted">
         <span className="lg:hidden">
-          <span className="font-mono text-text">{trained6mo}</span> training
-          day{trained6mo === 1 ? "" : "s"} · last 6 months
+          <span className="tnum text-text">{trained6mo}</span> training day
+          {trained6mo === 1 ? "" : "s"} in the last 6 months
         </span>
         <span className="hidden lg:inline">
-          <span className="font-mono text-text">{trainedYear}</span> training
-          day{trainedYear === 1 ? "" : "s"} · last year
+          <span className="tnum text-text">{trainedYear}</span> training day
+          {trainedYear === 1 ? "" : "s"} in the last year
         </span>
-        <div className="flex items-center gap-1 text-[10px] text-muted">
+        <div className="flex items-center gap-1 text-[12px] text-muted">
           Less
           {LEVELS.map((bg, i) => (
-            <span
-              key={i}
-              className="size-3 rounded-[3px]"
-              style={{ backgroundColor: bg, boxShadow: CELL_RING }}
-            />
+            <span key={i} className="size-3 rounded-[3px]" style={{ backgroundColor: bg }} />
           ))}
           More
         </div>

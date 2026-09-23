@@ -1,81 +1,55 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { Card } from "@/components/ui/card";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import { toDisplayWeight, trimNum, type Unit } from "@/lib/units";
-import { cn } from "@/lib/utils";
 import type { Exercise1RM } from "@/lib/data/analytics";
 
 /**
- * Strength leaderboard: every logged exercise with its all-time best estimated
- * 1RM (Epley), ranked strongest first. Each row carries a faint accent bar
- * scaled to the top lift, and links into that exercise's Progress deep-dive.
+ * Every logged lift with its all-time best estimated 1RM (Epley), strongest
+ * first. A faint bar behind each row is scaled to the top lift, so the list
+ * reads as a comparison, not just a column of numbers. Rows open that lift's
+ * detail.
  */
-export function OneRepMaxBoard({
-  rows,
-  unit,
-}: {
-  rows: Exercise1RM[];
-  unit: Unit;
-}) {
+export function OneRepMaxBoard({ rows, unit }: { rows: Exercise1RM[]; unit: Unit }) {
   if (rows.length === 0) return null;
   const max = rows[0]?.bestEst1rm || 1;
 
   return (
-    <Card className="overflow-hidden">
-      <div className="border-b border-border/70 px-5 py-3.5">
-        <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-muted">
-          Estimated 1RM board
-        </h3>
-        <p className="mt-1 text-xs text-muted/80">
-          All-time best est. 1RM per exercise · Epley · tap to open
-        </p>
-      </div>
-      <ul className="divide-y divide-border">
-        {rows.map((r, i) => {
-          const pct = Math.max(5, Math.round((r.bestEst1rm / max) * 100));
-          return (
-            <li key={r.exerciseId}>
-              <Link
-                href={`/progress?tab=exercise&exercise=${r.exerciseId}`}
-                className="group relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-surface-2 active:bg-surface-2"
-              >
-                {/* strength bar, scaled to the strongest lift */}
-                <span
-                  aria-hidden
-                  className="absolute inset-y-0 left-0 bg-accent/[0.06] transition-colors group-hover:bg-accent/[0.09]"
-                  style={{ width: `${pct}%` }}
-                />
-                <span
-                  className={cn(
-                    "relative w-6 shrink-0 text-right font-impact text-sm leading-none tabular-nums",
-                    i === 0 ? "text-accent" : "text-muted/70",
-                  )}
-                >
-                  {i + 1}
+    <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+      {rows.map((r, i) => {
+        const pct = Math.max(4, Math.round((r.bestEst1rm / max) * 100));
+        return (
+          <li key={r.exerciseId}>
+            <Link
+              href={`/progress?tab=exercise&exercise=${r.exerciseId}`}
+              className="relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]"
+            >
+              <span
+                aria-hidden
+                className="absolute inset-y-0 left-0 bg-white/[0.035]"
+                style={{ width: `${pct}%` }}
+              />
+              <span className="tnum relative w-5 shrink-0 text-right text-[13px] text-muted/70">
+                {i + 1}
+              </span>
+              <span className="relative min-w-0 flex-1">
+                <span className="block truncate text-[15px] text-text">{r.name}</span>
+                <span className="tnum block truncate text-[13px] text-muted">
+                  {MUSCLE_LABEL[r.primaryMuscle]}, best {trimNum(toDisplayWeight(r.bestWeightKg, unit))}
+                  {unit} × {r.bestReps}
                 </span>
-                <div className="relative min-w-0 flex-1">
-                  <div className="truncate text-sm text-text">{r.name}</div>
-                  <div className="truncate font-mono text-xs text-muted">
-                    {MUSCLE_LABEL[r.primaryMuscle]} ·{" "}
-                    {trimNum(toDisplayWeight(r.bestWeightKg, unit))}
-                    {unit}×{r.bestReps}
-                  </div>
-                </div>
-                <div className="relative shrink-0 text-right">
-                  <div className="font-impact text-lg leading-none text-accent tabular-nums">
-                    {trimNum(toDisplayWeight(r.bestEst1rm, unit))}
-                  </div>
-                  <div className="font-mono text-[10px] uppercase tracking-wide text-muted">
-                    {unit} 1RM
-                  </div>
-                </div>
-                <ChevronRight className="relative size-4 shrink-0 text-muted/50 transition-colors group-hover:text-accent" />
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </Card>
+              </span>
+              <span className="relative shrink-0 text-right">
+                <span className="font-display block text-[19px] leading-none text-text">
+                  {trimNum(toDisplayWeight(r.bestEst1rm, unit))}
+                </span>
+                <span className="block text-[12px] text-muted">{unit}</span>
+              </span>
+              <ChevronRight className="relative size-4 shrink-0 text-muted/50" />
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

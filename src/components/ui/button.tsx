@@ -2,26 +2,27 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
+/* Primary is bone on black: the strongest contrast in the palette, and not
+   the accent, which is reserved for what is live. `accent` exists for the one
+   action on a screen that starts something (a workout, a set). */
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-[background,color,box-shadow,border-color,transform] duration-150 ease-out active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:pointer-events-none disabled:opacity-45 select-none",
+  "inline-flex items-center justify-center gap-2 rounded-xl font-medium whitespace-nowrap transition-[background-color,color,opacity] duration-150 ease-out active:opacity-75 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40 disabled:pointer-events-none disabled:opacity-40 select-none",
   {
     variants: {
       variant: {
-        primary:
-          "bg-accent text-bg hover:brightness-110 shadow-glow active:brightness-95",
-        secondary:
-          "bg-surface-2 text-text border border-border hover:border-accent/40 hover:text-accent",
+        primary: "bg-text text-bg hover:bg-white",
+        accent: "bg-accent text-black hover:brightness-110",
+        secondary: "bg-surface-2 text-text hover:bg-[#242428]",
         outline:
-          "border border-border bg-transparent text-text hover:bg-surface-2",
-        ghost: "text-muted hover:bg-surface-2 hover:text-text",
-        danger:
-          "bg-transparent text-danger border border-danger/30 hover:bg-danger/10",
+          "bg-transparent text-text shadow-[inset_0_0_0_1px_var(--color-border)] hover:bg-surface",
+        ghost: "text-muted hover:bg-surface hover:text-text",
+        danger: "bg-danger/10 text-danger hover:bg-danger/15",
       },
       size: {
-        sm: "h-8 px-3 text-sm",
+        sm: "h-8 px-3 text-[13px]",
         md: "h-10 px-4 text-sm",
-        lg: "h-12 px-5 text-base",
-        icon: "h-10 w-10",
+        lg: "h-12 px-5 text-[15px]",
+        icon: "size-10",
         xl: "h-14 px-6 text-base",
       },
     },

@@ -74,12 +74,12 @@ export function ExercisePicker({
                 <div className="truncate text-sm text-text">{e.name}</div>
                 <div className="truncate text-xs text-muted">
                   {MUSCLE_LABEL[e.primary_muscle]}
-                  {e.equipment ? ` · ${e.equipment}` : ""}
-                  {e.mechanic ? ` · ${e.mechanic}` : ""}
+                  {e.equipment ? `, ${e.equipment}` : ""}
+                  {e.mechanic ? `, ${e.mechanic}` : ""}
                 </div>
               </div>
               {e.user_id && (
-                <span className="shrink-0 text-xs text-accent">custom</span>
+                <span className="shrink-0 text-[13px] text-muted">Custom</span>
               )}
             </button>
           </li>

@@ -20,8 +20,8 @@ export function DangerZone({
       {activeProgram && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="text-sm font-medium text-text">Restart block</div>
-            <p className="text-xs text-muted">
+            <div className="text-[15px] font-medium text-text">Restart block</div>
+            <p className="mt-0.5 text-[13px] leading-5 text-muted">
               Reset “{activeProgram.name}” to week 1 (today). Logged sessions are
               kept.
             </p>
@@ -68,10 +68,10 @@ export function DangerZone({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="text-sm font-medium text-danger">Delete all history</div>
-          <p className="text-xs text-muted">
+          <div className="text-[15px] font-medium text-danger">Delete all history</div>
+          <p className="mt-0.5 text-[13px] leading-5 text-muted">
             Permanently wipe every logged session, exercise and set. Cannot be
             undone.
           </p>

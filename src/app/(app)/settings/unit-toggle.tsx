@@ -18,7 +18,7 @@ export function UnitToggle({ current }: { current: Unit }) {
   }
 
   return (
-    <div className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
+    <div className="inline-flex rounded-full bg-white/[0.06] p-0.5">
       {(["kg", "lb"] as const).map((u) => (
         <button
           key={u}
@@ -26,8 +26,8 @@ export function UnitToggle({ current }: { current: Unit }) {
           aria-pressed={unit === u}
           aria-label={u === "kg" ? "Kilograms" : "Pounds"}
           className={cn(
-            "min-w-16 rounded-md px-4 py-2 text-sm font-medium uppercase transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50",
-            unit === u ? "bg-accent text-bg" : "text-muted hover:text-text",
+            "h-8 min-w-14 rounded-full px-4 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/40",
+            unit === u ? "bg-white/[0.12] text-text" : "text-muted hover:text-text",
           )}
         >
           {u}

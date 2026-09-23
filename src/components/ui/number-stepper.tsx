@@ -45,7 +45,7 @@ export function NumberStepper({
   return (
     <div
       className={cn(
-        "flex h-12 items-stretch overflow-hidden rounded-lg border border-border bg-surface-2 shadow-inset",
+        "flex h-14 items-stretch overflow-hidden rounded-2xl bg-surface-2",
         className,
       )}
     >
@@ -53,7 +53,7 @@ export function NumberStepper({
         type="button"
         aria-label={`decrease ${ariaLabel ?? ""}`}
         onClick={() => bump(-1)}
-        className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface hover:text-accent active:bg-bg"
+        className="flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-white/[0.06]"
       >
         <Minus className="size-4" />
       </button>
@@ -61,6 +61,7 @@ export function NumberStepper({
         <input
           inputMode="decimal"
           type="number"
+          data-display
           aria-label={ariaLabel}
           value={value ?? ""}
           placeholder={placeholder}
@@ -71,10 +72,10 @@ export function NumberStepper({
             const n = Number(v);
             if (!Number.isNaN(n)) onChange(n);
           }}
-          className="h-full w-full min-w-0 bg-transparent text-center font-mono text-lg tabular-nums text-text focus:outline-none"
+          className="font-display h-full w-full min-w-0 bg-transparent text-center text-[22px] text-text focus:outline-none"
         />
         {suffix && (
-          <span className="pointer-events-none absolute right-2 text-xs text-muted">
+          <span className="pointer-events-none absolute right-2 text-[13px] text-muted">
             {suffix}
           </span>
         )}
@@ -83,7 +84,7 @@ export function NumberStepper({
         type="button"
         aria-label={`increase ${ariaLabel ?? ""}`}
         onClick={() => bump(1)}
-        className="flex w-11 shrink-0 items-center justify-center text-muted transition-colors hover:bg-surface hover:text-accent active:bg-bg"
+        className="flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-white/[0.06]"
       >
         <Plus className="size-4" />
       </button>

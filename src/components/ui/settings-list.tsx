@@ -27,14 +27,12 @@ export function SettingsGroup({
 }) {
   return (
     <section className={className}>
-      <h2 className="px-1 pb-2 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-muted">
-        {label}
-      </h2>
-      <div className="hb-panel-cut divide-y divide-border overflow-hidden border border-border bg-surface">
+      <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">{label}</h2>
+      <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
         {children}
       </div>
       {caption && (
-        <p className="px-1 pt-2 text-[12px] leading-5 text-muted">{caption}</p>
+        <p className="px-4 pt-2 text-[13px] leading-5 text-muted">{caption}</p>
       )}
     </section>
   );
@@ -72,13 +70,13 @@ export function SettingsRow({
           {label}
         </span>
         {hint && (
-          <span className="mt-0.5 block text-[12px] leading-5 text-muted">
+          <span className="mt-0.5 block text-[13px] leading-5 text-muted">
             {hint}
           </span>
         )}
       </span>
       {control && <span className="shrink-0">{control}</span>}
-      {href && <ChevronRight className="size-4 shrink-0 text-muted" />}
+      {href && <ChevronRight className="size-4 shrink-0 text-muted/70" />}
     </>
   );
 
@@ -86,7 +84,7 @@ export function SettingsRow({
     return (
       <Link
         href={href}
-        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-accent/[0.035]"
+        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
       >
         {head}
       </Link>
@@ -104,7 +102,7 @@ export function SettingsRow({
 /** A row whose content is a value read-out rather than a control. */
 export function SettingsValue({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-mono text-[13px] tabular-nums text-muted">
+    <span className="tnum text-[15px] text-muted">
       {children}
     </span>
   );

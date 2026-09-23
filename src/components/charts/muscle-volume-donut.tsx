@@ -8,7 +8,7 @@ import { ChartEmpty, TooltipBox } from "./chart-kit";
 type Row = { muscle: Muscle; volume: number };
 type Slice = { label: string; volume: number; other?: boolean };
 
-/** Where your tonnage goes: volume share across muscles, as an accent-ramp donut. */
+/** Where your tonnage goes: volume share across muscles, as a bone-ramp donut. */
 export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   const ranked = data
     .filter((d) => d.volume > 0)
@@ -29,7 +29,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   const color = (i: number, other?: boolean) => {
     if (other) return "var(--color-surface-2)";
     const alpha = Math.max(0.28, 1 - (i / Math.max(1, slices.length)) * 0.8);
-    return `rgb(var(--accent-rgb) / ${alpha.toFixed(2)})`;
+    return `rgb(244 242 238 / ${alpha.toFixed(2)})`;
   };
 
   return (
@@ -57,7 +57,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
               content={({ active, payload }) =>
                 active && payload?.length ? (
                   <TooltipBox label={(payload[0].payload as Slice).label}>
-                    {formatVolume(Number(payload[0].value), unit)} ·{" "}
+                    {formatVolume(Number(payload[0].value), unit)},{" "}
                     {Math.round((Number(payload[0].value) / total) * 100)}%
                   </TooltipBox>
                 ) : null
@@ -66,10 +66,10 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
           </PieChart>
         </ResponsiveContainer>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-muted">
+          <span className="text-[12px] font-medium text-muted">
             Total
           </span>
-          <span className="font-impact text-xl leading-none text-text">
+          <span className="font-display text-xl leading-none text-text">
             {formatVolume(total, unit)}
           </span>
         </div>
@@ -83,7 +83,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
               style={{ backgroundColor: color(i, s.other) }}
             />
             <span className="min-w-0 flex-1 truncate text-muted">{s.label}</span>
-            <span className="shrink-0 font-mono tabular-nums text-text">
+            <span className="shrink-0 tnum tabular-nums text-text">
               {Math.round((s.volume / total) * 100)}%
             </span>
           </li>

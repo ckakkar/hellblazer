@@ -19,57 +19,52 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
     start(async () => void (await discardSession({ id: session.id })));
 
   return (
-    <div className="mb-5 flex items-center gap-3 rounded-lg border border-accent/40 bg-accent/[0.07] px-4 py-3">
-      <span className="relative flex size-2.5 shrink-0">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
-        <span className="relative inline-flex size-2.5 rounded-full bg-accent" />
-      </span>
+    <div className="mb-6 flex items-center gap-3 rounded-2xl bg-surface py-3 pl-4 pr-2">
+      <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden />
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-accent">
-          Battle in progress
-        </div>
-        <div className="truncate text-sm text-text">
+        <div className="truncate text-[15px] font-medium text-text">
           {session.title ?? "Workout"}
-          <span className="ml-1 font-mono text-xs text-muted">
-            · {session.workingSets} sets logged
-          </span>
+        </div>
+        <div className="tnum text-[13px] text-muted">
+          In progress, {session.workingSets} {session.workingSets === 1 ? "set" : "sets"} logged
         </div>
       </div>
-      <Link
-        href={`/log/${session.id}`}
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-3 py-2 text-sm font-semibold text-bg shadow-glow transition-transform active:scale-95"
-      >
-        <Play className="size-4" />
-        Resume
-      </Link>
       {confirming ? (
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={discard}
             disabled={pending}
-            className="inline-flex items-center gap-1 rounded-md bg-danger/15 px-2 py-1 text-xs font-medium text-danger transition-colors hover:bg-danger/25"
+            className="inline-flex h-9 items-center gap-1 rounded-xl bg-danger/10 px-3 text-[14px] font-medium text-danger"
           >
-            {pending ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : null}
+            {pending ? <Loader2 className="size-3.5 animate-spin" /> : null}
             Discard
           </button>
           <button
             onClick={() => setConfirming(false)}
             aria-label="Keep workout"
-            className="text-muted transition-colors hover:text-text"
+            className="flex size-9 items-center justify-center rounded-full text-muted hover:text-text"
           >
             <X className="size-4" />
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setConfirming(true)}
-          aria-label="Discard workout"
-          className="shrink-0 text-muted transition-colors hover:text-danger"
-        >
-          <X className="size-4" />
-        </button>
+        <>
+          <Link
+            href={`/log/${session.id}`}
+            transitionTypes={["nav-forward"]}
+            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-[14px] font-semibold text-black active:opacity-80"
+          >
+            <Play className="size-3.5" />
+            Resume
+          </Link>
+          <button
+            onClick={() => setConfirming(true)}
+            aria-label="Discard workout"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:text-danger"
+          >
+            <X className="size-4" />
+          </button>
+        </>
       )}
     </div>
   );

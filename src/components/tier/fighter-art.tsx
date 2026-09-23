@@ -13,9 +13,16 @@ type FighterArtProps = {
   priority?: boolean;
   /** Decorative by default: the surrounding copy names the role of the art. */
   alt?: string;
+  /** "corner" fades the left and bottom edges (art beside text); "bottom"
+   *  fades only the bottom (full-bleed art with text below it). */
+  fade?: "corner" | "bottom";
 };
 
-/** Canon-based Kengan portrait, finished in Hell Blazer's fight-poster style. */
+/**
+ * Canon-based Kengan portrait. Non-thumbnail variants fade into whatever they
+ * sit on: set `--hb-fade` on an ancestor to that surface's colour (it
+ * defaults to the page black).
+ */
 export function FighterArt({
   fighterKey = "ohma",
   variant = "card",
@@ -23,6 +30,7 @@ export function FighterArt({
   imageClassName,
   priority = false,
   alt = "",
+  fade = "corner",
 }: FighterArtProps) {
   const art = FIGHTER_ART[fighterKey];
   const sizes =
@@ -38,9 +46,6 @@ export function FighterArt({
       data-variant={variant}
       aria-hidden={alt ? undefined : true}
     >
-      {variant !== "thumbnail" && (
-        <div className="hb-fighter-aura absolute inset-[12%_5%_4%_18%] -z-10" />
-      )}
       {variant === "thumbnail" ? (
         <Image
           src={art.src}
@@ -66,13 +71,21 @@ export function FighterArt({
           placeholder="blur"
           sizes={sizes}
           className={cn(
-            "absolute inset-0 h-full w-full object-cover object-center contrast-[1.05] drop-shadow-[0_28px_42px_rgba(0,0,0,0.8)]",
+            "absolute inset-0 h-full w-full object-cover object-center contrast-[1.05]",
             imageClassName,
           )}
         />
       )}
       {variant !== "thumbnail" && (
-        <div className="hb-portrait-fade absolute inset-0" />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              fade === "bottom"
+                ? "linear-gradient(to top, var(--hb-fade, var(--color-bg)) 0%, transparent 55%)"
+                : "linear-gradient(to right, var(--hb-fade, var(--color-bg)) 0%, transparent 42%), linear-gradient(to top, var(--hb-fade, var(--color-bg)) 0%, transparent 34%)",
+          }}
+        />
       )}
     </figure>
   );

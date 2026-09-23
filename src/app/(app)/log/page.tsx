@@ -81,21 +81,15 @@ export default async function LogPage() {
     activeProgress.currentWeek &&
     !activeProgress.isCompleted &&
     !activeProgress.isPaused
-      ? `Counts toward Week ${activeProgress.currentWeek}`
+      ? `Counts toward week ${activeProgress.currentWeek}`
       : null;
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader
-        title="Start a workout"
-        subtitle="Choose the card, inspect the work, then step into the session with every target ready."
-        eyebrow="Enter the arena"
-        index="02"
-        stat={{ value: options.length, label: "ready cards" }}
-      />
+      <PageHeader title="Log" subtitle="Start your next programmed day, or pick any other." />
 
       {activeProgress && hasProgramNext && (
-        <div className="mb-6">
+        <div className="mb-10">
           <ProgramProgressCard
             progress={activeProgress}
             href={`/programs/${activeProgress.program.id}`}

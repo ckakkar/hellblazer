@@ -1,82 +1,52 @@
-"use client";
-
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import {
   CHART_HIDDEN_MUSCLES,
   MUSCLE_LABEL,
   isWeakPoint,
   type Muscle,
 } from "@/lib/muscles";
-import { AXIS_TICK, ChartEmpty, TooltipBox } from "./chart-kit";
+import { cn } from "@/lib/utils";
+import { ChartEmpty } from "./chart-kit";
 
 type Row = { muscle: Muscle; sets: number };
-type Datum = { label: string; sets: number; weak: boolean };
 
+/**
+ * Sets per muscle as horizontal bars on one scale. Reads on a phone without
+ * rotated axis labels, shows every value outright, and needs no chart
+ * library. Weak points are drawn in bone; the rest recede.
+ */
 export function WeeklySetsChart({ data }: { data: Row[] }) {
-  const chartData: Datum[] = data
+  const rows = data
     .filter((d) => !CHART_HIDDEN_MUSCLES.has(d.muscle))
     .map((d) => ({
+      muscle: d.muscle,
       label: MUSCLE_LABEL[d.muscle],
       sets: Math.round(d.sets * 10) / 10,
       weak: isWeakPoint(d.muscle),
     }));
 
-  const total = chartData.reduce((s, d) => s + d.sets, 0);
-  if (total === 0) {
-    return <ChartEmpty message="No sets logged this week yet. Start a session to populate this." />;
+  const max = Math.max(0, ...rows.map((r) => r.sets));
+  if (max === 0) {
+    return <ChartEmpty message="No sets logged this week yet. Start a session to fill this in." />;
   }
 
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={chartData} margin={{ top: 8, right: 8, bottom: 4, left: -20 }}>
-        <XAxis
-          dataKey="label"
-          tick={{ ...AXIS_TICK, fontSize: 10 }}
-          interval={0}
-          angle={-42}
-          textAnchor="end"
-          height={62}
-          tickLine={false}
-          axisLine={{ stroke: "var(--color-border)" }}
-        />
-        <YAxis
-          tick={AXIS_TICK}
-          tickLine={false}
-          axisLine={false}
-          allowDecimals={false}
-          width={40}
-        />
-        <Tooltip
-          cursor={{ fill: "rgba(255,255,255,0.03)" }}
-          content={({ active, payload, label }) =>
-            active && payload?.length ? (
-              <TooltipBox label={label}>
-                {payload[0].value} sets
-                {(payload[0].payload as Datum).weak ? (
-                  <span className="ml-1 text-accent">· weak point</span>
-                ) : null}
-              </TooltipBox>
-            ) : null
-          }
-        />
-        <Bar dataKey="sets" radius={[3, 3, 0, 0]} maxBarSize={36}>
-          {chartData.map((d, i) => (
-            <Cell
-              key={i}
-              fill={d.weak ? "var(--color-accent)" : "var(--color-surface-2)"}
-              stroke={d.weak ? "transparent" : "var(--color-border)"}
+    <ul className="space-y-2.5 px-3 pb-3 pt-1">
+      {rows.map((r) => (
+        <li key={r.muscle} className="grid grid-cols-[5.5rem_1fr_2.25rem] items-center gap-3">
+          <span className={cn("truncate text-[13px]", r.weak ? "text-text" : "text-muted")}>
+            {r.label}
+          </span>
+          <span className="h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
+            <span
+              className={cn("block h-full rounded-full", r.weak ? "bg-text/85" : "bg-white/25")}
+              style={{ width: `${r.sets > 0 ? Math.max(3, (r.sets / max) * 100) : 0}%` }}
             />
-          ))}
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+          </span>
+          <span className={cn("tnum text-right text-[13px]", r.weak ? "text-text" : "text-muted")}>
+            {r.sets}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

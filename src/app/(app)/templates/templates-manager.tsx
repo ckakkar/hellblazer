@@ -7,15 +7,12 @@ import {
   ClipboardList,
   Eraser,
   GripVertical,
-  Loader2,
   Plus,
-  Sparkles,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
@@ -23,12 +20,12 @@ import { MUSCLE_LABEL } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
 import type { TemplateWithExercises } from "@/lib/data/templates";
 import type { Preset } from "@/lib/presets";
+import { PresetCarousel } from "@/components/program/preset-carousel";
 import {
   addTemplateExercise,
   cleanupTemplates,
   createTemplate,
   deleteTemplate,
-  loadPreset,
   moveTemplateExercise,
   removeTemplateExercise,
   updateTemplateExercise,
@@ -51,7 +48,6 @@ export function TemplatesManager({
   const [pending, start] = useTransition();
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [showOthers, setShowOthers] = useState(false);
 
   // "Your split" = the active program's days, in order. Everything else is
@@ -77,13 +73,7 @@ export function TemplatesManager({
     <div>
       <PageHeader
         title="Templates"
-        subtitle="Build the blueprints behind your split: movements, order, working sets, and rep targets."
-        eyebrow="Day blueprints"
-        index="04"
-        stat={{
-          value: templates.length,
-          label: templates.length === 1 ? "template" : "templates",
-        }}
+        subtitle="The days that make up your split: exercises, order, sets and reps."
         action={
           <Button onClick={() => setCreating((v) => !v)}>
             <Plus className="size-4" />
@@ -114,73 +104,24 @@ export function TemplatesManager({
         </Card>
       )}
 
-      {/* Starter routines */}
-      {presets.length > 0 && (
-        <Card className="mb-8 overflow-hidden border-accent/20 bg-accent/[0.025]">
-          <div className="flex items-center gap-3 border-b border-border px-5 py-4">
-            <Sparkles className="size-4 text-accent" />
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">Ready-made corners</div>
-              <p className="mt-1 text-xs text-muted">Load a complete split, then tailor every day to your own fight.</p>
-            </div>
-          </div>
-          <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
-            {presets.map((p, presetIndex) => (
-              <div
-                key={p.id}
-                className="relative flex min-h-44 flex-col bg-surface p-5"
-              >
-                <span aria-hidden className="absolute right-3 top-1 font-impact text-6xl text-text/[0.035]">{String(presetIndex + 1).padStart(2, "0")}</span>
-                <div className="min-w-0">
-                  <div className="max-w-[80%] font-display text-lg uppercase leading-tight tracking-wide text-text">
-                    {p.name}
-                  </div>
-                  <p className="mt-0.5 text-xs leading-5 text-muted">
-                    {p.description}
-                  </p>
-                  <div className="mt-1 text-xs text-muted">
-                    {p.days.length} days ·{" "}
-                    {p.days.reduce((n, d) => n + d.exercises.length, 0)} exercises
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  className="mt-auto w-full"
-                  disabled={pending}
-                  onClick={() => {
-                    setLoadingId(p.id);
-                    start(async () => {
-                      try {
-                        await loadPreset({ presetId: p.id });
-                      } finally {
-                        setLoadingId(null);
-                      }
-                    });
-                  }}
-                >
-                  {loadingId === p.id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  {loadingId === p.id ? "Loading…" : "Load split"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-
       {templates.length === 0 ? (
         <EmptyState
           icon={<ClipboardList className="size-6" />}
           title="No templates yet"
-          body="Load a starter split above, or create a template from scratch."
+          body="Use a starter program below, or create a template from scratch."
         />
       ) : currentSplit.length > 0 ? (
         <>
-          <SectionLabel>{activeProgramName ? `Your split · ${activeProgramName}` : "Your split"}</SectionLabel>
-          <div className="grid gap-4">
+          <SectionLabel
+            action={
+              activeProgramName ? (
+                <span className="truncate text-[13px] text-muted">{activeProgramName}</span>
+              ) : undefined
+            }
+          >
+            Your split
+          </SectionLabel>
+          <div className="grid gap-3">
             {currentSplit.map((t) => (
               <TemplateCard
                 key={t.id}
@@ -197,19 +138,19 @@ export function TemplatesManager({
               <div className="flex items-center justify-between gap-2 px-1">
                 <button
                   onClick={() => setShowOthers((v) => !v)}
-                  className="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-muted transition-colors hover:text-text"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-text"
                 >
                   {showOthers ? (
                     <ChevronUp className="size-4" />
                   ) : (
                     <ChevronDown className="size-4" />
                   )}
-                  Other templates · {otherTemplates.length}
+                  Other templates ({otherTemplates.length})
                 </button>
                 <CleanupButton pending={pending} start={start} />
               </div>
               {showOthers && (
-                <div className="mt-3 grid gap-4">
+                <div className="mt-3 grid gap-3">
                   {otherTemplates.map((t) => (
                     <TemplateCard
                       key={t.id}
@@ -227,12 +168,10 @@ export function TemplatesManager({
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between gap-2 px-1">
-            <span className="text-xs font-medium uppercase tracking-wide text-muted">
-              All templates
-            </span>
+            <span className="text-[13px] font-medium text-muted">All templates</span>
             <CleanupButton pending={pending} start={start} />
           </div>
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             {otherTemplates.map((t) => (
               <TemplateCard
                 key={t.id}
@@ -245,6 +184,10 @@ export function TemplatesManager({
           </div>
         </>
       )}
+
+      <div className="mt-10">
+        <PresetCarousel presets={presets} />
+      </div>
     </div>
   );
 }
@@ -265,7 +208,7 @@ function CleanupButton({
         })
       }
       title="Delete leftover templates you've never trained and aren't in a program"
-      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-accent disabled:opacity-45"
+      className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-[13px] text-muted transition-colors hover:text-text disabled:opacity-45"
     >
       <Eraser className="size-3.5" />
       Clean up
@@ -298,14 +241,12 @@ function TemplateCard({
         >
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
+              <span className="truncate text-[15px] font-medium text-text">
                 {template.name}
               </span>
-              {template.day_label && (
-                <Badge variant="muted">{template.day_label}</Badge>
-              )}
             </div>
-            <div className="mt-0.5 text-xs text-muted">
+            <div className="mt-0.5 truncate text-[13px] text-muted">
+              {template.day_label ? `${template.day_label}, ` : ""}
               {rows.length} exercise{rows.length === 1 ? "" : "s"}
             </div>
           </div>
@@ -351,7 +292,7 @@ function TemplateCard({
                     {row.exercise
                       ? MUSCLE_LABEL[row.exercise.primary_muscle]
                       : ""}
-                    {row.note ? ` · ${row.note}` : ""}
+                    {row.note ? `, ${row.note}` : ""}
                   </div>
                 </div>
 
@@ -371,7 +312,7 @@ function TemplateCard({
                         });
                       });
                   }}
-                  className="h-9 w-12 rounded-md border border-border bg-surface-2 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
+                  className="h-9 w-12 rounded-lg bg-surface-2 text-center tnum text-sm text-text focus:outline-none focus:ring-2 focus:ring-text/25"
                 />
                 <span className="text-xs text-muted">×</span>
                 <input
@@ -389,7 +330,7 @@ function TemplateCard({
                         });
                       });
                   }}
-                  className="h-9 w-16 rounded-md border border-border bg-surface-2 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
+                  className="h-9 w-16 rounded-lg bg-surface-2 text-center tnum text-sm text-text focus:outline-none focus:ring-2 focus:ring-text/25"
                 />
 
                 <div className="flex shrink-0 flex-col">

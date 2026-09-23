@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, ViewTransition } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { CalendarDays, Search } from "lucide-react";
@@ -53,23 +53,30 @@ export function HistoryList({
     );
   }
 
+  // Month sections: a long record reads by month, the way you remember it.
+  const months: { key: string; label: string; rows: SessionSummary[] }[] = [];
+  for (const s of filtered) {
+    const d = s.session_date ? parseISO(s.session_date) : null;
+    const key = d ? format(d, "yyyy-MM") : "undated";
+    const label = d ? format(d, "MMMM yyyy") : "No date";
+    const last = months[months.length - 1];
+    if (last?.key === key) last.rows.push(s);
+    else months.push({ key, label, rows: [s] });
+  }
+
   return (
     <div>
-      <div className="mb-6 flex flex-col gap-3 border-y border-border bg-surface/45 p-3 sm:flex-row">
+      <div className="mb-8 flex flex-col gap-2 sm:flex-row">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted" />
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by title or date…"
-            className="pl-9"
+            placeholder="Search by title or date"
+            className="pl-10"
           />
         </div>
-        <Select
-          value={templateId}
-          onChange={(e) => setTemplateId(e.target.value)}
-          className="sm:w-56"
-        >
+        <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="sm:w-56">
           <option value="all">All templates</option>
           <option value="freeform">Freeform only</option>
           {templates.map((t) => (
@@ -80,51 +87,46 @@ export function HistoryList({
         </Select>
       </div>
 
-      {/* The full record. A history screen is a table you read down, with the
-          previous card-per-session layout made every row the same weight and
-          buried the numbers you actually scan for. */}
-      <div className="border-t-2 border-text/75">
-        <div className="hidden grid-cols-[3rem_4rem_1fr_5rem_6rem_3rem] gap-3 border-b border-border py-2 font-mono text-[9px] uppercase tracking-[0.16em] text-muted/55 md:grid">
-          <span>No.</span><span>Date</span><span>Bout</span><span className="text-right">Sets</span><span className="text-right">Volume</span><span className="text-right">Time</span>
-        </div>
-        {filtered.map((s, index) => (
-          <Link
-            key={s.session_id}
-            href={
-              s.finished_at
-                ? `/history/${s.session_id}`
-                : `/log/${s.session_id}`
-            }
-            className="group flex items-baseline gap-3 border-b border-border py-3.5 transition-colors hover:bg-surface/60 md:grid md:grid-cols-[3rem_4rem_1fr_5rem_6rem_3rem]"
-          >
-            <span className="hidden font-impact text-lg tabular-nums text-muted/35 md:inline">{String(filtered.length - index).padStart(2, "0")}</span>
-            <span className="w-14 shrink-0 font-mono text-[11px] uppercase tabular-nums text-muted">
-              {s.session_date
-                ? format(parseISO(s.session_date), "dd MMM")
-                : "--"}
-            </span>
-            <span className="flex min-w-0 flex-1 items-baseline gap-2">
-              <span className="truncate font-display text-[15px] uppercase tracking-wide text-text transition-colors group-hover:text-accent">
-                {s.title ?? "Session"}
-              </span>
-              {!s.finished_at && <Badge variant="accent">Live</Badge>}
-              {!s.template_id && <Badge variant="muted">freeform</Badge>}
-            </span>
-            <span className="shrink-0 text-right font-mono text-[11px] tabular-nums text-muted">
-              {s.working_sets ?? 0} sets
-            </span>
-            <span className="hidden w-20 shrink-0 text-right font-mono text-[11px] tabular-nums text-text sm:inline">
-              {formatVolume(Number(s.total_volume ?? 0), unit)}
-            </span>
-            <span className="hidden w-12 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted md:inline">
-              {s.duration_min ? `${s.duration_min}m` : "Not timed"}
-            </span>
-          </Link>
+      <div className="space-y-8">
+        {months.map((m) => (
+          <section key={m.key}>
+            <h2 className="mb-2 px-4 text-[13px] font-medium text-muted">{m.label}</h2>
+            <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+              {m.rows.map((s) => (
+                <Link
+                  key={s.session_id}
+                  href={s.finished_at ? `/history/${s.session_id}` : `/log/${s.session_id}`}
+                  transitionTypes={["nav-forward"]}
+                  className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <ViewTransition name={`session-${s.session_id}`} share="hb-morph" default="none">
+                        <span className="truncate text-[15px] font-medium text-text">
+                          {s.title ?? "Session"}
+                        </span>
+                      </ViewTransition>
+                      {!s.finished_at && <Badge variant="accent">Live</Badge>}
+                    </div>
+                    <p className="tnum mt-0.5 text-[13px] text-muted">
+                      {s.session_date ? format(parseISO(s.session_date), "EEE d") : "No date"}
+                      {s.duration_min ? `, ${s.duration_min} min` : ""}
+                      {!s.template_id ? ", freeform" : ""}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="tnum text-[15px] text-text">
+                      {formatVolume(Number(s.total_volume ?? 0), unit)}
+                    </p>
+                    <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
         ))}
         {filtered.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">
-            No sessions match your filters.
-          </p>
+          <p className="py-8 text-center text-[15px] text-muted">No sessions match your filters.</p>
         )}
       </div>
     </div>

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, Dumbbell, Loader2, Play, Zap } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ChevronDown, Loader2, Play, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
 import { todayLocalISO } from "@/lib/local-date";
@@ -53,139 +52,104 @@ export function SessionStarter({
     });
   }
 
-  return (
-    <div className="grid gap-4">
-      <button
-        disabled={pending}
-        onClick={() => begin(null)}
-        className={cn(
-          "hb-panel-cut group relative flex min-h-36 items-end gap-4 overflow-hidden border border-border bg-surface p-5 text-left transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]",
-          pending && chosen === "freeform" && "border-accent/60",
+  const freeform = (
+    <button
+      disabled={pending}
+      onClick={() => begin(null)}
+      className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-4 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05] disabled:opacity-60"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted">
+        {pending && chosen === "freeform" ? (
+          <Loader2 className="size-[18px] animate-spin" />
+        ) : (
+          <Zap className="size-[18px]" />
         )}
-      >
-        <span aria-hidden className="absolute -right-2 -top-8 font-impact text-[8rem] leading-none text-text/[0.025]">00</span>
-        <div className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-border bg-surface-2 text-muted">
-          {pending && chosen === "freeform" ? (
-            <Loader2 className="size-5 animate-spin" />
-          ) : (
-            <Zap className="size-5" />
-          )}
-        </div>
-        <div>
-          <div className="font-display text-[15px] uppercase tracking-wide text-text">
-            Freeform battle
-          </div>
-          <div className="text-xs text-muted">
-            Start empty and add exercises as you go
-            {hasActiveProgram && (
-              <>
-                {" · "}
-                <span className="text-muted/70">won&apos;t touch your block</span>
-              </>
-            )}
-          </div>
-        </div>
-      </button>
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium text-text">Start empty</span>
+        <span className="mt-0.5 block text-[13px] text-muted">
+          Add exercises as you go
+          {hasActiveProgram ? ". Doesn't count toward your program." : "."}
+        </span>
+      </span>
+    </button>
+  );
 
+  return (
+    <div className="space-y-8">
       {templates.length > 0 && (
-        <div>
-          <div className="mb-2 mt-2 px-1 font-mono text-[10px] uppercase tracking-[0.2em] text-muted">
-            {hasActiveProgram ? "From your block" : "From a template"}
+        <section>
+          <div className="mb-3 flex items-baseline justify-between gap-3 px-1">
+            <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-text">
+              {hasActiveProgram ? "Your program" : "Templates"}
+            </h2>
+            {countsLabel && <span className="text-[13px] text-muted">{countsLabel}</span>}
           </div>
-          <div className="grid gap-3">
+          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
             {templates.map((t) => {
               const expanded = openId === t.id;
               const starting = pending && chosen === t.id;
               return (
-                <div
-                  key={t.id}
-                  className={cn(
-                    "hb-panel-cut overflow-hidden border bg-surface transition-colors",
-                    expanded ? "border-accent/40" : "border-border",
-                  )}
-                >
-                  {/* Header. Tap to preview, not to start */}
+                <div key={t.id}>
+                  {/* Tap to preview, not to start. */}
                   <button
                     onClick={() => setOpenId(expanded ? null : t.id)}
                     aria-expanded={expanded}
-                    className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-surface-2/40"
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03]"
                   >
-                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-2 text-muted">
-                      <Dumbbell className="size-4" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
-                          {t.name}
-                        </span>
-                        {t.day_label && (
-                          <Badge variant="muted">{t.day_label}</Badge>
-                        )}
-                      </div>
-                      <div className="mt-0.5 text-xs text-muted">
-                        {t.count} exercise{t.count === 1 ? "" : "s"} ·{" "}
-                        {expanded ? "tap to collapse" : "tap to preview"}
-                      </div>
-                      {t.programDayId && countsLabel && (
-                        <div className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-accent/80">
-                          {countsLabel}
-                        </div>
-                      )}
-                    </div>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium text-text">
+                        {t.day_label || t.name}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[13px] text-muted">
+                        {t.day_label ? `${t.name}, ` : ""}
+                        {t.count} {t.count === 1 ? "exercise" : "exercises"}
+                      </span>
+                    </span>
                     <ChevronDown
                       className={cn(
-                        "size-5 shrink-0 text-muted transition-transform duration-200",
-                        expanded && "rotate-180 text-accent",
+                        "size-[18px] shrink-0 text-muted transition-transform duration-200",
+                        expanded && "rotate-180",
                       )}
                     />
                   </button>
 
-                  {/* Preview: upcoming movements without starting */}
                   {expanded && (
-                    <div className="border-t border-border p-3">
+                    <div className="px-4 pb-4">
                       {t.exercises.length > 0 ? (
-                        <ul className="grid gap-1.5">
+                        <ol className="divide-y divide-white/[0.05] rounded-xl bg-surface-2/60">
                           {t.exercises.map((ex, i) => (
-                            <li
-                              key={i}
-                              className="flex items-center gap-3 rounded-md bg-surface-2/40 px-3 py-2"
-                            >
-                              <span className="w-4 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted/60">
+                            <li key={i} className="flex items-center gap-3 px-3.5 py-2.5">
+                              <span className="tnum w-4 shrink-0 text-right text-[13px] text-muted/70">
                                 {i + 1}
                               </span>
-                              <span className="min-w-0 flex-1 truncate text-sm text-text">
+                              <span className="min-w-0 flex-1 truncate text-[14px] text-text">
                                 {ex.name}
                               </span>
                               {ex.muscle && (
-                                <Badge
-                                  variant="muted"
-                                  className="hidden sm:inline-flex"
-                                >
+                                <span className="hidden text-[13px] text-muted sm:inline">
                                   {MUSCLE_LABEL[ex.muscle]}
-                                </Badge>
+                                </span>
                               )}
-                              <span className="shrink-0 font-mono text-xs text-muted">
+                              <span className="tnum shrink-0 text-[13px] text-muted">
                                 {ex.targetSets ?? 3} × {ex.targetRepRange || "-"}
                               </span>
                             </li>
                           ))}
-                        </ul>
+                        </ol>
                       ) : (
-                        <p className="px-1 py-3 text-center text-sm text-muted">
+                        <p className="py-3 text-center text-[14px] text-muted">
                           No exercises in this template yet.
                         </p>
                       )}
                       <Button
+                        variant="accent"
                         size="lg"
                         className="mt-3 w-full"
                         disabled={pending}
                         onClick={() => begin(t.id, t.programDayId)}
                       >
-                        {starting ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <Play className="size-4" />
-                        )}
+                        {starting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
                         Start workout
                       </Button>
                     </div>
@@ -194,8 +158,15 @@ export function SessionStarter({
               );
             })}
           </div>
-        </div>
+        </section>
       )}
+
+      <section>
+        <h2 className="mb-3 px-1 text-[19px] font-semibold tracking-[-0.02em] text-text">
+          {templates.length > 0 ? "Or" : "Freeform"}
+        </h2>
+        {freeform}
+      </section>
     </div>
   );
 }

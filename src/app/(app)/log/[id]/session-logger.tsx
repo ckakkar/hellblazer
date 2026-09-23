@@ -14,7 +14,6 @@ import { unstable_rethrow } from "next/navigation";
 import {
   ArrowRight,
   Check,
-  ChevronsUp,
   CloudOff,
   Flame,
   Loader2,
@@ -112,7 +111,9 @@ function useOnline(): boolean {
   );
 }
 
-/** Elapsed milliseconds → clock string (H:MM:SS past an hour, else M:SS). */
+/** Elapsed milliseconds → clock string: M:SS, then "1h 05m" past an hour
+ *  (seconds stop mattering, and H:MM:SS won't fit the readout on a small
+ *  phone). */
 function formatElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(total / 3600);
@@ -120,7 +121,7 @@ function formatElapsed(ms: number): string {
   const s = total % 60;
   const mm = String(m).padStart(2, "0");
   const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}:${mm}:${ss}` : `${m}:${ss}`;
+  return h > 0 ? `${h}h ${mm}m` : `${m}:${ss}`;
 }
 
 export function SessionLogger({
@@ -567,8 +568,8 @@ export function SessionLogger({
       setPrSets((prev) => new Set(prev).add(set.id));
       const detail =
         kind === "weight"
-          ? `New heaviest · ${trimNum(wDisp)}${unit} × ${reps}`
-          : `New est. 1RM · ${Math.round(toDisplayWeight(e1rm, unit))}${unit}`;
+          ? `New heaviest: ${trimNum(wDisp)}${unit} × ${reps}`
+          : `New best estimated 1RM: ${Math.round(toDisplayWeight(e1rm, unit))}${unit}`;
       setRemoval({ name, detail });
       if (removalTimer.current) clearTimeout(removalTimer.current);
       removalTimer.current = setTimeout(() => setRemoval(null), 2600);
@@ -841,30 +842,17 @@ export function SessionLogger({
   );
 
   const currentIndex = exercises.findIndex((e) => !completed.has(e.seId));
-  const allDone = exercises.length > 0 && currentIndex === -1;
   const active = exercises.find((e) => e.seId === activeSeId) ?? null;
   const doneCount = exercises.filter((e) => completed.has(e.seId)).length;
 
   return (
     <div className="mx-auto max-w-3xl">
-      {/* Session header */}
-      <div className="hb-ink-noise relative mb-6 overflow-hidden border-y-2 border-text/80 bg-surface/45 p-4 sm:p-5">
-        <div className="mb-4 flex items-center justify-between gap-3 font-mono text-[9px] uppercase tracking-[0.22em] text-accent">
-          <span className="flex items-center gap-2"><span className="size-1.5 animate-pulse rounded-full bg-accent" />Live session</span>
-          <span className="text-muted/60">in the corner</span>
-        </div>
-        <input
-          defaultValue={session.title ?? "Session"}
-          aria-label="Session title"
-          onBlur={(e) =>
-            updateSessionMeta({
-              sessionId: session.id,
-              title: e.target.value.trim() || null,
-            }).catch(() => showNotice("Couldn't save the session title."))
-          }
-          className="w-full bg-transparent font-impact text-4xl uppercase leading-[0.82] tracking-tight text-text focus:outline-none sm:text-5xl"
-        />
-        <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-muted">
+      <header className="mb-8">
+        <div className="flex items-center justify-between gap-3">
+          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent">
+            <span className="size-1.5 rounded-full bg-accent" />
+            Live
+          </span>
           <input
             type="date"
             defaultValue={session.date}
@@ -876,79 +864,64 @@ export function SessionLogger({
                 date: e.target.value,
               }).catch(() => showNotice("Couldn't save the session date."))
             }
-            className="rounded-md border border-border bg-surface-2 px-2 py-1 font-mono text-xs text-text focus:border-accent/60 focus:outline-none"
+            className="tnum rounded-lg bg-transparent px-1 py-0.5 text-right text-[13px] text-muted [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-text/25"
           />
-          {exercises.length > 0 && (
-            <span className="font-mono text-xs text-muted">
-              {doneCount}/{exercises.length} done
-            </span>
-          )}
         </div>
-
-        {/* Live readout. Three figures side by side under one rule rather than
-            two bordered boxes: mid-set this gets glanced at, not read, so the
-            numbers sit on a shared baseline where the eye can take all three at
-            once. The clock is the only accent because it is the thing moving. */}
-        <div className="mt-4">
-          <div className="h-0.5 bg-text/85" />
-          <div className="mt-px h-px bg-border" />
-          <div className="flex items-end justify-between gap-3 py-3">
-            <div className="min-w-0">
-              <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-                Force
-              </div>
-              <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
-                {/* Animates only when it changes, which on this screen means a
-                    set just landed. The move is the information, not the
-                    arrival. */}
-                <CountUp
-                  to={Math.round(totalForce)}
-                  animateOnMount={false}
-                  duration={0.7}
-                  separator=","
-                />
-                <span className="ml-1 font-mono text-[11px] lowercase text-muted">
-                  {unit}
-                </span>
-              </div>
-            </div>
-            <div className="min-w-0 text-right">
-              <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-                Sets
-              </div>
-              <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-text">
-                <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
-              </div>
-            </div>
-            <div
-              className="min-w-0 text-right"
-              title="Workout time"
-              aria-label={`Elapsed ${formatElapsed(elapsed)}`}
-            >
-              <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted">
-                Clock
-              </div>
-              <div className="mt-1 font-impact text-[2rem] leading-none tabular-nums text-accent">
-                {formatElapsed(elapsed)}
-              </div>
-            </div>
-          </div>
-          <div className="h-px bg-border" />
-          <div className="mt-px h-0.5 bg-text/85" />
-        </div>
-        <p className="mt-2.5 font-mono text-[10px] uppercase tracking-[0.18em] text-muted">
-          {hype}
+        <input
+          defaultValue={session.title ?? "Session"}
+          aria-label="Session title"
+          data-display
+          onBlur={(e) =>
+            updateSessionMeta({
+              sessionId: session.id,
+              title: e.target.value.trim() || null,
+            }).catch(() => showNotice("Couldn't save the session title."))
+          }
+          className="font-display mt-1 w-full bg-transparent text-[2rem] leading-tight text-text focus:outline-none sm:text-[2.5rem]"
+        />
+        <p className="tnum mt-0.5 text-[13px] text-muted">
+          {exercises.length > 0
+            ? `${doneCount} of ${exercises.length} exercises done`
+            : "No exercises yet"}
         </p>
+
+        {/* Live readout: glanced at mid-set, not read, so three figures on one
+            baseline. The clock is the only accent because it is the thing
+            moving. */}
+        <div className="mt-5 grid grid-cols-[1.3fr_0.8fr_1.1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
+          <div className="min-w-0 px-3.5">
+            <p className="text-[13px] text-muted">Volume</p>
+            <p className="font-display mt-1.5 whitespace-nowrap text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none text-text">
+              {/* Animates only when it changes, which here means a set just
+                  landed. The move is the information. */}
+              <CountUp to={Math.round(totalForce)} animateOnMount={false} duration={0.7} separator="," />
+              <span className="ml-1 text-[13px] font-normal text-muted">{unit}</span>
+            </p>
+          </div>
+          <div className="min-w-0 px-3.5">
+            <p className="text-[13px] text-muted">Sets</p>
+            <p className="font-display mt-1.5 text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none text-text">
+              <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
+            </p>
+          </div>
+          <div className="min-w-0 px-3.5" title="Workout time" aria-label={`Elapsed ${formatElapsed(elapsed)}`}>
+            <p className="text-[13px] text-muted">Time</p>
+            <p className="font-display mt-1.5 whitespace-nowrap text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none text-accent">
+              {formatElapsed(elapsed)}
+            </p>
+          </div>
+        </div>
+        <p className="mt-3 px-1 text-[13px] text-muted">{hype}</p>
         <RestTimer />
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (
           <div
             role="alert"
-            className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-danger/40 bg-danger/10 px-3 py-2.5"
+            className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-danger/10 px-4 py-3"
           >
             <TriangleAlert className="size-4 shrink-0 text-danger" />
-            <span className="min-w-0 flex-1 text-xs text-text">
+            <span className="min-w-0 flex-1 text-[13px] leading-5 text-text">
               <strong className="font-medium text-danger">
                 {failed.size} {failed.size === 1 ? "change" : "changes"}{" "}
                 didn&apos;t save.
@@ -957,225 +930,170 @@ export function SessionLogger({
                 ? "Saved on this device. Retry the upload when you're ready."
                 : "Saved on this device. They'll upload when you reconnect."}
             </span>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={retryFailed}
-              disabled={inFlight > 0 || !online}
-            >
-              {inFlight > 0 ? (
-                <Loader2 className="size-3.5 animate-spin" />
-              ) : (
-                <RefreshCw className="size-3.5" />
-              )}
+            <Button size="sm" variant="secondary" onClick={retryFailed} disabled={inFlight > 0 || !online}>
+              {inFlight > 0 ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
               Retry
             </Button>
           </div>
         ) : !online ? (
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-warn/30 bg-warn/5 px-3 py-2 text-xs text-warn">
-            <CloudOff className="size-3.5 shrink-0" />
-            Offline. Keep logging. Sets are saved on this device.
+          <div className="mt-3 flex items-center gap-2 rounded-2xl bg-warn/10 px-4 py-3 text-[13px] text-warn">
+            <CloudOff className="size-4 shrink-0" />
+            Offline. Keep logging: sets save on this device.
           </div>
         ) : inFlight > 0 ? (
-          <div className="mt-3 flex items-center gap-2 px-1 font-mono text-[11px] text-muted">
+          <div className="mt-3 flex items-center gap-2 px-1 text-[13px] text-muted">
             <Loader2 className="size-3 animate-spin" />
-            Saving…
+            Saving
           </div>
         ) : null}
-      </div>
+      </header>
 
-      {/* Exercise queue. Finished work and locked work are list rows; only the
-          exercise you're actually on is lifted into a block. Previously all
-          three states were similarly-sized cards, so the queue had no shape and
-          you had to read it to find your place. */}
-      <div className="border-t border-border">
-        {exercises.map((ex, i) => {
-          const isDone = completed.has(ex.seId);
-          const isCurrent = i === currentIndex;
-          const isLocked = !isDone && !isCurrent;
-          const isAdvance = advanceIds.has(ex.seId);
-          const hasPR = ex.sets.some((s) => prSets.has(s.id));
-          const workingSets = ex.sets.filter((s) => !s.isWarmup);
-          const last = lastFor(ex.exerciseId);
-          const advanceBadge = isAdvance ? (
-            <Badge variant="accent" className="gap-1">
-              <ChevronsUp className="size-3" />
-              Advance
-            </Badge>
-          ) : null;
+      {/* The queue in three states. Done work and upcoming work are quiet
+          grouped rows; only the exercise you're on is lifted out, with the
+          one button that matters. */}
+      {(() => {
+        const rows = exercises.map((ex, i) => ({ ex, i }));
+        const done = rows.filter(({ ex }) => completed.has(ex.seId));
+        const current = currentIndex >= 0 ? rows[currentIndex] : null;
+        const upcoming = rows.filter(
+          ({ ex, i }) => !completed.has(ex.seId) && i !== currentIndex,
+        );
+        const addedTag = (seId: string) =>
+          advanceIds.has(seId) ? <Badge variant="muted">Added</Badge> : null;
 
-          if (isDone) {
-            return (
-              <button
-                key={ex.seId}
-                onClick={() => setActiveSeId(ex.seId)}
-                className="group flex w-full items-baseline gap-3 border-b border-border py-3 text-left transition-colors hover:bg-surface/60"
-              >
-                <Check className="size-3.5 shrink-0 translate-y-0.5 text-accent" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate font-display text-[15px] uppercase tracking-wide text-muted">
+        return (
+          <section className="space-y-3">
+            {done.length > 0 && (
+              <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+                {done.map(({ ex }) => {
+                  const workingSets = ex.sets.filter((s) => !s.isWarmup);
+                  const hasPR = ex.sets.some((s) => prSets.has(s.id));
+                  return (
+                    <button
+                      key={ex.seId}
+                      onClick={() => setActiveSeId(ex.seId)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+                    >
+                      <Check className="size-4 shrink-0 text-muted" />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="truncate text-[15px] font-medium text-text/75">{ex.name}</span>
+                          {addedTag(ex.seId)}
+                          {hasPR && (
+                            <Badge variant="accent" className="gap-1">
+                              <Zap className="size-3" />
+                              PR
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="tnum mt-0.5 truncate text-[13px] text-muted">
+                          {workingSets.length > 0
+                            ? workingSets
+                                .map((s) => `${trimNum(Number(s.weight) || 0)}×${s.reps ?? 0}`)
+                                .join(", ")
+                            : "Skipped"}
+                        </div>
+                      </div>
+                      <Pencil className="size-3.5 shrink-0 text-muted/60" />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {current && (() => {
+              const { ex, i } = current;
+              const last = lastFor(ex.exerciseId);
+              return (
+                <div className="rounded-2xl bg-surface p-5">
+                  <div className="flex items-baseline justify-between gap-2 text-[13px]">
+                    <span className="font-medium text-text">Up now</span>
+                    <span className="tnum text-muted">
+                      {i + 1} of {exercises.length}
+                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className="text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-text">
                       {ex.name}
                     </span>
-                    {advanceBadge}
-                    {hasPR && (
-                      <Badge variant="accent" className="gap-1">
-                        <Zap className="size-3" />
-                        PR
-                      </Badge>
-                    )}
+                    {addedTag(ex.seId)}
                   </div>
-                  <div className="mt-0.5 truncate font-mono text-[11px] tabular-nums text-muted">
-                    {workingSets.length > 0
-                      ? workingSets
-                          .map(
-                            (s) =>
-                              `${trimNum(Number(s.weight) || 0)}×${s.reps ?? 0}`,
-                          )
-                          .join("  ·  ")
-                      : "skipped"}
-                  </div>
+                  <p className="tnum mt-1 text-[13px] text-muted">
+                    {MUSCLE_LABEL[ex.primaryMuscle]}
+                    {last &&
+                      `. Last time (${format(parseISO(last.session_date), "d MMM")}): ${last.sets
+                        .slice(0, 4)
+                        .map((s) => `${trimNum(toDisplayWeight(s.weight_kg, unit))}×${s.reps}`)
+                        .join(", ")}${last.sets.length > 4 ? "…" : ""}`}
+                  </p>
+                  {ex.note && <p className="mt-1 text-[13px] text-muted">{ex.note}</p>}
+                  <Button variant="accent" size="lg" className="mt-4 w-full" onClick={() => setActiveSeId(ex.seId)}>
+                    <Play className="size-4" />
+                    {ex.sets.length > 0 ? "Continue exercise" : "Start exercise"}
+                  </Button>
                 </div>
-                <Pencil className="size-3.5 shrink-0 text-muted opacity-0 transition-opacity group-hover:opacity-100" />
-              </button>
-            );
-          }
+              );
+            })()}
 
-          if (isCurrent) {
-            return (
-              <div
-                key={ex.seId}
-                className="hb-panel-cut my-3 border border-accent/40 bg-accent/[0.05] p-4"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">
-                    On the bar
-                  </span>
-                  <span className="font-mono text-[10px] tabular-nums text-muted">
-                    {i + 1} / {exercises.length}
-                  </span>
-                </div>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="font-impact text-2xl uppercase leading-none text-text">
-                    {ex.name}
-                  </span>
-                  <Badge variant="muted">{MUSCLE_LABEL[ex.primaryMuscle]}</Badge>
-                  {advanceBadge}
-                </div>
-                {last && (
-                  <div className="mt-1 font-mono text-xs text-muted">
-                    last · {format(parseISO(last.session_date), "MMM d")}:{" "}
-                    {last.sets
-                      .slice(0, 4)
-                      .map(
-                        (s) =>
-                          `${trimNum(toDisplayWeight(s.weight_kg, unit))}${unit}×${s.reps}`,
-                      )
-                      .join(", ")}
-                    {last.sets.length > 4 ? " …" : ""}
+            {upcoming.length > 0 && (
+              <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+                {upcoming.map(({ ex, i }) => (
+                  <div key={ex.seId} className="flex items-center gap-3 px-4 py-3">
+                    <Lock className="size-3.5 shrink-0 text-muted/60" />
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-muted">{ex.name}</span>
+                    {addedTag(ex.seId)}
+                    <span className="tnum shrink-0 text-[13px] text-muted/60">{i + 1}</span>
                   </div>
-                )}
-                {ex.note && (
-                  <div className="mt-1 text-xs text-muted">{ex.note}</div>
-                )}
-                <Button
-                  size="lg"
-                  className="mt-3 w-full"
-                  onClick={() => setActiveSeId(ex.seId)}
-                >
-                  <Play className="size-4" />
-                  {ex.sets.length > 0 ? "Continue exercise" : "Start exercise"}
-                </Button>
+                ))}
               </div>
-            );
-          }
+            )}
 
-          // Locked: a later exercise you can't start yet.
-          return (
-            <div
-              key={ex.seId}
-              className={cn(
-                "flex items-baseline gap-3 border-b border-border py-3",
-                isLocked && "opacity-45",
-              )}
+            {exercises.length === 0 && (
+              <div className="rounded-2xl bg-surface px-6 py-10 text-center text-[15px] text-muted">
+                No exercises yet. Add your first one below.
+              </div>
+            )}
+
+            {/* Bonus work for this session only; the program is untouched. */}
+            <button
+              onClick={() => setPicker(true)}
+              className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
             >
-              <Lock className="size-3 shrink-0 translate-y-0.5 text-muted" />
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
-                  {ex.name}
-                </span>
-                {advanceBadge}
-              </div>
-              <span className="shrink-0 font-mono text-[11px] tabular-nums text-muted">
-                {i + 1}
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text">
+                <Plus className="size-4" />
               </span>
-            </div>
-          );
-        })}
+              <span className="min-w-0">
+                <span className="block text-[15px] font-medium text-text">Add exercise</span>
+                <span className="block text-[13px] text-muted">This session only. Your program stays as it is.</span>
+              </span>
+            </button>
+          </section>
+        );
+      })()}
 
-        {exercises.length === 0 && (
-          <div className="hb-panel-cut border border-dashed border-border bg-surface p-8 text-center text-sm text-muted">
-            No exercises yet. Add your first movement to begin.
-          </div>
-        )}
-      </div>
-
-      {/* Advance: bonus movement beyond the program, this session only */}
-      <button
-        onClick={() => setPicker(true)}
-        className="hb-panel-cut mt-4 flex w-full items-center gap-3 border border-dashed border-border px-4 py-3.5 text-left transition-colors hover:border-accent/50 hover:bg-surface"
-      >
-        <ChevronsUp className="size-4 shrink-0 text-muted" />
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-[15px] uppercase tracking-wide text-text">
-              Advance
-            </span>
-            <span className="font-mono text-[10px] tracking-[0.2em] text-muted">
-              前進
-            </span>
-          </div>
-          <div className="text-xs text-muted">
-            Add a movement beyond your program, this session only.
-          </div>
-        </div>
-      </button>
-
-      {/* Finish bar */}
-      <div
-        className={cn(
-          "hb-panel-cut mt-8 flex flex-col gap-3 border p-4 sm:flex-row sm:items-center sm:justify-between",
-          allDone ? "border-accent/40 bg-accent/[0.04]" : "border-border bg-surface",
-        )}
-      >
-        <div className="flex items-center gap-3">
-          {allDone && (
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-accent/40 bg-accent/10 text-accent">
-              <Check className="size-4" />
-            </span>
-          )}
-          <label className="flex items-center gap-2 text-sm text-muted">
-            Duration
+      {/* Finish */}
+      <section className="mt-10 rounded-2xl bg-surface p-4">
+        <label className="flex items-center justify-between gap-3 px-1 pb-4 text-[15px] text-text">
+          Duration
+          <span className="flex items-center gap-2">
             <input
               type="number"
               onFocus={selectAllOnFocus}
               inputMode="numeric"
               value={duration ?? ""}
-              onChange={(e) =>
-                setDuration(e.target.value === "" ? null : Number(e.target.value))
-              }
+              onChange={(e) => setDuration(e.target.value === "" ? null : Number(e.target.value))}
               placeholder={String(elapsedMin)}
-              title="Auto-tracked from the workout clock, type to override"
-              className="h-9 w-20 rounded-md border border-border bg-surface-2 px-2 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
+              title="Tracked from the workout clock. Type to override."
+              className="tnum h-9 w-20 rounded-lg bg-surface-2 px-2 text-center text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-text/25"
             />
-            <span className="text-xs text-muted/70">min</span>
-          </label>
-        </div>
+            <span className="text-[13px] text-muted">min</span>
+          </span>
+        </label>
         {/* `() => finish()` deliberately, not `onClick={finish}`: the latter
             hands the click event in as `force` and skips the unsaved guard. */}
         {confirmFinish ? (
-          <div className="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
-            <p className="text-xs text-danger sm:text-right">
+          <div className="flex w-full flex-col gap-3">
+            <p className="px-1 text-[13px] text-danger">
               {failed.size} {failed.size === 1 ? "change is" : "changes are"}{" "}
               still unsaved. Finishing now loses{" "}
               {failed.size === 1 ? "it" : "them"}.
@@ -1184,7 +1102,7 @@ export function SessionLogger({
               <Button
                 variant="secondary"
                 onClick={() => setConfirmFinish(false)}
-                className="flex-1 sm:flex-none"
+                className="flex-1"
               >
                 Keep logging
               </Button>
@@ -1192,7 +1110,7 @@ export function SessionLogger({
                 variant="danger"
                 onClick={() => finish(true)}
                 disabled={finishing}
-                className="flex-1 sm:flex-none"
+                className="flex-1"
               >
                 Finish anyway
               </Button>
@@ -1203,17 +1121,17 @@ export function SessionLogger({
             onClick={() => finish()}
             disabled={finishing}
             size="lg"
-            className="w-full sm:w-auto"
+            className="w-full"
           >
             {finishing ? (
               <Loader2 className="size-4 animate-spin" />
             ) : (
               <Trophy className="size-4" />
             )}
-            Claim victory
+            Finish workout
           </Button>
         )}
-      </div>
+      </section>
 
       {/* Add-exercise picker (appends to the queue) */}
       <ExercisePicker
@@ -1252,7 +1170,7 @@ export function SessionLogger({
             {notice && (
               <div
                 role="alert"
-                className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-xl border border-warn/40 bg-surface/95 px-4 py-2.5 shadow-raised backdrop-blur"
+                className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] px-4 py-3 shadow-raised backdrop-blur"
               >
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
                 <p className="min-w-0 flex-1 text-xs leading-5 text-text">
@@ -1269,22 +1187,16 @@ export function SessionLogger({
             )}
             {removal && (
               <div role="status" aria-live="polite">
-                <div className="hb-slam pointer-events-auto flex items-center gap-3 rounded-xl border border-accent/40 bg-surface/95 px-4 py-2.5 shadow-glow backdrop-blur">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                    <Zap className="size-4" />
+                <div className="hb-landed pointer-events-auto flex items-center gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] py-2.5 pl-2.5 pr-4 shadow-raised backdrop-blur">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent text-black">
+                    <Zap className="size-[18px]" />
                   </span>
                   <div className="min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-impact text-lg uppercase leading-none tracking-tight text-accent">
-                        Removal
-                      </span>
-                      <span className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-muted">
-                        {removal.name}
-                      </span>
+                      <span className="font-display text-[17px] leading-none text-accent">Removal</span>
+                      <span className="truncate text-[13px] text-muted">{removal.name}</span>
                     </div>
-                    <div className="mt-0.5 font-mono text-xs text-text">
-                      {removal.detail}
-                    </div>
+                    <div className="tnum mt-1 text-[13px] text-text">{removal.detail}</div>
                   </div>
                 </div>
               </div>
@@ -1299,7 +1211,7 @@ export function SessionLogger({
           <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-bg/95 px-6 backdrop-blur">
             <div
               aria-hidden
-              className="hb-speedlines pointer-events-none absolute inset-0 opacity-70"
+              className="pointer-events-none absolute inset-0 opacity-70"
               style={{
                 maskImage:
                   "radial-gradient(circle at 50% 45%, black, transparent 68%)",
@@ -1307,19 +1219,13 @@ export function SessionLogger({
                   "radial-gradient(circle at 50% 45%, black, transparent 68%)",
               }}
             />
-            <div className="hb-slam relative text-center">
-              <div
-                aria-hidden
-                className="font-display text-sm font-bold uppercase tracking-[0.4em] text-accent/70"
-              >
-                勝利
-              </div>
-              <div className="mt-2 font-impact text-6xl uppercase tracking-tight text-accent sm:text-8xl">
+            <div className="hb-landed relative text-center">
+              <div className="font-display text-[3.25rem] leading-none text-text sm:text-7xl">
                 {victory}
               </div>
-              <div className="mt-4 font-mono text-sm text-muted">
-                {Math.round(totalForce).toLocaleString()} {unit} moved ·{" "}
-                {totalSets} sets · {formatElapsed(elapsed)}
+              <div className="tnum mt-4 text-[15px] text-muted">
+                {Math.round(totalForce).toLocaleString()} {unit}, {totalSets} sets,{" "}
+                {formatElapsed(elapsed)}
               </div>
             </div>
           </div>
@@ -1401,7 +1307,7 @@ function ActiveExerciseModal({
     >
       {swapping ? (
         <div>
-          <div className="sticky top-0 z-10 border-b border-border bg-surface p-3">
+          <div className="sticky top-0 z-10 bg-[rgb(20_20_22)] px-4 pb-3 pt-1">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
               <Input
@@ -1412,11 +1318,11 @@ function ActiveExerciseModal({
                 className="pl-9"
               />
             </div>
-            <p className="mt-2 px-0.5 text-xs text-muted">
+            <p className="mt-2 px-1 text-[13px] text-muted">
               Picks become this day’s new default going forward.
             </p>
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="mx-4 mb-4 divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.04]">
             {filtered.map((e) => (
               <li key={e.id}>
                 <button
@@ -1425,17 +1331,17 @@ function ActiveExerciseModal({
                     setSwapping(false);
                     setQ("");
                   }}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors active:bg-white/[0.05]"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-sm text-text">{e.name}</div>
-                    <div className="truncate text-xs text-muted">
+                    <div className="truncate text-[15px] text-text">{e.name}</div>
+                    <div className="truncate text-[13px] text-muted">
                       {MUSCLE_LABEL[e.primary_muscle]}
-                      {e.equipment ? ` · ${e.equipment}` : ""}
+                      {e.equipment ? `, ${e.equipment}` : ""}
                     </div>
                   </div>
                   {e.user_id && (
-                    <span className="shrink-0 text-xs text-accent">custom</span>
+                    <span className="shrink-0 text-[13px] text-muted">Custom</span>
                   )}
                 </button>
               </li>
@@ -1443,12 +1349,12 @@ function ActiveExerciseModal({
           </ul>
         </div>
       ) : (
-        <div className="p-4">
+        <div className="px-4 pb-4">
           <div className="mb-3 flex items-center justify-between gap-2">
             <Badge variant="muted">{MUSCLE_LABEL[exercise.primaryMuscle]}</Badge>
             <button
               onClick={() => setSwapping(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:border-accent/40 hover:text-accent"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-[13px] text-text transition-colors active:bg-white/[0.1]"
             >
               <Repeat2 className="size-3.5" />
               Swap movement
@@ -1456,8 +1362,8 @@ function ActiveExerciseModal({
           </div>
 
           {lastPerformance && (
-            <div className="mb-3 rounded-lg border border-border bg-surface-2/40 px-3 py-2 font-mono text-xs text-muted">
-              last · {format(parseISO(lastPerformance.session_date), "MMM d")}:{" "}
+            <div className="tnum mb-3 rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[13px] text-muted">
+              Last time ({format(parseISO(lastPerformance.session_date), "d MMM")}):{" "}
               {lastPerformance.sets
                 .slice(0, 5)
                 .map(
@@ -1468,7 +1374,7 @@ function ActiveExerciseModal({
             </div>
           )}
           {exercise.note && (
-            <div className="mb-3 text-xs text-muted">{exercise.note}</div>
+            <div className="mb-3 text-[13px] text-muted">{exercise.note}</div>
           )}
 
           <div className="grid gap-2">
@@ -1486,17 +1392,17 @@ function ActiveExerciseModal({
               />
             ))}
 
-            <Button variant="outline" onClick={onAddSet} className="mt-1 w-full">
+            <Button variant="secondary" size="lg" onClick={onAddSet} className="mt-1 w-full">
               <Plus className="size-4" />
               {exercise.sets.length === 0
                 ? "Log first set"
-                : "Next set · copy forward"}
+                : "Add set"}
             </Button>
           </div>
 
           <button
             onClick={onRemoveExercise}
-            className="mt-4 inline-flex items-center gap-1.5 text-xs text-muted transition-colors hover:text-danger"
+            className="mt-5 inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-danger"
           >
             <Trash2 className="size-3.5" />
             Remove from session
@@ -1529,27 +1435,23 @@ function SetRow({
   return (
     <div
       className={cn(
-        "rounded-lg border p-2.5",
-        set.isWarmup
-          ? "border-warn/30 bg-warn/[0.04]"
-          : isPR
-            ? "border-accent/50 bg-accent/[0.05]"
-            : "border-border bg-surface-2/40",
-        flash && "hb-hit",
+        "rounded-2xl p-3",
+        set.isWarmup ? "bg-warn/[0.07]" : isPR ? "bg-accent/[0.09]" : "bg-white/[0.04]",
+        flash && "hb-landed",
       )}
     >
       <div className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-muted">
+        <span className="flex items-center gap-2 tnum text-[13px] text-muted">
           {set.isWarmup ? "Warm-up" : `Set ${index + 1}`}
           {isPR && (
-            <span className="inline-flex items-center gap-1 rounded-[2px] bg-accent px-1.5 py-px font-mono text-[9px] uppercase tracking-[0.1em] text-bg">
+            <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-black">
               <Zap className="size-2.5" />
               PR
             </span>
           )}
         </span>
         <div className="flex items-center gap-1">
-          <label className="flex items-center gap-1 text-xs text-muted">
+          <label className="flex items-center gap-1.5 text-[13px] text-muted">
             RPE
             <input
               type="number"
@@ -1564,17 +1466,15 @@ function SetRow({
                   rpe: e.target.value === "" ? null : Number(e.target.value),
                 })
               }
-              className="h-8 w-12 rounded-md border border-border bg-surface px-1 text-center font-mono text-sm text-text focus:border-accent/60 focus:outline-none"
+              className="tnum h-9 w-12 rounded-lg bg-white/[0.06] px-1 text-center text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-text/25"
             />
           </label>
           <button
             aria-label="Toggle warm-up"
             onClick={() => onChange({ isWarmup: !set.isWarmup })}
             className={cn(
-              "flex size-8 items-center justify-center rounded-md border transition-colors",
-              set.isWarmup
-                ? "border-warn/40 bg-warn/10 text-warn"
-                : "border-border text-muted hover:text-text",
+              "flex size-9 items-center justify-center rounded-full transition-colors",
+              set.isWarmup ? "bg-warn/15 text-warn" : "bg-white/[0.06] text-muted hover:text-text",
             )}
           >
             <Flame className="size-4" />
@@ -1582,7 +1482,7 @@ function SetRow({
           <button
             aria-label="Delete set"
             onClick={onRemove}
-            className="flex size-8 items-center justify-center rounded-md border border-border text-muted transition-colors hover:text-danger"
+            className="flex size-9 items-center justify-center rounded-full bg-white/[0.06] text-muted transition-colors hover:text-danger"
           >
             <X className="size-4" />
           </button>
@@ -1590,8 +1490,8 @@ function SetRow({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
-            Weight · {unit}
+          <div className="mb-1 tnum text-[12px] text-muted">
+            Weight ({unit})
           </div>
           <NumberStepper
             ariaLabel="weight"
@@ -1602,7 +1502,7 @@ function SetRow({
           />
         </div>
         <div>
-          <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
+          <div className="mb-1 tnum text-[12px] text-muted">
             Reps
           </div>
           <NumberStepper

@@ -1,77 +1,63 @@
 @import "tailwindcss";
 
-/* ── Hell Blazer · Kengan-grade design tokens → Tailwind theme ────────────
-   Black base, hairline borders, a single savage accent hue. Heavy impact type
-   for the moments that should hit. The accent is routed through one channel
-   variable (--accent-rgb) so the whole app re-skins from a single swap; see
-   the html[data-accent] blocks below for the selectable palettes.
-   Colors are emitted as CSS custom properties so recharts can read them too. */
+/* ── Hell Blazer · design tokens → Tailwind theme ─────────────────────────
+   Black glass, loud numbers. The canvas is true black so the installed app
+   dissolves into an OLED phone and its status bar; content sits on graphite
+   surfaces a single step up. Hierarchy comes from type size and weight, not
+   from boxes, rules or labels. The accent is routed through one channel
+   variable (--accent-rgb) so Settings can re-skin it; it is spent only on what
+   is live right now, a record being broken, and the log action. */
 @theme {
-  /* The neutral ramp is warm, not grey. Every step carries a little red/brown
-     so the dark reads as an unlit arena floor rather than the generic
-     near-black every dark dashboard is built on. --color-text is canvas bone
-     (poster stock), not white. */
-  --color-bg: #0b0908;
-  --color-surface: #14100e;
-  --color-surface-2: #1d1815;
-  --color-border: #2b2320;
-  --color-text: #ece5d8;
-  --color-muted: #8d8378;
+  --color-bg: #000000;
+  --color-surface: #121214;
+  --color-surface-2: #1c1c1f;
+  --color-border: #28282c;
+  --color-text: #f4f2ee;
+  --color-muted: #8e8c88;
   --color-accent: rgb(var(--accent-rgb));
   --color-accent-dim: rgb(var(--accent-dim-rgb));
-  --color-danger: #e5484d;
-  --color-warn: #f5a524;
+  --color-danger: #ef5350;
+  --color-warn: #f2a93b;
 
   --color-chart-1: rgb(var(--accent-rgb));
-  --color-chart-2: #9a938c;
-  --color-chart-3: #d98b57;
-  --color-chart-4: #61656f;
+  --color-chart-2: #a8a6a1;
+  --color-chart-3: #6b6a67;
+  --color-chart-4: #3d3d40;
 
-  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, "IBM Plex Mono", monospace;
-  --font-display: var(--font-big-shoulders), var(--font-archivo), ui-sans-serif,
+  /* One family. Archivo is variable on width as well as weight, so the
+     expanded cut that carries titles and numbers is the same file as the
+     text face. Mono and impact are kept as aliases for older call sites. */
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, -apple-system,
     sans-serif;
-  --font-impact: var(--font-big-shoulders), var(--font-archivo), sans-serif;
+  --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-impact: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
 
-  --radius-lg: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
 
-  /* A printed-ink accent doesn't bloom. This used to throw a 30px halo of
-     accent behind every primary button and active nav item, which is the one
-     effect that most reliably reads as neon; it's now a tight edge plus a
-     shallow lift, so the glow still marks the live thing without haloing. */
-  --shadow-glow:
-    0 0 0 1px rgb(var(--accent-rgb) / 0.18),
-    0 1px 10px -6px rgb(var(--accent-rgb) / 0.35);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 
-  /* Premium depth: a faint glass top-edge highlight + a soft layered drop, so
-     surfaces read as gently raised over the near-black base. */
-  --shadow-card:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.045),
-    0 1px 2px rgb(0 0 0 / 0.28),
-    0 12px 30px -22px rgb(0 0 0 / 0.58);
-  --shadow-raised:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.07),
-    0 2px 6px rgb(0 0 0 / 0.4),
-    0 30px 60px -30px rgb(0 0 0 / 0.8);
-  /* Recessed form fields */
-  --shadow-inset: inset 0 1px 2px rgb(0 0 0 / 0.28);
+  --shadow-glow: 0 0 0 1px rgb(var(--accent-rgb) / 0.3);
+  --shadow-card: none;
+  --shadow-raised: 0 24px 60px -24px rgb(0 0 0 / 0.9);
+  --shadow-inset: none;
 }
 
 :root {
   color-scheme: dark;
-  /* Default accent: Crimson (blood). Space-separated channels so it composes
-     into rgb(var(--accent-rgb) / <alpha>) anywhere translucency is needed.
-     Tuned to a printed-ink red rather than a screen neon: the old #ff2d3a sat
-     right on the stock "dark UI + hot vermilion" look, and pulling it toward
-     poster ink is most of what stops the palette reading as off-the-shelf. */
   --accent-rgb: 223 45 40;
   --accent-dim-rgb: 150 26 24;
   --accent-glow: rgb(var(--accent-rgb) / 0.18);
 }
 
 /* ── Selectable accent palettes ───────────────────────────────────────────
-   Set on <html data-accent="…"> from Settings. Each only needs to redefine the
-   two channel vars; everything else (utilities, glows, charts) derives. */
+   Set on <html data-accent="…"> from Settings. Each only redefines the two
+   channel vars; utilities and charts derive from them. Swatches in
+   src/lib/accents.ts must match. */
 html[data-accent="crimson"] {
   --accent-rgb: 223 45 40;
   --accent-dim-rgb: 150 26 24;
@@ -85,12 +71,10 @@ html[data-accent="gold"] {
   --accent-dim-rgb: 154 105 26;
 }
 html[data-accent="green"] {
-  /* Pastel bottle green */
   --accent-rgb: 116 191 160;
   --accent-dim-rgb: 60 122 100;
 }
 html[data-accent="slate"] {
-  /* Cool greyish steel */
   --accent-rgb: 150 162 180;
   --accent-dim-rgb: 88 96 108;
 }
@@ -99,226 +83,61 @@ html[data-accent="violet"] {
   --accent-dim-rgb: 108 60 190;
 }
 
-html {
-  /* Match body bg so iOS rubber-band overscroll never flashes white. */
-  background: var(--color-bg);
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  background:
-    radial-gradient(circle at 78% -10%, rgb(var(--accent-rgb) / 0.07), transparent 28rem),
-    var(--color-bg);
-  color: var(--color-text);
-  font-family: var(--font-sans);
-  font-feature-settings: "kern" 1, "liga" 1, "ss02" 1;
-  letter-spacing: -0.01em;
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-}
-
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-p {
-  text-wrap: pretty;
-}
-
-h1,
-h2,
-h3 {
-  text-wrap: balance;
-}
-
-.hb-app-shell {
-  background-image:
-    linear-gradient(90deg, rgb(255 255 255 / 0.012) 1px, transparent 1px),
-    linear-gradient(rgb(255 255 255 / 0.009) 1px, transparent 1px);
-  background-size: 72px 72px;
-}
-
-.hb-nav-rail {
-  background-image:
-    linear-gradient(180deg, rgb(var(--accent-rgb) / 0.055), transparent 15rem),
-    repeating-linear-gradient(135deg, transparent 0 22px, rgb(255 255 255 / 0.012) 22px 23px);
-}
-
-/* ── Arena composition ────────────────────────────────────────────────────
-   These surfaces are intentionally asymmetrical. They give cinematic pages a
-   real focal point while the logger and form-heavy screens stay quiet. */
-.hb-arena {
-  background:
-    radial-gradient(circle at 84% 7%, rgb(var(--accent-rgb) / 0.13), transparent 31rem),
-    radial-gradient(circle at 12% 28%, rgb(255 255 255 / 0.028), transparent 26rem),
-    linear-gradient(90deg, rgb(255 255 255 / 0.018) 1px, transparent 1px) 0 0 / 72px 100%,
-    linear-gradient(180deg, rgb(var(--accent-rgb) / 0.06), transparent 38rem);
-}
-
-.hb-command-deck {
-  background:
-    radial-gradient(circle at 82% -8%, rgb(var(--accent-rgb) / 0.18), transparent 42%),
-    linear-gradient(145deg, rgb(255 255 255 / 0.045), transparent 38%),
-    rgb(20 16 14 / 0.82);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-}
-
-.hb-command-deck::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    112deg,
-    transparent 15%,
-    rgb(255 255 255 / 0.035) 38%,
-    transparent 58%
-  );
-  transform: translateX(-72%);
-  animation: hb-console-scan 8s ease-in-out infinite;
-}
-
-.hb-live-pulse {
-  box-shadow: 0 0 0 0 rgb(var(--accent-rgb) / 0.45);
-  animation: hb-live-pulse 2.2s ease-out infinite;
-}
-
-.hb-console-progress {
-  transform-origin: left;
-  animation: hb-console-progress 1s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes hb-console-scan {
-  0%,
-  58% {
-    transform: translateX(-72%);
+/* Element defaults live in the base layer so utilities always win over them.
+   Unlayered, `input { font: inherit }` pinned the logger's title and set
+   figures at 16px, and `p { text-wrap: pretty }` overrode whitespace-nowrap. */
+@layer base {
+  html {
+    /* Match body so iOS rubber-band overscroll never flashes a colour. */
+    background: var(--color-bg);
+    -webkit-text-size-adjust: 100%;
   }
-  82%,
-  100% {
-    transform: translateX(82%);
+
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-feature-settings: "kern" 1, "liga" 1;
+    letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
   }
 }
 
-@keyframes hb-live-pulse {
-  70% {
-    box-shadow: 0 0 0 6px rgb(var(--accent-rgb) / 0);
+/* ── Type ─────────────────────────────────────────────────────────────────
+   The expanded cut: titles and every number that matters. Wide numerals read
+   like a broadcast scoreboard, and tabular figures keep columns still while
+   values change. */
+@layer components {
+  .font-display,
+  .font-impact {
+    font-variation-settings: "wdth" 125;
+    font-stretch: 125%;
+    font-weight: 640;
+    letter-spacing: -0.035em;
+    font-variant-numeric: tabular-nums;
   }
-  100% {
-    box-shadow: 0 0 0 0 rgb(var(--accent-rgb) / 0);
+  .font-mono,
+  .tnum {
+    font-variant-numeric: tabular-nums;
   }
-}
-
-@keyframes hb-console-progress {
-  from {
-    transform: scaleX(0);
-  }
-  to {
-    transform: scaleX(1);
-  }
-}
-
-.hb-ink-noise::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.055;
-  mix-blend-mode: screen;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.92' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
-}
-
-.hb-panel-cut {
-  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
-}
-
-.hb-page-head {
-  background:
-    linear-gradient(105deg, rgb(var(--accent-rgb) / 0.09), transparent 36%),
-    repeating-linear-gradient(
-      112deg,
-      transparent 0 46px,
-      rgb(255 255 255 / 0.018) 46px 47px
-    ),
-    rgb(20 16 14 / 0.62);
-}
-
-.hb-page-head::after {
-  content: "";
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: min(38%, 24rem);
-  height: 3px;
-  background: linear-gradient(90deg, transparent, var(--color-accent));
-  opacity: 0.85;
-}
-
-.hb-fighter-aura {
-  border-radius: 48% 52% 46% 54%;
-  background:
-    radial-gradient(circle at 58% 38%, rgb(255 255 255 / 0.12), transparent 20%),
-    radial-gradient(circle, rgb(var(--accent-rgb) / 0.42), transparent 68%);
-  filter: blur(22px);
-  transform: rotate(-9deg);
-}
-
-.hb-portrait-fade {
-  background:
-    linear-gradient(to bottom, var(--color-bg) 0, transparent 12%, transparent 78%, var(--color-bg) 100%),
-    linear-gradient(to right, var(--color-bg) 0, transparent 24%, transparent 82%, var(--color-bg) 100%);
-}
-
-.hb-fighter-swap {
-  animation: hb-fighter-swap 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.hb-dossier-switch {
-  animation: hb-dossier-switch 360ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
-}
-
-@keyframes hb-fighter-swap {
-  from {
-    opacity: 0;
-    transform: translate3d(18px, 0, 0) scale(0.985);
-    filter: contrast(1.2);
-  }
-  to {
-    opacity: 1;
-    transform: translate3d(0, 0, 0) scale(1);
-    filter: contrast(1);
-  }
-}
-
-@keyframes hb-dossier-switch {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-    filter: contrast(1.12);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    filter: contrast(1);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hb-fighter-swap {
-    animation: none;
-  }
-
-  .hb-dossier-switch {
-    animation: none;
-  }
-}
-
-.hb-roster-number {
-  -webkit-text-stroke: 1px rgb(255 255 255 / 0.16);
-  color: transparent;
 }
 
 /* Native-app feel on iOS: no grey tap flash, no long-press callout menu. */
@@ -332,530 +151,80 @@ label {
   -webkit-touch-callout: none;
 }
 
-/* Keyboard focus is visible on every interactive element by default. Wrapped
-   in :where() so it carries zero specificity: any component that styles its
-   own focus (Button, Input) still wins, and this only fills the gaps. Pointer
-   and touch input never match :focus-visible, so it costs mouse users nothing. */
+/* Keyboard focus is visible on every interactive element by default. Zero
+   specificity via :where(), so components that style their own focus win. */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid rgb(var(--accent-rgb) / 0.65);
+  outline: 2px solid rgb(var(--accent-rgb) / 0.7);
   outline-offset: 2px;
 }
 
-/* Numeric/data feel: tabular figures on mono */
-.font-mono {
-  font-variant-numeric: tabular-nums;
+/* ── Chrome materials ─────────────────────────────────────────────────────
+   Black glass for anything that floats over content: tab bar, sidebar,
+   sheets. Content itself stays opaque. */
+.hb-glass {
+  background-color: rgb(16 16 18 / 0.82);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+}
+.hb-sheet {
+  background-color: rgb(20 20 22 / 0.94);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .hb-glass {
+    background-color: rgb(14 14 16 / 0.97);
+  }
+  .hb-sheet {
+    background-color: rgb(20 20 22);
+  }
 }
 
-/* Big Shoulders is variable and ships at 400 by default, where Anton only ever
-   had one heavy cut. Both display roles therefore pin their own weight, so
-   every existing `font-display` / `font-impact` call site keeps the heft it was
-   written against. The face is condensed, so it also wants a touch of positive
-   tracking in caps to stop the verticals fusing. */
-.font-display {
-  font-weight: 650;
-  letter-spacing: 0.015em;
+/* Top bar: clear while the page sits at the top, frosting only once content
+   scrolls underneath it. Scroll-driven, so it costs no JavaScript. */
+.hb-topbar {
+  background-color: rgb(0 0 0 / 0);
+  box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 0);
 }
-.font-impact {
-  font-weight: 760;
-  letter-spacing: -0.012em;
+@supports (animation-timeline: scroll()) {
+  .hb-topbar {
+    animation: hb-topbar linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 56px;
+  }
 }
-
-/* ── Signature motion (CSS only, no libs) ─────────────────────────────────
-   Shiny wordmark: a crimson glint sweeps across an off-white base. */
-.hb-shiny {
-  background: linear-gradient(
-    110deg,
-    var(--color-text) 30%,
-    #ffffff 45%,
-    var(--color-accent) 52%,
-    #ffffff 59%,
-    var(--color-text) 74%
-  );
-  background-size: 260% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  animation: hb-shine 6s linear infinite;
+@supports not (animation-timeline: scroll()) {
+  .hb-topbar {
+    background-color: rgb(0 0 0 / 0.78);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
 }
-@keyframes hb-shine {
+@keyframes hb-topbar {
   to {
-    background-position: -260% center;
+    background-color: rgb(0 0 0 / 0.72);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+    box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 0.08);
   }
 }
 
-/* Blur-rise entrance; stagger with inline animation-delay.
-   `backwards` (not `both`) holds the `from` keyframe through the delay, then
-   lets the element settle back to its plain base style. A forwards fill would
-   leave `filter: blur(0)` applied forever, a non-none filter, which makes the
-   element a containing block for any `position: fixed` descendant and pins it
-   to a compositing layer. Hence no `opacity: 0` in the base rule either; the
-   backwards fill supplies it before the animation starts. */
-.hb-reveal {
-  animation: hb-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-}
-@keyframes hb-rise {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-    filter: blur(8px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-    filter: blur(0);
-  }
-}
-
-/* Impact hit: a crimson shockwave pulse on a logged set */
-.hb-hit {
-  animation: hb-hit 0.55s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-@keyframes hb-hit {
-  0% {
-    box-shadow: 0 0 0 0 rgb(var(--accent-rgb) / 0.55);
-    border-color: var(--color-accent);
-  }
-  100% {
-    box-shadow: 0 0 0 14px rgb(var(--accent-rgb) / 0);
-  }
-}
-
-/* Manga halftone dots */
-.hb-halftone {
-  background-image: radial-gradient(
-    rgb(var(--accent-rgb) / 0.22) 1px,
-    transparent 1.5px
-  );
-  background-size: 7px 7px;
-}
-
-/* Speed-line burst radiating from center (manga impact) */
-.hb-speedlines {
-  background: repeating-conic-gradient(
-    from 0deg at 50% 50%,
-    rgba(255, 255, 255, 0.055) 0deg 0.5deg,
-    transparent 0.5deg 4.5deg
-  );
-}
-
-/* Victory slam-in. `backwards` for the same reason as .hb-reveal, the base
-   style already matches the final keyframe, so there's nothing to hold. */
-.hb-slam {
-  animation: hb-slam 0.5s cubic-bezier(0.2, 1.4, 0.3, 1) backwards;
-}
-@keyframes hb-slam {
-  0% {
-    opacity: 0;
-    transform: scale(1.6);
-    filter: blur(6px);
-  }
-  60% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0);
-  }
-}
-
-/* Page content settles in on navigation, subtle, respects reduced-motion.
-   fill-mode is `backwards`, NOT `both`: a forwards fill keeps the transform
-   animation in effect after it ends, which makes .hb-page a containing block
-   for `position: fixed` descendants on WebKit (modals then anchor to the page
-   instead of the viewport). The base style already matches the `to` keyframe,
-   so dropping the forwards fill is visually identical. */
-.hb-page {
-  animation: hb-page 0.3s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-}
-@keyframes hb-page {
-  from {
-    opacity: 0;
-    transform: translateY(7px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/* Route loader: an official card being called, with no weight/plate counter. */
-.hb-loader-card {
-  width: min(100%, 31rem);
-  background:
-    linear-gradient(110deg, rgb(var(--accent-rgb) / 0.09), transparent 45%),
-    var(--color-surface);
-}
-
-.hb-loader-scan {
-  transform-origin: left;
-  animation: hb-loader-scan 1.35s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-
-.hb-loader-mark {
-  animation: hb-loader-mark 1.35s steps(2, end) infinite;
-}
-
-.hb-loader-plate {
-  opacity: 1;
-  animation: hb-loader-plate 2.7s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-.hb-loader-phrase {
+/* The compact page title in the mobile top bar: hidden while the page's own
+   large title is on screen, fading in as it scrolls away. Without scroll
+   timelines it stays hidden and the large title carries the page. */
+.hb-topbar-title {
   opacity: 0;
-  animation: hb-loader-phrase 2.7s linear infinite;
 }
-
-@keyframes hb-loader-scan {
-  0% {
-    transform: scaleX(0);
-    opacity: 0.35;
-  }
-  55% {
-    transform: scaleX(1);
-    opacity: 1;
-  }
-  100% {
-    transform: scaleX(1);
-    opacity: 0;
+@supports (animation-timeline: scroll()) {
+  .hb-topbar-title {
+    animation: hb-topbar-title linear both;
+    animation-timeline: scroll(root);
+    animation-range: 44px 88px;
   }
 }
-
-@keyframes hb-loader-mark {
-  50% {
-    color: var(--color-accent);
-  }
-}
-
-@keyframes hb-loader-plate {
-  0% {
-    transform: translateX(var(--hb-loader-from));
-    opacity: 0;
-  }
-  8% {
-    opacity: 1;
-  }
-  24%,
-  86% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 0;
-  }
-}
-
-@keyframes hb-loader-phrase {
-  0%,
-  4% {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  10%,
-  26% {
-    opacity: 1;
-    transform: none;
-  }
-  32%,
-  100% {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* Scroll-revealed copy must never be left dimmed for someone who has asked
-     for less motion. ScrollReveal already branches to a static paragraph in JS,
-     but a hook that resolves a tick late would leave real body copy sitting at
-     base opacity in the meantime, so the guarantee lives in CSS, where it
-     cannot fail to apply. */
-  .hb-scroll-reveal,
-  .hb-scroll-reveal span {
-    opacity: 1 !important;
-    filter: none !important;
-    transform: none !important;
-  }
-}
-
-/* ── The bootloader sheet ─────────────────────────────────────────────────
-   Shown only when the app is launched from the home screen (see
-   BootSplash for why). iOS drops its static launch image the instant the
-   document paints, which is well before React has hydrated, so this holds the
-   frame in the meantime with a boot sequence instead of a bare shell.
-
-   Everything here is CSS on server-rendered markup: the meter climbs, the
-   counter counts and the log fills on the first frame, with no bundle and no
-   rAF. The React Bits pieces inside layer on at hydration, which is precisely
-   the moment worth signalling. */
-.hb-boot {
-  display: none;
-}
-
-@media (display-mode: standalone), (display-mode: fullscreen) {
-  .hb-boot {
-    position: fixed;
-    inset: 0;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    padding: calc(env(safe-area-inset-top) + 2rem) 1.75rem
-      calc(env(safe-area-inset-bottom) + 1.5rem);
-    background-color: var(--color-bg);
-    /* One heat source, the same arena glow the landing page uses. */
-    background-image: radial-gradient(
-      125% 58% at 50% -6%,
-      rgb(var(--accent-rgb) / 0.13),
-      transparent 62%
-    );
-    transition:
-      opacity 0.42s ease-out,
-      transform 0.42s cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-}
-
-/* Failsafe. If hydration never happens (a bad bundle, a stale service worker)
-   nothing would ever lift the sheet, and a permanently black app is far worse
-   than one that boots ugly. The !important is deliberate: it has to survive
-   the global reduced-motion collapse at the bottom of this file, which would
-   otherwise fire this at 0.01ms and hide the splash instantly. */
-.hb-boot[data-phase="boot"] {
-  animation: hb-boot-failsafe 9s linear forwards !important;
-}
-@keyframes hb-boot-failsafe {
-  0%,
-  93% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-/* Handed over: fade and pull back a hair, as if the sheet lifts off the app. */
-.hb-boot[data-phase="exit"] {
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(1.035);
-}
-
-.hb-boot__texture {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.16;
-  mask-image: radial-gradient(circle at 50% 44%, black, transparent 66%);
-  -webkit-mask-image: radial-gradient(circle at 50% 44%, black, transparent 66%);
-}
-
-.hb-boot__kanji {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: var(--font-display);
-  font-size: min(62vw, 27rem);
-  font-weight: 700;
-  line-height: 1;
-  color: rgb(255 255 255 / 0.022);
-  pointer-events: none;
-  user-select: none;
-}
-
-.hb-boot__frame {
-  position: relative;
-  display: flex;
-  width: 100%;
-  max-width: 21rem;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.hb-boot__sigil {
-  display: flex;
-  height: 2.25rem;
-  width: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgb(var(--accent-rgb) / 0.4);
-  border-radius: var(--radius-lg);
-  color: var(--color-accent);
-  animation: hb-boot-pulse 2.4s ease-in-out infinite;
-}
-@keyframes hb-boot-pulse {
-  0%,
-  100% {
-    box-shadow: 0 0 22px -8px rgb(var(--accent-rgb) / 0.5);
-    opacity: 0.86;
-  }
-  50% {
-    box-shadow: 0 0 30px -4px rgb(var(--accent-rgb) / 0.8);
-    opacity: 1;
-  }
-}
-
-.hb-boot__wordmark {
-  margin-top: 1.05rem;
-  font-size: clamp(2.35rem, 13vw, 3.35rem);
-  line-height: 0.94;
-  text-transform: uppercase;
-}
-
-.hb-boot__tagline {
-  margin-top: 0.6rem;
-  font-size: 10px;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-
-.hb-boot__board {
-  margin-top: 1.55rem;
-}
-
-/* Load meter + readout. The counter is a real animated integer (@property
-   makes it interpolatable), stepping in lockstep with the fill above it. */
-.hb-boot__meter {
-  position: relative;
-  margin-top: 1.6rem;
-  height: 2px;
-  width: 100%;
-  overflow: hidden;
-  border-radius: 9999px;
-  background: var(--color-border);
-}
-.hb-boot__meter-fill {
-  position: absolute;
-  inset: 0;
-  transform: scaleX(1);
-  transform-origin: left center;
-  background: linear-gradient(
-    90deg,
-    rgb(var(--accent-rgb) / 0.35),
-    var(--color-accent)
-  );
-  box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.5);
-  /* Stepped, not eased: a boot meter that glides to 95% in the first tenth of
-     a second and then crawls reads as a fake. These stops move in stages, the
-     way a real POST does, and the counter below shares them exactly. */
-  animation: hb-boot-fill 2.6s linear backwards;
-}
-@keyframes hb-boot-fill {
-  0% {
-    transform: scaleX(0.03);
-  }
-  18% {
-    transform: scaleX(0.22);
-  }
-  34% {
-    transform: scaleX(0.29);
-  }
-  52% {
-    transform: scaleX(0.55);
-  }
-  70% {
-    transform: scaleX(0.68);
-  }
-  88% {
-    transform: scaleX(0.91);
-  }
-  100% {
-    transform: scaleX(1);
-  }
-}
-
-@property --hb-boot-pct {
-  syntax: "<integer>";
-  initial-value: 100;
-  inherits: false;
-}
-.hb-boot__pct {
-  --hb-boot-pct: 100;
-  counter-reset: hb-boot-pct var(--hb-boot-pct);
-  font-size: 12px;
-  color: var(--color-text);
-  animation: hb-boot-count 2.6s linear backwards;
-}
-.hb-boot__pct::after {
-  content: counter(hb-boot-pct) "%";
-}
-@keyframes hb-boot-count {
-  0% {
-    --hb-boot-pct: 3;
-  }
-  18% {
-    --hb-boot-pct: 22;
-  }
-  34% {
-    --hb-boot-pct: 29;
-  }
-  52% {
-    --hb-boot-pct: 55;
-  }
-  70% {
-    --hb-boot-pct: 68;
-  }
-  88% {
-    --hb-boot-pct: 91;
-  }
-  100% {
-    --hb-boot-pct: 100;
-  }
-}
-
-.hb-boot__readout {
-  display: flex;
-  width: 100%;
-  align-items: baseline;
-  justify-content: space-between;
-  margin-top: 0.7rem;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-}
-.hb-boot__readout-label {
-  color: var(--color-muted);
-}
-
-/* POST log, one subsystem per line, revealed in the order they come up. */
-.hb-boot__log {
-  display: grid;
-  gap: 0.4rem;
-  width: 100%;
-  margin-top: 1.45rem;
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-align: left;
-  text-transform: uppercase;
-  color: var(--color-muted);
-}
-.hb-boot__log-line {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-  /* Resting state is *shown*; the keyframes supply the entrance, so the
-     reduced-motion collapse leaves the log readable instead of blank. */
-  opacity: 1;
-  animation: hb-boot-line 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
-}
-.hb-boot__log-ok {
-  display: inline-flex;
-  min-width: 2.1rem;
-  justify-content: center;
-  border: 1px solid rgb(var(--accent-rgb) / 0.32);
-  border-radius: 4px;
-  padding: 0.05rem 0.25rem;
-  font-size: 9px;
-  letter-spacing: 0.18em;
-  color: var(--color-accent);
-}
-@keyframes hb-boot-line {
+@keyframes hb-topbar-title {
   from {
     opacity: 0;
     transform: translateY(6px);
@@ -866,96 +235,201 @@ label {
   }
 }
 
-.hb-boot__foot {
-  position: absolute;
-  bottom: calc(env(safe-area-inset-bottom) + 1.35rem);
-  font-size: 9px;
-  letter-spacing: 0.34em;
-  text-transform: uppercase;
-  color: rgb(255 255 255 / 0.22);
+/* ── Feel like an app, not a web page ─────────────────────────────────────
+   No double-tap-to-zoom delay on controls, no accidental text selection when
+   a thumb rests on chrome, no scrollbars on touch screens. Content text stays
+   selectable. */
+a,
+button,
+[role="button"],
+[role="tab"],
+[role="radio"],
+label,
+summary,
+input,
+select {
+  touch-action: manipulation;
+}
+nav,
+header,
+button,
+[role="button"],
+[role="tab"],
+[role="radio"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+@media (pointer: coarse) {
+  * {
+    scrollbar-width: none;
+  }
+  ::-webkit-scrollbar {
+    display: none;
+  }
 }
 
-/* Champion aura: a crimson arc sweeps the border of the #1 standing.
-   Stands in for React Bits' ElectricBorder, which drives an equivalent look
-   from a canvas requestAnimationFrame that never idles. An animated @property
-   angle keeps this on the compositor with no JS and no per-frame callback, and
-   the global reduced-motion rule parks the arc instead of spinning it. */
-@property --hb-angle {
-  syntax: "<angle>";
-  initial-value: 0deg;
-  inherits: false;
+/* Loading placeholder: a slow breath, the one sign that data is on its way. */
+.hb-skeleton {
+  background: var(--color-surface);
+  animation: hb-breathe 1.6s var(--ease-in-out) infinite;
 }
-.hb-champion::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  border-radius: inherit;
-  padding: 1px;
-  background: conic-gradient(
-    from var(--hb-angle),
-    transparent 0deg,
-    rgb(var(--accent-rgb)) 45deg,
-    rgb(var(--accent-rgb) / 0.15) 110deg,
-    transparent 190deg,
-    transparent 250deg,
-    rgb(var(--accent-rgb) / 0.7) 310deg,
-    transparent 360deg
-  );
-  /* Punch out the middle so only the 1px ring paints. */
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
+@keyframes hb-breathe {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ── Route transitions ────────────────────────────────────────────────────
+   React's <ViewTransition> drives these (see PageTransition). Moving between
+   tabs crossfades with a short rise: same app, different room. Going into a
+   detail slides forward, coming back slides back. The chrome is anchored so
+   only content moves. */
+::view-transition {
   pointer-events: none;
-  animation: hb-champion 6s linear infinite;
 }
-@keyframes hb-champion {
+::view-transition-old(.hb-page),
+::view-transition-new(.hb-page) {
+  animation-timing-function: var(--ease-out);
+}
+::view-transition-old(.hb-page) {
+  animation: 140ms var(--ease-out) both hb-fade-out;
+}
+::view-transition-new(.hb-page) {
+  animation: 260ms var(--ease-out) 60ms both hb-rise-in;
+}
+::view-transition-old(.nav-forward) {
+  --hb-slide: -48px;
+  animation:
+    160ms var(--ease-out) both hb-fade-out,
+    340ms var(--ease-in-out) both hb-slide-out;
+}
+::view-transition-new(.nav-forward) {
+  --hb-slide: 48px;
+  animation:
+    240ms var(--ease-out) 90ms both hb-fade-in,
+    340ms var(--ease-in-out) both hb-slide-in;
+}
+::view-transition-old(.nav-back) {
+  --hb-slide: 48px;
+  animation:
+    160ms var(--ease-out) both hb-fade-out,
+    340ms var(--ease-in-out) both hb-slide-out;
+}
+::view-transition-new(.nav-back) {
+  --hb-slide: -48px;
+  animation:
+    240ms var(--ease-out) 90ms both hb-fade-in,
+    340ms var(--ease-in-out) both hb-slide-in;
+}
+::view-transition-group(.hb-morph) {
+  animation-duration: 340ms;
+  animation-timing-function: var(--ease-in-out);
+}
+/* The nav highlight travels from the old tab to the new one. */
+::view-transition-group(hb-tab-active),
+::view-transition-group(hb-side-active) {
+  animation-duration: 320ms;
+  animation-timing-function: var(--ease-out);
+  z-index: 101;
+}
+::view-transition-group(hb-tabbar),
+::view-transition-group(hb-topbar),
+::view-transition-group(hb-sidebar) {
+  animation: none;
+  z-index: 100;
+}
+::view-transition-old(hb-tabbar),
+::view-transition-old(hb-topbar),
+::view-transition-old(hb-sidebar) {
+  display: none;
+}
+::view-transition-new(hb-tabbar),
+::view-transition-new(hb-topbar),
+::view-transition-new(hb-sidebar) {
+  animation: none;
+}
+@keyframes hb-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes hb-fade-out {
   to {
-    --hb-angle: 360deg;
+    opacity: 0;
+  }
+}
+@keyframes hb-rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes hb-slide-in {
+  from {
+    translate: var(--hb-slide);
+  }
+}
+@keyframes hb-slide-out {
+  to {
+    translate: var(--hb-slide);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }
 
-/* ── Liquid glass ─────────────────────────────────────────────────────────
-   Translucent, saturated backdrop blur with a specular light edge, Apple's
-   Liquid Glass material, tuned for the dark theme. Used for chrome (nav bars,
-   sheets); content cards stay opaque. */
-.hb-glass {
-  /* Lit, translucent material: brightened + saturated backdrop with bright
-     specular light edges (React Bits' fallback formula), so it reads as glass
-     rather than a dark panel. */
-  background-color: rgb(32 30 28 / 0.42);
-  backdrop-filter: blur(20px) saturate(185%) brightness(1.14);
-  -webkit-backdrop-filter: blur(20px) saturate(185%) brightness(1.14);
-  box-shadow:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.22),
-    inset 0 -1px 0 0 rgb(0 0 0 / 0.22),
-    inset 0 0 0 1px rgb(255 255 255 / 0.05),
-    0 14px 36px -14px rgb(0 0 0 / 0.6);
+/* A value that just changed (a set landing, a PR): one brief lift of the
+   figure, then stillness. */
+.hb-landed {
+  animation: hb-landed 420ms var(--ease-out);
 }
-.hb-glass-strong {
-  background-color: rgb(26 24 22 / 0.72);
-  backdrop-filter: blur(30px) saturate(175%) brightness(1.1);
-  -webkit-backdrop-filter: blur(30px) saturate(175%) brightness(1.1);
-  box-shadow:
-    inset 0 1px 0 0 rgb(255 255 255 / 0.18),
-    inset 0 0 0 1px rgb(255 255 255 / 0.05),
-    0 -22px 55px -22px rgb(0 0 0 / 0.6);
-}
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .hb-glass {
-    background-color: rgb(12 11 10 / 0.94);
-  }
-  .hb-glass-strong {
-    background-color: rgb(14 13 12 / 0.97);
+@keyframes hb-landed {
+  from {
+    opacity: 0.35;
+    transform: translateY(4px);
   }
 }
 
-/* Strip native number spinners: NumberStepper supplies its own controls */
+/* ── Launch sheet ─────────────────────────────────────────────────────────
+   Installed app only (browser tabs never see it). iOS drops its static launch
+   image as soon as the document paints, before React hydrates; this holds the
+   same black frame and mark until the app is live, then gets out of the way.
+   If hydration never happens, the failsafe lifts it on its own. */
+.hb-boot {
+  display: none;
+}
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  .hb-boot {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background: var(--color-bg);
+    transition: opacity 260ms var(--ease-out);
+  }
+}
+.hb-boot[data-phase="boot"] {
+  animation: hb-boot-failsafe 1ms linear 6s forwards;
+}
+.hb-boot[data-phase="exit"] {
+  opacity: 0;
+  pointer-events: none;
+}
+@keyframes hb-boot-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+/* Strip native number spinners: NumberStepper supplies its own controls. */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -966,14 +440,16 @@ input[type="number"] {
 }
 
 ::selection {
-  background: rgb(var(--accent-rgb) / 0.28);
+  background: rgb(var(--accent-rgb) / 0.3);
 }
 
-/* Prevent iOS Safari zoom on focus: 16px floor on controls at phone widths */
+/* Prevent iOS Safari zoom on focus: 16px floor on controls at phone widths.
+   Fields set larger than that on purpose (a title, a logged weight) opt out
+   with data-display, or the floor would shrink them to 16px. */
 @media (max-width: 639.98px) {
-  input:not([type="date"]):not([type="checkbox"]):not([type="radio"]),
+  input:not([type="date"]):not([type="checkbox"]):not([type="radio"]):not([data-display]),
   select,
-  textarea {
+  textarea:not([data-display]) {
     font-size: max(16px, 1em);
   }
 }
@@ -990,20 +466,21 @@ input[type="number"] {
   background: var(--color-border);
   border-radius: 9999px;
 }
-::-webkit-scrollbar-thumb:hover {
-  background: #34302d;
-}
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
-    /* Collapse the delay too, or a staggered entrance still holds its `from`
-       keyframe (opacity: 0) for the full delay, content that just sits
-       invisible for a beat instead of appearing at once. */
     animation-delay: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  /* Scroll-driven chrome isn't motion; keep the top bar legible. */
+  .hb-topbar {
+    animation: none;
+    background-color: rgb(0 0 0 / 0.78);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
   }
 }

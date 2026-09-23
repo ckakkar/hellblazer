@@ -110,7 +110,7 @@ export function DayPreview({
             />
             <Link
               href="/templates"
-              className="text-center text-xs text-muted transition-colors hover:text-accent"
+              className="text-center text-[13px] text-muted transition-colors hover:text-text"
             >
               Edit sets, reps &amp; order in Templates →
             </Link>
@@ -146,11 +146,11 @@ export function DayPreview({
                     <div className="truncate text-sm text-text">{e.name}</div>
                     <div className="truncate text-xs text-muted">
                       {MUSCLE_LABEL[e.primary_muscle]}
-                      {e.equipment ? ` · ${e.equipment}` : ""}
+                      {e.equipment ? `, ${e.equipment}` : ""}
                     </div>
                   </div>
                   {e.user_id && (
-                    <span className="shrink-0 text-xs text-accent">custom</span>
+                    <span className="shrink-0 text-[13px] text-muted">Custom</span>
                   )}
                 </button>
               </li>
@@ -165,7 +165,7 @@ export function DayPreview({
                 key={r.id}
                 className="flex items-center gap-3 rounded-lg border border-border bg-surface-2/40 p-3"
               >
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface font-mono text-xs text-muted">
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-md bg-surface tnum text-xs text-muted">
                   {i + 1}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -175,9 +175,9 @@ export function DayPreview({
                       {MUSCLE_LABEL[r.primaryMuscle]}
                     </Badge>
                   </div>
-                  <div className="mt-0.5 font-mono text-xs text-muted">
+                  <div className="mt-0.5 tnum text-xs text-muted">
                     {r.targetSets ?? 3} × {r.targetReps || "-"}
-                    {r.note ? ` · ${r.note}` : ""}
+                    {r.note ? `, ${r.note}` : ""}
                   </div>
                 </div>
                 <button
@@ -186,7 +186,7 @@ export function DayPreview({
                     setQ("");
                   }}
                   aria-label={`Swap ${r.name}`}
-                  className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border text-muted transition-colors hover:border-accent/40 hover:text-accent"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted transition-colors hover:text-text"
                 >
                   <Repeat2 className="size-4" />
                 </button>

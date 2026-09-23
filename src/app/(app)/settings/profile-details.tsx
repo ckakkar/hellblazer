@@ -82,7 +82,7 @@ export function ProfileDetails({
 
       <div className="grid gap-1.5">
         <span className="text-xs font-medium text-muted">Sex</span>
-        <div className="inline-flex w-full rounded-lg border border-border bg-surface-2 p-0.5">
+        <div className="inline-flex w-full rounded-full bg-white/[0.06] p-0.5">
           {SEXES.map((o) => (
             <button
               key={o.key}
@@ -94,9 +94,9 @@ export function ProfileDetails({
                 persist({ sex: next });
               }}
               className={cn(
-                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/50",
+                "h-9 flex-1 rounded-full px-3 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/40",
                 sex === o.key
-                  ? "bg-accent text-bg"
+                  ? "bg-white/[0.12] text-text"
                   : "text-muted hover:text-text",
               )}
             >
@@ -148,8 +148,8 @@ export function ProfileDetails({
       <p className="flex items-center gap-1.5 text-xs text-muted">
         {saved ? (
           <>
-            <Check className="size-3.5 text-accent" />
-            <span className="text-accent">Saved</span>
+            <Check className="size-3.5 text-text" />
+            <span className="text-text">Saved</span>
           </>
         ) : (
           "Sharpens your strength rank: standards are sex- and bodyweight-relative."

@@ -1,6 +1,5 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 
 interface ChartCardProps {
   title: string;
@@ -20,21 +19,15 @@ export function ChartCard({
   bodyClassName,
 }: ChartCardProps) {
   return (
-    <Card className={cn("flex flex-col", className)}>
-      <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-3.5">
+    <section className={cn("flex flex-col rounded-2xl bg-surface", className)}>
+      <div className="flex items-start justify-between gap-3 px-5 pt-4">
         <div className="min-w-0">
-          <h3 className="font-mono text-[10px] font-medium uppercase tracking-[0.16em] text-muted">
-            {title}
-          </h3>
-          {subtitle && (
-            <p className="mt-1.5 text-xs leading-5 text-muted/80">{subtitle}</p>
-          )}
+          <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-text">{title}</h3>
+          {subtitle && <p className="mt-0.5 text-[13px] leading-5 text-muted">{subtitle}</p>}
         </div>
         {action}
       </div>
-      <div className={cn("min-w-0 flex-1 p-2 pt-3", bodyClassName)}>
-        {children}
-      </div>
-    </Card>
+      <div className={cn("min-w-0 flex-1 p-2 pt-3", bodyClassName)}>{children}</div>
+    </section>
   );
 }

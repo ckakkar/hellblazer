@@ -7,16 +7,15 @@ import {
   ChevronRight,
   Loader2,
   Plus,
-  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
+import { PresetCarousel } from "@/components/program/preset-carousel";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { format } from "date-fns";
 import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
@@ -27,7 +26,6 @@ import {
   deleteProgram,
   setActiveProgram,
 } from "@/lib/actions/programs";
-import { loadPreset } from "@/lib/actions/templates";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -44,19 +42,12 @@ export function ProgramsManager({
 }) {
   const [pending, start] = useTransition();
   const [creating, setCreating] = useState(false);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
 
   return (
     <div>
       <PageHeader
         title="Programs"
-        subtitle="Build the campaign: sequence your training days, set the duration, and make every week count."
-        eyebrow="Training architecture"
-        index="03"
-        stat={{
-          value: programs.length,
-          label: programs.length === 1 ? "block" : "blocks",
-        }}
+        subtitle="Your training days, scheduled week by week."
         action={
           <Button
             onClick={() => setCreating(true)}
@@ -74,132 +65,78 @@ export function ProgramsManager({
       />
 
       {activeProgress && (
-        <div className="mb-6">
-          <ProgramProgressCard
-            progress={activeProgress}
-            href={`/programs/${activeProgress.program.id}`}
-          />
+        <div className="mb-10">
+          <ProgramProgressCard progress={activeProgress} href={`/programs/${activeProgress.program.id}`} />
         </div>
-      )}
-
-      {/* Starter programs: load a proven split (any number of times) */}
-      {presets.length > 0 && (
-        <Card className="mb-8 overflow-hidden border-accent/20 bg-accent/[0.025]">
-          <div className="flex items-start gap-3 border-b border-border px-5 py-4">
-            <Sparkles className="mt-0.5 size-4 shrink-0 text-accent" />
-            <div>
-              <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-accent">Promoter&apos;s picks</div>
-              <p className="mt-1 max-w-2xl text-xs leading-5 text-muted">
-                Proven strength-first campaigns, ready to become your active block.
-              </p>
-            </div>
-          </div>
-          <div className="grid gap-px bg-border sm:grid-cols-2 xl:grid-cols-3">
-            {presets.map((p, presetIndex) => (
-              <div
-                key={p.id}
-                className="relative flex min-h-48 flex-col bg-surface p-5"
-              >
-                <span aria-hidden className="absolute right-3 top-1 font-impact text-6xl text-text/[0.035]">{String(presetIndex + 1).padStart(2, "0")}</span>
-                <div className="min-w-0">
-                  <div className="max-w-[80%] font-display text-lg uppercase leading-tight tracking-wide text-text">
-                    {p.name}
-                  </div>
-                  <p className="mt-0.5 text-xs leading-5 text-muted">
-                    {p.description}
-                  </p>
-                  <div className="mt-1 font-mono text-xs text-muted">
-                    {p.days.length} days/week · {p.weeks ?? 8} weeks ·{" "}
-                    {p.days.reduce((n, d) => n + d.exercises.length, 0)} exercises
-                  </div>
-                </div>
-                <Button
-                  variant="secondary"
-                  className="mt-auto w-full"
-                  disabled={pending}
-                  onClick={() => {
-                    setLoadingId(p.id);
-                    start(async () => {
-                      try {
-                        await loadPreset({ presetId: p.id });
-                      } finally {
-                        setLoadingId(null);
-                      }
-                    });
-                  }}
-                >
-                  {loadingId === p.id ? (
-                    <Loader2 className="size-4 animate-spin" />
-                  ) : (
-                    <Plus className="size-4" />
-                  )}
-                  {loadingId === p.id ? "Loading…" : "Load"}
-                </Button>
-              </div>
-            ))}
-          </div>
-        </Card>
       )}
 
       {programs.length === 0 ? (
-        <EmptyState
-          icon={<CalendarRange className="size-6" />}
-          title="No programs yet"
-          body="Load a starter program above, or build your own from templates."
-        />
+        <div className="mb-10">
+          <EmptyState
+            icon={<CalendarRange className="size-6" />}
+            title="No programs yet"
+            body="Load a starter program below, or build your own from templates."
+          />
+        </div>
       ) : (
-        <div className="grid gap-3">
-          <SectionLabel>All programs · tap “Make active” to switch</SectionLabel>
-          {programs.map((p, programIndex) => (
-            <Card
-              key={p.id}
-              className="group flex items-center gap-3 overflow-hidden p-4 transition-[transform,border-color] hover:border-accent/40 active:scale-[0.99]"
-            >
-              <span className="w-7 shrink-0 font-impact text-xl tabular-nums text-muted/45 group-hover:text-accent">{String(programIndex + 1).padStart(2, "0")}</span>
-              <Link href={`/programs/${p.id}`} className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="truncate font-display text-[15px] uppercase tracking-wide text-text">
-                    {p.name}
+        <section className="mb-10">
+          <SectionLabel>Your programs</SectionLabel>
+          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+            {programs.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 pl-4 pr-2">
+                <Link
+                  href={`/programs/${p.id}`}
+                  transitionTypes={["nav-forward"]}
+                  className="min-w-0 flex-1 py-3.5"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="truncate text-[15px] font-medium text-text">{p.name}</span>
+                    {p.is_active && <Badge>Active</Badge>}
                   </span>
-                  {p.is_active && <Badge variant="accent">Active</Badge>}
-                </div>
-                <div className="mt-0.5 font-mono text-xs text-muted">
-                  {p.duration_weeks} weeks · {p.program_day.length} days/week
-                  {p.start_date
-                    ? ` · from ${format(new Date(p.start_date + "T00:00:00"), "MMM d")}`
-                    : ""}
-                </div>
-              </Link>
-              {!p.is_active && (
-                <button
+                  <span className="tnum mt-0.5 block truncate text-[13px] text-muted">
+                    {p.duration_weeks} weeks, {p.program_day.length} days a week
+                    {p.start_date ? `, from ${format(new Date(p.start_date + "T00:00:00"), "d MMM")}` : ""}
+                  </span>
+                </Link>
+                {!p.is_active && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={pending}
+                    onClick={() =>
+                      start(async () => {
+                        await setActiveProgram({ id: p.id, active: true });
+                      })
+                    }
+                  >
+                    Make active
+                  </Button>
+                )}
+                <ConfirmIconButton
+                  label="Delete program"
+                  confirmLabel="Tap again to delete program"
                   disabled={pending}
-                  onClick={() =>
+                  onConfirm={() =>
                     start(async () => {
-                      await setActiveProgram({ id: p.id, active: true });
+                      await deleteProgram({ id: p.id });
                     })
                   }
-                  className="shrink-0 rounded-md border border-accent/30 px-2.5 py-1 text-xs font-medium text-accent transition-colors hover:bg-accent/10"
+                />
+                <Link
+                  href={`/programs/${p.id}`}
+                  transitionTypes={["nav-forward"]}
+                  aria-label={`Open ${p.name}`}
+                  className="flex size-8 items-center justify-center"
                 >
-                  Make active
-                </button>
-              )}
-              <ConfirmIconButton
-                label="Delete program"
-                confirmLabel="Tap again to delete program"
-                disabled={pending}
-                onConfirm={() =>
-                  start(async () => {
-                    await deleteProgram({ id: p.id });
-                  })
-                }
-              />
-              <Link href={`/programs/${p.id}`} aria-label="Open program">
-                <ChevronRight className="size-4 shrink-0 text-muted" />
-              </Link>
-            </Card>
-          ))}
-        </div>
+                  <ChevronRight className="size-4 text-muted/70" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
+
+      <PresetCarousel presets={presets} />
 
       <CreateProgramSheet
         open={creating}
@@ -261,13 +198,13 @@ function CreateProgramSheet({
           size="lg"
         >
           {pending ? <Loader2 className="size-4 animate-spin" /> : null}
-          Create &amp; activate
+          Create and start
         </Button>
       }
     >
       <div className="grid gap-5 p-4">
         <label className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted">Program name</span>
+          <span className="text-[13px] font-medium text-muted">Program name</span>
           <Input
             autoFocus
             value={name}
@@ -277,17 +214,15 @@ function CreateProgramSheet({
         </label>
 
         <div className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted">Run it for</span>
+          <span className="text-[13px] font-medium text-muted">Run it for</span>
           <div className="flex flex-wrap items-center gap-2">
             {DURATIONS.map((w) => (
               <button
                 key={w}
                 onClick={() => setWeeks(w)}
                 className={cn(
-                  "rounded-lg border px-3 py-1.5 text-sm transition-colors",
-                  weeks === w
-                    ? "border-accent/50 bg-accent/10 text-accent"
-                    : "border-border text-muted hover:text-text",
+                  "tnum h-9 rounded-full px-3.5 text-[13px] font-medium transition-colors",
+                  weeks === w ? "bg-text text-bg" : "bg-surface-2 text-muted hover:text-text",
                 )}
               >
                 {w} wks
@@ -309,7 +244,7 @@ function CreateProgramSheet({
         </div>
 
         <label className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted">Start date</span>
+          <span className="text-[13px] font-medium text-muted">Start date</span>
           <Input
             type="date"
             value={startDate}
@@ -319,7 +254,7 @@ function CreateProgramSheet({
         </label>
 
         <div className="grid gap-2">
-          <span className="text-xs font-medium text-muted">
+          <span className="text-[13px] font-medium text-muted">
             Weekly schedule{" "}
             <span className="text-muted/60">
               Tap templates in order ({selected.length} selected)
@@ -334,18 +269,14 @@ function CreateProgramSheet({
                   key={t.id}
                   onClick={() => toggle(t.id)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                    active
-                      ? "border-accent/40 bg-accent/[0.06]"
-                      : "border-border hover:border-border/80",
+                    "flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
+                    active ? "bg-white/[0.08]" : "bg-surface-2/60 hover:bg-surface-2",
                   )}
                 >
                   <span
                     className={cn(
-                      "flex size-6 shrink-0 items-center justify-center rounded-md font-mono text-xs",
-                      active
-                        ? "bg-accent text-bg"
-                        : "border border-border text-muted",
+                      "tnum flex size-6 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold",
+                      active ? "bg-text text-bg" : "shadow-[inset_0_0_0_1.5px_var(--color-border)]",
                     )}
                   >
                     {active ? order + 1 : ""}

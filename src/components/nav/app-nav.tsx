@@ -1,8 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, LogOut } from "lucide-react";
+import { ChevronRight, Ellipsis, Flame, LogOut, Plus } from "lucide-react";
+import { Sheet } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import {
@@ -13,55 +15,62 @@ import {
   type NavItem,
 } from "./nav-items";
 
+/** The compact title the mobile top bar shows once the large one scrolls off. */
+const TITLES: [prefix: string, title: string][] = [
+  ["/dashboard", "Home"],
+  ["/log/", "Workout"],
+  ["/log", "Log"],
+  ["/programs/", "Program"],
+  ["/programs", "Programs"],
+  ["/progress", "Progress"],
+  ["/history/", "Session"],
+  ["/history", "History"],
+  ["/leaderboard", "King of the Hill"],
+  ["/templates", "Templates"],
+  ["/exercises", "Exercises"],
+  ["/settings", "Profile"],
+];
+function titleFor(pathname: string) {
+  return TITLES.find(([p]) => pathname === p || pathname.startsWith(p))?.[1] ?? "";
+}
+
 function useActive() {
   const pathname = usePathname();
-  return (href: string) =>
-    pathname === href || pathname.startsWith(href + "/");
+  return (href: string) => pathname === href || pathname.startsWith(href + "/");
 }
 
 function Brand() {
   return (
-    <Link href="/dashboard" className="group flex items-center gap-3">
-      <span className="hb-panel-cut flex size-8 items-center justify-center border border-accent/50 bg-accent/[0.06] text-accent transition-colors group-hover:bg-accent/15">
-        <Flame className="size-3.5" />
-      </span>
-      <span>
-        <span className="block font-display text-[15px] font-semibold uppercase tracking-[0.15em] text-text">
-          Hell&nbsp;Blazer
-        </span>
-        <span className="mt-0.5 block font-mono text-[9px] uppercase tracking-[0.16em] text-muted/60">
-          Personal fight record
-        </span>
+    <Link href="/dashboard" className="flex items-center gap-2.5">
+      <Flame className="size-5 text-accent" strokeWidth={2.25} />
+      <span className="text-[15px] font-semibold tracking-[-0.02em] text-text">
+        Hell Blazer
       </span>
     </Link>
   );
 }
 
-function SidebarLink({
-  item,
-  active,
-}: {
-  item: NavItem;
-  active: boolean;
-}) {
+/* The active highlight carries a view-transition name, so on navigation the
+   browser morphs the old highlight into the new one: the selection visibly
+   travels to where you went, with no JavaScript animating it. */
+function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
       className={cn(
-        "group relative flex items-center gap-3 border-l-2 px-3 py-2.5 text-sm font-medium transition-colors",
-        active
-          ? "border-accent bg-gradient-to-r from-accent/15 to-transparent text-text"
-          : "border-transparent text-muted hover:border-border hover:bg-surface/50 hover:text-text",
+        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors",
+        active ? "text-text" : "text-muted hover:text-text",
       )}
     >
-      <item.icon
-        className={cn(
-          "size-4.5 shrink-0",
-          active ? "text-accent" : "text-muted group-hover:text-text",
-        )}
-      />
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-      <span className={cn("font-mono text-[9px] tabular-nums", active ? "text-accent" : "text-muted/45")}>{item.code}</span>
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-xl bg-white/[0.07]"
+          style={{ viewTransitionName: "hb-side-active" }}
+        />
+      )}
+      <item.icon className="relative size-[18px] shrink-0" />
+      <span className="relative min-w-0 flex-1 truncate">{item.label}</span>
     </Link>
   );
 }
@@ -72,108 +81,158 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hb-glass hb-nav-rail fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-border px-3 py-5 md:flex">
-        <div className="px-2">
+      <aside
+        className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-bg px-3 py-6 md:flex"
+        style={{ viewTransitionName: "hb-sidebar" }}
+      >
+        <div className="px-3">
           <Brand />
         </div>
-        <nav className="mt-9 flex flex-1 flex-col gap-6">
+        <nav className="mt-8 flex flex-1 flex-col gap-6">
           {NAV_SECTIONS.map((section, i) => (
-            <div key={i} className="flex flex-col gap-1">
+            <div key={i} className="flex flex-col gap-0.5">
               {section.title && (
-                <div className="px-3 pb-1.5 font-mono text-[10px] uppercase tracking-[0.16em] text-muted/50">
+                <div className="px-3 pb-1.5 text-[12px] font-medium text-muted/70">
                   {section.title}
                 </div>
               )}
               {section.items.map((item) => (
-                <SidebarLink
-                  key={item.href}
-                  item={item}
-                  active={isActive(item.href)}
-                />
+                <SidebarLink key={item.href} item={item} active={isActive(item.href)} />
               ))}
             </div>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-1 border-t border-border pt-3">
-          <SidebarLink
-            item={SETTINGS_ITEM}
-            active={isActive(SETTINGS_ITEM.href)}
-          />
+        <div className="mt-auto flex flex-col gap-0.5">
+          <SidebarLink item={SETTINGS_ITEM} active={isActive(SETTINGS_ITEM.href)} />
           {userEmail && (
-            <p className="truncate px-3 pt-1 text-xs text-muted" title={userEmail}>
+            <p className="truncate px-3 pb-1 pt-2 text-[12px] text-muted/70" title={userEmail}>
               {userEmail}
             </p>
           )}
           <form action={signOut}>
             <button
               type="submit"
-              className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-surface-2 hover:text-danger"
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium text-muted transition-colors hover:text-danger"
             >
-              <LogOut className="size-4.5" />
+              <LogOut className="size-[18px]" />
               Sign out
             </button>
           </form>
         </div>
       </aside>
 
-      {/* Mobile top bar: pads into the notch via safe-area inset */}
-      <header className="hb-glass fixed inset-x-0 top-0 z-30 border-b border-border/60 pt-[env(safe-area-inset-top)] md:hidden">
-        <div className="flex h-14 items-center justify-between px-4">
-          <Brand />
-          <div className="flex items-center gap-1">
-            {SECONDARY_NAV.map((item) => (
+      <MobileTopBar />
+
+      {/* Mobile tab bar: a floating capsule of black glass. */}
+      <nav
+        className="hb-glass fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid h-16 grid-cols-5 rounded-[1.75rem] px-1.5 min-[400px]:inset-x-5 md:hidden"
+        style={{ viewTransitionName: "hb-tabbar" }}
+      >
+        {BOTTOM_NAV.map((item) => {
+          const active = isActive(item.href);
+          const isLog = item.href === "/log";
+          if (isLog) {
+            return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-label={item.label}
-                className={cn(
-                  "flex size-10 items-center justify-center rounded-lg transition-transform active:scale-90",
-                  isActive(item.href)
-                    ? "bg-accent/10 text-accent"
-                    : "text-muted",
-                )}
+                className="flex items-center justify-center"
               >
-                <item.icon className="size-5" />
+                <span className="flex size-11 items-center justify-center rounded-full bg-accent text-black">
+                  <Plus className="size-5" strokeWidth={2.5} />
+                </span>
               </Link>
-            ))}
-          </div>
-        </div>
-      </header>
-
-      {/* Mobile bottom nav */}
-      <nav className="hb-glass fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid grid-cols-5 overflow-hidden border-t border-text/20 md:hidden">
-        {BOTTOM_NAV.map((item) => {
-          const active = isActive(item.href);
-          const isLog = item.href === "/log";
+            );
+          }
           return (
             <Link
               key={item.href}
               href={item.href}
-              className="flex flex-col items-center justify-center gap-1 py-2 transition-transform active:scale-90"
+              aria-current={active ? "page" : undefined}
+              className={cn(
+                "relative flex flex-col items-center justify-center gap-0.5 transition-colors",
+                active ? "text-text" : "text-muted",
+              )}
             >
-              <span
-                className={cn(
-                  "flex size-9 items-center justify-center rounded-lg transition-colors",
-                  isLog && "bg-accent text-bg shadow-glow",
-                  !isLog && active && "bg-accent/10 text-accent",
-                  !isLog && !active && "text-muted",
-                )}
-              >
-                <item.icon className="size-5" />
-              </span>
-              <span
-                className={cn(
-                  "font-mono text-[9px] uppercase tracking-[0.08em]",
-                  active ? "text-accent" : "text-muted",
-                  isLog && "text-accent",
-                )}
-              >
-                {item.label}
-              </span>
+              {active && (
+                <span
+                  aria-hidden
+                  className="absolute inset-x-0.5 inset-y-1.5 rounded-[1.375rem] bg-white/[0.09]"
+                  style={{ viewTransitionName: "hb-tab-active" }}
+                />
+              )}
+              <item.icon className="relative size-[21px]" strokeWidth={active ? 2.25 : 1.75} />
+              <span className="relative text-[10.5px] font-medium">{item.label}</span>
             </Link>
           );
         })}
       </nav>
+    </>
+  );
+}
+
+/* Mobile top bar. Clear at rest, frosting once content scrolls under it; the
+   page's own title fades in at the same moment, iOS-style, so you always know
+   where you are without a second heading on screen. Secondary destinations
+   live behind one labelled "More" sheet instead of four bare icons. */
+function MobileTopBar() {
+  const pathname = usePathname();
+  const isActive = useActive();
+  const [more, setMore] = useState(false);
+  const title = titleFor(pathname);
+
+  return (
+    <>
+      <header
+        className="hb-topbar fixed inset-x-0 top-0 z-30 pt-[env(safe-area-inset-top)] md:hidden"
+        style={{ viewTransitionName: "hb-topbar" }}
+      >
+        <div className="relative flex h-11 items-center justify-between px-2 min-[400px]:px-3">
+          <Link
+            href="/dashboard"
+            aria-label="Home"
+            className="flex size-11 items-center justify-center rounded-full"
+          >
+            <Flame className="size-[22px] text-accent" strokeWidth={2.25} />
+          </Link>
+          <span
+            aria-hidden
+            className="hb-topbar-title pointer-events-none absolute inset-x-16 truncate text-center text-[16px] font-semibold tracking-[-0.015em] text-text"
+          >
+            {title}
+          </span>
+          <button
+            type="button"
+            onClick={() => setMore(true)}
+            aria-label="More"
+            className="flex size-11 items-center justify-center rounded-full text-text"
+          >
+            <Ellipsis className="size-[22px]" />
+          </button>
+        </div>
+      </header>
+
+      <Sheet open={more} onClose={() => setMore(false)} title="More">
+        <nav className="px-4 pb-5">
+          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.05]">
+            {SECONDARY_NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMore(false)}
+                className="flex items-center gap-3.5 px-4 py-3.5 active:bg-white/[0.05]"
+              >
+                <item.icon
+                  className={cn("size-5", isActive(item.href) ? "text-text" : "text-muted")}
+                />
+                <span className="flex-1 text-[16px] text-text">{item.label}</span>
+                <ChevronRight className="size-4 text-muted/70" />
+              </Link>
+            ))}
+          </div>
+        </nav>
+      </Sheet>
     </>
   );
 }

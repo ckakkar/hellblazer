@@ -25,7 +25,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+    <div className="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
       {ACCENTS.map((a) => {
         const active = a.key === accent;
         return (
@@ -36,10 +36,10 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
             aria-pressed={active}
             aria-label={a.name}
             className={cn(
-              "group flex flex-col items-center gap-2 rounded-lg border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+              "group flex flex-col items-center gap-2 rounded-xl p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40",
               active
-                ? "border-accent bg-accent/[0.07]"
-                : "border-border hover:border-muted/50 hover:bg-surface-2",
+                ? "bg-white/[0.08] shadow-[inset_0_0_0_1.5px_rgb(244_242_238/0.55)]"
+                : "bg-surface-2/60 hover:bg-surface-2",
             )}
           >
             <span
@@ -53,7 +53,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
             </span>
             <span
               className={cn(
-                "text-[11px] font-medium",
+                "text-[13px] font-medium",
                 active ? "text-text" : "text-muted",
               )}
             >
