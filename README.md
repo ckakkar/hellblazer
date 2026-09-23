@@ -1,229 +1,281 @@
 <div align="center">
 
-# 🔥 HELL BLAZER
+# 🔥 Hell Blazer
 
 ### Train like a Kengan fighter.
 
-A production-grade, **Kengan Ashura-themed** strength tracker built around a savage-fast mobile set logger and a live analytics engine. Log every set like it counts, then earn your place on the ladder of monsters.
+A **Kengan Ashura-themed** strength tracker: a fast mobile set logger, programs that run your week, analytics computed in Postgres, and an AI judge who ranks you on a ladder of the series' fighters.
 
 <br />
 
-[![Live](https://img.shields.io/badge/live-hellblazer.vercel.app-FF2D3A?style=for-the-badge)](https://hellblazer.vercel.app)
+[![Live](https://img.shields.io/badge/live-hellblazer.vercel.app-DF2D28?style=for-the-badge)](https://hellblazer.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js)](https://nextjs.org)
 [![React](https://img.shields.io/badge/React-19-087EA4?style=for-the-badge&logo=react)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-Postgres%20%2B%20RLS-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com)
 [![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
 
-**[Live app →](https://hellblazer.vercel.app)** · App by [Cyrus](https://kkrwhofrags.xyz)
+**[Open the app →](https://hellblazer.vercel.app)** · App by [Cyrus](https://kkrwhofrags.xyz)
 
 </div>
 
 ---
 
-Hell Blazer is a real, multi-user workout app, not a demo. Every screen runs against live Postgres data behind row-level security, sign-in is Google-only, and the whole thing installs to your phone as a PWA with offline logging and push reminders. It logs to a single atomic `set` grain, then computes estimated 1RM, tonnage, and weekly sets-per-muscle server-side so the client only ever fetches pre-aggregated numbers.
+Hell Blazer is a real, multi-user app, not a demo. Every screen reads live Postgres data behind row-level security, sign-in is Google-only, and it installs to your phone as a PWA with offline logging and push reminders. Every logged set lands in one atomic `set` table; estimated 1RM, tonnage and weekly sets per muscle are computed in the database, so the phone only ever downloads the numbers it shows.
 
-The twist: your training gets **judged**. An AI coach reads your full history and places you on a ten-rung ladder of Kengan Ashura's deadliest fighters: and you climb it, one honest rep at a time.
+The twist: your training gets **judged**. An AI judge reads your full history and places you on a ten-rung ladder of Kengan Ashura fighters. You climb it one honest rep at a time.
 
 ## Contents
 
 - [Highlights](#highlights)
-- [The Strength Ladder](#the-strength-ladder)
-- [Screens](#screens)
+- [A tour of the app](#a-tour-of-the-app)
+- [Logging a workout](#logging-a-workout)
+- [The strength ladder](#the-strength-ladder)
+- [Design](#design)
+- [Performance](#performance)
 - [The analytics engine](#the-analytics-engine)
 - [Tech stack](#tech-stack)
 - [Architecture](#architecture)
 - [Data model](#data-model)
-- [Design system](#design-system)
-- [PWA & notifications](#pwa--notifications)
+- [Security and privacy](#security-and-privacy)
+- [PWA, offline and notifications](#pwa-offline-and-notifications)
 - [Getting started](#getting-started)
+- [Testing](#testing)
+- [Deployment](#deployment)
 - [Project structure](#project-structure)
-- [Security & privacy](#security--privacy)
+- [Conventions](#conventions)
 
 ## Highlights
 
-**⚡ Savage-fast set logging**: the mid-workout screen is the whole point. Start an exercise, log sets in a focused modal, end it, move to the next. Every "+ set" **copies the previous set's weight & reps forward**; last session's numbers show inline as a target (`last · 60kg×5`); big thumb targets; debounced autosave that flushes on tab-hide and can't create duplicates.
+- **A set logger built for mid-set use.** Exercises run as a queue. Each one opens in a focused sheet where every new set **copies the last one forward**, and last session's numbers sit above as the target. Thumb-sized steppers, a rest timer, a live workout clock, and autosave that can't create duplicates.
+- **It keeps logging offline.** Sets you log without a signal are queued on the device (IndexedDB) and uploaded when you're back. The logger tells you plainly when something hasn't saved yet.
+- **Removal: live PR detection.** When a working set beats your all-time best on a lift (heaviest load, or best estimated 1RM), a **Removal** banner drops in, the screen's edge rings in your accent, Android phones buzz, and the set is tagged PR.
+- **A victory screen.** Finishing a workout ends on your fighter, a poster-style result word, and your volume, sets, time and records broken.
+- **Programs, not just templates.** Load one of five starter programs, or build your own split and run it as a multi-week block. Skip a day, pause and resume, roll back, preview a day before you start it, and swap a movement mid-workout so it becomes that day's default.
+- **The strength ladder.** A DeepSeek-powered judge ranks you among ten Kengan fighters, calibrated to your sex, bodyweight, height and age. Its verdict is a reveal you can accept or decline.
+- **King of the Hill.** Claim a ring name and you're ranked with everyone else by lifetime volume lifted. The top three stand on a podium as their fighters.
+- **A shareable fight card.** Export any session as a 1080×1350 PNG rendered on the server, straight to the share sheet.
+- **Analytics from real data.** Weekly sets per muscle, volume trends, a year-long consistency heatmap, per-lift 1RM and volume charts, an all-time 1RM board, muscle balance and volume distribution.
+- **Six accents.** The whole app re-skins from one colour channel. The palettes are named after the Kengan Association companies: Nogi, Motorhead, Dainippon, Kouou, Under Mount and Gandai.
+- **kg or lb.** Weight is always stored in kilograms and converted only for display.
 
-**🏆 REMOVAL: live PR detection**, the moment a working set beats your all-time best on a lift (heaviest load *or* best estimated 1RM), a **Removal** callout fires and the set is tagged with a PR badge. Baselines come from prior sessions only, gated to lifts with history, and fold into a running best so it never over-fires on a warm-up ramp.
+## A tour of the app
 
-**📈 ADVANCE: go beyond the program**. Add bonus movements mid-session without touching your program. Advance work writes to the session grain only; your split stays exactly as designed.
+| Route | What's there |
+|-------|--------------|
+| `/` | Landing page and Google sign-in; the ladder's fighters as a swipeable roster. Signed-in visitors go straight to the dashboard. |
+| `/welcome` | First-run setup: name, ring name, and the details that calibrate the judge. |
+| `/dashboard` | Your rank as a full-bleed fight poster, the **next bout** from your program with Start in thumb reach, this week against last week, a consistency heatmap, sets per muscle, a 7D / 30D / 1Y volume chart, and recent sessions. |
+| `/log` → `/log/[id]` | Start your next programmed day, any other day, or an empty session; then the set logger. |
+| `/programs` → `/programs/[id]` | Your programs and the starter programs, each fronted by the fighter whose style it's named after. Pause, resume, roll back, preview, reorder days. |
+| `/templates` | The days of your split: exercises, order, target sets, reps and notes. |
+| `/exercises` | The 140+ movement library, grouped by muscle, with a how-to for every movement; add your own. |
+| `/history` → `/history/[id]` | Every session by month, searchable and filterable. Open one for its stats and sets, to edit it, share it as a card, or delete it. |
+| `/progress` | **Lifts:** records, estimated 1RM and volume per lift, and the all-time 1RM board. **Muscles:** weekly sets and volume, balance and distribution. Plus your standing on the ladder. |
+| `/leaderboard` | King of the Hill: the podium, then everyone else, by total volume. |
+| `/settings` | Your profile under your rank fighter; the judge; ring name and details; bodyweight; units and accent; push reminders; CSV export; reset tools. |
 
-**🥋 Programs, not just templates**, build a reusable split once, run it as a multi-week program with day-by-day progression. Pause a program, resume it, roll back a day, preview tomorrow's session before you commit, and swap a movement mid-workout so it becomes that day's new default going forward.
+On a phone, the five everyday destinations live in a floating glass tab bar. The **•••** in the top bar opens a full-page menu for everything else:
+- you, with your fighter and rank;
+- the main tabs in large type;
+- King of the Hill, Templates, Exercises and History as tiles;
+- a Start a workout button.
 
-**🎯 Weak-point tracking**: back · biceps · triceps · side delts are highlighted across the dashboard and progress views, because those are the muscles worth obsessing over.
+On desktop a sidebar carries it all.
 
-**🏅 King of the Hill**: claim a **ring name** and every fighter is ranked by lifetime tonnage moved, your standing highlighted. Backed by a security-definer Postgres function that exposes only public columns across all users.
+## Logging a workout
 
-**🖼️ Shareable fight card**: export any session as a themed **1080×1350 PNG** (total volume, top lifts, your rank) rendered on the server with `next/og`, handed straight to the native share sheet.
+1. **Start.** From the dashboard's next bout, the Log tab, or a program day. The session copies that day's exercises and targets.
+2. **Work the queue.** Exercises show as done, up now, or waiting. Start one and it opens in a sheet.
+3. **Log sets.** The first set pre-fills from last time; each new set copies the one before. Weight and reps have large steppers, RPE and a warm-up flag are optional, and a rest timer runs between sets.
+4. **Adjust freely.** Swap a movement (and keep the swap for next time), add bonus exercises that don't touch your program, or remove one.
+5. **Finish.** The duration fills in from the clock, the victory screen plays, and you land on the session.
 
-**⏱️ Live workout clock + CSV export**, an elapsed timer runs during a session and auto-fills its duration; export your entire set log as **CSV** from Settings, yours to keep.
+Reopen a finished session from History to fix it: it opens in **editing** mode, with no live clock, and saving keeps its original finish time. A session left open by mistake stops counting after 6 hours, so you don't record a day-long workout.
 
-**🧬 It knows you**: sex, age and height feed the AI judge so it ranks bodyweight- and sex-relative, and a **rank ratchet** means an evaluation can only hold or raise your rank, never drop it.
+## The strength ladder
 
-**🎨 App-wide accent themer**: the entire UI re-skins from a single CSS channel variable. Six palettes named after Kengan Association companies, **Nogi · Motorhead · Dainippon · Kouou · Under Mount · Gandai**, selectable from Settings, persisted per user, applied server-side with zero flash.
+Log a workout, then ask to be judged. The judge (DeepSeek) weighs your real numbers, relative to bodyweight on the big lifts and calibrated to your sex, height and age. You start unranked and climb from **Rei** to **Kuroki**.
 
-**📊 Data-dense analytics**: a GitHub-style consistency heatmap, muscle-balance radar, volume-distribution donut, bodyweight trend, per-exercise 1RM + volume, weekly sets-per-muscle, a windowed volume trend (7d / 30d / 1y), and an all-time **estimated-1RM board** across every lift, all from real aggregated data.
-
-**⚖️ kg / lb**: canonical storage is always kilograms; conversion happens only at display.
-
-**📱 Installable PWA**: offline shell, offline logging, branded iOS launch screens, and daily push reminders when a programmed workout is due.
-
-## The Strength Ladder
-
-Log a workout, then step forward to be judged. An AI judge (DeepSeek) weighs your real numbers, calibrated to your sex, bodyweight, height and age, bodyweight-relative on the big compounds, and never drops you below the rank you already hold. You enter unranked and climb from **Rei** to **Kuroki**.
-
-**The ladder has two regimes.** Rei → Gaolang (1-4) is the proving ground: brutally hard, no rounding up, and only logged loads earn a step. Clearing the **Gaolang wall** is the achievement. Past it, Julius → Kuroki (5-10) rewards you: any clear progression promotes, ties round up, and the summit is reachable rather than mythical.
-
-**Earning a verdict.** Evaluations are rate-limited: you need a finished workout logged *since your last judgment*, and the judge rules at most **once every 5 days**. Declining a verdict doesn't buy a re-roll: the cooldown starts when the judge speaks, not when you accept.
-
-**The judge unchained.** Every limit lifts once you rank *above* Julius Reinhold. Past the Monster the ladder stops rationing verdicts entirely: no cooldown, no once-per-workout rule, nothing that has to be on the log first. Call for a verdict whenever you like, as often as you like. The rank ratchet still applies, so a judgment can only hold or raise where you stand.
+- **Two regimes.** Ranks 1-4 (Rei → Gaolang) are strict: logged loads only, no rounding up. Clearing the **Gaolang wall** is the achievement. From Julius (5) up, clear progress promotes you and ties round up.
+- **Earning a verdict.** You need a finished workout logged since your last verdict, and the judge rules at most once every 5 days. Declining doesn't buy a re-roll: the cooldown starts when the judge speaks.
+- **Past the Monster.** Rank above Julius Reinhold and the limits lift: ask for a verdict whenever you like.
+- **You choose.** The verdict is stored on the server as pending. Accepting applies exactly that verdict; the client can't name a rank.
 
 | # | Fighter | Call sign | Standard |
 |:-:|---------|-----------|----------|
-| 10 | **Kuroki Gensai** | The Devil Lance | Once-in-a-generation, monstrous |
+| 10 | **Kuroki Gensai** | The Devil Lance | Once in a generation |
 | 9 | **Kanoh Agito** | The Fang of Metsudo | Near the natural ceiling |
 | 8 | **Ohma Tokita** | The Ashura | Elite, near-competitive |
-| 7 | **Wakatsuki Takeshi** | The Wild Tiger | Near-elite, big all-round |
+| 7 | **Wakatsuki Takeshi** | The Wild Tiger | Near-elite, strong all round |
 | 6 | **Raian Kure** | The Devil | Very advanced |
 | 5 | **Julius Reinhold** | The Monster | Advanced |
 | 4 | **Gaolang Wongsawat** | The Thai God of War | Strong intermediate |
 | 3 | **Sen Hatsumi** | The Floating Cloud | Solid intermediate |
-| 2 | **Setsuna Kiryu** | The Beautiful Beast | Beginner base, climbing |
+| 2 | **Setsuna Kiryu** | The Beautiful Beast | Building a base |
 | 1 | **Rei Mikazuchi** | The Lightning God | Where everyone starts |
 
-The **Progress** tab renders your standing on this ladder, the fighter you're chasing, the one you've surpassed, and every rung between.
+## Design
 
-## Screens
+**True black, one accent, and the fighters.** The base is quiet and native-feeling, so the logger stays fast to use mid-set. The Kengan theme is spent on the moments that matter:
+- who you are (the dashboard and profile heroes);
+- breaking a record;
+- finishing a workout;
+- being judged;
+- the standings.
 
-| Route | Purpose |
-|-------|---------|
-| `/` | Landing / Google sign-in (redirects to `/dashboard` if authed) |
-| `/dashboard` | This-week summary, weak-point cards, weekly-sets-per-muscle chart, volume trend, recent sessions, onboarding |
-| `/log` → `/log/[id]` | Start a session (from a program or freeform), then the fast set logger |
-| `/history` → `/history/[id]` | Reverse-chron session list; editable detail; share a session as a card |
-| `/progress` | Your ladder standing, per-exercise 1RM / volume / PRs, per-muscle trends, and the all-time 1RM board |
-| `/leaderboard` | King of the Hill — every fighter with a ring name, ranked by total volume moved |
-| `/programs` → `/programs/[id]` | Build & run multi-week programs; pause / resume / roll back / preview |
-| `/templates` | CRUD your split: searchable exercise library, target sets/reps/notes, ordering |
-| `/exercises` | Browse the 140+ movement library, tap any movement for a how-to; create custom exercises |
-| `/settings` | Ring name, sex/age/height, accent theme, units, bodyweight log, push, strength evaluation, CSV export |
+- **Colour.** A `#000` canvas that disappears into an OLED phone, graphite surfaces (`#121214`, `#1c1c1f`), bone text (`#f4f2ee`). The accent goes through a single `--accent-rgb` channel, so each of the six palettes re-skins everything at once. It's reserved for what's live or earned: the workout in progress, starting a workout, a record, your rank. Charts and history stay bone.
+- **Type.** One family: **Archivo**, variable on width. The expanded cut (`.font-display`, width 125) carries titles and every number that matters, with tabular figures; the regular width does the reading. UI copy is sentence case. Uppercase and a skewed setting are reserved for poster words (the victory result, **Removal**, a verdict).
+- **Surfaces.** Grouped lists and cards without borders or shadows; glass only for chrome that floats over content (the tab bar, top bar, sheets, the menu). The dashboard and profile heroes run edge to edge on a phone, up under the clear top bar.
+- **Motion.** It marks something happening and then stops:
+  - the rank ladder filling on arrival;
+  - a record's banner and edge ring;
+  - the victory slam;
+  - the loading bar.
+
+  Page changes use React's `<ViewTransition>`: tabs crossfade, detail pages slide, a session's title morphs from the list into its page, and the tab highlight travels to where you went. Everything animates transform and opacity only, nothing loops, and `prefers-reduced-motion` shows final frames.
+- **The loader.** Every route loads a competition bar: 25s, 20s, 15s, change plates and collars slide on, and the readout rolls to a true 150 kg. It's zero-JS and paints on the first frame of a navigation.
+- **Built for phones.** Tested on Pro Max (the primary target) down to an iPhone SE:
+  - safe-area insets everywhere;
+  - a 16px input floor so iOS never zooms on focus;
+  - thumb-reach placement for the actions that matter;
+  - drag-to-dismiss sheets.
+
+## Performance
+
+- **Functions run in Tokyo** (`hnd1`), beside the Supabase database, so a page's queries don't cross an ocean.
+- **Auth checks are local.** The proxy verifies the session JWT against the project's ES256 public key (`getClaims()`), instead of calling the Auth server on every navigation.
+- **Heavy reads are aggregated in Postgres** (views and RPCs), so there's no pulling every set to the client and no row-cap truncation.
+- **Light where it counts.** The dashboard ships no charting library; its bars are HTML. Sheets and the menu are CSS, so no animation library loads on shared routes. Recharts loads only on Progress and Settings.
+- **Smooth under load.** Animations are compositor-driven (transform and opacity), so they stay smooth while the next page hydrates.
+- **Instant back-and-forth.** The client router cache reuses recently visited pages (`staleTimes`), so switching tabs doesn't refetch.
 
 ## The analytics engine
 
-Nothing derived is stored: it's all computed from the atomic `set` grain via **security-invoker Postgres views**, so the client fetches pre-aggregated rows and RLS still applies.
+Nothing derived is stored. It's computed from the `set` grain by **security-invoker views** and **RPCs**, so RLS still applies and the client gets pre-aggregated rows.
 
-- **Estimated 1RM (Epley):** `weight × (1 + reps / 30)`, working sets only. Charted as best-per-session over time.
-- **Volume:** `Σ (weight × reps)` for working sets, rolled up per session, per exercise, and per muscle.
-- **Weekly sets per muscle:** working sets grouped by ISO week and primary muscle, the flagship weak-point view.
-- **Secondary-muscle weighting:** a set's secondary muscles each count **0.5×** toward their muscle's volume and set totals, so accessory work is credited honestly.
-- **PRs:** heaviest weight, best estimated 1RM, and best single-set volume per exercise.
+- **Estimated 1RM (Epley):** `weight × (1 + reps / 30)`, working sets only.
+- **Volume:** `Σ weight × reps` over working sets, per session, per exercise and per muscle.
+- **Weekly sets per muscle:** working sets by ISO week and primary muscle; each secondary muscle counts **0.5×**, so accessory work is credited honestly.
+- **Records:** heaviest weight, best estimated 1RM and best single-set volume per lift.
+- **Local dates:** sessions are dated in the lifter's own timezone, not the database's UTC, so a late-night workout lands on the right day.
+
+| Object | Kind | Used for |
+|--------|------|----------|
+| `v_working_set` | view | Completed, non-warm-up sets with muscle and 1RM |
+| `v_session_summary` | view | Per-session volume, sets, duration, finish state |
+| `v_exercise_progression` | view | Best estimated 1RM per session, per lift |
+| `v_weekly_sets_per_muscle` | view | Sets and volume per muscle per ISO week |
+| `exercise_stats(p_exclude_session)` | RPC | Per-lift records and progress, in one round trip |
+| `last_performances(p_exercise_ids, p_exclude_session)` | RPC | "Last time" targets in the logger |
+| `leaderboard()` | RPC | King of the Hill: ring name, rank and total volume only |
 
 ## Tech stack
 
 | Layer | Choice |
 |-------|--------|
-| Framework | **Next.js 16** (App Router, React Server Components, Server Actions) |
-| Language | **TypeScript** |
-| UI | **React 19**, **Tailwind CSS v4** (CSS-first `@theme` tokens) |
-| Backend | **Supabase**: Postgres, Row-Level Security, security-invoker views, Google OAuth |
-| Auth | `@supabase/ssr`: PKCE OAuth, cookie-based sessions, edge session refresh |
-| Charts | **Recharts 3** (custom dark theme) |
+| Framework | **Next.js 16** (App Router, Server Components, Server Actions, `proxy.ts`) |
+| UI | **React 19** (incl. `<ViewTransition>`), **Tailwind CSS v4** (CSS-first `@theme` tokens) |
+| Language | **TypeScript 6** |
+| Backend | **Supabase**: Postgres, row-level security, views and RPCs, Google OAuth, Realtime |
+| Auth | `@supabase/ssr`: cookie sessions, JWT verified in the proxy |
 | Validation | **Zod 4** on every Server Action |
-| AI judge | **DeepSeek** (optional: powers strength evaluation) |
-| Push | **web-push** (VAPID) + a hand-rolled service worker |
+| Charts | **Recharts 3** (Progress and Settings only); HTML bars elsewhere |
+| Motion | CSS first; `motion` only for the logger's counting figures and the welcome stepper |
+| AI judge | **DeepSeek** (`deepseek-v4-flash`), optional |
+| Push | **web-push** (VAPID) and a hand-written service worker |
+| Tests | **Vitest** |
 | Primitives | `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `date-fns` |
 
-No Redux, no tRPC, no component library. Server Components + Supabase + minimal client state, hand-built primitives to preserve the aesthetic.
+There's no Redux, no tRPC and no component library: Server Components, Supabase, and a small set of hand-built primitives.
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    subgraph Client["Browser / PWA"]
-        SW["Service Worker<br/>offline shell + push"]
-        UI["React 19 · Client islands<br/>(set logger, charts, theme)"]
+    subgraph Client["Phone / browser (PWA)"]
+        SW["Service worker<br/>offline shell, push"]
+        Q["Offline set queue<br/>IndexedDB"]
+        UI["Client islands<br/>logger, charts, menu"]
     end
 
-    subgraph Edge["Next.js 16"]
-        PX["proxy.ts<br/>session refresh + route gate"]
-        RSC["Server Components<br/>read via typed data layer"]
-        SA["Server Actions<br/>Zod-validated mutations"]
+    subgraph Next["Next.js 16 on Vercel (hnd1)"]
+        PX["proxy.ts<br/>session refresh + JWT check"]
+        RSC["Server Components<br/>typed data layer"]
+        SA["Server Actions<br/>Zod-validated writes"]
+        API["Route handlers<br/>share PNG, CSV, cron"]
     end
 
-    subgraph DB["Supabase · Postgres"]
-        RLS["Row-Level Security<br/>on every table"]
-        VIEWS["Aggregation views<br/>1RM · volume · weekly sets"]
+    subgraph DB["Supabase (Tokyo)"]
+        RLS["RLS on every table"]
+        AGG["Views + RPCs<br/>1RM, volume, weekly sets"]
         AUTH["Google OAuth"]
     end
 
-    JUDGE["DeepSeek<br/>strength evaluation"]
+    JUDGE["DeepSeek"]
 
     UI --> SA
-    UI --> RSC
+    UI --> Q
+    Q --> SA
     SW -.-> UI
     PX --> RSC
-    RSC --> VIEWS
+    RSC --> AGG
     SA --> RLS
-    VIEWS --> RLS
+    AGG --> RLS
+    API --> RLS
     AUTH --> PX
     SA --> JUDGE
 ```
 
-- **Reads** live in a typed data layer (`src/lib/data/*`): no raw Supabase calls scattered through components.
-- **Writes** are Server Actions (`src/lib/actions/*`), each validated with Zod.
-- **Auth** is refreshed on every request in `src/proxy.ts`, with the authoritative check server-side in the `(app)` layout via `supabase.auth.getUser()`.
+- **Reads** go through a typed data layer (`src/lib/data/*`), not raw Supabase calls in components.
+- **Writes** are Server Actions (`src/lib/actions/*`), each validated with Zod and scoped by RLS.
+- **Sessions** are refreshed and checked in `src/proxy.ts` (Next 16's replacement for middleware); pages read the verified identity from the cookie.
 - **Types** are generated from the live schema into `src/lib/database.types.ts`.
+- **Realtime** keeps open tabs in sync when you log from another device.
 
 ## Data model
 
-Structure is **template-based with ad-hoc override**: build reusable templates, run them as programs, and log freely on top. Logging always writes to the same `set` grain regardless of source.
+Template-based with ad-hoc override: build reusable days, run them as programs, log freely on top. Every source writes to the same `set` grain.
 
 ```
-exercise            140+ seeded movements (nullable user_id = custom) · muscle_group enum
-workout_template ─┬ template_exercise      prescribed sets/reps per movement
-program ──────────┼ program_day / program_skip   multi-week scheduling & pauses
-session ──────────┬ session_exercise ─── set      the atomic logged unit
+exercise            140+ global movements (user_id null) + your custom ones
+workout_template ── template_exercise        a day of your split, with targets
+program ─────────── program_day, program_skip   multi-week rotation, skips, pauses
+session ─────────── session_exercise ── set     what you actually did
 bodyweight_log      dated bodyweight entries
-profile             username · sex · birth_year · height_cm · tier · rationale
-push_subscription   Web Push endpoints
+profile             name, ring name, sex, birth year, height, rank + reasoning,
+                    pending verdict, reminder hour, onboarding
+push_subscription   Web Push endpoints per device
 ```
 
-**Muscle groups** (`muscle_group` enum, 14): chest · back · side_delt · rear_delt · front_delt · biceps · triceps · quads · hamstrings · glutes · calves · abs · forearms · traps.
+**Muscle groups** (`muscle_group` enum, 14): chest, back, side delts, rear delts, front delts, biceps, triceps, quads, hamstrings, glutes, calves, abs, forearms and traps.
 
-**Aggregation views:** `v_working_set` · `v_session_summary` · `v_exercise_progression` · `v_weekly_sets_per_muscle`, plus a security-definer `leaderboard()` function that exposes only public columns (ring name · tier · total volume) across all users. Session dates are stamped in the lifter's **local timezone**, not the DB's UTC, so a late-night workout lands on the right day.
+Unit, accent and timezone preferences are cookies, read on the server so the first paint is already in your units and colours.
 
-Every user-owned row carries `user_id`; RLS policies restrict CRUD to `auth.uid()`. The exercise library is the one shared read-only table (global rows have a null `user_id`).
+## Security and privacy
 
-## Design system
+- **RLS on every table.** Every user-owned row carries `user_id`, and policies limit access to `auth.uid()`. A second account sees none of the first account's data. The exercise library is the one shared, read-only table.
+- **Rank can't be self-assigned.** The rank columns are not writable by the signed-in user at all (column-level grants); the judge's verdict is written server-side as pending and applied by a service-role client only when you accept it.
+- **The leaderboard exposes only public columns** (ring name, rank, volume) through a `security definer` function that requires a signed-in caller.
+- **Google OAuth only**: no passwords and no magic links.
+- **No secrets in the browser.** Only the Supabase URL and anon key reach the client. The service-role key, VAPID private key, DeepSeek key and cron secret stay on the server.
+- **Headers.** Every response carries `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY` and a restrictive `Permissions-Policy`.
 
-**Dark cyberpunk, minimal**: an engineered instrument panel, not gamer RGB. Deep charcoal base, hairline borders, a single electric accent hue.
+## PWA, offline and notifications
 
-- **One accent, themeable.** All accent color routes through a single `--accent-rgb` channel variable, so opacity composites, glows, chart series, and the manga effects all re-skin from one swap. Six palettes ship via `html[data-accent]`.
-- **Type as instrument.** [Geist](https://vercel.com/font) for UI, **Geist Mono** with tabular figures for all data (weights, reps, 1RM), Bricolage Grotesque for display, and **Anton** for the moments that should *hit*.
-- **Liquid glass chrome.** The navigation, a **floating glass tab bar**, top bar and sidebar, plus bottom sheets use a translucent, saturated backdrop-blur material with a specular light edge; content cards keep an opaque premium depth for readability.
-- **Motion, restrained.** 150-200ms ease-outs, a crimson shockwave on a logged set, a slam-in on victory, a Kengan **"arena" loading screen** (a charging aura over manga speed-lines with cycling combat call-outs), and a subtle page settle-in, all gated behind `prefers-reduced-motion`.
-- **Mobile-first logging.** Safe-area insets for notch & home indicator, a 16px input floor to kill iOS focus-zoom, native tap feedback, and the floating bottom tab bar.
-
-## PWA & notifications
-
-- Installable via Add-to-Home-Screen; standalone display, maskable icon, and **branded iOS launch screens** (`apple-touch-startup-image`, generated per device by `scripts/generate-splash.mjs`) so cold-start shows the brand instead of a blank flash.
-- A **bootloader** picks up where that launch image stops. iOS drops the static splash the instant the document paints, long before React has hydrated, so the installed app boots into a load meter, a split-flap status board and a POST-style log instead of a bare shell. The chrome is pure CSS on server-rendered markup (it animates on the first frame, no bundle needed); the React Bits pieces resolve at hydration, which is the tell that the app is up. Browser tabs never see it, and a CSS failsafe lifts the sheet even if hydration never happens.
-- A hand-rolled service worker (`public/sw.js`): network-first navigations with an offline fallback (`public/offline.html`), cache-first static assets.
-- Web Push (VAPID) with a **daily cron** (`/api/cron/reminders`) that reminds you when a programmed workout is due.
-- Functions are pinned to the Supabase region (Tokyo) so page renders and queries stay co-located and fast.
+- **Installable.** Standalone display, maskable icons, and **iOS launch screens** for current iPhones (`scripts/generate-splash.mjs`), so a cold start shows the brand instead of a white flash. A boot screen holds that frame until the app is ready (installed app only).
+- **Offline.** A hand-written service worker (`public/sw.js`): network-first pages with an offline fallback (`public/offline.html`), cached media. It never caches Next's own scripts and styles, so a deploy can't pair new HTML with old code.
+- **Offline logging.** Sets go to an IndexedDB queue first and upload when there's a connection; failures are shown, retried, and never silently dropped.
+- **Push reminders.** Web Push (VAPID) and a **daily cron** (`/api/cron/reminders`) that nudges you when today's programmed workout isn't done. On iPhone, push works once the app is added to the Home Screen (iOS 16.4+).
 
 ## Getting started
 
-**Prerequisites:** Node 20+, a Supabase project (Google OAuth configured), and optionally a DeepSeek API key.
+**You'll need:** Node 20+, a Supabase project with the Google provider enabled, and, optionally, a DeepSeek API key and a VAPID key pair.
 
 ```bash
-# 1. Install
 npm install
-
-# 2. Configure environment (.env.local): see the table below
-
-# 3. Run
-npm run dev                  # http://localhost:3000
+# create .env.local with the variables below
+npm run dev      # http://localhost:3000
 ```
 
 **Environment variables**
@@ -231,70 +283,109 @@ npm run dev                  # http://localhost:3000
 | Variable | Required | Purpose |
 |----------|:--------:|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Public anon key (client-safe) |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Server-only: used by the push cron |
-| `DEEPSEEK_API_KEY` | optional | Enables AI strength evaluation |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Public anon key (safe in the browser) |
+| `SUPABASE_SERVICE_ROLE_KEY` | for rank + cron | Server only. Applies accepted verdicts and runs the reminder cron |
+| `DEEPSEEK_API_KEY` | optional | Turns on the strength judge |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | optional | Web Push public key |
-| `VAPID_PRIVATE_KEY` | optional | Web Push private key (server-only) |
-| `CRON_SECRET` | optional | Authorizes the reminder cron endpoint |
+| `VAPID_PRIVATE_KEY` | optional | Web Push private key (server only) |
+| `VAPID_SUBJECT` | optional | Contact for push services, e.g. `mailto:you@example.com` |
+| `CRON_SECRET` | optional | Authorizes `/api/cron/reminders` |
 
-> The service-role and VAPID private keys are **server-only**, never exposed to the client. Canonical weight is stored in **kg** everywhere and converted only at display.
+Generate a VAPID pair with `npx web-push generate-vapid-keys`.
+
+**Supabase setup**
+
+1. Enable the **Google** provider and add `<your-site>/auth/callback` (and `http://localhost:3000/auth/callback`) to the allowed redirect URLs.
+2. The schema (tables, enum, RLS policies, views, RPCs and column grants) is managed as migrations applied to the Supabase project itself; this repository doesn't carry a migrations folder. To stand up your own copy, dump the schema from an existing project (`supabase db dump --schema public`) and apply it. `src/lib/database.types.ts` documents every table, view and function.
+3. Seed the global exercise library. The one-off scripts in `scripts/sql/` add common movements and remove duplicates.
+4. After schema changes, regenerate types into `src/lib/database.types.ts` (`supabase gen types typescript`).
 
 **Scripts**
 
 ```bash
-npm run dev      # start the dev server
-npm run build    # production build (typecheck + lint gated)
+npm run dev      # dev server
+npm run build    # production build
 npm run start    # serve the production build
-npm run lint     # eslint
+npm run lint     # ESLint
+npm test         # Vitest
+node scripts/generate-splash.mjs   # regenerate iOS launch screens
 ```
+
+## Testing
+
+`npm test` runs the Vitest suite, which covers the parts that are easy to get subtly wrong:
+
+- **`local-date`:** dating sessions in the lifter's timezone.
+- **`offline-set-queue`:** the IndexedDB queue (on `fake-indexeddb`): sessions kept apart, the latest edit winning, uploads clearing entries without losing an edit made mid-upload, and deletes.
+- **`rest-timer`:** the rest timer's arithmetic.
+
+Before shipping, `npx tsc --noEmit`, `npm run lint` and `npm run build` should all pass clean.
+
+## Deployment
+
+The app deploys on **Vercel**, and a push to `main` is a production deploy.
+
+- Functions are pinned to `hnd1` (Tokyo) in `vercel.json`, next to the Supabase region.
+- The reminder cron runs daily (`0 16 * * *`), which is the Hobby plan's limit. Hourly, per-user reminder times would need Pro.
+- Set the environment variables above in the Vercel project (server-only keys in Production and Preview).
 
 ## Project structure
 
 ```
 src/
 ├── app/
-│   ├── (app)/              # auth-gated routes (dashboard, log, progress, leaderboard, …)
+│   ├── (app)/                 signed-in routes: dashboard, log, programs, templates,
+│   │                          exercises, history, progress, leaderboard, settings
+│   │   ├── layout.tsx         the app shell: nav, resume banner, page transitions
+│   │   ├── loading.tsx        the loading bar (one per route)
+│   │   └── error.tsx          recoverable error screen
 │   ├── api/
-│   │   ├── cron/reminders/ # daily push-reminder endpoint
-│   │   ├── share/[id]/     # session → shareable PNG (next/og)
-│   │   └── export/         # full set log → CSV download
-│   ├── auth/callback/      # OAuth callback
-│   ├── page.tsx            # landing / sign-in
-│   ├── layout.tsx          # root: fonts + accent theme + iOS launch screens
-│   ├── manifest.ts         # PWA manifest
-│   └── globals.css         # design tokens, accent palettes, liquid-glass + motion
+│   │   ├── share/[id]/        session → 1080×1350 PNG (next/og)
+│   │   ├── export/            your set log as CSV
+│   │   └── cron/reminders/    daily push reminders
+│   ├── auth/callback/         OAuth callback
+│   ├── welcome/               first-run setup
+│   ├── page.tsx               landing and sign-in
+│   ├── layout.tsx             root: font, accent, iOS launch screens, boot screen
+│   ├── error.tsx, global-error.tsx, not-found.tsx
+│   ├── manifest.ts, robots.ts
+│   └── globals.css            tokens, palettes, glass, motion
 ├── components/
-│   ├── boot-splash.tsx     # installed-app bootloader (PWA cold start)
-│   ├── charts/             # Recharts views + chart-kit
-│   ├── tier/               # ladder standing + strength meter
-│   └── ui/                 # hand-built primitives (Button, Card, NumberStepper, ArenaLoader…)
+│   ├── nav/                   tab bar, sidebar, top bar, full-page menu, page transitions
+│   ├── ui/                    primitives: Button, Sheet, NumberStepper, PlateLoader, …
+│   ├── tier/                  fighter art, rank hero, profile header, ladder
+│   ├── charts/                HTML bar charts, Recharts views, heatmap
+│   ├── program/               next-bout card, starter programs, day preview
+│   └── workout/               rest timer, victory screen
 ├── lib/
-│   ├── data/               # typed read layer (per entity)
-│   ├── actions/            # Zod-validated Server Actions
-│   ├── supabase/           # server / client / proxy factories
-│   ├── exercise-guides.ts  # how-to paragraph per library movement
-│   ├── tiers.ts            # the Kengan strength ladder
-│   ├── accents.ts          # accent palettes
-│   ├── presets.ts          # starter programs
-│   └── database.types.ts   # generated from the live schema
-└── proxy.ts                # edge session refresh + route gating
+│   ├── data/                  typed reads, per entity
+│   ├── actions/               Zod-validated Server Actions
+│   ├── supabase/              server, browser, proxy and service-role clients
+│   ├── tiers.ts               the ladder
+│   ├── presets.ts             starter programs
+│   ├── exercise-guides.ts     a how-to for every library movement
+│   ├── offline-set-queue.ts   IndexedDB queue for offline logging
+│   └── database.types.ts      generated from the live schema
+└── proxy.ts                   session refresh and route gate
 
-scripts/
-└── sql/                    # one-off library SQL, run from the Supabase editor
+public/   sw.js, offline.html, splash/, art/fighters/
+scripts/  generate-splash.mjs, sql/
 ```
 
-## Security & privacy
+## Conventions
 
-- **RLS on every table**, enforced, a second account sees *zero* of the first account's data.
-- **Google OAuth only**: no passwords, no magic links.
-- **No secrets in client code**, only the Supabase URL and anon key reach the browser; service-role and VAPID private keys stay server-side.
+- **Data flows one way.** Reads live in `src/lib/data`; writes are Server Actions in `src/lib/actions`, validated with Zod. No Supabase calls in components.
+- **Kilograms everywhere.** Convert only at display (`src/lib/units.ts`).
+- **Dates in the lifter's timezone.** Format dates on the server (or pass `today` down). Formatting in a client component during render disagrees with the server and breaks hydration.
+- **Global CSS goes in a layer.** Tailwind v4 utilities live in `@layer utilities`, and any unlayered rule in `globals.css` beats them all regardless of specificity. Element defaults go in `@layer base`.
+- **Motion carries meaning.** Animate transform and opacity only, don't loop, respect reduced motion, and no tap or cursor effects.
+- **Keep heavy libraries off shared paths.** Anything imported by the nav or the dashboard loads for everyone.
 
 ---
 
 <div align="center">
 
-**[Hell Blazer](https://hellblazer.vercel.app)**: built by [Cyrus](https://kkrwhofrags.xyz)
+**[Hell Blazer](https://hellblazer.vercel.app)**, built by [Cyrus](https://kkrwhofrags.xyz)
 
 *Numbers don't lie. Make them climb.*
 
