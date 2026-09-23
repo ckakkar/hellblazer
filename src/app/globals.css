@@ -151,11 +151,15 @@ label {
   -webkit-touch-callout: none;
 }
 
-/* Keyboard focus is visible on every interactive element by default. Zero
-   specificity via :where(), so components that style their own focus win. */
-:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
-  outline: 2px solid rgb(var(--accent-rgb) / 0.7);
-  outline-offset: 2px;
+/* Keyboard focus is visible on every interactive element by default. In the
+   base layer, so a component's own focus utilities (a ring, or
+   focus:outline-none on a panel that takes focus programmatically) win;
+   unlayered, it beat them all. */
+@layer base {
+  :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+    outline: 2px solid rgb(var(--accent-rgb) / 0.7);
+    outline-offset: 2px;
+  }
 }
 
 /* ── Chrome materials ─────────────────────────────────────────────────────
@@ -265,6 +269,54 @@ button,
   }
   ::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* ── Sheets ───────────────────────────────────────────────────────────────
+   Rises from the bottom edge on phones, settles in as a dialog from `sm` up,
+   and retreats the way it came. Entry uses @starting-style (no script, no
+   extra frame); exit flips data-state and the component unmounts when the
+   transition is done. Transform and opacity only, so it stays smooth while
+   the page behind is busy. While a finger drags the sheet, the transition is
+   off and the finger drives it directly. */
+.hb-sheet-backdrop {
+  transition: opacity 240ms var(--ease-out);
+}
+.hb-sheet-backdrop[data-state="closed"] {
+  opacity: 0;
+}
+.hb-sheet-panel {
+  transition: transform 320ms var(--ease-out);
+}
+.hb-sheet-panel[data-state="closed"] {
+  transform: translateY(100%);
+}
+.hb-sheet-panel[data-dragging] {
+  transition: none;
+}
+@starting-style {
+  .hb-sheet-backdrop[data-state="open"] {
+    opacity: 0;
+  }
+  .hb-sheet-panel[data-state="open"] {
+    transform: translateY(100%);
+  }
+}
+@media (min-width: 640px) {
+  .hb-sheet-panel {
+    transition:
+      transform 260ms var(--ease-out),
+      opacity 200ms var(--ease-out);
+  }
+  .hb-sheet-panel[data-state="closed"] {
+    transform: translateY(16px);
+    opacity: 0;
+  }
+  @starting-style {
+    .hb-sheet-panel[data-state="open"] {
+      transform: translateY(16px);
+      opacity: 0;
+    }
   }
 }
 

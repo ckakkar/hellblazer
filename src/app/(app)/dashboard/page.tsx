@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ViewTransition } from "react";
 import Link from "next/link";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
@@ -20,6 +21,8 @@ import { WeeklySetsChart } from "@/components/charts/weekly-sets-chart";
 import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { formatVolume } from "@/lib/units";
+
+export const metadata: Metadata = { title: "Dashboard" };
 
 export const dynamic = "force-dynamic";
 
@@ -214,7 +217,7 @@ export default async function DashboardPage() {
         <ChartCard title="Sets per muscle" subtitle="This week, secondary muscles count half">
           <WeeklySetsChart data={weeklySets} />
         </ChartCard>
-        <VolumeTrendCard daily={dailyVolume} unit={unit} />
+        <VolumeTrendCard daily={dailyVolume} unit={unit} today={today} />
       </section>
 
       <section>
