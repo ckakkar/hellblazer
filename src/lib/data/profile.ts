@@ -15,11 +15,25 @@ export async function getProfile(): Promise<Profile | null> {
  * the (app) layout runs this on every navigation. Missing profile row (a
  * brand-new Google sign-in) counts as not onboarded.
  */
-export async function isOnboarded(): Promise<boolean> {
+/** What the app shell needs on every page: whether first-run setup is done,
+ *  and who to show in the menu. One small read. */
+export type ShellProfile = {
+  onboarded: boolean;
+  displayName: string | null;
+  ringName: string | null;
+  tier: string | null;
+};
+
+export async function getShellProfile(): Promise<ShellProfile> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profile")
-    .select("onboarded_at")
+    .select("onboarded_at, display_name, username, tier")
     .maybeSingle();
-  return Boolean(data?.onboarded_at);
+  return {
+    onboarded: Boolean(data?.onboarded_at),
+    displayName: data?.display_name ?? null,
+    ringName: data?.username ?? null,
+    tier: data?.tier ?? null,
+  };
 }

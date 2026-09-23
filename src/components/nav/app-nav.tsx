@@ -3,17 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Ellipsis, Flame, LogOut, Plus } from "lucide-react";
-import { Sheet } from "@/components/ui/sheet";
+import { Ellipsis, Flame, LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
-import {
-  NAV_SECTIONS,
-  SETTINGS_ITEM,
-  BOTTOM_NAV,
-  SECONDARY_NAV,
-  type NavItem,
-} from "./nav-items";
+import { NAV_SECTIONS, SETTINGS_ITEM, BOTTOM_NAV, type NavItem } from "./nav-items";
+import { MenuOverlay, type NavIdentity } from "./menu-overlay";
 
 /** The compact title the mobile top bar shows once the large one scrolls off. */
 const TITLES: [prefix: string, title: string][] = [
@@ -75,7 +69,13 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   );
 }
 
-export function AppNav({ userEmail }: { userEmail?: string }) {
+export function AppNav({
+  userEmail,
+  identity,
+}: {
+  userEmail?: string;
+  identity: NavIdentity;
+}) {
   const isActive = useActive();
 
   return (
@@ -121,7 +121,7 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
         </div>
       </aside>
 
-      <MobileTopBar />
+      <MobileTopBar identity={identity} email={userEmail} />
 
       {/* Mobile tab bar: a floating capsule of black glass. */}
       <nav
@@ -175,10 +175,9 @@ export function AppNav({ userEmail }: { userEmail?: string }) {
 /* Mobile top bar. Clear at rest, frosting once content scrolls under it; the
    page's own title fades in at the same moment, iOS-style, so you always know
    where you are without a second heading on screen. Secondary destinations
-   live behind one labelled "More" sheet instead of four bare icons. */
-function MobileTopBar() {
+   live behind ••• in a full-page menu instead of four bare icons. */
+function MobileTopBar({ identity, email }: { identity: NavIdentity; email?: string }) {
   const pathname = usePathname();
-  const isActive = useActive();
   const [more, setMore] = useState(false);
   const title = titleFor(pathname);
 
@@ -205,7 +204,9 @@ function MobileTopBar() {
           <button
             type="button"
             onClick={() => setMore(true)}
-            aria-label="More"
+            aria-label="Menu"
+            aria-haspopup="dialog"
+            aria-expanded={more}
             className="flex size-11 items-center justify-center rounded-full text-text"
           >
             <Ellipsis className="size-[22px]" />
@@ -213,26 +214,12 @@ function MobileTopBar() {
         </div>
       </header>
 
-      <Sheet open={more} onClose={() => setMore(false)} title="More">
-        <nav className="px-4 pb-5">
-          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.05]">
-            {SECONDARY_NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMore(false)}
-                className="flex items-center gap-3.5 px-4 py-3.5 active:bg-white/[0.05]"
-              >
-                <item.icon
-                  className={cn("size-5", isActive(item.href) ? "text-text" : "text-muted")}
-                />
-                <span className="flex-1 text-[16px] text-text">{item.label}</span>
-                <ChevronRight className="size-4 text-muted/70" />
-              </Link>
-            ))}
-          </div>
-        </nav>
-      </Sheet>
+      <MenuOverlay
+        open={more}
+        onClose={() => setMore(false)}
+        identity={identity}
+        email={email}
+      />
     </>
   );
 }

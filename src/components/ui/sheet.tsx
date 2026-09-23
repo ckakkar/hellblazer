@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { X } from "lucide-react";
 import { Portal } from "@/components/ui/portal";
+import { useModal, usePresence } from "@/components/ui/use-modal";
 import { cn } from "@/lib/utils";
 
 /** Matches the `.hb-sheet-panel` exit transition in globals.css. */
@@ -37,94 +38,9 @@ export function Sheet({
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  // Callers pass inline arrows for onClose, so its identity changes on every
-  // render. Keep it in a ref so the scroll-lock effect below runs once per
-  // open/close rather than re-firing (and losing the saved scroll position)
-  // on every keystroke in the sheet.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  });
-
   const panelRef = useRef<HTMLDivElement>(null);
-
-  // Mount as soon as it opens (adjusted during render, so the panel exists
-  // when the effects below run), unmount once the exit transition is done.
-  const [mounted, setMounted] = useState(open);
-  const [wasOpen, setWasOpen] = useState(open);
-  if (open !== wasOpen) {
-    setWasOpen(open);
-    if (open) setMounted(true);
-  }
-  useEffect(() => {
-    if (open || !mounted) return;
-    const t = setTimeout(() => setMounted(false), EXIT_MS);
-    return () => clearTimeout(t);
-  }, [open, mounted]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    // Return focus where it came from, so closing the sheet puts the caret
-    // back on the button that opened it.
-    const opener = document.activeElement as HTMLElement | null;
-
-    const focusables = () =>
-      Array.from(
-        panelRef.current?.querySelectorAll<HTMLElement>(
-          'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
-        ) ?? [],
-      ).filter((el) => el.offsetParent !== null);
-
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") return onCloseRef.current();
-      if (e.key !== "Tab") return;
-      // Trap Tab inside the panel, or it walks out of an aria-modal dialog.
-      const items = focusables();
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
-      if (e.shiftKey && (active === first || !panelRef.current?.contains(active))) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && active === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-
-    // Focus the panel itself rather than the first field, so opening a sheet
-    // on mobile doesn't summon the keyboard over the content.
-    panelRef.current?.focus({ preventScroll: true });
-
-    // iOS Safari ignores `body { overflow: hidden }`; pin the body at its
-    // offset instead and restore the scroll position on close.
-    const scrollY = window.scrollY;
-    const { style } = document.body;
-    const prev = {
-      position: style.position,
-      top: style.top,
-      left: style.left,
-      right: style.right,
-      width: style.width,
-      overflow: style.overflow,
-    };
-    style.position = "fixed";
-    style.top = `-${scrollY}px`;
-    style.left = "0";
-    style.right = "0";
-    style.width = "100%";
-    style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      Object.assign(style, prev);
-      window.scrollTo(0, scrollY);
-      if (opener?.isConnected) opener.focus({ preventScroll: true });
-    };
-  }, [open]);
+  const mounted = usePresence(open, EXIT_MS);
+  useModal(open, panelRef, onClose);
 
   // Drag to dismiss, from the handle/header only. The finger drives the
   // transform directly (transition off); on release the CSS transition takes
