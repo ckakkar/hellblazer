@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Download, LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { format, parseISO } from "date-fns";
@@ -24,6 +25,8 @@ import { BodyweightChart } from "@/components/charts/bodyweight-chart";
 import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
+
+export const metadata: Metadata = { title: "Profile" };
 
 export const dynamic = "force-dynamic";
 

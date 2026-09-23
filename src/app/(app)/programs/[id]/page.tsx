@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getProgram, getProgramProgress } from "@/lib/data/programs";
 import { getTemplates } from "@/lib/data/templates";
 import { getExercises } from "@/lib/data/exercises";
 import { ProgramDetail } from "./program-detail";
+
+export const metadata: Metadata = { title: "Program" };
 
 export const dynamic = "force-dynamic";
 

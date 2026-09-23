@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CalendarRange } from "lucide-react";
 import { getTemplates } from "@/lib/data/templates";
@@ -6,6 +7,8 @@ import { ProgramProgressCard } from "@/components/program/program-progress-card"
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { SessionStarter } from "./session-starter";
+
+export const metadata: Metadata = { title: "Log workout" };
 
 export const dynamic = "force-dynamic";
 

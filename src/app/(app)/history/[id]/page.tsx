@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { ViewTransition } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -12,6 +13,8 @@ import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import { DeleteSessionButton } from "./delete-session-button";
 import { ShareCardButton } from "./share-card-button";
+
+export const metadata: Metadata = { title: "Session" };
 
 export const dynamic = "force-dynamic";
 

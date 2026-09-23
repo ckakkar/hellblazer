@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
   getSessionDetail,
@@ -7,6 +8,8 @@ import {
 import { getExercises } from "@/lib/data/exercises";
 import { getUnit } from "@/lib/settings";
 import { SessionLogger } from "./session-logger";
+
+export const metadata: Metadata = { title: "Workout" };
 
 export const dynamic = "force-dynamic";
 

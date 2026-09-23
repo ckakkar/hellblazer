@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Trophy } from "lucide-react";
 import { getLeaderboard } from "@/lib/data/leaderboard";
@@ -6,6 +7,8 @@ import { getUnit } from "@/lib/settings";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Standings } from "./standings";
+
+export const metadata: Metadata = { title: "King of the Hill" };
 
 export const dynamic = "force-dynamic";
 

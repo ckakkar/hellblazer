@@ -18,7 +18,10 @@ const archivo = Archivo({
 });
 
 export const metadata: Metadata = {
-  title: "Hell Blazer: Strength Log",
+  title: {
+    default: "Hell Blazer: Strength Log",
+    template: "%s · Hell Blazer",
+  },
   description:
     "Train like a Kengan fighter. Programs, savage-fast set logging, and power analytics that climb with every rep.",
   appleWebApp: {

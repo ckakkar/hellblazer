@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { getSessionSummaries } from "@/lib/data/sessions";
 import { getTemplates } from "@/lib/data/templates";
 import { getUnit } from "@/lib/settings";
 import { PageHeader } from "@/components/ui/page-header";
 import { HistoryList } from "./history-list";
+
+export const metadata: Metadata = { title: "History" };
 
 export const dynamic = "force-dynamic";
 

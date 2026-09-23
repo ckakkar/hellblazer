@@ -8,7 +8,7 @@ import { WelcomeFlow } from "./welcome-flow";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Enter the arena: Hell Blazer",
+  title: "Set up your profile",
 };
 
 /**

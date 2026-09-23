@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { TrendingUp } from "lucide-react";
 import { getLoggedExercises } from "@/lib/data/exercises";
 import {
@@ -23,6 +24,8 @@ import { MuscleBalanceRadar } from "@/components/charts/muscle-balance-radar";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
 import { ProgressControls } from "./progress-controls";
+
+export const metadata: Metadata = { title: "Progress" };
 
 export const dynamic = "force-dynamic";
 

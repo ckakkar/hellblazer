@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import { getTemplates } from "@/lib/data/templates";
 import { getExercises } from "@/lib/data/exercises";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { PRESETS } from "@/lib/presets";
 import { TemplatesManager } from "./templates-manager";
+
+export const metadata: Metadata = { title: "Templates" };
 
 export const dynamic = "force-dynamic";
 
