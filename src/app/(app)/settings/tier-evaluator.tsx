@@ -91,11 +91,12 @@ export function TierEvaluator({
 
   return (
     <div className="grid gap-4">
-      {/* Current rank hero */}
+      {/* The standing verdict. Who you are (fighter, name, rank) is the page
+          header now, so this card is the judge's reasoning and the ladder. */}
       <div className="rounded-2xl bg-surface p-5">
         <div>
           <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
-            {current ? `Rank ${current.rank} of ${MAX_RANK}` : "Unranked"}
+            {current ? `The judge on ${current.name.split(" ")[0]}` : "Unranked"}
             {/* Past Julius the judge answers on demand: worth saying out loud,
                 it's the reward for clearing the wall. */}
             {gate.unlimited && (
@@ -105,14 +106,7 @@ export function TierEvaluator({
               </span>
             )}
           </div>
-          {current ? (
-            <>
-              <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-text">
-                {current.name}
-              </div>
-              <div className="mt-0.5 text-[15px] text-muted">{current.epithet}</div>
-            </>
-          ) : (
+          {!current && (
             <>
               <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-muted">
                 No rank yet
@@ -120,7 +114,7 @@ export function TierEvaluator({
               <div className="mt-0.5 text-[15px] text-muted">Ask the judge below.</div>
             </>
           )}
-          <TierLadder rank={currentRank} className="mt-4" />
+          <TierLadder rank={currentRank} className={current ? "mt-3" : "mt-4"} />
           {rationale && (
             <p className="mt-4 text-[15px] leading-[1.5] text-text/80">{rationale}</p>
           )}
