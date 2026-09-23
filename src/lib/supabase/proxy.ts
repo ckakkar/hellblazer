@@ -3,10 +3,10 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "@/lib/database.types";
 
 /**
- * Refreshes the Supabase auth session on every request and optimistically
- * gates protected routes. Runs from `src/proxy.ts` (Next 16's replacement for
- * middleware). The authoritative auth check still happens server-side in the
- * (app) layout via `supabase.auth.getUser()`.
+ * Refreshes the Supabase auth session on every request and gates protected
+ * routes on a verified token. Runs from `src/proxy.ts` (Next 16's replacement
+ * for middleware). Every query is still checked again by RLS against the same
+ * JWT, and server actions confirm the user with the Auth server.
  */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -32,16 +32,20 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: getUser() must be called to refresh the token. Do not run other
-  // logic between createServerClient and getUser or sessions may drop out.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // IMPORTANT: this call is what refreshes an expired token, so it must run
+  // before anything else and on every request, or sessions drop out.
+  //
+  // getClaims, not getUser: the project signs tokens with an asymmetric key
+  // (ES256), so the JWT's signature and expiry are verified here against the
+  // cached public key instead of asking the Auth server on every navigation,
+  // a round trip to Tokyo before the page could even start rendering.
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = Boolean(data?.claims?.sub);
 
   const path = request.nextUrl.pathname;
   const isPublic = path === "/" || path.startsWith("/auth");
 
-  if (!user && !isPublic) {
+  if (!signedIn && !isPublic) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

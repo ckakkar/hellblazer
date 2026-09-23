@@ -16,8 +16,8 @@ export async function getUser(): Promise<User | null> {
 
 /**
  * Fast identity read from the already-validated session cookie, no auth-server
- * round-trip. Safe for the app layout because the proxy authenticates every
- * request with getUser() (refreshing + gating unauth traffic) and RLS validates
+ * round-trip. Safe for the app layout because the proxy verifies every
+ * request's token with getClaims() (refreshing + gating unauth traffic) and RLS validates
  * the JWT signature on every query. Use for display/identity, not as a gate on
  * its own.
  */
