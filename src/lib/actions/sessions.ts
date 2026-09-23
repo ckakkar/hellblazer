@@ -313,19 +313,27 @@ export async function finishSession(input: {
     })
     .parse(input);
   const { supabase } = await getAuthedContext();
-  const patch: TablesUpdate<"session"> = {
-    finished_at: new Date().toISOString(),
-  };
+  // Saving a session reopened to fix it keeps its original finish time.
+  const { data: current, error: readErr } = await supabase
+    .from("session")
+    .select("finished_at")
+    .eq("id", v.sessionId)
+    .single();
+  if (readErr) throw readErr;
+  const patch: TablesUpdate<"session"> = {};
+  if (!current.finished_at) patch.finished_at = new Date().toISOString();
   if (v.durationMin !== undefined && v.durationMin !== null) {
     patch.duration_min = v.durationMin;
   }
   // Checked, not fire-and-forget: redirecting to the finished view after a
   // failed write would show the session as done while it stays in progress.
-  const { error } = await supabase
-    .from("session")
-    .update(patch)
-    .eq("id", v.sessionId);
-  if (error) throw error;
+  if (Object.keys(patch).length > 0) {
+    const { error } = await supabase
+      .from("session")
+      .update(patch)
+      .eq("id", v.sessionId);
+    if (error) throw error;
+  }
   revalidatePath("/dashboard");
   revalidatePath("/history");
   redirect(`/history/${v.sessionId}`);

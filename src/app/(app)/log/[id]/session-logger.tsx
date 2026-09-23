@@ -114,6 +114,9 @@ function useOnline(): boolean {
 /** Elapsed milliseconds → clock string: M:SS, then "1h 05m" past an hour
  *  (seconds stop mattering, and H:MM:SS won't fit the readout on a small
  *  phone). */
+/** Past this, the clock is measuring a session left open, not a workout. */
+const STALE_CLOCK_MS = 6 * 60 * 60 * 1000;
+
 function formatElapsed(ms: number): string {
   const total = Math.max(0, Math.floor(ms / 1000));
   const h = Math.floor(total / 3600);
@@ -150,6 +153,18 @@ export function SessionLogger({
   const startedAt = new Date(session.created_at).getTime();
   const [elapsed, setElapsed] = useState(0);
   const elapsedMin = Math.max(1, Math.round(elapsed / 60000));
+  // Reopening a finished session to fix it is not a workout in progress: no
+  // live badge, no running clock, and saving keeps its logged duration. A
+  // clock past STALE_CLOCK_MS is a session someone forgot to finish; it stops
+  // reading as time trained and nothing is auto-recorded from it.
+  const isEditing = session.finished_at != null;
+  const clockLive = !isEditing && elapsed <= STALE_CLOCK_MS;
+  const autoDuration = clockLive ? elapsedMin : null;
+  const timeLabel = clockLive
+    ? formatElapsed(elapsed)
+    : duration
+      ? `${duration} min`
+      : "Not timed";
   // Exercises added mid-session via "Advance", bonus work, tagged in the queue.
   const [advanceIds, setAdvanceIds] = useState<Set<string>>(new Set());
   // Sets that broke a personal best this session, and the active Removal toast.
@@ -527,11 +542,12 @@ export function SessionLogger({
 
   // Tick the workout clock once a second while the logger is open.
   useEffect(() => {
+    if (isEditing) return;
     const tick = () => setElapsed(Date.now() - startedAt);
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
-  }, [startedAt]);
+  }, [startedAt, isEditing]);
 
   // Evaluate a just-committed working set against the running PR. Fires the
   // Removal callout only when it beats the prior all-time best (heaviest load,
@@ -802,14 +818,14 @@ export function SessionLogger({
     if (needsConnection("Finishing the session")) return;
     setConfirmFinish(false);
     setFinishing(true);
-    setVictory(randomVictory());
+    setVictory(isEditing ? "Saved" : randomVictory());
     setTimeout(() => {
       startNav(async () => {
         try {
           // Auto-record the live clock unless a duration was typed by hand.
           await finishSession({
             sessionId: session.id,
-            durationMin: duration ?? elapsedMin,
+            durationMin: duration ?? autoDuration,
           });
         } catch (err) {
           // Success arrives as a redirect, which rejects this promise; let
@@ -849,10 +865,14 @@ export function SessionLogger({
     <div className="mx-auto max-w-3xl">
       <header className="mb-8">
         <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent">
-            <span className="size-1.5 rounded-full bg-accent" />
-            Live
-          </span>
+          {isEditing ? (
+            <span className="text-[13px] font-medium text-muted">Editing</span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent">
+              <span className="size-1.5 rounded-full bg-accent" />
+              Live
+            </span>
+          )}
           <input
             type="date"
             defaultValue={session.date}
@@ -904,15 +924,20 @@ export function SessionLogger({
               <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
             </p>
           </div>
-          <div className="min-w-0 px-3.5" title="Workout time" aria-label={`Elapsed ${formatElapsed(elapsed)}`}>
+          <div className="min-w-0 px-3.5" title="Workout time" aria-label={`Time ${timeLabel}`}>
             <p className="text-[13px] text-muted">Time</p>
-            <p className="font-display mt-1.5 whitespace-nowrap text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none text-accent">
-              {formatElapsed(elapsed)}
+            <p
+              className={cn(
+                "font-display mt-1.5 whitespace-nowrap text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none",
+                clockLive ? "text-accent" : "text-text",
+              )}
+            >
+              {timeLabel}
             </p>
           </div>
         </div>
         <p className="mt-3 px-1 text-[13px] text-muted">{hype}</p>
-        <RestTimer />
+        {!isEditing && <RestTimer />}
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (
@@ -1082,8 +1107,12 @@ export function SessionLogger({
               inputMode="numeric"
               value={duration ?? ""}
               onChange={(e) => setDuration(e.target.value === "" ? null : Number(e.target.value))}
-              placeholder={String(elapsedMin)}
-              title="Tracked from the workout clock. Type to override."
+              placeholder={autoDuration != null ? String(autoDuration) : "–"}
+              title={
+                autoDuration != null
+                  ? "Tracked from the workout clock. Type to override."
+                  : "How long the session took, in minutes."
+              }
               className="tnum h-9 w-20 rounded-lg bg-surface-2 px-2 text-center text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-text/25"
             />
             <span className="text-[13px] text-muted">min</span>
@@ -1128,7 +1157,7 @@ export function SessionLogger({
             ) : (
               <Trophy className="size-4" />
             )}
-            Finish workout
+            {isEditing ? "Save session" : "Finish workout"}
           </Button>
         )}
       </section>
@@ -1225,7 +1254,7 @@ export function SessionLogger({
               </div>
               <div className="tnum mt-4 text-[15px] text-muted">
                 {Math.round(totalForce).toLocaleString()} {unit}, {totalSets} sets,{" "}
-                {formatElapsed(elapsed)}
+                {timeLabel}
               </div>
             </div>
           </div>
