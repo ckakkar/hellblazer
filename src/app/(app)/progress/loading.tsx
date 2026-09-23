@@ -1,5 +1,5 @@
-import { PageSkeleton } from "@/components/ui/page-skeleton";
+import { PlateLoader } from "@/components/ui/plate-loader";
 
 export default function Loading() {
-  return <PageSkeleton title="Progress" />;
+  return <PlateLoader label="Progress" />;
 }

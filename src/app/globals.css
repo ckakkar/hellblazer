@@ -268,14 +268,279 @@ button,
   }
 }
 
-/* Loading placeholder: a slow breath, the one sign that data is on its way. */
-.hb-skeleton {
-  background: var(--color-surface);
-  animation: hb-breathe 1.6s var(--ease-in-out) infinite;
+/* ── Loading: the bar ─────────────────────────────────────────────────────
+   Every route loader is one competition bar being loaded (PlateLoader). The
+   plates seat against the collars with a firm ease-out, heaviest first, and
+   the readout rolls up with each one, landing on its value as the plate
+   lands. Then it holds, and strips outermost first on a quick ease-in. One
+   3400ms cycle; every part below is a slice of it, in ms / 3400.
+
+   Resting styles are the loaded bar. Under reduced motion the animations are
+   switched off (not just shortened), so it stays loaded and reads 150. */
+.hb-bar-loader {
+  /* Held back a beat: a route that resolves in a blink never flashes it. */
+  animation: hb-fade-in 220ms var(--ease-out) 90ms both;
 }
-@keyframes hb-breathe {
-  50% {
-    opacity: 0.55;
+.hb-bar-part {
+  --hb-from: -56px;
+  --hb-to: -40px;
+  /* Longhands on purpose: the build's CSS minifier mangles a nameless
+     animation shorthand into "animation: none". */
+  animation-duration: 3400ms;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
+}
+.hb-bar-part[data-side="r"] {
+  --hb-from: 56px;
+  --hb-to: 40px;
+}
+.hb-bar-p1 {
+  animation-name: hb-bar-p1;
+}
+.hb-bar-p2 {
+  animation-name: hb-bar-p2;
+}
+.hb-bar-p3 {
+  animation-name: hb-bar-p3;
+}
+.hb-bar-p4 {
+  animation-name: hb-bar-p4;
+}
+.hb-bar-clip {
+  animation-name: hb-bar-clip;
+}
+@keyframes hb-bar-p1 {
+  0%,
+  1.76% {
+    transform: translateX(var(--hb-from));
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  4.71% {
+    opacity: 1;
+  }
+  12.35%,
+  87.65% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  94.71%,
+  100% {
+    transform: translateX(var(--hb-to));
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-p2 {
+  0%,
+  8.82% {
+    transform: translateX(var(--hb-from));
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  11.76% {
+    opacity: 1;
+  }
+  18.82%,
+  85.59% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  92.65%,
+  100% {
+    transform: translateX(var(--hb-to));
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-p3 {
+  0%,
+  15.29% {
+    transform: translateX(var(--hb-from));
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  18.24% {
+    opacity: 1;
+  }
+  24.71%,
+  83.53% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  90.59%,
+  100% {
+    transform: translateX(var(--hb-to));
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-p4 {
+  0%,
+  21.76% {
+    transform: translateX(var(--hb-from));
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  24.41% {
+    opacity: 1;
+  }
+  30%,
+  81.47% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  88.53%,
+  100% {
+    transform: translateX(var(--hb-to));
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-clip {
+  0%,
+  28.24% {
+    transform: translateX(var(--hb-from));
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  30.88% {
+    opacity: 1;
+  }
+  35.88%,
+  79.41% {
+    transform: none;
+    opacity: 1;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.75, 0);
+  }
+  86.47%,
+  100% {
+    transform: translateX(var(--hb-to));
+    opacity: 0;
+  }
+}
+
+/* The readout is a real animated integer: @property makes --hb-kg
+   interpolable, counter-reset reads it, ::after prints it. */
+@property --hb-kg {
+  syntax: "<integer>";
+  initial-value: 150;
+  inherits: false;
+}
+.hb-bar-kg {
+  counter-reset: hb-kg var(--hb-kg);
+  animation: hb-bar-kg 3400ms infinite both;
+}
+.hb-bar-kg::after {
+  content: counter(hb-kg);
+}
+@keyframes hb-bar-kg {
+  0% {
+    --hb-kg: 20;
+  }
+  1.76% {
+    --hb-kg: 20;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  12.35% {
+    --hb-kg: 70;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  18.82% {
+    --hb-kg: 110;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  24.71% {
+    --hb-kg: 140;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  30% {
+    --hb-kg: 145;
+    animation-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  }
+  35.88% {
+    --hb-kg: 150;
+  }
+  79.41% {
+    --hb-kg: 150;
+    animation-timing-function: linear;
+  }
+  86.47% {
+    --hb-kg: 145;
+    animation-timing-function: linear;
+  }
+  88.53% {
+    --hb-kg: 140;
+    animation-timing-function: linear;
+  }
+  90.59% {
+    --hb-kg: 110;
+    animation-timing-function: linear;
+  }
+  92.65% {
+    --hb-kg: 70;
+    animation-timing-function: linear;
+  }
+  94.71%,
+  100% {
+    --hb-kg: 20;
+  }
+}
+
+/* "Loading the bar" while plates go on, "Collars on" once they're clamped. */
+.hb-bar-say-2 {
+  opacity: 0;
+}
+.hb-bar-say-1 {
+  animation: hb-bar-say-1 3400ms var(--ease-out) infinite;
+}
+.hb-bar-say-2 {
+  animation: hb-bar-say-2 3400ms var(--ease-out) infinite;
+}
+@keyframes hb-bar-say-1 {
+  0%,
+  35.88% {
+    opacity: 1;
+    transform: none;
+  }
+  40%,
+  93.53% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  93.82% {
+    transform: translateY(4px);
+  }
+  99.41%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hb-bar-say-2 {
+  0%,
+  37.06% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  41.76%,
+  79.41% {
+    opacity: 1;
+    transform: none;
+  }
+  83.53%,
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb-bar-loader,
+  .hb-bar-part,
+  .hb-bar-kg,
+  .hb-bar-say {
+    animation: none !important;
   }
 }
 
@@ -320,6 +585,16 @@ button,
   animation:
     240ms var(--ease-out) 90ms both hb-fade-in,
     340ms var(--ease-in-out) both hb-slide-in;
+}
+/* The loader steps aside for the page it was holding the place of. */
+::view-transition-old(.hb-loader-out) {
+  animation: 180ms var(--ease-out) both hb-loader-out;
+}
+@keyframes hb-loader-out {
+  to {
+    opacity: 0;
+    transform: scale(0.97);
+  }
 }
 ::view-transition-group(.hb-morph) {
   animation-duration: 340ms;
