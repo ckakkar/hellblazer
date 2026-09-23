@@ -12,7 +12,7 @@ import { FightCardHero } from "@/components/tier/fight-card-hero";
 import { getTier } from "@/lib/tiers";
 import { getToday, getUnit } from "@/lib/settings";
 import { SectionLabel } from "@/components/ui/page-header";
-import { Delta, BarRow, type DeltaTone } from "@/components/ui/tape";
+import { Delta, type DeltaTone } from "@/components/ui/tape";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,6 @@ import { WeeklySetsChart } from "@/components/charts/weekly-sets-chart";
 import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { formatVolume } from "@/lib/units";
-import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
 
 export const dynamic = "force-dynamic";
 
@@ -101,17 +100,6 @@ export default async function DashboardPage() {
       ? "gain"
       : "loss"
     : "flat";
-
-  const setsByMuscle = new Map(weeklySets.map((m) => [m.muscle, m.sets]));
-  const weakPointRows = WEAK_POINTS.map((m) => ({
-    muscle: m,
-    label: MUSCLE_LABEL[m],
-    sets: Math.round((setsByMuscle.get(m) ?? 0) * 10) / 10,
-  }));
-  const weakPointMax = Math.max(1, ...weakPointRows.map((r) => r.sets));
-  // Only the muscle actually trailing the group gets marked, so the accent
-  // still means one thing.
-  const weakPointMin = Math.min(...weakPointRows.map((r) => r.sets));
 
   const recent = summaries.slice(0, 6);
 
@@ -210,22 +198,6 @@ export default async function DashboardPage() {
               </p>
               {st.delta && <div className="mt-1.5">{st.delta}</div>}
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Four muscles on one scale, so the one falling behind shows as a gap. */}
-      <section>
-        <SectionLabel>Weak points</SectionLabel>
-        <div className="rounded-2xl bg-surface px-4 py-1">
-          {weakPointRows.map((r) => (
-            <BarRow
-              key={r.muscle}
-              label={r.label}
-              value={r.sets}
-              max={weakPointMax}
-              low={r.sets === weakPointMin && weakPointMax > weakPointMin}
-            />
           ))}
         </div>
       </section>
