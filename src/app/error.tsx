@@ -3,7 +3,8 @@
 import { useEffect } from "react";
 import { ErrorState } from "@/components/ui/error-state";
 
-export default function AppError({
+/** Routes outside the app shell: the landing page and /welcome. */
+export default function RootError({
   error,
   retry,
 }: {
@@ -13,9 +14,8 @@ export default function AppError({
   retry: () => void;
 }) {
   useEffect(() => {
-    // Surface for observability; transient auth/clock-skew errors land here.
     console.error(error);
   }, [error]);
 
-  return <ErrorState digest={error.digest} onRetry={retry} />;
+  return <ErrorState digest={error.digest} onRetry={retry} fullScreen />;
 }

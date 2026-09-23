@@ -22,6 +22,16 @@ function urlBase64ToUint8Array(base64String: string) {
 
 type Status = "loading" | "unsupported" | "ios-install" | "ready";
 
+/** The service worker's registration, or null when none turns up in time.
+ *  `serviceWorker.ready` alone never settles if registration failed (private
+ *  mode, a blocked script), which left this card spinning forever. */
+function workerRegistration(timeoutMs = 4000): Promise<ServiceWorkerRegistration | null> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+  ]);
+}
+
 export function NotificationsManager({
   reminderHour,
   vapidPublicKey,
@@ -53,8 +63,12 @@ export function NotificationsManager({
         }
         return;
       }
+      const reg = await workerRegistration();
+      if (!reg) {
+        if (!cancelled) setStatus("unsupported");
+        return;
+      }
       try {
-        const reg = await navigator.serviceWorker.ready;
         const sub = await reg.pushManager.getSubscription();
         if (!cancelled) setSubscribed(!!sub);
       } catch {
@@ -81,7 +95,11 @@ export function NotificationsManager({
         setMsg("Notifications are blocked: allow them in your device settings.");
         return;
       }
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await workerRegistration();
+      if (!reg) {
+        setMsg("Couldn't reach the app's background worker. Reload and try again.");
+        return;
+      }
       const sub =
         (await reg.pushManager.getSubscription()) ??
         (await reg.pushManager.subscribe({
@@ -113,8 +131,8 @@ export function NotificationsManager({
     setBusy(true);
     setMsg(null);
     try {
-      const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.getSubscription();
+      const reg = await workerRegistration();
+      const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
         await deletePushSubscription({ endpoint: sub.endpoint });
         await sub.unsubscribe();
