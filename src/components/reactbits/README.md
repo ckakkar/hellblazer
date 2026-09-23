@@ -30,21 +30,8 @@ the WebGL cost is deliberately accepted.
   tonnage on `/log/[id]`), the move is the information, not the arrival, so the
   spring is seeded at the current value and only runs on change.
 
-`scroll-reveal.tsx` is a rebuild rather than a port:
-
-- Upstream uses **GSAP + ScrollTrigger** (as do `ScrollFloat`, `FadeContent`
-  and `AnimatedContent`). That is ~60KB gzipped for one reveal, so the scrub is
-  reimplemented on `motion`'s `useScroll`, which is already bundled.
-- `offset` is a module constant. Passing a fresh array literal makes
-  `useScroll` re-create its tracker every render, which pins progress at zero.
-- The range ends at `start 0.8`, not the viewport centre. An element near the
-  bottom of a short page can never reach the centre, which left its last words
-  stuck at base opacity, leaving permanently unreadable text.
-- `baseOpacity` floors at 0.3 and a `prefers-reduced-motion` rule in
-  `globals.css` forces `.hb-scroll-reveal` fully opaque. The JS branch already
-  renders a static paragraph, but a hook resolving a tick late would otherwise
-  leave real body copy dimmed.
-
-Only worth pointing at content that is genuinely **below the fold**, such as
-anything already on screen at load the range is complete before the first
-scroll, and the effect never fires.
+`scroll-reveal.tsx` (a GSAP-free rebuild on `motion`'s `useScroll`),
+`split-flap-text.tsx`, `spotlight-card.tsx` and `blur-text.tsx` were removed in the September
+2026 redesign: the minimal UI keeps motion for things that carry information
+(a live figure changing, a sheet arriving, a navigation), and those three were
+decoration (the blur-in title included). They are in git history if a future screen genuinely needs one.
