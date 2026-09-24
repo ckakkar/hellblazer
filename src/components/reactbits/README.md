@@ -35,3 +35,34 @@ the WebGL cost is deliberately accepted.
 2026 redesign: the minimal UI keeps motion for things that carry information
 (a live figure changing, a sheet arriving, a navigation), and those three were
 decoration (the blur-in title included). They are in git history if a future screen genuinely needs one.
+
+## Interaction pieces (September 2026)
+
+Pulled through the shadcn MCP server's `@react-bits` registry. Each one guards
+an action rather than decorating one:
+
+| File | Upstream | Used for |
+|------|----------|----------|
+| `slide-commit.tsx` | SlideCommit | **Slide to finish** a live workout, so a stray tap mid-set can't end it. Resets with "Not finished" if unsaved sets or no connection stop it. |
+| `hold-button.tsx` | HoldButton | **Hold to delete** a session, **hold to restart** a block, **hold to wipe** history (2 s). Replaces the two-tap "Sure?" prompts; letting go early cancels. |
+| `fuse-button.tsx` | FuseButton | **Skip** with a 4 s undo: the button turns into Undo while a fuse burns in the accent, and the day is only skipped when it runs out (or you leave the page). |
+
+Local changes, beyond the list above:
+
+- **No Hugeicons.** Upstream imports `@hugeicons/*`; these use `lucide-react`,
+  which the app already ships.
+- **Namespace.** HoldButton's `hb-` classes and custom properties are renamed
+  `hold-`: `hb-` is this app's own prefix, and they collided.
+- **Fluid width.** SlideCommit takes an optional `width`; without it, it fills
+  its container (ResizeObserver) so it can span a phone.
+- **No bounce.** SlideCommit's `returnBounce` and `landingDip` default to 0,
+  per the design rule against springy motion.
+- **Accent-aware.** Colours default to the app's tokens, and anything drawn in
+  the accent takes `rgb(var(--accent-rgb))`. Because that isn't a hex,
+  SlideCommit takes an explicit `successTextColor`.
+- **Lint.** The "latest callback" refs they update during render now update in
+  an effect, which is what the React hooks lint rules require.
+
+Only SlideCommit needs `motion`, and it's used in the logger, which loads
+`motion` for CountUp anyway. HoldButton's frame loop runs only while a press is
+held; FuseButton's fuse is a Web Animation.

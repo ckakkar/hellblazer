@@ -119,7 +119,7 @@ export function ProgramProgressCard({
               size="lg"
               className="hb-glow flex-1"
             />
-            <SkipWorkoutButton programDayId={nextDay.id} size="lg" variant="secondary" />
+            <SkipWorkoutButton programDayId={nextDay.id} size="lg" />
           </div>
         </>
       ) : (

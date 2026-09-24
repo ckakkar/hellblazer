@@ -40,6 +40,7 @@ import { ExercisePicker } from "@/components/exercise-picker";
 import { CountUp } from "@/components/reactbits/count-up";
 import { RestTimer } from "@/components/workout/rest-timer";
 import { VictoryScreen } from "@/components/workout/victory-screen";
+import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
@@ -272,6 +273,8 @@ export function SessionLogger({
   const [failed, setFailed] = useState<Set<string>>(new Set());
   const [inFlight, setInFlight] = useState(0);
   const [confirmFinish, setConfirmFinish] = useState(false);
+  // Remounts the finish slider after a failed finish, so it's ready again.
+  const [slideKey, setSlideKey] = useState(0);
   const online = useOnline();
   const wasOffline = useRef(false);
   const failedRef = useRef(failed);
@@ -819,15 +822,16 @@ export function SessionLogger({
     setActiveSeId(null);
   }
 
-  function finish(force = false) {
+  /** Returns whether finishing actually started (the slider resets if not). */
+  function finish(force = false): boolean {
     // Finishing discards the page, so unsaved sets would be gone for good.
     // Retry once and make them confirm rather than losing work silently.
     if (!force && failed.size > 0) {
       retryFailed();
       setConfirmFinish(true);
-      return;
+      return false;
     }
-    if (needsConnection("Finishing the session")) return;
+    if (needsConnection("Finishing the session")) return false;
     setConfirmFinish(false);
     setFinishing(true);
     setVictory(isEditing ? "Saved" : randomVictory());
@@ -845,12 +849,14 @@ export function SessionLogger({
           unstable_rethrow(err);
           setVictory(null);
           setFinishing(false);
+          setSlideKey((k) => k + 1);
           showNotice(
             "Couldn't finish the session. Your sets are safe; try again in a moment.",
           );
         }
       });
     }, 1700);
+    return true;
   }
 
   const totalSets = exercises.reduce(
@@ -1157,20 +1163,32 @@ export function SessionLogger({
               </Button>
             </div>
           </div>
-        ) : (
+        ) : isEditing ? (
           <Button
             onClick={() => finish()}
             disabled={finishing}
             size="lg"
             className="w-full"
           >
-            {finishing ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Trophy className="size-4" />
-            )}
-            {isEditing ? "Save session" : "Finish workout"}
+            {finishing ? <Loader2 className="size-4 animate-spin" /> : <Trophy className="size-4" />}
+            Save session
           </Button>
+        ) : (
+          // A slide, not a tap: finishing ends the workout, and a stray tap
+          // mid-set shouldn't. It resets if finishing can't go ahead.
+          <SlideCommit
+            key={slideKey}
+            label="Slide to finish"
+            doneLabel="Finished"
+            errorLabel="Not finished"
+            successTextColor="#000000"
+            height={56}
+            holdMs={0}
+            disabled={finishing}
+            onConfirm={() => {
+              if (!finish()) throw new Error("Finish didn't start");
+            }}
+          />
         )}
       </section>
 

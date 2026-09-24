@@ -56,6 +56,7 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 - **King of the Hill.** Claim a ring name and you're ranked with everyone else by lifetime volume lifted. The top three stand on a podium as their fighters.
 - **A shareable fight card.** Export any session as a 1080×1350 PNG rendered on the server, straight to the share sheet.
 - **Analytics from real data.** Weekly sets per muscle, volume trends, a year-long consistency heatmap, per-lift 1RM and volume charts, an all-time 1RM board, muscle balance and volume distribution.
+- **Guarded actions.** Slide to finish a workout, hold to delete or wipe, and a 4-second undo on Skip, built from [React Bits](https://reactbits.dev) components (see `src/components/reactbits/README.md`).
 - **Six accents.** The whole app re-skins from one colour channel. The palettes are named after the Kengan Association companies: Nogi, Motorhead, Dainippon, Kouou, Under Mount and Gandai.
 - **kg or lb.** Weight is always stored in kilograms and converted only for display.
 
@@ -65,13 +66,13 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 |-------|--------------|
 | `/` | Landing page and Google sign-in; the ladder's fighters as a swipeable roster. Signed-in visitors go straight to the dashboard. |
 | `/welcome` | First-run setup: name, ring name, and the details that calibrate the judge. |
-| `/dashboard` | Your rank as a full-bleed fight poster, the **next bout** from your program with Start in thumb reach, this week against last week, a consistency heatmap, sets per muscle, a 7D / 30D / 1Y volume chart, and recent sessions. |
+| `/dashboard` | Your rank as a full-bleed fight poster, the **next bout** from your program with Start in thumb reach (Skip comes with an undo), this week against last week, a consistency heatmap, sets per muscle against the 10-20 set range, a 7D / 30D / 1Y volume chart, and recent sessions. |
 | `/log` → `/log/[id]` | Start your next programmed day, any other day, or an empty session; then the set logger. |
 | `/programs` → `/programs/[id]` | Your programs and the starter programs, each fronted by the fighter whose style it's named after. Pause, resume, roll back, preview, reorder days. |
 | `/templates` | The days of your split: exercises, order, target sets, reps and notes. |
 | `/exercises` | The 140+ movement library, grouped by muscle, with a how-to for every movement; add your own. |
 | `/history` → `/history/[id]` | Every session by month, searchable and filterable. Open one for its stats and sets, to edit it, share it as a card, or delete it. |
-| `/progress` | **Lifts:** records, estimated 1RM and volume per lift, and the all-time 1RM board. **Muscles:** weekly sets and volume, balance and distribution. Plus your standing on the ladder. |
+| `/progress` | **Lifts:** your top lifts as 12-week estimated-1RM lines with the change, your latest records (each opens its session), then any lift's records, 1RM and volume, and the all-time 1RM board. **Muscles:** your weekly rep-range mix (strength, hypertrophy, endurance), then weekly sets and volume, balance and distribution. Plus your standing on the ladder. |
 | `/leaderboard` | King of the Hill: the podium, then everyone else, by total volume. |
 | `/settings` | Your profile under your rank fighter; the judge; ring name and details; bodyweight; units and accent; push reminders; CSV export; reset tools. |
 
@@ -89,7 +90,7 @@ On desktop a sidebar carries it all.
 2. **Work the queue.** Exercises show as done, up now, or waiting. Start one and it opens in a sheet.
 3. **Log sets.** The first set pre-fills from last time; each new set copies the one before. Weight and reps have large steppers, RPE and a warm-up flag are optional, and a rest timer runs between sets.
 4. **Adjust freely.** Swap a movement (and keep the swap for next time), add bonus exercises that don't touch your program, or remove one.
-5. **Finish.** The duration fills in from the clock, the victory screen plays, and you land on the session.
+5. **Finish.** Slide to finish (a slide, so a stray tap mid-set can't end the workout). The duration fills in from the clock, the victory screen plays, and you land on the session.
 
 Reopen a finished session from History to fix it: it opens in **editing** mode, with no live clock, and saving keeps its original finish time. A session left open by mistake stops counting after 6 hours, so you don't record a day-long workout.
 
@@ -169,6 +170,8 @@ Nothing derived is stored. It's computed from the `set` grain by **security-invo
 | `exercise_stats(p_exclude_session)` | RPC | Per-lift records and progress, in one round trip |
 | `last_performances(p_exercise_ids, p_exclude_session)` | RPC | "Last time" targets in the logger |
 | `leaderboard()` | RPC | King of the Hill: ring name, rank and total volume only |
+| `rep_range_weekly(p_since)` | RPC | Working sets per week in 1-5, 6-12 and 13+ rep ranges |
+| `recent_records(p_limit)` | RPC | Personal records as events: what was beaten, when, by how much |
 
 ## Tech stack
 

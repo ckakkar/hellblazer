@@ -1,19 +1,22 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { Loader2, RotateCcw, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import HoldButton from "@/components/reactbits/hold-button";
 import { resetProgram } from "@/lib/actions/programs";
 import { clearHistory } from "@/lib/actions/sessions";
 
+/**
+ * The two irreversible actions, each behind a press-and-hold instead of a
+ * second "are you sure" button: holding is one deliberate gesture, and
+ * letting go early cancels. Wiping history takes the longer hold.
+ */
 export function DangerZone({
   activeProgram,
 }: {
   activeProgram: { id: string; name: string } | null;
 }) {
   const [pending, start] = useTransition();
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [confirmClear, setConfirmClear] = useState(false);
 
   return (
     <div className="grid gap-4">
@@ -26,45 +29,22 @@ export function DangerZone({
               kept.
             </p>
           </div>
-          {confirmReset ? (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={pending}
-                onClick={() =>
-                  start(async () => {
-                    await resetProgram({ id: activeProgram.id });
-                    setConfirmReset(false);
-                  })
-                }
-              >
-                {pending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <RotateCcw className="size-4" />
-                )}
-                Confirm restart
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setConfirmReset(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="shrink-0"
-              onClick={() => setConfirmReset(true)}
-            >
-              <RotateCcw className="size-4" />
-              Restart block
-            </Button>
-          )}
+          <HoldButton
+            size="sm"
+            radius={10}
+            backgroundColor="#1c1c1f"
+            fillColor="#f4f2ee"
+            textColor="#f4f2ee"
+            fillTextColor="#000000"
+            holdTime={1200}
+            disabled={pending}
+            icon={pending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
+            doneLabel="Restarted"
+            onHold={() => start(async () => void (await resetProgram({ id: activeProgram.id })))}
+            className="shrink-0"
+          >
+            Hold to restart
+          </HoldButton>
         </div>
       )}
 
@@ -76,45 +56,18 @@ export function DangerZone({
             undone.
           </p>
         </div>
-        {confirmClear ? (
-          <div className="flex items-center gap-2">
-            <Button
-              variant="danger"
-              size="sm"
-              disabled={pending}
-              onClick={() =>
-                start(async () => {
-                  await clearHistory();
-                  setConfirmClear(false);
-                })
-              }
-            >
-              {pending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <Trash2 className="size-4" />
-              )}
-              Wipe everything
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setConfirmClear(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        ) : (
-          <Button
-            variant="danger"
-            size="sm"
-            className="shrink-0"
-            onClick={() => setConfirmClear(true)}
-          >
-            <Trash2 className="size-4" />
-            Delete history
-          </Button>
-        )}
+        <HoldButton
+          size="sm"
+          radius={10}
+          holdTime={2000}
+          disabled={pending}
+          icon={pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
+          doneLabel="Wiping"
+          onHold={() => start(async () => void (await clearHistory()))}
+          className="shrink-0"
+        >
+          Hold to wipe history
+        </HoldButton>
       </div>
     </div>
   );
