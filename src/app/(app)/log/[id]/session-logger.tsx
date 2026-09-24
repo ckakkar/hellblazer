@@ -44,6 +44,7 @@ import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
+import { haptic } from "@/lib/haptics";
 import {
   fromDisplayWeight,
   toDisplayWeight,
@@ -600,8 +601,8 @@ export function SessionLogger({
               value: `${Math.round(toDisplayWeight(e1rm, unit))} ${unit}`,
             },
       );
-      // A short buzz where the phone supports it (Android); iOS ignores it.
-      if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate([30, 50, 90]);
+      // A short buzz: the Taptic Engine in the iOS app, vibration on Android.
+      haptic("record");
       if (removalTimer.current) clearTimeout(removalTimer.current);
       removalTimer.current = setTimeout(() => setRemoval(null), 2600);
     },

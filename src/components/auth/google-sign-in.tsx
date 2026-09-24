@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { isNativeApp } from "@/lib/native";
 
 function GoogleGlyph() {
   return (
@@ -30,9 +31,22 @@ function GoogleGlyph() {
 
 export function GoogleSignIn({ next = "/dashboard" }: { next?: string }) {
   const [loading, setLoading] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
   async function signIn() {
     setLoading(true);
+    setNote(null);
+    if (isNativeApp()) {
+      // The iOS app can't use the redirect flow below: Google blocks OAuth
+      // inside embedded web views. See src/lib/native-auth.ts.
+      const { signInWithGoogleInApp } = await import("@/lib/native-auth");
+      const result = await signInWithGoogleInApp(next);
+      if (!result.ok) {
+        setLoading(false);
+        setNote(result.message);
+      }
+      return;
+    }
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -44,7 +58,7 @@ export function GoogleSignIn({ next = "/dashboard" }: { next?: string }) {
     // On success the browser is redirected to Google; no further work here.
   }
 
-  return (
+  const button = (
     <Button
       size="xl"
       variant="secondary"
@@ -59,5 +73,14 @@ export function GoogleSignIn({ next = "/dashboard" }: { next?: string }) {
       )}
       Continue with Google
     </Button>
+  );
+  if (!note) return button;
+  return (
+    <div className="flex w-full flex-col items-center gap-2 sm:w-auto">
+      {button}
+      <p role="status" className="text-center text-[13px] text-muted">
+        {note}
+      </p>
+    </div>
   );
 }

@@ -39,6 +39,7 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 - [Data model](#data-model)
 - [Security and privacy](#security-and-privacy)
 - [PWA, offline and notifications](#pwa-offline-and-notifications)
+- [iOS app](#ios-app)
 - [Getting started](#getting-started)
 - [Testing](#testing)
 - [Deployment](#deployment)
@@ -271,6 +272,22 @@ Unit, accent and timezone preferences are cookies, read on the server so the fir
 - **Offline logging.** Sets go to an IndexedDB queue first and upload when there's a connection; failures are shown, retried, and never silently dropped.
 - **Push reminders.** Web Push (VAPID) and a **daily cron** (`/api/cron/reminders`) that nudges you when today's programmed workout isn't done. On iPhone, push works once the app is added to the Home Screen (iOS 16.4+).
 
+## iOS app
+
+A native iPhone app built with **Capacitor**. It's a thin shell around the live site: the app loads `https://hellblazer.vercel.app` in a WKWebView, so every web deploy updates the app too. Only native changes need a new build.
+
+- **What's native.**
+  - Google sign-in through Google's iOS SDK, because Google blocks OAuth inside web views. It hands back an ID token, and `POST /auth/native` swaps it for the same Supabase session cookies the website's redirect flow sets.
+  - Taptic Engine haptics for records and the end of a rest (`src/lib/haptics.ts`).
+  - A true-black launch screen with the flame, and dark system UI.
+- **Web and PWA are untouched.** Everything app-only sits behind `isNativeApp()` (`src/lib/native.ts`), and plugin code loads through dynamic imports inside that check, so the website never downloads it.
+- **Offline.** App-Bound Domains are on, which lets the service worker run in the app, and `app-shell/offline.html` covers a first launch with no signal.
+- **Builds without Xcode.** `.github/workflows/ios.yml` builds on a GitHub-hosted Mac whenever `ios/`, `app-shell/` or `capacitor.config.ts` changes, or by hand from the Actions tab.
+  - Before signing is set up, it only checks that the app compiles.
+  - After `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>`, it signs with fastlane (`ios/fastlane/Fastfile`) and uploads to TestFlight. That script registers the bundle ID, creates the distribution certificate and stores everything as GitHub secrets.
+- **Changing the icon or launch mark:** `node scripts/generate-ios-assets.mjs`.
+- **After adding or removing a Capacitor plugin:** run `npx cap sync ios` and commit `ios/`.
+
 ## Getting started
 
 **You'll need:** Node 20+, a Supabase project with the Google provider enabled, and, optionally, a DeepSeek API key and a VAPID key pair.
@@ -347,6 +364,7 @@ src/
 │   │   ├── export/            your set log as CSV
 │   │   └── cron/reminders/    daily push reminders
 │   ├── auth/callback/         OAuth callback
+│   ├── auth/native/           ID-token sign-in for the iOS app
 │   ├── welcome/               first-run setup
 │   ├── page.tsx               landing and sign-in
 │   ├── layout.tsx             root: font, accent, iOS launch screens, boot screen
@@ -371,8 +389,10 @@ src/
 │   └── database.types.ts      generated from the live schema
 └── proxy.ts                   session refresh and route gate
 
-public/   sw.js, offline.html, splash/, art/fighters/
-scripts/  generate-splash.mjs, sql/
+public/     sw.js, offline.html, splash/, art/fighters/
+scripts/    generate-splash.mjs, generate-ios-assets.mjs, ios-signing-setup.mjs, sql/
+ios/        the Capacitor Xcode project and fastlane lane
+app-shell/  files bundled into the iOS app (offline page)
 ```
 
 ## Conventions

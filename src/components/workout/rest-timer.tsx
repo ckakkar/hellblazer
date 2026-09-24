@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, TimerReset } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { haptic } from "@/lib/haptics";
 import {
   clampRestDuration,
   DEFAULT_REST_SECONDS,
@@ -44,7 +45,7 @@ export function RestTimer() {
         setRunning(false);
         setFinished(true);
         endAt.current = null;
-        navigator.vibrate?.([120, 70, 180]);
+        haptic("rest-done");
       }
     };
     tick();

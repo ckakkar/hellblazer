@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Native iOS shell: generated Xcode project plus copied bridge scripts.
+    "ios/**",
+    "app-shell/**",
   ]),
 ]);
 
