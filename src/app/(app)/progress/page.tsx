@@ -6,7 +6,13 @@ import {
   getExerciseProgression,
   getMuscleBalance,
   getMuscleWeeklySeries,
+  getRecentRecords,
+  getRepRangeWeeks,
+  getTopLiftTrends,
 } from "@/lib/data/analytics";
+import { LiftTrends } from "@/components/charts/lift-trends";
+import { RecentRecords } from "@/components/charts/recent-records";
+import { RepRangeChart } from "@/components/charts/rep-range-chart";
 import { getUnit } from "@/lib/settings";
 import { getProfile } from "@/lib/data/profile";
 import { LadderStanding } from "@/components/tier/ladder-standing";
@@ -78,6 +84,8 @@ export default async function ProgressPage({
             body="Log some working sets and your 1RM and volume trends will appear here."
           />
         ) : (
+          <div className="grid gap-10">
+          <LiftsOverview unit={unit} />
           <ExerciseTab
             exerciseId={selectedExercise}
             exerciseName={
@@ -86,6 +94,7 @@ export default async function ProgressPage({
             }
             unit={unit}
           />
+          </div>
         )
       ) : (
         <MuscleTab muscle={selectedMuscle} unit={unit} />
@@ -107,6 +116,18 @@ export default async function ProgressPage({
   );
 }
 
+/** The lifts at a glance: top lifts' 12-week lines, then recent records. */
+async function LiftsOverview({ unit }: { unit: "kg" | "lb" }) {
+  const [lifts, records] = await Promise.all([getTopLiftTrends(4, 12), getRecentRecords(5)]);
+  if (lifts.length === 0 && records.length === 0) return null;
+  return (
+    <div className="grid gap-10">
+      <LiftTrends lifts={lifts} unit={unit} />
+      <RecentRecords records={records} unit={unit} />
+    </div>
+  );
+}
+
 async function ExerciseTab({
   exerciseId,
   exerciseName,
@@ -119,7 +140,8 @@ async function ExerciseTab({
   const { points, pr } = await getExerciseProgression(exerciseId);
 
   return (
-    <div className="grid gap-4">
+    // The top-lift cards link here (#lift); the margin clears the top bar.
+    <div id="lift" className="grid scroll-mt-24 gap-4">
       {/* A lift's personal records are a tale of the tape by any other name, so
           they're set as one: the lift is named, and the records read down a
           column instead of sitting in four equal boxes. */}
@@ -170,9 +192,10 @@ async function MuscleTab({
   muscle: Muscle;
   unit: "kg" | "lb";
 }) {
-  const [points, balance] = await Promise.all([
+  const [points, balance, repRanges] = await Promise.all([
     getMuscleWeeklySeries(muscle, 12),
     getMuscleBalance(4),
+    getRepRangeWeeks(8),
   ]);
   const lastWeek = points[points.length - 1];
   const avgSets =
@@ -183,6 +206,13 @@ async function MuscleTab({
 
   return (
     <div className="grid gap-4">
+      <ChartCard
+        title="Rep ranges"
+        subtitle="Working sets per week: strength 1-5, hypertrophy 6-12, endurance 13+"
+      >
+        <RepRangeChart weeks={repRanges} />
+      </ChartCard>
+
       {hasMuscleData ? (
         <>
           <Tape title={`${MUSCLE_LABEL[muscle]} this week`}>

@@ -188,3 +188,135 @@ export async function getExerciseProgression(
   };
   return { points, pr };
 }
+
+export type LiftTrend = {
+  exerciseId: string;
+  name: string;
+  /** Best estimated 1RM per session in the window, oldest first (kg). */
+  points: { date: string; e1rm: number }[];
+  /** The latest session's best estimated 1RM (kg). */
+  current: number;
+  /** Change from the first to the latest session in the window, in %. */
+  changePct: number | null;
+};
+
+/**
+ * The lifter's most-trained lifts and where their estimated 1RM has gone
+ * over the last `weeks`. Picks the lifts from the `exercise_stats()` RPC
+ * (cached per request), then reads just those lifts' per-session bests in
+ * one query.
+ */
+export async function getTopLiftTrends(limit = 4, weeks = 12): Promise<LiftTrend[]> {
+  const stats = await getExerciseStats();
+  if (stats.length === 0) return [];
+  const supabase = await createClient();
+
+  // Compounds first: a strength view should lead with the bench, not the
+  // lateral raise you happen to do three times a week. Then by how often
+  // it's trained, then by how heavy.
+  const candidates = [...stats].sort((a, b) => b.sessions_logged - a.sessions_logged).slice(0, 16);
+  const { data: kinds } = await supabase
+    .from("exercise")
+    .select("id, mechanic")
+    .in(
+      "id",
+      candidates.map((c) => c.exercise_id),
+    );
+  const compound = new Set((kinds ?? []).filter((k) => k.mechanic === "compound").map((k) => k.id));
+  const top = candidates
+    .sort(
+      (a, b) =>
+        Number(compound.has(b.exercise_id)) - Number(compound.has(a.exercise_id)) ||
+        b.sessions_logged - a.sessions_logged ||
+        b.best_est_1rm - a.best_est_1rm,
+    )
+    .slice(0, limit);
+
+  const since = format(subWeeks(await lifterNow(), weeks), "yyyy-MM-dd");
+  const { data, error } = await supabase
+    .from("v_exercise_progression")
+    .select("exercise_id, session_date, best_est_1rm")
+    .in(
+      "exercise_id",
+      top.map((t) => t.exercise_id),
+    )
+    .gte("session_date", since)
+    .order("session_date", { ascending: true });
+  if (error) throw error;
+
+  return top.map((t) => {
+    const points = (data ?? [])
+      .filter((r) => r.exercise_id === t.exercise_id && r.session_date)
+      .map((r) => ({ date: r.session_date as string, e1rm: Number(r.best_est_1rm ?? 0) }));
+    const first = points[0]?.e1rm ?? 0;
+    const current = points[points.length - 1]?.e1rm ?? Number(t.last_est_1rm ?? 0);
+    return {
+      exerciseId: t.exercise_id,
+      name: t.exercise_name,
+      points,
+      current,
+      changePct: points.length > 1 && first > 0 ? Math.round(((current - first) / first) * 100) : null,
+    };
+  });
+}
+
+export type RepRangeWeek = {
+  week: string;
+  strength: number;
+  hypertrophy: number;
+  endurance: number;
+};
+
+/**
+ * Working sets per ISO week split by rep range: 1-5 (strength), 6-12
+ * (hypertrophy), 13+ (endurance), for the last `weeks` weeks including this
+ * one, zero-filled. Counted in Postgres (`rep_range_weekly()`).
+ */
+export async function getRepRangeWeeks(weeks = 8): Promise<RepRangeWeek[]> {
+  const supabase = await createClient();
+  const now = await lifterNow();
+  const first = startOfISOWeek(subWeeks(now, weeks - 1));
+  const { data, error } = await supabase.rpc("rep_range_weekly", {
+    p_since: format(first, "yyyy-MM-dd"),
+  });
+  if (error) throw error;
+  const byWeek = new Map((data ?? []).map((r) => [r.week, r]));
+  return Array.from({ length: weeks }).map((_, i) => {
+    const key = isoWeekKey(subWeeks(now, weeks - 1 - i));
+    const r = byWeek.get(key);
+    return {
+      week: key,
+      strength: Number(r?.strength ?? 0),
+      hypertrophy: Number(r?.hypertrophy ?? 0),
+      endurance: Number(r?.endurance ?? 0),
+    };
+  });
+}
+
+export type RecentRecord = {
+  exerciseId: string;
+  name: string;
+  sessionId: string;
+  date: string;
+  kind: "weight" | "e1rm";
+  /** The new best (kg). */
+  value: number;
+  /** What it beat (kg). */
+  previous: number;
+};
+
+/** The lifter's latest personal records, newest first (`recent_records()`). */
+export async function getRecentRecords(limit = 5): Promise<RecentRecord[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("recent_records", { p_limit: limit });
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    exerciseId: r.exercise_id,
+    name: r.exercise_name,
+    sessionId: r.session_id,
+    date: r.session_date,
+    kind: r.kind === "weight" ? "weight" : "e1rm",
+    value: Number(r.value),
+    previous: Number(r.previous),
+  }));
+}

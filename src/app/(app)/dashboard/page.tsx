@@ -218,7 +218,7 @@ export default async function DashboardPage() {
         >
           <ConsistencyHeatmap summaries={summaries} today={today} />
         </ChartCard>
-        <ChartCard title="Sets per muscle" subtitle="This week, secondary muscles count half">
+        <ChartCard title="Sets per muscle" subtitle="This week so far. The band is 10-20 sets, where most growth happens">
           <WeeklySetsChart data={weeklySets} />
         </ChartCard>
         <VolumeTrendCard daily={dailyVolume} unit={unit} today={today} />

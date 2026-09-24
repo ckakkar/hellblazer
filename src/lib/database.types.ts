@@ -653,6 +653,27 @@ export type Database = {
           username: string
         }[]
       }
+      recent_records: {
+        Args: { p_limit?: number }
+        Returns: {
+          exercise_id: string
+          exercise_name: string
+          kind: string
+          previous: number
+          session_date: string
+          session_id: string
+          value: number
+        }[]
+      }
+      rep_range_weekly: {
+        Args: { p_since: string }
+        Returns: {
+          endurance: number
+          hypertrophy: number
+          strength: number
+          week: string
+        }[]
+      }
     }
     Enums: {
       muscle_group:
