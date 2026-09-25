@@ -1,4 +1,6 @@
 import Foundation
+import UIKit
+import WebKit
 import Capacitor
 import ActivityKit
 import HealthKit
@@ -8,59 +10,89 @@ import WidgetKit
 /// The app's own bridge to iOS, called from the site through
 /// `src/lib/native-plugins.ts` (registered as "HellBlazerNative"):
 ///
-/// - Rest timer: a Live Activity on the Lock Screen and in the Dynamic Island,
-///   plus a "Rest's up" alert for when the phone is locked.
+/// - Workout: a Live Activity on the Lock Screen and in the Dynamic Island
+///   for the session in progress, rest countdown included, plus a "Rest's
+///   up" alert for when the phone is locked.
 /// - Apple Health: finished workouts and logged bodyweight.
 /// - Widgets: the snapshot the Home and Lock Screen widgets draw.
+/// - The share sheet, for files the site builds (share card, CSV export).
+/// - Web view chrome: lifting the launch screen, the edge swipe back.
 @objc(HellBlazerNativePlugin)
 public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "HellBlazerNativePlugin"
     public let jsName = "HellBlazerNative"
     public let pluginMethods: [CAPPluginMethod] = [
-        CAPPluginMethod(name: "startRest", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "stopRest", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "workoutActivity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "endWorkoutActivity", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "scheduleRestAlert", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "cancelRestAlert", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "healthStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestHealth", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveWorkout", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "saveBodyweight", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "updateWidget", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "share", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "ready", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setBackGesture", returnType: CAPPluginReturnPromise),
     ]
 
-    // MARK: Rest timer
+    // MARK: Workout Live Activity
+
+    /// Starts or updates the Live Activity for a session. The site sends the
+    /// whole state each time; `startedAt` and `restEndsAt` are epoch ms.
+    @objc func workoutActivity(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId"),
+              let startedAtMs = call.getDouble("startedAt"),
+              let title = call.getString("title")
+        else {
+            call.reject("sessionId, startedAt and title are required")
+            return
+        }
+        let state = WorkoutActivityAttributes.ContentState(
+            title: title,
+            exercise: call.getString("exercise"),
+            detail: call.getString("detail"),
+            sets: call.getInt("sets") ?? 0,
+            volume: call.getString("volume") ?? "",
+            restEndsAt: call.getDouble("restEndsAt").map { Date(timeIntervalSince1970: $0 / 1000) },
+            restTotal: call.getDouble("restTotal")
+        )
+        WorkoutActivity.upsert(
+            sessionId: sessionId,
+            startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
+            state: state
+        )
+        call.resolve()
+    }
+
+    /// Ends the workout's Live Activity: the session was finished or
+    /// discarded. With `except`, keeps that session's (it's still live).
+    @objc func endWorkoutActivity(_ call: CAPPluginCall) {
+        WorkoutActivity.end(except: call.getString("except"))
+        call.resolve()
+    }
+
+    // MARK: Rest alert
 
     private static let restAlertId = "rest-over"
 
-    /// Starts (or moves) the rest countdown. `endsAt` is epoch milliseconds,
-    /// `total` the rest's length in seconds.
-    @objc func startRest(_ call: CAPPluginCall) {
-        guard let endsAtMs = call.getDouble("endsAt"), let total = call.getDouble("total") else {
-            call.reject("endsAt and total are required")
+    /// A local notification at the end of the rest, so a locked phone still
+    /// says when to lift. `endsAt` is epoch ms. Asks for permission the first
+    /// time. It never shows while the app is open: the page says it there.
+    @objc func scheduleRestAlert(_ call: CAPPluginCall) {
+        guard let endsAtMs = call.getDouble("endsAt") else {
+            call.reject("endsAt is required")
             return
         }
-        let endsAt = Date(timeIntervalSince1970: endsAtMs / 1000)
         let label = call.getString("label") ?? "Next set"
-        scheduleRestAlert(at: endsAt, label: label)
-        RestActivity.start(endsAt: endsAt, total: total, label: label)
-        call.resolve()
-    }
-
-    /// Clears the countdown: rest paused, reset, or finished in the app.
-    @objc func stopRest(_ call: CAPPluginCall) {
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [Self.restAlertId])
         center.removeDeliveredNotifications(withIdentifiers: [Self.restAlertId])
-        RestActivity.end()
-        call.resolve()
-    }
-
-    /// A local notification at the end of the rest, so a locked phone still
-    /// says when to lift. Asks for permission the first time a rest starts.
-    private func scheduleRestAlert(at date: Date, label: String) {
-        let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [Self.restAlertId])
-        center.removeDeliveredNotifications(withIdentifiers: [Self.restAlertId])
-        let interval = date.timeIntervalSinceNow
-        guard interval >= 1 else { return }
+        let interval = Date(timeIntervalSince1970: endsAtMs / 1000).timeIntervalSinceNow
+        guard interval >= 1 else {
+            call.resolve()
+            return
+        }
         center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
             guard granted else { return }
             let content = UNMutableNotificationContent()
@@ -71,6 +103,15 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
             center.add(UNNotificationRequest(identifier: Self.restAlertId, content: content, trigger: trigger))
         }
+        call.resolve()
+    }
+
+    /// Clears the alert: the rest was skipped, reset, or finished in the app.
+    @objc func cancelRestAlert(_ call: CAPPluginCall) {
+        let center = UNUserNotificationCenter.current()
+        center.removePendingNotificationRequests(withIdentifiers: [Self.restAlertId])
+        center.removeDeliveredNotifications(withIdentifiers: [Self.restAlertId])
+        call.resolve()
     }
 
     // MARK: Apple Health
@@ -205,42 +246,105 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         WidgetCenter.shared.reloadAllTimelines()
         call.resolve()
     }
-}
 
-/// Starts, moves and ends the rest timer's Live Activity.
-enum RestActivity {
-    static func start(endsAt: Date, total: Double, label: String) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
-        let state = RestActivityAttributes.ContentState(endsAt: endsAt, total: total)
-        // Stale at the end of the rest: the widget then shows "Rest's up"
-        // even if the app is suspended and can't update it.
-        let content = ActivityContent(state: state, staleDate: endsAt)
-        let running = Activity<RestActivityAttributes>.activities
+    // MARK: Share sheet
 
-        // Same exercise: move the countdown instead of stacking a new card.
-        if let current = running.first, current.attributes.label == label {
-            Task { await current.update(content) }
+    /// Hands a file the site built (base64 `data`, saved as `fileName`) to
+    /// the iOS share sheet: Save Image, Messages, AirDrop, Save to Files.
+    /// Resolves with whether the lifter went through with it.
+    @objc func share(_ call: CAPPluginCall) {
+        guard let rawName = call.getString("fileName"),
+              let base64 = call.getString("data"),
+              let data = Data(base64Encoded: base64)
+        else {
+            call.reject("fileName and base64 data are required")
             return
         }
-        Task {
-            for activity in running {
-                await activity.end(nil, dismissalPolicy: .immediate)
+        // A bare file name only: nothing the page sends can write elsewhere.
+        let name = (rawName as NSString).lastPathComponent
+        guard !name.isEmpty, name != ".", name != ".." else {
+            call.reject("Invalid file name")
+            return
+        }
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(name)
+        do {
+            try data.write(to: url, options: .atomic)
+        } catch {
+            call.reject("Couldn't prepare the file")
+            return
+        }
+        var items: [Any] = [url]
+        if let text = call.getString("text") { items.append(text) }
+
+        DispatchQueue.main.async {
+            guard let presenter = self.bridge?.viewController else {
+                call.reject("Nothing to present from")
+                return
             }
+            let sheet = UIActivityViewController(activityItems: items, applicationActivities: nil)
+            sheet.completionWithItemsHandler = { _, completed, _, _ in
+                call.resolve(["completed": completed])
+            }
+            sheet.popoverPresentationController?.sourceView = presenter.view
+            presenter.present(sheet, animated: true)
+        }
+    }
+
+    // MARK: Web view chrome
+
+    /// The page is up: lift the launch screen that's been covering it.
+    @objc func ready(_ call: CAPPluginCall) {
+        DispatchQueue.main.async {
+            (self.bridge?.viewController as? HellBlazerViewController)?.hideLaunchCover()
+        }
+        call.resolve()
+    }
+
+    /// Turns the edge swipe back on for pages pushed onto a stack (a session
+    /// in History, a program) and off everywhere else, as in any iOS app.
+    @objc func setBackGesture(_ call: CAPPluginCall) {
+        let enabled = call.getBool("enabled") ?? false
+        DispatchQueue.main.async {
+            self.bridge?.webView?.allowsBackForwardNavigationGestures = enabled
+        }
+        call.resolve()
+    }
+}
+
+/// Starts, updates and ends the workout's Live Activity. One at a time: a
+/// different session's activity is ended when a new one starts.
+enum WorkoutActivity {
+    private static func isLive(_ activity: Activity<WorkoutActivityAttributes>) -> Bool {
+        activity.activityState == .active || activity.activityState == .stale
+    }
+
+    static func upsert(sessionId: String, startedAt: Date, state: WorkoutActivityAttributes.ContentState) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        // Stale when the rest runs out, so the Lock Screen flips to "Rest's
+        // up" even while the app is suspended and can't update it.
+        let staleDate = state.restEndsAt.flatMap { $0 > Date() ? $0 : nil }
+        let content = ActivityContent(state: state, staleDate: staleDate)
+
+        let running = Activity<WorkoutActivityAttributes>.activities
+        let current = running.first { $0.attributes.sessionId == sessionId && isLive($0) }
+        for other in running where other.id != current?.id {
+            Task { await other.end(nil, dismissalPolicy: .immediate) }
+        }
+        if let current {
+            Task { await current.update(content) }
+        } else {
             _ = try? Activity.request(
-                attributes: RestActivityAttributes(label: label),
+                attributes: WorkoutActivityAttributes(sessionId: sessionId, startedAt: startedAt),
                 content: content,
                 pushType: nil
             )
         }
     }
 
-    static func end() {
-        let running = Activity<RestActivityAttributes>.activities
-        guard !running.isEmpty else { return }
-        Task {
-            for activity in running {
-                await activity.end(nil, dismissalPolicy: .immediate)
-            }
+    static func end(except sessionId: String? = nil) {
+        for activity in Activity<WorkoutActivityAttributes>.activities
+        where activity.attributes.sessionId != sessionId {
+            Task { await activity.end(nil, dismissalPolicy: .immediate) }
         }
     }
 }

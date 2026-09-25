@@ -4,7 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { SettingsGroup, SettingsRow } from "@/components/ui/settings-list";
 import { isNativeApp } from "@/lib/native";
 import { healthSyncOn, nativePlugin, setHealthSync } from "@/lib/native-plugins";
-import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 
 const noop = () => () => {};
 
@@ -71,24 +71,12 @@ function HealthRow() {
       label="Save workouts to Health"
       hint={msg ?? "Finished sessions as strength training, plus the bodyweight you log."}
       control={
-        <button
-          role="switch"
-          aria-checked={on}
-          aria-label="Save workouts to Apple Health"
+        <Switch
+          checked={on}
+          onChange={() => void toggle()}
+          label="Save workouts to Apple Health"
           disabled={busy}
-          onClick={toggle}
-          className={cn(
-            "relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60",
-            on ? "bg-accent" : "border border-border bg-surface-2",
-          )}
-        >
-          <span
-            className={cn(
-              "absolute top-0.5 size-5 rounded-full bg-white transition-transform",
-              on ? "translate-x-[22px]" : "translate-x-0.5",
-            )}
-          />
-        </button>
+        />
       }
     />
   );

@@ -1448,6 +1448,46 @@ input[type="number"] {
   border-radius: 9999px;
 }
 
+/* ── iOS app ──────────────────────────────────────────────────────────────
+   <html data-app> is set by NativeShell inside the iOS app only. An app's
+   labels and buttons aren't text you select: long-pressing them does
+   nothing. Fields, and anything marked .select-text, still select. */
+[data-app] body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+[data-app] :is(input, textarea, [contenteditable="true"], .select-text) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* A swipe back the browser animated itself: no second transition on top
+   (PageTransition sets data-ua-nav). */
+html[data-ua-nav]::view-transition-group(*),
+html[data-ua-nav]::view-transition-old(*),
+html[data-ua-nav]::view-transition-new(*) {
+  animation: none;
+}
+
+/* Pull to refresh (native/pull-to-refresh.tsx): while it refreshes, the page
+   sits lower to make room for the spinner, as a table view does. */
+.hb-ptr-content {
+  transition: translate 320ms var(--ease-out);
+}
+@media (max-width: 767px) {
+  html.hb-ptr .hb-ptr-content {
+    translate: 0 2.75rem;
+  }
+}
+.hb-spokes {
+  animation: hb-spokes 800ms steps(8, end) infinite;
+}
+@keyframes hb-spokes {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

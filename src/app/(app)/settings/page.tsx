@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Download, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { format, parseISO } from "date-fns";
 import { getUnit, getAccent, getTimeZone, getToday } from "@/lib/settings";
@@ -26,6 +26,7 @@ import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
 import { AppleHealthSettings } from "./apple-health";
+import { ExportButton } from "./export-button";
 import { SignInMethods, type SignInMethod } from "./sign-in-methods";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -174,16 +175,7 @@ export default async function ProfilePage({
           <SettingsRow
             label="Export your data"
             hint="Every logged set as a CSV, weights in kg."
-            control={
-              <a
-                href="/api/export"
-                download
-                className="inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-[#242428]"
-              >
-                <Download className="size-4" />
-                Export
-              </a>
-            }
+            control={<ExportButton />}
           />
           <SettingsRow label="Privacy" href="/privacy" />
           <SettingsRow label="Support" hint="cyrus@kkrwhofrags.xyz" href="/support" />

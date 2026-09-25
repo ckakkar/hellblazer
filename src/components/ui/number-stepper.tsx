@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Minus, Plus } from "lucide-react";
 import { cn, selectAllOnFocus } from "@/lib/utils";
+import { haptic } from "@/lib/haptics";
 
 interface NumberStepperProps {
   value: number | null;
@@ -40,7 +41,12 @@ export function NumberStepper({
   };
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
 
-  const bump = (dir: 1 | -1) => onChange(clamp(round((value ?? 0) + dir * step)));
+  // Each step ticks like a picker's detent in the iOS app, so the weight can
+  // be dialled in without looking.
+  const bump = (dir: 1 | -1) => {
+    haptic("tick");
+    onChange(clamp(round((value ?? 0) + dir * step)));
+  };
 
   return (
     <div

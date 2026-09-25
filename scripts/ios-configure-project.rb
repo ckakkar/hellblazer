@@ -1,5 +1,5 @@
 # Edits ios/App/App.xcodeproj without Xcode: adds the Widgets extension
-# (Home Screen widget + rest timer Live Activity), registers the app's own
+# (Home Screen widget + workout Live Activity), registers the app's own
 # Swift files, and sets entitlements and the minimum iOS version.
 #
 # Safe to re-run: it only adds what's missing. Needs the xcodeproj gem
@@ -54,7 +54,7 @@ widgets = project.targets.find { |t| t.name == "Widgets" } ||
   project.new_target(:app_extension, "Widgets", :ios, DEPLOYMENT, nil, :swift)
 
 widgets_group = group(project, "Widgets")
-%w[HellBlazerWidgets.swift Brand.swift RestTimerLiveActivity.swift NextBoutWidget.swift].each do |name|
+%w[HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift].each do |name|
   compile(widgets, file(widgets_group, name))
 end
 file(widgets_group, "Info.plist")
@@ -83,7 +83,7 @@ end
 
 # --- Shared by both ---------------------------------------------------------
 shared_group = group(project, "Shared")
-%w[RestActivityAttributes.swift WidgetSnapshot.swift].each do |name|
+%w[WorkoutActivityAttributes.swift WidgetSnapshot.swift].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)
   compile(widgets, ref)

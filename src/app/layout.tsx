@@ -4,6 +4,7 @@ import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
 import { TimezoneSync } from "@/components/timezone-sync";
+import { NativeShell } from "@/components/native/native-shell";
 import { getAccent, getTimeZone } from "@/lib/settings";
 
 /* One family, two widths. Archivo is variable on width as well as weight, so
@@ -75,6 +76,7 @@ export default async function RootLayout({
       <body className="min-h-full bg-bg text-text">
         <PwaRegister />
         <TimezoneSync serverTimeZone={timeZone} />
+        <NativeShell />
         {/* Installed-app boot sequence. Renders server-side so it paints on the
             first frame of a cold PWA start, then lifts itself once the app is
             up; a browser tab never sees it. */}

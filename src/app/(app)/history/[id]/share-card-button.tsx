@@ -26,6 +26,10 @@ export function ShareCardButton({
       const res = await fetch(`/api/share/${sessionId}`);
       if (!res.ok) throw new Error("build failed");
       const blob = await res.blob();
+      // The iOS app: straight to the system share sheet (Save Image,
+      // Messages, Instagram). A web view can't share files or download.
+      const { shareNatively } = await import("@/lib/native-plugins");
+      if (await shareNatively(blob, "Fatty workout.png")) return;
       const file = new File([blob], `hell-blazer-${sessionId}.png`, {
         type: "image/png",
       });

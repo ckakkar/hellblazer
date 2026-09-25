@@ -3,8 +3,8 @@
 import { useEffect, useState, useTransition } from "react";
 import { Bell, Loader2, Send, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { isNativeApp } from "@/lib/native";
+import { Switch } from "@/components/ui/switch";
 import {
   deletePushSubscription,
   savePushSubscription,
@@ -239,8 +239,8 @@ export function NotificationsManager({
           <p className="mt-1">
             On iPhone, notifications only work in the installed app. Tap{" "}
             <Share className="inline size-3.5 align-text-bottom" /> Share →{" "}
-            <span className="text-text">Add to Home Screen</span>, then open Hell
-            Blazer from its icon and come back here.
+            <span className="text-text">Add to Home Screen</span>, then open
+            Fatty from its icon and come back here.
           </p>
         </div>
       </div>
@@ -279,25 +279,11 @@ export function NotificationsManager({
                 A once-a-day nudge when a workout is due and not yet logged.
               </div>
             </div>
-            <button
-              role="switch"
-              aria-checked={hour != null}
-              aria-label="Daily workout reminder"
-              onClick={() => changeReminder(hour == null)}
-              className={cn(
-                "relative h-6 w-11 shrink-0 rounded-full transition-colors",
-                hour != null
-                  ? "bg-accent"
-                  : "border border-border bg-surface-2",
-              )}
-            >
-              <span
-                className={cn(
-                  "absolute top-0.5 size-5 rounded-full bg-white transition-transform",
-                  hour != null ? "translate-x-[22px]" : "translate-x-0.5",
-                )}
-              />
-            </button>
+            <Switch
+              checked={hour != null}
+              onChange={(on) => changeReminder(on)}
+              label="Daily workout reminder"
+            />
           </div>
 
           <div className="flex flex-wrap gap-2">

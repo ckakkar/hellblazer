@@ -12,8 +12,10 @@
  *      Groups, Associated Domains),
  *   2. creates an Apple Distribution certificate from a fresh private key,
  *   3. stores the key, certificate and API key as GitHub Actions secrets,
- *   4. sets the IOS_TEAM_ID and IOS_CERT_ID variables, which switches
- *      .github/workflows/ios.yml from compile checks to TestFlight uploads.
+ *   4. sets the IOS_TEAM_ID and IOS_CERT_ID variables. TestFlight uploads
+ *      then start once IOS_TESTFLIGHT is set to "on" (after the App Group
+ *      and the App Store Connect app record exist); until then
+ *      .github/workflows/ios.yml runs compile checks.
  *
  * Secrets go straight from here to GitHub (via the gh CLI) and are never
  * printed. The private key only exists in a temp folder that's deleted at
@@ -115,7 +117,7 @@ async function ensureBundleId(identifier, name) {
 
 /** Turns on capabilities the ID doesn't have yet. */
 async function ensureCapabilities(bundleRecordId, identifier, capabilities) {
-  const current = await asc(`/bundleIds/${bundleRecordId}/bundleIdCapabilities?limit=200`);
+  const current = await asc(`/bundleIds/${bundleRecordId}/bundleIdCapabilities`);
   const have = new Set(current.data.map((c) => c.attributes.capabilityType));
   for (const { type, settings } of capabilities) {
     if (have.has(type)) continue;
@@ -224,4 +226,5 @@ Done. Next:
   • Developer portal → Identifiers → + → App Groups: group.${BUNDLE_ID}, then attach
     it to ${BUNDLE_ID} and ${WIDGETS_ID} (App Groups → Configure).
   • App Store Connect → Apps → + → New App: pick bundle ID ${BUNDLE_ID}, name "${APP_NAME}".
-  • Then run the iOS workflow (GitHub → Actions → iOS → Run workflow).`);
+  • Then switch uploads on and run the iOS workflow:
+    gh variable set IOS_TESTFLIGHT --body on && gh workflow run ios.yml`);

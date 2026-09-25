@@ -9,6 +9,8 @@ struct NextBoutWidget: Widget {
         StaticConfiguration(kind: "NextBout", provider: NextBoutProvider()) { entry in
             NextBoutView(entry: entry)
                 .containerBackground(for: .widget) { Brand.background }
+                // Tapping it starts the next bout: the Log screen.
+                .widgetURL(URL(string: "https://hellblazer.vercel.app/log"))
         }
         .configurationDisplayName("Next Bout")
         .description("Your next workout and this week's training.")

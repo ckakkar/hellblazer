@@ -8,7 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		193BA68ADC3FA7130A989A0A /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */; };
-		2AC1D53AC576840337EA0BCD /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */; };
+		2AC1D53AC576840337EA0BCD /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* WorkoutActivityAttributes.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		4C599DDF19AAA63030394650 /* Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0AA7C4240F60FBA6BFDFA48C /* Widgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
@@ -23,10 +23,10 @@
 		82498FE415AD2AFEBA1C0F83 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E764D7B64DC0B30F61736C2 /* Brand.swift */; };
 		9042C73CAF4E353BAFC3B41C /* HellBlazerWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
-		9B12E6AF9378E92AE41B49E8 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */; };
+		9B12E6AF9378E92AE41B49E8 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* WorkoutActivityAttributes.swift */; };
 		A70AC4541676B4CC4BA8376E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D256DB474CD275086B6EB5D6 /* PrivacyInfo.xcprivacy */; };
 		B021219EFE8184E526DE70FA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */; };
-		D7595755F8A990CF6BDB3DBB /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FBDA18709D59FBB38210C0 /* RestTimerLiveActivity.swift */; };
+		D7595755F8A990CF6BDB3DBB /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FBDA18709D59FBB38210C0 /* WorkoutLiveActivity.swift */; };
 		E032D3DB9D99BB1FF3E0495E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 346DF9A657CA2BB7C1B6814B /* Foundation.framework */; };
 		E91CADD37762B34D12F5F84C /* HellBlazerNativePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */; };
 		ED6AB91710DC525C89AEBA93 /* HellBlazerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */; };
@@ -74,7 +74,7 @@
 		54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerNativePlugin.swift; sourceTree = "<group>"; };
 		5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerViewController.swift; sourceTree = "<group>"; };
 		5B5C3E8A727B2CB1A8BB2600 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestActivityAttributes.swift; sourceTree = "<group>"; };
+		6B9632B13BCA779AEFE286F5 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		7B020AC17F56F31B373E1AF2 /* Widgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Widgets.entitlements; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
@@ -82,7 +82,7 @@
 		A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
 		C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextBoutWidget.swift; sourceTree = "<group>"; };
-		C4FBDA18709D59FBB38210C0 /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
+		C4FBDA18709D59FBB38210C0 /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		D256DB474CD275086B6EB5D6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		DF710AB3E6C9ACDA0F664DF2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -162,7 +162,7 @@
 			children = (
 				1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */,
 				9E764D7B64DC0B30F61736C2 /* Brand.swift */,
-				C4FBDA18709D59FBB38210C0 /* RestTimerLiveActivity.swift */,
+				C4FBDA18709D59FBB38210C0 /* WorkoutLiveActivity.swift */,
 				C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */,
 				5B5C3E8A727B2CB1A8BB2600 /* Info.plist */,
 				7B020AC17F56F31B373E1AF2 /* Widgets.entitlements */,
@@ -183,7 +183,7 @@
 		EA6DA5A10D9F3414498772E8 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
-				6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */,
+				6B9632B13BCA779AEFE286F5 /* WorkoutActivityAttributes.swift */,
 				A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */,
 			);
 			name = Shared;
@@ -302,9 +302,9 @@
 			files = (
 				9042C73CAF4E353BAFC3B41C /* HellBlazerWidgets.swift in Sources */,
 				82498FE415AD2AFEBA1C0F83 /* Brand.swift in Sources */,
-				D7595755F8A990CF6BDB3DBB /* RestTimerLiveActivity.swift in Sources */,
+				D7595755F8A990CF6BDB3DBB /* WorkoutLiveActivity.swift in Sources */,
 				FB4649089CC2CD0BAF084AA5 /* NextBoutWidget.swift in Sources */,
-				9B12E6AF9378E92AE41B49E8 /* RestActivityAttributes.swift in Sources */,
+				9B12E6AF9378E92AE41B49E8 /* WorkoutActivityAttributes.swift in Sources */,
 				193BA68ADC3FA7130A989A0A /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -318,7 +318,7 @@
 				ED6AB91710DC525C89AEBA93 /* HellBlazerViewController.swift in Sources */,
 				E91CADD37762B34D12F5F84C /* HellBlazerNativePlugin.swift in Sources */,
 				B021219EFE8184E526DE70FA /* AppShortcuts.swift in Sources */,
-				2AC1D53AC576840337EA0BCD /* RestActivityAttributes.swift in Sources */,
+				2AC1D53AC576840337EA0BCD /* WorkoutActivityAttributes.swift in Sources */,
 				5DBE2EFD05E3C7D632E2C61B /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

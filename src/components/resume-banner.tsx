@@ -2,15 +2,35 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Loader2, Play, X } from "lucide-react";
 import { discardSession } from "@/lib/actions/sessions";
 import type { ActiveSession } from "@/lib/data/sessions";
+import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
+
+/**
+ * The workout's running clock, ticking once a second. Null until mounted (the
+ * server and the phone would disagree on the time), and for a session left
+ * open so long it isn't a workout any more.
+ */
+function useElapsed(startedAt: string): string | null {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  if (now === null) return null;
+  const ms = now - new Date(startedAt).getTime();
+  return ms >= 0 && ms <= STALE_CLOCK_MS ? formatElapsed(ms) : null;
+}
 
 export function ResumeBanner({ session }: { session: ActiveSession }) {
   const pathname = usePathname();
   const [pending, start] = useTransition();
   const [confirming, setConfirming] = useState(false);
+  const elapsed = useElapsed(session.startedAt);
 
   // Don't nag while you're already in that workout.
   if (pathname === `/log/${session.id}`) return null;
@@ -26,7 +46,16 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
           {session.title ?? "Workout"}
         </div>
         <div className="tnum text-[13px] text-muted">
-          In progress, {session.workingSets} {session.workingSets === 1 ? "set" : "sets"} logged
+          {elapsed ? (
+            <>
+              <span className="text-accent">{elapsed}</span>, {session.workingSets}{" "}
+              {session.workingSets === 1 ? "set" : "sets"} logged
+            </>
+          ) : (
+            <>
+              In progress, {session.workingSets} {session.workingSets === 1 ? "set" : "sets"} logged
+            </>
+          )}
         </div>
       </div>
       {confirming ? (

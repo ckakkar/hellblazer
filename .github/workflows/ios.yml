@@ -4,11 +4,18 @@ name: iOS
 # live site, so a Vercel deploy updates it. This runs when the native project
 # changes, or by hand from the Actions tab (Run workflow).
 #
-# Until signing is set up (scripts/ios-signing-setup.mjs sets IOS_TEAM_ID),
-# it only checks that the app compiles. After that, every run uploads a
-# TestFlight build.
+# It uploads a TestFlight build when signing is set up (IOS_TEAM_ID, set by
+# scripts/ios-signing-setup.mjs) and uploads are switched on (IOS_TESTFLIGHT
+# = on, once the App Group and the App Store Connect app record exist).
+# Otherwise, or when started by hand with "compile only", it just checks
+# that the app compiles.
 on:
   workflow_dispatch:
+    inputs:
+      compile_only:
+        description: Compile only, no TestFlight upload
+        type: boolean
+        default: false
   push:
     branches: [main]
     paths:
@@ -27,9 +34,11 @@ permissions:
 
 jobs:
   build:
-    name: ${{ vars.IOS_TEAM_ID && 'TestFlight' || 'Compile check' }}
+    name: ${{ (vars.IOS_TEAM_ID && vars.IOS_TESTFLIGHT == 'on' && !inputs.compile_only) && 'TestFlight' || 'Compile check' }}
     runs-on: macos-26
     timeout-minutes: 60
+    env:
+      UPLOAD: ${{ vars.IOS_TEAM_ID != '' && vars.IOS_TESTFLIGHT == 'on' && !inputs.compile_only }}
     steps:
       - uses: actions/checkout@v5
 
@@ -50,7 +59,7 @@ jobs:
         run: xcodebuild -version
 
       - name: Compile check (unsigned)
-        if: ${{ !vars.IOS_TEAM_ID }}
+        if: ${{ env.UPLOAD != 'true' }}
         run: >
           xcodebuild -quiet
           -project ios/App/App.xcodeproj
@@ -61,16 +70,16 @@ jobs:
           build
 
       - uses: ruby/setup-ruby@v1
-        if: ${{ vars.IOS_TEAM_ID }}
+        if: ${{ env.UPLOAD == 'true' }}
         with:
           ruby-version: "3.3"
 
       - name: Install fastlane
-        if: ${{ vars.IOS_TEAM_ID }}
+        if: ${{ env.UPLOAD == 'true' }}
         run: gem install fastlane --no-document
 
       - name: Build and upload to TestFlight
-        if: ${{ vars.IOS_TEAM_ID }}
+        if: ${{ env.UPLOAD == 'true' }}
         working-directory: ios
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

@@ -25,6 +25,9 @@ const config: CapacitorConfig = {
     // Required for the service worker to run in WKWebView. The domains are
     // listed under WKAppBoundDomains in ios/App/App/Info.plist.
     limitsNavigationsToAppBoundDomains: true,
+    // Long-pressing a link or button does nothing, as in a native app, instead
+    // of popping up Safari's link preview.
+    allowsLinkPreview: false,
     // Lets Safari's Web Inspector attach to TestFlight builds over USB.
     webContentsDebuggingEnabled: true,
   },

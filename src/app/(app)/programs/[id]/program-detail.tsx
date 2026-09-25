@@ -68,7 +68,7 @@ export function ProgramDetail({
       <Link
         href="/programs"
         transitionTypes={["nav-back"]}
-        className="-ml-1 mb-3 inline-flex h-9 items-center gap-1 rounded-full pl-1 pr-3 text-[15px] text-muted transition-colors hover:text-text"
+        className="-ml-1 mb-3 hidden h-9 items-center gap-1 rounded-full pl-1 pr-3 text-[15px] text-muted transition-colors hover:text-text md:inline-flex"
       >
         <ArrowLeft className="size-4" />
         Programs

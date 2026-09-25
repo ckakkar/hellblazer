@@ -5,6 +5,6 @@ import WidgetKit
 struct HellBlazerWidgets: WidgetBundle {
     var body: some Widget {
         NextBoutWidget()
-        RestTimerLiveActivity()
+        WorkoutLiveActivity()
     }
 }

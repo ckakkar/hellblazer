@@ -9,6 +9,8 @@ import { getActiveSession } from "@/lib/data/sessions";
 import { getShellProfile } from "@/lib/data/profile";
 import { getTier } from "@/lib/tiers";
 import { NativeBridge } from "@/components/native/native-bridge";
+import { PullToRefresh } from "@/components/native/pull-to-refresh";
+import { WorkoutActivitySync } from "@/components/native/workout-activity-sync";
 
 export default async function AppLayout({
   children,
@@ -36,6 +38,7 @@ export default async function AppLayout({
           away with the page; the home and profile heroes cover it. */}
       <div aria-hidden className="hb-arena-light pointer-events-none absolute inset-x-0 top-0 -z-10 h-[26rem]" />
       <NativeBridge />
+      <PullToRefresh />
       <RealtimeSync userId={user.id} />
       <AppNav
         userEmail={user.email}
@@ -53,7 +56,7 @@ export default async function AppLayout({
         }}
       />
       <div className="md:pl-60">
-        <main className="mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-12 md:pb-16 lg:px-10">
+        <main className="hb-ptr-content mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-12 md:pb-16 lg:px-10">
           {/* Streamed so its lookup never blocks the page content. */}
           <Suspense fallback={null}>
             <ResumeBannerSlot />
@@ -67,6 +70,10 @@ export default async function AppLayout({
 
 async function ResumeBannerSlot() {
   const activeSession = await getActiveSession();
-  if (!activeSession) return null;
-  return <ResumeBanner session={activeSession} />;
+  return (
+    <>
+      <WorkoutActivitySync activeSessionId={activeSession?.id ?? null} />
+      {activeSession && <ResumeBanner session={activeSession} />}
+    </>
+  );
 }

@@ -38,14 +38,15 @@ import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CountUp } from "@/components/reactbits/count-up";
-import { RestTimer } from "@/components/workout/rest-timer";
+import { RestTimerBar, RestTimerCard, useRestTimer, type RestTimerControls } from "@/components/workout/rest-timer";
 import { VictoryScreen } from "@/components/workout/victory-screen";
 import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import { haptic } from "@/lib/haptics";
-import { healthSyncOn, withNative } from "@/lib/native-plugins";
+import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
+import { healthSyncOn, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
   fromDisplayWeight,
   toDisplayWeight,
@@ -116,22 +117,6 @@ function useOnline(): boolean {
   );
 }
 
-/** Elapsed milliseconds → clock string: M:SS, then "1h 05m" past an hour
- *  (seconds stop mattering, and H:MM:SS won't fit the readout on a small
- *  phone). */
-/** Past this, the clock is measuring a session left open, not a workout. */
-const STALE_CLOCK_MS = 6 * 60 * 60 * 1000;
-
-function formatElapsed(ms: number): string {
-  const total = Math.max(0, Math.floor(ms / 1000));
-  const h = Math.floor(total / 3600);
-  const m = Math.floor((total % 3600) / 60);
-  const s = total % 60;
-  const mm = String(m).padStart(2, "0");
-  const ss = String(s).padStart(2, "0");
-  return h > 0 ? `${h}h ${mm}m` : `${m}:${ss}`;
-}
-
 export function SessionLogger({
   session,
   exerciseLibrary,
@@ -173,6 +158,8 @@ export function SessionLogger({
     : duration
       ? `${duration} min`
       : "Not timed";
+  // Mirrors the title field (saved on blur) for the Live Activity.
+  const [title, setTitle] = useState(session.title ?? "Workout");
   // Exercises added mid-session via "Advance", bonus work, tagged in the queue.
   const [advanceIds, setAdvanceIds] = useState<Set<string>>(new Set());
   // Sets that broke a personal best this session, and the active Removal toast.
@@ -680,6 +667,9 @@ export function SessionLogger({
     setExercises(next);
     setFlashId(seed.id);
     void persist(seId, seed, nextNumber);
+    // A set just landed: that's when the rest starts, as in any gym app.
+    if (!isEditing && rest.auto) rest.start();
+    else haptic("tap");
   }
 
   function removeSet(seId: string, setId: string) {
@@ -836,8 +826,14 @@ export function SessionLogger({
     const minutes = duration ?? autoDuration;
     if (!minutes || minutes <= 0) return;
     savedToHealth.current = true;
-    const end = duration != null ? startedAt + duration * 60_000 : Date.now();
-    withNative((api) => api.saveWorkout({ start: startedAt, end, sessionId: session.id }));
+    const typed = duration;
+    withNative((api) =>
+      api.saveWorkout({
+        start: startedAt,
+        end: typed != null ? startedAt + typed * 60_000 : Date.now(),
+        sessionId: session.id,
+      }),
+    );
   }
 
   /** Returns whether finishing actually started (the slider resets if not). */
@@ -853,6 +849,8 @@ export function SessionLogger({
     setConfirmFinish(false);
     setFinishing(true);
     setVictory(isEditing ? "Saved" : randomVictory());
+    haptic("success");
+    rest.skip();
     saveToHealth();
     setTimeout(() => {
       startNav(async () => {
@@ -897,6 +895,46 @@ export function SessionLogger({
   const currentIndex = exercises.findIndex((e) => !completed.has(e.seId));
   const active = exercises.find((e) => e.seId === activeSeId) ?? null;
   const doneCount = exercises.filter((e) => completed.has(e.seId)).length;
+  const current = active ?? (currentIndex >= 0 ? exercises[currentIndex] : null);
+
+  // Declared after the queue it labels its alert with; functions above that
+  // use it only run on events, after this render.
+  const rest = useRestTimer({ sessionId: session.id, label: current?.name });
+
+  // The workout on the Lock Screen and in the Dynamic Island (iOS app). The
+  // whole state goes over on every change, debounced; the clock and the rest
+  // countdown are dates the system draws from. It outlives this page, since
+  // the workout goes on while you look at another tab, and ends when the
+  // session is finished (or found abandoned; see WorkoutActivitySync).
+  const currentDone = current ? current.sets.filter((s) => !s.isWarmup).length : 0;
+  const activityState = JSON.stringify({
+    sessionId: session.id,
+    startedAt,
+    title,
+    exercise: current?.name,
+    detail: current
+      ? currentDone > 0
+        ? `${currentDone} ${currentDone === 1 ? "set" : "sets"} done`
+        : `Exercise ${exercises.indexOf(current) + 1} of ${exercises.length}`
+      : undefined,
+    sets: totalSets,
+    volume: `${Math.round(totalForce).toLocaleString("en-US")} ${unit}`,
+    restEndsAt: rest.endsAt ?? undefined,
+    restTotal: rest.endsAt !== null ? rest.total : undefined,
+  } satisfies WorkoutActivityState);
+  const activityEnded = finishing || victory !== null;
+  useEffect(() => {
+    if (isEditing) return;
+    if (activityEnded || Date.now() - startedAt > STALE_CLOCK_MS) {
+      withNative((api) => api.endWorkoutActivity());
+      return;
+    }
+    const id = window.setTimeout(
+      () => withNative((api) => api.workoutActivity(JSON.parse(activityState) as WorkoutActivityState)),
+      300,
+    );
+    return () => window.clearTimeout(id);
+  }, [activityState, activityEnded, isEditing, startedAt]);
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -928,12 +966,13 @@ export function SessionLogger({
           defaultValue={session.title ?? "Session"}
           aria-label="Session title"
           data-display
-          onBlur={(e) =>
+          onBlur={(e) => {
+            setTitle(e.target.value.trim() || "Workout");
             updateSessionMeta({
               sessionId: session.id,
               title: e.target.value.trim() || null,
-            }).catch(() => showNotice("Couldn't save the session title."))
-          }
+            }).catch(() => showNotice("Couldn't save the session title."));
+          }}
           className="font-display mt-1 w-full bg-transparent text-[2rem] leading-tight text-text focus:outline-none sm:text-[2.5rem]"
         />
         <p className="tnum mt-0.5 text-[13px] text-muted">
@@ -974,7 +1013,7 @@ export function SessionLogger({
           </div>
         </div>
         <p className="mt-3 px-1 text-[13px] text-muted">{hype}</p>
-        {!isEditing && <RestTimer label={(active ?? exercises[currentIndex])?.name} />}
+        {!isEditing && <RestTimerCard timer={rest} />}
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (
@@ -1237,6 +1276,7 @@ export function SessionLogger({
           onRemoveSet={(setId) => removeSet(active.seId, setId)}
           onSwap={(newId) => swap(active.seId, newId)}
           onRemoveExercise={() => removeExercise(active.seId)}
+          rest={isEditing ? null : rest}
         />
       )}
 
@@ -1324,6 +1364,7 @@ function ActiveExerciseModal({
   onRemoveSet,
   onSwap,
   onRemoveExercise,
+  rest,
 }: {
   exercise: LocalExercise;
   exerciseLibrary: Exercise[];
@@ -1339,6 +1380,8 @@ function ActiveExerciseModal({
   onRemoveSet: (setId: string) => void;
   onSwap: (newExerciseId: string) => void;
   onRemoveExercise: () => void;
+  /** Live sessions only: the rest countdown, kept in view above End. */
+  rest: RestTimerControls | null;
 }) {
   const [swapping, setSwapping] = useState(false);
   const [q, setQ] = useState("");
@@ -1371,11 +1414,14 @@ function ActiveExerciseModal({
             Cancel
           </Button>
         ) : (
-          <Button size="lg" className="w-full" onClick={onEnd}>
-            <Check className="size-4" />
-            {hasSets ? "End exercise" : "Skip exercise"}
-            <ArrowRight className="size-4" />
-          </Button>
+          <>
+            {rest && <RestTimerBar timer={rest} />}
+            <Button size="lg" className="w-full" onClick={onEnd}>
+              <Check className="size-4" />
+              {hasSets ? "End exercise" : "Skip exercise"}
+              <ArrowRight className="size-4" />
+            </Button>
+          </>
         )
       }
     >

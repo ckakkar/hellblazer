@@ -48,7 +48,7 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 
 ## Highlights
 
-- **A set logger built for mid-set use.** Exercises run as a queue. Each one opens in a focused sheet where every new set **copies the last one forward**, and last session's numbers sit above as the target. Thumb-sized steppers, a rest timer, a live workout clock, and autosave that can't create duplicates.
+- **A set logger built for mid-set use.** Exercises run as a queue. Each one opens in a focused sheet where every new set **copies the last one forward**, and last session's numbers sit above as the target. Thumb-sized steppers, a rest timer that starts itself after each set (in the sheet too, so it's in view mid-set), a live workout clock, and autosave that can't create duplicates.
 - **It keeps logging offline.** Sets you log without a signal are queued on the device (IndexedDB) and uploaded when you're back. The logger tells you plainly when something hasn't saved yet.
 - **Removal: live PR detection.** When a working set beats your all-time best on a lift (heaviest load, or best estimated 1RM), a **Removal** banner drops in, the screen's edge rings in your accent, Android phones buzz, and the set is tagged PR.
 - **A victory screen.** Finishing a workout ends on your fighter, a poster-style result word, and your volume, sets, time and records broken.
@@ -279,7 +279,8 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 - **What's native.**
   - **Sign-in:** Google through Google's iOS SDK (Google blocks OAuth inside web views) and Sign in with Apple, listed first in the app. Each returns an ID token with a hashed nonce, and `POST /auth/native` swaps it for the same Supabase session cookies the website's redirect flow sets. Apple's refresh token is kept server-side (`apple_token`) only so it can be revoked on account deletion.
   - **Linking:** Settings → Sign-in methods connects the other provider to the same account (`linkIdentity`: Google by redirect on the web or natively in the app, Apple in the app), so either signs you in. Needs Supabase's *Allow manual linking*.
-  - **Rest timer:** a Live Activity on the Lock Screen and in the Dynamic Island, drawn by the system from the end time, plus a "Rest's up" alert for a locked phone.
+  - **Live workout:** a Live Activity on the Lock Screen and in the Dynamic Island for the whole session: the workout clock, the exercise you're on, sets and volume, and the rest countdown while you rest. The clocks are dates the system draws from, so they tick while the app sleeps; a "Rest's up" alert covers a locked phone. Tapping it opens the session.
+  - **Feels native, not like a web page:** rubber-band scrolling, the edge swipe back on pushed pages (with a back button in the top bar), no zoom, text selection or link previews on the interface, drag down to put the keyboard away, pull to refresh, tap a tab again to scroll to the top, haptics that match system controls (switch and stepper detents, a knock when a set lands, success on a finished workout), the launch screen held until the page is ready, and files (share card, CSV export) through the share sheet.
   - **Widgets:** "Next Bout" for the Home Screen (small, medium) and Lock Screen (rectangular, circular, inline). The dashboard writes a snapshot into the App Group; the widget resets when the week rolls over.
   - **Apple Health:** with the switch on in Settings, finished sessions are saved as strength-training workouts and logged bodyweight as body mass. Nothing is read from Health.
   - **Push:** APNs (`src/lib/apns.ts`) beside Web Push; the daily reminder cron sends to both. Tapping a notification opens its page.
@@ -289,8 +290,8 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 - **Web and PWA are untouched.** Everything app-only sits behind `isNativeApp()` (`src/lib/native.ts`), and plugin code loads through dynamic imports inside that check, so the website never downloads it.
 - **Offline.** App-Bound Domains are on, which lets the service worker run in the app, and `app-shell/offline.html` covers a first launch with no signal.
 - **Builds without Xcode.** `.github/workflows/ios.yml` builds on a GitHub-hosted Mac whenever `ios/`, `app-shell/` or `capacitor.config.ts` changes, or by hand from the Actions tab.
-  - Before signing is set up, it only checks that the app compiles.
-  - After `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>`, it signs both targets with fastlane (`ios/fastlane/Fastfile`) and uploads to TestFlight. That script registers both bundle IDs and their capabilities, creates the distribution certificate and stores everything as GitHub secrets.
+  - Until uploads are on, it only checks that the app compiles. Run it by hand with *compile only* to check without uploading.
+  - `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>` registers both bundle IDs and their capabilities, creates the distribution certificate and stores everything as GitHub secrets. Once the App Group and the App Store Connect app record exist, `gh variable set IOS_TESTFLIGHT --body on` turns on uploads: fastlane (`ios/fastlane/Fastfile`) signs both targets and sends each build to TestFlight.
 - **Changing the icon or launch mark:** `node scripts/generate-ios-assets.mjs`.
 - **After adding or removing a Capacitor plugin:** run `npx cap sync ios` and commit `ios/`.
 
@@ -347,6 +348,7 @@ node scripts/generate-splash.mjs   # regenerate iOS launch screens
 - **`local-date`:** dating sessions in the lifter's timezone.
 - **`offline-set-queue`:** the IndexedDB queue (on `fake-indexeddb`): sessions kept apart, the latest edit winning, uploads clearing entries without losing an edit made mid-upload, and deletes.
 - **`rest-timer`:** the rest timer's arithmetic.
+- **`workout-clock`:** the workout clock's format, and which routes get the swipe back.
 
 Before shipping, `npx tsc --noEmit`, `npm run lint` and `npm run build` should all pass clean.
 

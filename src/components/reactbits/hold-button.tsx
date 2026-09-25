@@ -9,6 +9,7 @@
  * runs only while a press is held or releasing.
  */
 import React, { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { haptic } from '@/lib/haptics';
 
 export type HoldButtonSize = 'sm' | 'md' | 'lg';
 export type HoldButtonDirection = 'right' | 'up';
@@ -164,6 +165,8 @@ const HoldButton: React.FC<HoldButtonProps> = ({
     if (now() - gesture.current.start < holdTime - 50) return;
     clearTimers();
     go('done', inputRef.current);
+    // Destructive by default in this app: the system's warning knock (iOS app).
+    haptic('warning');
     onHold?.();
     if (resetAfter > 0) {
       timers.current.reset = window.setTimeout(() => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ViewTransition, type ReactNode } from "react";
+import { useEffect, ViewTransition, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 
 const ENTER_EXIT = {
@@ -20,6 +20,20 @@ const ENTER_EXIT = {
  */
 export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+
+  // A back navigation the browser already animated (Safari's edge swipe, the
+  // iOS app's swipe back) shouldn't play a second transition on top. Marks
+  // <html data-ua-nav> briefly; globals.css turns the transition off then.
+  useEffect(() => {
+    const onPop = (e: PopStateEvent) => {
+      if (!(e as PopStateEvent & { hasUAVisualTransition?: boolean }).hasUAVisualTransition) return;
+      const root = document.documentElement;
+      root.dataset.uaNav = "";
+      window.setTimeout(() => delete root.dataset.uaNav, 800);
+    };
+    window.addEventListener("popstate", onPop, { capture: true });
+    return () => window.removeEventListener("popstate", onPop, { capture: true });
+  }, []);
   return (
     <ViewTransition key={pathname} enter={ENTER_EXIT} exit={ENTER_EXIT} default="none">
       <div>{children}</div>

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Ellipsis, Flame, LogOut, Plus } from "lucide-react";
+import { ChevronLeft, Ellipsis, Flame, LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOut } from "@/lib/actions/auth";
 import { NAV_SECTIONS, SETTINGS_ITEM, BOTTOM_NAV, type NavItem } from "./nav-items";
@@ -26,6 +26,24 @@ const TITLES: [prefix: string, title: string][] = [
 ];
 function titleFor(pathname: string) {
   return TITLES.find(([p]) => pathname === p || pathname.startsWith(p))?.[1] ?? "";
+}
+
+/** Pushed pages get an iOS back button in the top bar, to their parent. */
+function backFor(pathname: string): { href: string; label: string } | null {
+  if (/^\/history\/[^/]+$/.test(pathname)) return { href: "/history", label: "History" };
+  if (/^\/programs\/[^/]+$/.test(pathname)) return { href: "/programs", label: "Programs" };
+  return null;
+}
+
+/**
+ * Tapping the tab you're on does what it does in any iOS app: on a page
+ * pushed inside that tab it goes back to the tab's root (the link's normal
+ * navigation), and on the root itself it scrolls to the top.
+ */
+function scrollToTopIfHere(e: React.MouseEvent, href: string, pathname: string) {
+  if (pathname !== href) return;
+  e.preventDefault();
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function useActive() {
@@ -77,6 +95,7 @@ export function AppNav({
   identity: NavIdentity;
 }) {
   const isActive = useActive();
+  const pathname = usePathname();
 
   return (
     <>
@@ -149,6 +168,7 @@ export function AppNav({
             <Link
               key={item.href}
               href={item.href}
+              onClick={(e) => scrollToTopIfHere(e, item.href, pathname)}
               aria-current={active ? "page" : undefined}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-0.5 transition-colors",
@@ -180,6 +200,7 @@ function MobileTopBar({ identity, email }: { identity: NavIdentity; email?: stri
   const pathname = usePathname();
   const [more, setMore] = useState(false);
   const title = titleFor(pathname);
+  const back = backFor(pathname);
 
   return (
     <>
@@ -188,13 +209,24 @@ function MobileTopBar({ identity, email }: { identity: NavIdentity; email?: stri
         style={{ viewTransitionName: "hb-topbar" }}
       >
         <div className="relative flex h-11 items-center justify-between px-2 min-[400px]:px-3">
-          <Link
-            href="/dashboard"
-            aria-label="Home"
-            className="flex size-11 items-center justify-center rounded-full"
-          >
-            <Flame className="size-[22px] text-accent" strokeWidth={2.25} />
-          </Link>
+          {back ? (
+            <Link
+              href={back.href}
+              transitionTypes={["nav-back"]}
+              className="flex h-11 items-center pr-3 text-[17px] text-text active:opacity-60"
+            >
+              <ChevronLeft className="size-7 -mr-0.5" strokeWidth={2.25} />
+              {back.label}
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard"
+              aria-label="Home"
+              className="flex size-11 items-center justify-center rounded-full"
+            >
+              <Flame className="size-[22px] text-accent" strokeWidth={2.25} />
+            </Link>
+          )}
           <span
             aria-hidden
             className="hb-topbar-title pointer-events-none absolute inset-x-16 truncate text-center text-[16px] font-semibold tracking-[-0.015em] text-text"

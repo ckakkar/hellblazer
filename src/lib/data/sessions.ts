@@ -22,6 +22,8 @@ export type SessionDetail = Session & {
 export type ActiveSession = {
   id: string;
   title: string | null;
+  /** When it started (ISO), for the banner's running clock. */
+  startedAt: string;
   workingSets: number;
   exerciseCount: number;
 };
@@ -31,7 +33,7 @@ export async function getActiveSession(): Promise<ActiveSession | null> {
   const supabase = await createClient();
   const { data: sess, error } = await supabase
     .from("session")
-    .select("id, title")
+    .select("id, title, created_at")
     .is("finished_at", null)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -48,6 +50,7 @@ export async function getActiveSession(): Promise<ActiveSession | null> {
   return {
     id: sess.id,
     title: sess.title,
+    startedAt: sess.created_at,
     workingSets: Number(summary?.working_sets ?? 0),
     exerciseCount: Number(summary?.exercise_count ?? 0),
   };
