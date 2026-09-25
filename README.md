@@ -278,6 +278,7 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 
 - **What's native.**
   - **Sign-in:** Google through Google's iOS SDK (Google blocks OAuth inside web views) and Sign in with Apple, listed first in the app. Each returns an ID token with a hashed nonce, and `POST /auth/native` swaps it for the same Supabase session cookies the website's redirect flow sets. Apple's refresh token is kept server-side (`apple_token`) only so it can be revoked on account deletion.
+  - **Linking:** Settings → Sign-in methods connects the other provider to the same account (`linkIdentity`: Google by redirect on the web or natively in the app, Apple in the app), so either signs you in. Needs Supabase's *Allow manual linking*.
   - **Rest timer:** a Live Activity on the Lock Screen and in the Dynamic Island, drawn by the system from the end time, plus a "Rest's up" alert for a locked phone.
   - **Widgets:** "Next Bout" for the Home Screen (small, medium) and Lock Screen (rectangular, circular, inline). The dashboard writes a snapshot into the App Group; the widget resets when the week rolls over.
   - **Apple Health:** with the switch on in Settings, finished sessions are saved as strength-training workouts and logged bodyweight as body mass. Nothing is read from Health.

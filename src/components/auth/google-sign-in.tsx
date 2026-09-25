@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { isNativeApp } from "@/lib/native";
 
-function GoogleGlyph() {
+export function GoogleGlyph() {
   return (
     <svg viewBox="0 0 24 24" className="size-5" aria-hidden="true">
       <path
@@ -39,8 +39,8 @@ export function GoogleSignIn({ next = "/dashboard" }: { next?: string }) {
     if (isNativeApp()) {
       // The iOS app can't use the redirect flow below: Google blocks OAuth
       // inside embedded web views. See src/lib/native-auth.ts.
-      const { signInWithGoogleInApp } = await import("@/lib/native-auth");
-      const result = await signInWithGoogleInApp(next);
+      const { signInInApp } = await import("@/lib/native-auth");
+      const result = await signInInApp("google", next);
       if (!result.ok) {
         setLoading(false);
         setNote(result.message);

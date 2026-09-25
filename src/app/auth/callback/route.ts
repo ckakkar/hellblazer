@@ -12,6 +12,14 @@ export async function GET(request: Request) {
   const next = searchParams.get("next") ?? "/dashboard";
   const safeNext = next.startsWith("/") ? next : "/dashboard";
 
+  // Connecting Google to an existing account from Settings: a refusal (say,
+  // that Google account already has its own Fatty account) comes back here
+  // as an error code instead of a code to exchange. Show it on Settings.
+  const errorCode = searchParams.get("error_code");
+  if (!code && errorCode && safeNext.startsWith("/settings")) {
+    return NextResponse.redirect(`${origin}/settings?link_error=${encodeURIComponent(errorCode)}`);
+  }
+
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);

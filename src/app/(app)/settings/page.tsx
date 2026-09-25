@@ -26,12 +26,18 @@ import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
 import { AppleHealthSettings } from "./apple-health";
+import { SignInMethods, type SignInMethod } from "./sign-in-methods";
 
 export const metadata: Metadata = { title: "Profile" };
 
 export const dynamic = "force-dynamic";
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ link_error?: string }>;
+}) {
+  const { link_error: linkError } = await searchParams;
   const [user, unit, accent, logs, profile, active, notifications, evalGate, tz, today] =
     await Promise.all([
       getUser(),
@@ -52,12 +58,20 @@ export default async function ProfilePage() {
     ? format(parseISO(dateInTimeZone(new Date(profile.tier_evaluated_at), tz)), "d MMM yyyy")
     : null;
 
+  // Which ways into this account exist: Google, Apple, or both.
+  const method = (provider: "google" | "apple"): SignInMethod => {
+    const identity = user?.identities?.find((i) => i.provider === provider);
+    const email = identity?.identity_data?.email;
+    return { connected: Boolean(identity), email: typeof email === "string" ? email : null };
+  };
+  const signInMethods = { google: method("google"), apple: method("apple") };
+
   const activeProgram = active
     ? { id: active.program.id, name: active.program.name }
     : null;
 
-  // Google is the only sign-in method, so the account picture and name are the
-  // best identity we have; the profile row overrides them once it's filled in.
+  // The Google (or Apple) account's picture and name are the best identity we
+  // have; the profile row overrides them once it's filled in.
   const meta = (user?.user_metadata ?? {}) as Record<string, unknown>;
   const avatarUrl =
     typeof meta.avatar_url === "string"
@@ -153,6 +167,8 @@ export default async function ProfilePage() {
         </SettingsGroup>
 
         <AppleHealthSettings />
+
+        <SignInMethods methods={signInMethods} linkError={linkError} />
 
         <SettingsGroup label="Account">
           <SettingsRow

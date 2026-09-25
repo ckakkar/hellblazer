@@ -1,4 +1,5 @@
 import { GOOGLE_IOS_CLIENT_ID } from "@/lib/native";
+import { linkErrorMessage, type Provider } from "@/lib/auth-providers";
 
 function randomHex(bytes: number) {
   const buf = crypto.getRandomValues(new Uint8Array(bytes));
@@ -10,51 +11,37 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/** `ok` means the page is already navigating into the app. */
-export type InAppSignIn = { ok: true } | { ok: false; message: string | null };
 
-const fail = (message: string | null): InAppSignIn => ({ ok: false, message });
+/** `ok` means it worked (and, for sign-in, the page is already navigating). */
+export type InAppAuth = { ok: true } | { ok: false; message: string | null };
+
+const fail = (message: string | null): InAppAuth => ({ ok: false, message });
 
 function cancelled(err: unknown) {
   return (err as { code?: string } | null)?.code === "USER_CANCELLED";
 }
 
-/**
- * The provider's sheet hands back an ID token; /auth/native turns it into the
- * same Supabase session cookies the website's redirect flow sets, then says
- * where to go.
- */
-async function finishSignIn(body: {
-  provider: "google" | "apple";
+/** What a provider's native sheet hands back, ready for /auth/native. */
+type Credential = {
+  provider: Provider;
   idToken: string;
   nonce: string;
-  next: string;
+  /** Apple only: the one-time code, redeemed server-side for a revocable token. */
   authorizationCode?: string;
+  /** Apple only: shared on the very first sign-in alone. */
   fullName?: string;
-}): Promise<InAppSignIn> {
-  const res = await fetch("/auth/native", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) return fail("Couldn't sign you in. Try again.");
-  const { redirect } = (await res.json()) as { redirect: string };
-  window.location.replace(redirect);
-  return { ok: true };
-}
+};
 
-// Both providers write the SHA-256 of this nonce into the ID token; Supabase
+// Both providers write the SHA-256 of the nonce into the ID token; Supabase
 // gets the raw value and checks the hash, so a captured token can't be replayed.
 
 /**
- * Google sign-in inside the iOS app. Google refuses OAuth in embedded web
- * views, so the native Google SDK signs in instead. On failure, `message` is
- * what to tell the user, or null when they simply cancelled.
+ * Google's native sheet. Google refuses OAuth in embedded web views, so the
+ * app can't use the website's redirect flow.
  */
-export async function signInWithGoogleInApp(next: string): Promise<InAppSignIn> {
+async function googleCredential(): Promise<Credential | InAppAuth> {
   if (!GOOGLE_IOS_CLIENT_ID) return fail("Google sign-in isn't set up in the app yet.");
   const nonce = randomHex(32);
-  let idToken: string | null = null;
   try {
     const { SocialLogin } = await import("@capgo/capacitor-social-login");
     await SocialLogin.initialize({ google: { iOSClientId: GOOGLE_IOS_CLIENT_ID, mode: "online" } });
@@ -64,24 +51,17 @@ export async function signInWithGoogleInApp(next: string): Promise<InAppSignIn> 
       // that carries an old nonce, which Supabase would reject.
       options: { nonce: await sha256Hex(nonce), forcePrompt: true },
     });
-    if (result.responseType === "online") idToken = result.idToken;
+    const idToken = result.responseType === "online" ? result.idToken : null;
+    if (!idToken) return fail("Google didn't return an ID token. Try again.");
+    return { provider: "google", idToken, nonce };
   } catch (err) {
-    return fail(cancelled(err) ? null : "Google sign-in didn't finish. Try again.");
+    return fail(cancelled(err) ? null : "Google didn't finish. Try again.");
   }
-  if (!idToken) return fail("Google didn't return an ID token. Try again.");
-  return finishSignIn({ provider: "google", idToken, nonce, next });
 }
 
-/**
- * Sign in with Apple inside the iOS app, through Apple's own Face ID sheet.
- * Apple shares the user's name only on the very first sign-in, so it's passed
- * along for the profile.
- */
-export async function signInWithAppleInApp(next: string): Promise<InAppSignIn> {
+/** Apple's own Face ID sheet. */
+async function appleCredential(): Promise<Credential | InAppAuth> {
   const nonce = randomHex(32);
-  let idToken: string | null = null;
-  let authorizationCode: string | undefined;
-  let fullName: string | undefined;
   try {
     const { SocialLogin } = await import("@capgo/capacitor-social-login");
     // An empty redirect keeps the exchange native; the proper-exchange mode
@@ -91,13 +71,49 @@ export async function signInWithAppleInApp(next: string): Promise<InAppSignIn> {
       provider: "apple",
       options: { scopes: ["name", "email"], nonce: await sha256Hex(nonce) },
     });
-    idToken = result.idToken;
-    authorizationCode = result.authorizationCode ?? undefined;
+    if (!result.idToken) return fail("Apple didn't return an ID token. Try again.");
     const name = [result.profile.givenName, result.profile.familyName].filter(Boolean).join(" ").trim();
-    fullName = name || undefined;
+    return {
+      provider: "apple",
+      idToken: result.idToken,
+      nonce,
+      authorizationCode: result.authorizationCode ?? undefined,
+      fullName: name || undefined,
+    };
   } catch (err) {
-    return fail(cancelled(err) ? null : "Apple sign-in didn't finish. Try again.");
+    return fail(cancelled(err) ? null : "Apple didn't finish. Try again.");
   }
-  if (!idToken) return fail("Apple didn't return an ID token. Try again.");
-  return finishSignIn({ provider: "apple", idToken, nonce, next, authorizationCode, fullName });
+}
+
+function credentialFor(provider: Provider) {
+  return provider === "google" ? googleCredential() : appleCredential();
+}
+
+/** Sign in from the iOS app's landing page, then navigate into the app. */
+export async function signInInApp(provider: Provider, next: string): Promise<InAppAuth> {
+  const credential = await credentialFor(provider);
+  if (!("idToken" in credential)) return credential;
+  const res = await fetch("/auth/native", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...credential, next }),
+  });
+  if (!res.ok) return fail("Couldn't sign you in. Try again.");
+  const { redirect } = (await res.json()) as { redirect: string };
+  window.location.replace(redirect);
+  return { ok: true };
+}
+
+/** Adds Google or Apple as another way into the signed-in account (iOS app). */
+export async function linkInApp(provider: Provider): Promise<InAppAuth> {
+  const credential = await credentialFor(provider);
+  if (!("idToken" in credential)) return credential;
+  const res = await fetch("/auth/native", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ...credential, link: true }),
+  });
+  if (res.ok) return { ok: true };
+  const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+  return fail(linkErrorMessage(error, provider));
 }
