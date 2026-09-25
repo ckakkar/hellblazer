@@ -377,7 +377,7 @@ final class WatchModel: ObservableObject {
             content.body = "\(name). Time to lift."
             content.sound = .default
             let wait = max(1, rest.endsAt.timeIntervalSinceNow + 0.5)
-            center.add(UNNotificationRequest(
+            UNUserNotificationCenter.current().add(UNNotificationRequest(
                 identifier: "rest",
                 content: content,
                 trigger: UNTimeIntervalNotificationTrigger(timeInterval: wait, repeats: false)
@@ -388,7 +388,7 @@ final class WatchModel: ObservableObject {
             if wait > 0 { try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
             guard !Task.isCancelled, let self, self.rest == rest else { return }
             if WKApplication.shared().applicationState == .active {
-                center.removePendingNotificationRequests(withIdentifiers: ["rest"])
+                UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest"])
                 WKInterfaceDevice.current().play(.notification)
             }
             self.rest = nil
