@@ -18,7 +18,7 @@ export function isNativeApp(): boolean {
 
 /**
  * The iOS OAuth client ID from Google Cloud (Credentials, type iOS, bundle
- * com.ckakkar.hellblazer). Public, not a secret. Its reversed form must also
+ * com.kkrwhofrags.hellblazer). Public, not a secret. Its reversed form must also
  * be registered as a URL scheme in ios/App/App/Info.plist, or Google's SDK
  * crashes the app on sign-in, so the two always change together.
  */

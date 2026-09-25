@@ -7,7 +7,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * which .github/workflows/ios.yml produces.
  */
 const config: CapacitorConfig = {
-  appId: "com.ckakkar.hellblazer",
+  appId: "com.kkrwhofrags.hellblazer",
   appName: "Hell Blazer",
   // Bundled into the app. Only offline.html is ever shown: when the site
   // can't load at launch and the service worker has nothing cached yet.
@@ -33,10 +33,14 @@ const config: CapacitorConfig = {
     SocialLogin: {
       providers: {
         google: "implementation",
-        apple: "compileOnly",
+        apple: "implementation",
         facebook: "compileOnly",
         twitter: "compileOnly",
       },
+    },
+    // A push that arrives while the app is open still shows as a banner.
+    PushNotifications: {
+      presentationOptions: ["banner", "sound", "list"],
     },
   },
 };

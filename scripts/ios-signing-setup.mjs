@@ -7,7 +7,7 @@
  *   node scripts/ios-signing-setup.mjs --key ~/Downloads/AuthKey_ABC123XYZ.p8 --issuer <issuer-id>
  *
  * It then:
- *   1. registers the bundle ID com.ckakkar.hellblazer (if it isn't already),
+ *   1. registers the bundle ID com.kkrwhofrags.hellblazer (if it isn't already),
  *   2. creates an Apple Distribution certificate from a fresh private key,
  *   3. stores the key, certificate and API key as GitHub Actions secrets,
  *   4. sets the IOS_TEAM_ID and IOS_CERT_ID variables, which switches
@@ -26,7 +26,7 @@ import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
 
-const BUNDLE_ID = "com.ckakkar.hellblazer";
+const BUNDLE_ID = "com.kkrwhofrags.hellblazer";
 const APP_NAME = "Hell Blazer";
 const API = "https://api.appstoreconnect.apple.com/v1";
 

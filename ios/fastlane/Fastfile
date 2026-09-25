@@ -5,7 +5,7 @@ require "base64"
 
 default_platform(:ios)
 
-BUNDLE_ID = "com.ckakkar.hellblazer"
+BUNDLE_ID = "com.kkrwhofrags.hellblazer"
 # Absolute paths: fastlane runs Ruby code and actions from different working
 # directories, so relative paths are easy to get wrong.
 PROJECT = File.join(ENV.fetch("GITHUB_WORKSPACE"), "ios", "App", "App.xcodeproj")

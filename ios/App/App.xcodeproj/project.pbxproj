@@ -7,19 +7,62 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		193BA68ADC3FA7130A989A0A /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */; };
+		2AC1D53AC576840337EA0BCD /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */; };
 		2FAD9763203C412B000D30F8 /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
+		4C599DDF19AAA63030394650 /* Widgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0AA7C4240F60FBA6BFDFA48C /* Widgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
+		4E35D658CB8D92B40EE15EBC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DF710AB3E6C9ACDA0F664DF2 /* PrivacyInfo.xcprivacy */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		5DBE2EFD05E3C7D632E2C61B /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */; };
+		82498FE415AD2AFEBA1C0F83 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E764D7B64DC0B30F61736C2 /* Brand.swift */; };
+		9042C73CAF4E353BAFC3B41C /* HellBlazerWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */; };
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
+		9B12E6AF9378E92AE41B49E8 /* RestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */; };
+		A70AC4541676B4CC4BA8376E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D256DB474CD275086B6EB5D6 /* PrivacyInfo.xcprivacy */; };
+		B021219EFE8184E526DE70FA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */; };
+		D7595755F8A990CF6BDB3DBB /* RestTimerLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FBDA18709D59FBB38210C0 /* RestTimerLiveActivity.swift */; };
+		E032D3DB9D99BB1FF3E0495E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 346DF9A657CA2BB7C1B6814B /* Foundation.framework */; };
+		E91CADD37762B34D12F5F84C /* HellBlazerNativePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */; };
+		ED6AB91710DC525C89AEBA93 /* HellBlazerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */; };
+		FB4649089CC2CD0BAF084AA5 /* NextBoutWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		2B36C0755EE1181617C19B2B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 504EC2FC1FED79650016851F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2657F60699322CF9978D8C39;
+			remoteInfo = Widgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		95B7C43AF921BFB50902323B /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				4C599DDF19AAA63030394650 /* Widgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0AA7C4240F60FBA6BFDFA48C /* Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerWidgets.swift; sourceTree = "<group>"; };
+		1ED6052E03D446458CB5EF95 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
+		346DF9A657CA2BB7C1B6814B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		50379B222058CBB4000EE86E /* capacitor.config.json */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.json; path = capacitor.config.json; sourceTree = "<group>"; };
 		504EC3041FED79650016851F /* App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = App.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -28,11 +71,31 @@
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		504EC3131FED79650016851F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
+		54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerNativePlugin.swift; sourceTree = "<group>"; };
+		5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerViewController.swift; sourceTree = "<group>"; };
+		5B5C3E8A727B2CB1A8BB2600 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestActivityAttributes.swift; sourceTree = "<group>"; };
+		7B020AC17F56F31B373E1AF2 /* Widgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Widgets.entitlements; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
+		9E764D7B64DC0B30F61736C2 /* Brand.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
+		A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
+		A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
+		C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = NextBoutWidget.swift; sourceTree = "<group>"; };
+		C4FBDA18709D59FBB38210C0 /* RestTimerLiveActivity.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestTimerLiveActivity.swift; sourceTree = "<group>"; };
+		D256DB474CD275086B6EB5D6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		DF710AB3E6C9ACDA0F664DF2 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		1E40E5414201EC8A94086D1C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E032D3DB9D99BB1FF3E0495E /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3011FED79650016851F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -50,6 +113,9 @@
 				958DCC722DB07C7200EA8C5F /* debug.xcconfig */,
 				504EC3061FED79650016851F /* App */,
 				504EC3051FED79650016851F /* Products */,
+				DC17EF51BDA36FF768E2035A /* Frameworks */,
+				C2AAFA3C971FA54909CC84FF /* Widgets */,
+				EA6DA5A10D9F3414498772E8 /* Shared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -57,6 +123,7 @@
 			isa = PBXGroup;
 			children = (
 				504EC3041FED79650016851F /* App.app */,
+				0AA7C4240F60FBA6BFDFA48C /* Widgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -73,13 +140,76 @@
 				504EC3131FED79650016851F /* Info.plist */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
+				5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */,
+				54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */,
+				A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */,
+				1ED6052E03D446458CB5EF95 /* App.entitlements */,
+				D256DB474CD275086B6EB5D6 /* PrivacyInfo.xcprivacy */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		931E7343AD14A1CD53516756 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				346DF9A657CA2BB7C1B6814B /* Foundation.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		C2AAFA3C971FA54909CC84FF /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */,
+				9E764D7B64DC0B30F61736C2 /* Brand.swift */,
+				C4FBDA18709D59FBB38210C0 /* RestTimerLiveActivity.swift */,
+				C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */,
+				5B5C3E8A727B2CB1A8BB2600 /* Info.plist */,
+				7B020AC17F56F31B373E1AF2 /* Widgets.entitlements */,
+				DF710AB3E6C9ACDA0F664DF2 /* PrivacyInfo.xcprivacy */,
+			);
+			name = Widgets;
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		DC17EF51BDA36FF768E2035A /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				931E7343AD14A1CD53516756 /* iOS */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		EA6DA5A10D9F3414498772E8 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				6B9632B13BCA779AEFE286F5 /* RestActivityAttributes.swift */,
+				A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */,
+			);
+			name = Shared;
+			path = Shared;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		2657F60699322CF9978D8C39 /* Widgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 479F0A1DA5B55A8BA5650F40 /* Build configuration list for PBXNativeTarget "Widgets" */;
+			buildPhases = (
+				181B5D62138D64B242831F36 /* Sources */,
+				1E40E5414201EC8A94086D1C /* Frameworks */,
+				DE8C85E2D1E83415A145D229 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Widgets;
+			productName = Widgets;
+			productReference = 0AA7C4240F60FBA6BFDFA48C /* Widgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		504EC3031FED79650016851F /* App */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
@@ -87,10 +217,12 @@
 				504EC3001FED79650016851F /* Sources */,
 				504EC3011FED79650016851F /* Frameworks */,
 				504EC3021FED79650016851F /* Resources */,
+				95B7C43AF921BFB50902323B /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				BB032B4D4B9A20801EBBC263 /* PBXTargetDependency */,
 			);
 			name = App;
 			packageProductDependencies = (
@@ -133,6 +265,7 @@
 			projectRoot = "";
 			targets = (
 				504EC3031FED79650016851F /* App */,
+				2657F60699322CF9978D8C39 /* Widgets */,
 			);
 		};
 /* End PBXProject section */
@@ -148,22 +281,58 @@
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
+				A70AC4541676B4CC4BA8376E /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE8C85E2D1E83415A145D229 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4E35D658CB8D92B40EE15EBC /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		181B5D62138D64B242831F36 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9042C73CAF4E353BAFC3B41C /* HellBlazerWidgets.swift in Sources */,
+				82498FE415AD2AFEBA1C0F83 /* Brand.swift in Sources */,
+				D7595755F8A990CF6BDB3DBB /* RestTimerLiveActivity.swift in Sources */,
+				FB4649089CC2CD0BAF084AA5 /* NextBoutWidget.swift in Sources */,
+				9B12E6AF9378E92AE41B49E8 /* RestActivityAttributes.swift in Sources */,
+				193BA68ADC3FA7130A989A0A /* WidgetSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		504EC3001FED79650016851F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
 				9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */,
+				ED6AB91710DC525C89AEBA93 /* HellBlazerViewController.swift in Sources */,
+				E91CADD37762B34D12F5F84C /* HellBlazerNativePlugin.swift in Sources */,
+				B021219EFE8184E526DE70FA /* AppShortcuts.swift in Sources */,
+				2AC1D53AC576840337EA0BCD /* RestActivityAttributes.swift in Sources */,
+				5DBE2EFD05E3C7D632E2C61B /* WidgetSnapshot.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		BB032B4D4B9A20801EBBC263 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = Widgets;
+			target = 2657F60699322CF9978D8C39 /* Widgets */;
+			targetProxy = 2B36C0755EE1181617C19B2B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		504EC30B1FED79650016851F /* Main.storyboard */ = {
@@ -185,6 +354,59 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		3A09518AE58ED31767B0E2E9 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = Widgets/Widgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		463991CB730F317C7265E2D3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = Widgets/Widgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Widgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		504EC3141FED79650016851F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
@@ -234,7 +456,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
@@ -285,7 +507,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
 				SWIFT_COMPILATION_MODE = wholemodule;
@@ -299,17 +521,18 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ckakkar.hellblazer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_VERSION = 5.0;
@@ -321,16 +544,17 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
-				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.ckakkar.hellblazer;
+				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
 				SWIFT_VERSION = 5.0;
@@ -341,6 +565,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		479F0A1DA5B55A8BA5650F40 /* Build configuration list for PBXNativeTarget "Widgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3A09518AE58ED31767B0E2E9 /* Release */,
+				463991CB730F317C7265E2D3 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		504EC2FF1FED79650016851F /* Build configuration list for PBXProject "App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
