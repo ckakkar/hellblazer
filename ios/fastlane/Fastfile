@@ -74,15 +74,11 @@ platform :ios do
       output_directory: File.join(TMP, "build"),
     )
 
-    # "What to Test" in TestFlight: the commit that triggered the build (the
-    # workflow passes it in). Setting it means waiting for Apple to finish
-    # processing, usually a minute or two.
-    notes = ENV.fetch("TESTFLIGHT_NOTES", "").strip
+    # "What to Test" is set afterwards by scripts/testflight-notes.mjs:
+    # fastlane's changelog option writes an attribute Apple has retired.
     upload_to_testflight(
       api_key: api_key,
-      changelog: notes.empty? ? nil : notes[0, 3900],
-      skip_waiting_for_build_processing: notes.empty?,
-      distribute_external: false,
+      skip_waiting_for_build_processing: true,
     )
   end
 end

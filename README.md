@@ -327,7 +327,7 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 
 `.github/workflows/ios.yml` builds on a GitHub-hosted Mac whenever `ios/`, `app-shell/` or `capacitor.config.ts` changes, or by hand from the Actions tab.
 
-- With uploads on (`IOS_TESTFLIGHT=on`), fastlane (`ios/fastlane/Fastfile`) signs the app and the widget extension, uploads to TestFlight with the commit message as **What to Test**, and the internal group (automatic distribution) gets it on their phones within minutes. Otherwise, or when run by hand with *compile only*, it just checks that everything compiles.
+- With uploads on (`IOS_TESTFLIGHT=on`), fastlane (`ios/fastlane/Fastfile`) signs the app and the widget extension, uploads to TestFlight, then `scripts/testflight-notes.mjs` sets the commit message as **What to Test**, and the internal group (automatic distribution) gets it on their phones within minutes. Otherwise, or when run by hand with *compile only*, it just checks that everything compiles.
 - **Build numbers** count up by themselves (`run number.attempt`). **To ship a new version number**, bump `MARKETING_VERSION` on both targets in `ios/App/App.xcodeproj` (the app and the widgets must match). The app is on **1.1**.
 - **Web changes** don't need any of this: a push to `main` reaches the app within a minute of the Vercel deploy.
 
