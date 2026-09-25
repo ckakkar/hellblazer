@@ -28,15 +28,15 @@ export function ProfileIdentity({
 
   return (
     <header className={className}>
-      <div className="hb-hero-bleed relative isolate h-48 overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] md:h-44">
-        <div className="hb-hero-art absolute inset-0 -z-10 md:left-auto md:w-[58%]">
+      <div className="hb-hero-bleed hb-bleed-grow relative isolate h-48 overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] md:h-44">
+        <div className="hb-hero-art hb-bleed-art absolute inset-0 -z-10 md:left-auto md:w-[58%]">
           <FighterArt
             fighterKey={tier?.key ?? "ohma"}
             variant="hero"
             priority
             fade="bottom"
             className="absolute inset-0"
-            imageClassName={cn("object-[center_16%]", tier ? "opacity-75" : "opacity-40 grayscale")}
+            imageClassName={cn("object-[center_5%] md:object-[center_16%]", tier ? "opacity-75" : "opacity-40 grayscale")}
           />
           <div
             aria-hidden

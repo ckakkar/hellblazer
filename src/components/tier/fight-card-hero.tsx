@@ -34,7 +34,7 @@ export function FightCardHero({
       )}
     >
       {/* The portrait, lit in the lifter's accent from above */}
-      <div className="hb-hero-parallax absolute inset-0 -z-10 md:inset-y-0 md:left-auto md:right-0 md:w-[58%]">
+      <div className="hb-hero-parallax hb-bleed-art absolute inset-0 -z-10 md:inset-y-0 md:left-auto md:right-0 md:w-[58%]">
         <div className="hb-hero-art absolute inset-0">
           <FighterArt
             fighterKey={tier?.key ?? "ohma"}

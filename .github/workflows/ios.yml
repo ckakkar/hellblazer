@@ -91,4 +91,7 @@ jobs:
           IOS_CERT_ID: ${{ vars.IOS_CERT_ID }}
           FASTLANE_SKIP_UPDATE_CHECK: "1"
           FASTLANE_HIDE_CHANGELOG: "1"
-        run: fastlane beta
+        # TestFlight's "What to Test": the commit's message, minus trailers.
+        run: |
+          export TESTFLIGHT_NOTES="$(git log -1 --format=%B | grep -viE '^(co-authored-by|claude-session):' || true)"
+          fastlane beta

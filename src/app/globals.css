@@ -296,6 +296,28 @@ button,
     margin-top: 0;
     border-radius: 1.75rem;
   }
+  /* The art itself starts under the status bar, not behind it: there the
+     clock and the Dynamic Island would sit on the fighter's head. It fades
+     in from black, so the strip above reads as the app's own dark status
+     bar with the arena light behind it. */
+  .hb-hero-bleed .hb-bleed-art {
+    top: env(safe-area-inset-top);
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 2.5rem);
+    mask-image: linear-gradient(to bottom, transparent, #000 2.5rem);
+  }
+  /* A banner that grows by the status bar, so the art keeps its full height
+     below it (the profile's; the home hero keeps its height for the SE). */
+  .hb-hero-bleed.hb-bleed-grow {
+    height: calc(12rem + env(safe-area-inset-top));
+  }
+  main:has(.hb-resume) .hb-hero-bleed .hb-bleed-art {
+    top: 0;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  main:has(.hb-resume) .hb-hero-bleed.hb-bleed-grow {
+    height: 12rem;
+  }
 }
 /* The card that overlaps the hero's foot: glass, so the portrait's fade
    reads through its top edge. Opaque again where there's nothing under it. */

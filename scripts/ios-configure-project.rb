@@ -72,9 +72,10 @@ widgets.build_configurations.each do |config|
   s["IPHONEOS_DEPLOYMENT_TARGET"] = DEPLOYMENT
   s["TARGETED_DEVICE_FAMILY"] = "1"
   s["SWIFT_VERSION"] = "5.0"
-  # An extension's versions must match the app's; CI overrides the build
+  # An extension's versions must match the app's: copy the app's version
+  # (bump MARKETING_VERSION on both targets together). CI overrides the build
   # number for every target at once.
-  s["MARKETING_VERSION"] = "1.0"
+  s["MARKETING_VERSION"] = app.build_configurations.first.build_settings["MARKETING_VERSION"] || "1.0"
   s["CURRENT_PROJECT_VERSION"] = "1"
   s["SKIP_INSTALL"] = "YES"
   s["APPLICATION_EXTENSION_API_ONLY"] = "YES"
