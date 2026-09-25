@@ -25,6 +25,7 @@ import { BodyweightChart } from "@/components/charts/bodyweight-chart";
 import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
+import { AppleHealthSettings } from "./apple-health";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -151,6 +152,8 @@ export default async function ProfilePage() {
           </SettingsRow>
         </SettingsGroup>
 
+        <AppleHealthSettings />
+
         <SettingsGroup label="Account">
           <SettingsRow
             label="Export your data"
@@ -166,6 +169,8 @@ export default async function ProfilePage() {
               </a>
             }
           />
+          <SettingsRow label="Privacy" href="/privacy" />
+          <SettingsRow label="Support" hint="cyrus@kkrwhofrags.xyz" href="/support" />
           <SettingsRow
             label="Signed in"
             hint={user?.email ?? undefined}

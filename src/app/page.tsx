@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { LandingArenaHero } from "@/components/tier/landing-arena-hero";
@@ -17,7 +18,15 @@ export default async function Landing({
       <LandingArenaHero error={error} deleted={deleted === "1"} />
       <LandingFighterRoster />
       <footer className="flex items-center justify-between gap-4 px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 text-[13px] text-muted sm:px-8 lg:px-14 xl:px-20">
-        <span>Fatty</span>
+        <span className="flex items-center gap-4">
+          <span>Fatty</span>
+          <Link href="/privacy" className="underline-offset-4 hover:text-text hover:underline">
+            Privacy
+          </Link>
+          <Link href="/support" className="underline-offset-4 hover:text-text hover:underline">
+            Support
+          </Link>
+        </span>
         <span>
           App by{" "}
           <a

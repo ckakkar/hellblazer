@@ -6,6 +6,8 @@ require "base64"
 default_platform(:ios)
 
 BUNDLE_ID = "com.kkrwhofrags.hellblazer"
+# The Home Screen widget and rest timer Live Activity ship as an extension.
+WIDGETS_ID = "#{BUNDLE_ID}.widgets"
 # Absolute paths: fastlane runs Ruby code and actions from different working
 # directories, so relative paths are easy to get wrong.
 PROJECT = File.join(ENV.fetch("GITHUB_WORKSPACE"), "ios", "App", "App.xcodeproj")
@@ -32,26 +34,31 @@ platform :ios do
       keychain_password: ENV.fetch("MATCH_KEYCHAIN_PASSWORD"),
     )
 
-    # Reuses the App Store profile for our certificate, or creates one.
-    get_provisioning_profile(
-      api_key: api_key,
-      app_identifier: BUNDLE_ID,
-      cert_id: ENV.fetch("IOS_CERT_ID"),
-      output_path: TMP,
-      filename: "appstore.mobileprovision",
-    )
-    profile = lane_context[SharedValues::SIGH_NAME]
+    # One App Store profile per target, each reused or created for our
+    # certificate. A profile generated before a capability was switched on
+    # is invalid, so sigh makes a fresh one then.
+    profiles = {}
+    { "App" => BUNDLE_ID, "Widgets" => WIDGETS_ID }.each do |target, identifier|
+      get_provisioning_profile(
+        api_key: api_key,
+        app_identifier: identifier,
+        cert_id: ENV.fetch("IOS_CERT_ID"),
+        output_path: TMP,
+        filename: "#{target}.mobileprovision",
+      )
+      profiles[identifier] = lane_context[SharedValues::SIGH_NAME]
 
-    update_code_signing_settings(
-      path: PROJECT,
-      targets: ["App"],
-      build_configurations: ["Release"],
-      use_automatic_signing: false,
-      team_id: ENV.fetch("IOS_TEAM_ID"),
-      code_sign_identity: "Apple Distribution",
-      profile_name: profile,
-      bundle_identifier: BUNDLE_ID,
-    )
+      update_code_signing_settings(
+        path: PROJECT,
+        targets: [target],
+        build_configurations: ["Release"],
+        use_automatic_signing: false,
+        team_id: ENV.fetch("IOS_TEAM_ID"),
+        code_sign_identity: "Apple Distribution",
+        profile_name: profiles[identifier],
+        bundle_identifier: identifier,
+      )
+    end
 
     # Run number, plus the attempt so a re-run still uploads a new build.
     build_number = "#{ENV.fetch('GITHUB_RUN_NUMBER')}.#{ENV.fetch('GITHUB_RUN_ATTEMPT', '1')}"
@@ -62,7 +69,7 @@ platform :ios do
       configuration: "Release",
       clean: true,
       export_method: "app-store",
-      export_options: { provisioningProfiles: { BUNDLE_ID => profile } },
+      export_options: { provisioningProfiles: profiles },
       xcargs: "CURRENT_PROJECT_VERSION=#{build_number}",
       output_directory: File.join(TMP, "build"),
     )

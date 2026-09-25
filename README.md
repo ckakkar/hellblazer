@@ -21,7 +21,7 @@ A **Kengan Ashura-themed** strength tracker: a fast mobile set logger, programs 
 
 ---
 
-Fatty is a real, multi-user app, not a demo. Every screen reads live Postgres data behind row-level security, sign-in is Google-only, and it installs to your phone as a PWA with offline logging and push reminders. Every logged set lands in one atomic `set` table; estimated 1RM, tonnage and weekly sets per muscle are computed in the database, so the phone only ever downloads the numbers it shows.
+Fatty is a real, multi-user app, not a demo. Every screen reads live Postgres data behind row-level security, sign-in is Google (plus Sign in with Apple in the iPhone app), and it installs to your phone as a PWA with offline logging and push reminders. Every logged set lands in one atomic `set` table; estimated 1RM, tonnage and weekly sets per muscle are computed in the database, so the phone only ever downloads the numbers it shows.
 
 The twist: your training gets **judged**. An AI judge reads your full history and places you on a ten-rung ladder of Kengan Ashura fighters. You climb it one honest rep at a time.
 
@@ -277,14 +277,19 @@ Unit, accent and timezone preferences are cookies, read on the server so the fir
 A native iPhone app built with **Capacitor**. It's a thin shell around the live site: the app loads `https://hellblazer.vercel.app` in a WKWebView, so every web deploy updates the app too. Only native changes need a new build.
 
 - **What's native.**
-  - Google sign-in through Google's iOS SDK, because Google blocks OAuth inside web views. It hands back an ID token, and `POST /auth/native` swaps it for the same Supabase session cookies the website's redirect flow sets.
-  - Taptic Engine haptics for records and the end of a rest (`src/lib/haptics.ts`).
-  - A true-black launch screen with the flame, and dark system UI.
+  - **Sign-in:** Google through Google's iOS SDK (Google blocks OAuth inside web views) and Sign in with Apple, listed first in the app. Each returns an ID token with a hashed nonce, and `POST /auth/native` swaps it for the same Supabase session cookies the website's redirect flow sets. Apple's refresh token is kept server-side (`apple_token`) only so it can be revoked on account deletion.
+  - **Rest timer:** a Live Activity on the Lock Screen and in the Dynamic Island, drawn by the system from the end time, plus a "Rest's up" alert for a locked phone.
+  - **Widgets:** "Next Bout" for the Home Screen (small, medium) and Lock Screen (rectangular, circular, inline). The dashboard writes a snapshot into the App Group; the widget resets when the week rolls over.
+  - **Apple Health:** with the switch on in Settings, finished sessions are saved as strength-training workouts and logged bodyweight as body mass. Nothing is read from Health.
+  - **Push:** APNs (`src/lib/apns.ts`) beside Web Push; the daily reminder cron sends to both. Tapping a notification opens its page.
+  - **Siri, Spotlight and Shortcuts** (App Intents), **Home Screen quick actions**, and **universal links** (`/.well-known/apple-app-site-association`) all land on the right page through `NativeRouter`.
+  - Taptic Engine haptics for records and the end of a rest (`src/lib/haptics.ts`); a true-black launch screen with the flame; dark system UI.
+- **The native code:** `ios/App/App` (the app's plugin `HellBlazerNativePlugin`, the router, App Intents), `ios/App/Widgets` (the widget extension), `ios/App/Shared` (types both targets compile). `scripts/ios-configure-project.rb` edits the Xcode project without Xcode.
 - **Web and PWA are untouched.** Everything app-only sits behind `isNativeApp()` (`src/lib/native.ts`), and plugin code loads through dynamic imports inside that check, so the website never downloads it.
 - **Offline.** App-Bound Domains are on, which lets the service worker run in the app, and `app-shell/offline.html` covers a first launch with no signal.
 - **Builds without Xcode.** `.github/workflows/ios.yml` builds on a GitHub-hosted Mac whenever `ios/`, `app-shell/` or `capacitor.config.ts` changes, or by hand from the Actions tab.
   - Before signing is set up, it only checks that the app compiles.
-  - After `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>`, it signs with fastlane (`ios/fastlane/Fastfile`) and uploads to TestFlight. That script registers the bundle ID, creates the distribution certificate and stores everything as GitHub secrets.
+  - After `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>`, it signs both targets with fastlane (`ios/fastlane/Fastfile`) and uploads to TestFlight. That script registers both bundle IDs and their capabilities, creates the distribution certificate and stores everything as GitHub secrets.
 - **Changing the icon or launch mark:** `node scripts/generate-ios-assets.mjs`.
 - **After adding or removing a Capacitor plugin:** run `npx cap sync ios` and commit `ios/`.
 
@@ -310,6 +315,9 @@ npm run dev      # http://localhost:3000
 | `VAPID_PRIVATE_KEY` | optional | Web Push private key (server only) |
 | `VAPID_SUBJECT` | optional | Contact for push services, e.g. `mailto:you@example.com` |
 | `CRON_SECRET` | optional | Authorizes `/api/cron/reminders` |
+| `APPLE_TEAM_ID` | for iOS | Apple team ID: universal links, APNs, Sign in with Apple |
+| `APPLE_KEY_ID` | for iOS | ID of the Apple server key (APNs + Sign in with Apple) |
+| `APPLE_PRIVATE_KEY` | for iOS | That key's `.p8` contents (server only) |
 
 Generate a VAPID pair with `npx web-push generate-vapid-keys`.
 

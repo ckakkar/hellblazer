@@ -11,7 +11,7 @@ You are building a production workout-tracking web app. This file is the source 
 Use the Supabase MCP to run all migrations and RLS policies directly. Generate TypeScript types from the DB after the schema is live (`Supabase:generate_typescript_types`) and keep them in `src/lib/database.types.ts`. Regenerate whenever the schema changes.
 
 ## Non-negotiables
-- **Auth: Google OAuth only.** No email/password, no magic links. Use `@supabase/ssr` with the App Router server-client pattern (middleware for session refresh, server components read session server-side). Protect all `/app/*` routes; unauthenticated → redirect to `/`.
+- **Auth: Google OAuth on the web; Google or Sign in with Apple in the iOS app** (App Store rule 4.8 requires Apple beside Google there). No email/password, no magic links. Use `@supabase/ssr` with the App Router server-client pattern (middleware for session refresh, server components read session server-side). Protect all `/app/*` routes; unauthenticated → redirect to `/`.
 - **RLS on every table**, enforced. Every user-owned row carries `user_id uuid references auth.users`. Policies: a user can only CRUD their own rows. The exercise library is the one shared read-only table (see schema).
 - **Multi-user from day one.** No hardcoded user assumptions. The app is for me but others will sign up.
 - **No secrets in client code.** `NEXT_PUBLIC_SUPABASE_URL` and anon key only client-side; never expose the service role key.

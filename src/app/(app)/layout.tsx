@@ -8,6 +8,7 @@ import { ResumeBanner } from "@/components/resume-banner";
 import { getActiveSession } from "@/lib/data/sessions";
 import { getShellProfile } from "@/lib/data/profile";
 import { getTier } from "@/lib/tiers";
+import { NativeBridge } from "@/components/native/native-bridge";
 
 export default async function AppLayout({
   children,
@@ -34,6 +35,7 @@ export default async function AppLayout({
       {/* Arena light: the accent, faint, from above. Static, and it scrolls
           away with the page; the home and profile heroes cover it. */}
       <div aria-hidden className="hb-arena-light pointer-events-none absolute inset-x-0 top-0 -z-10 h-[26rem]" />
+      <NativeBridge />
       <RealtimeSync userId={user.id} />
       <AppNav
         userEmail={user.email}

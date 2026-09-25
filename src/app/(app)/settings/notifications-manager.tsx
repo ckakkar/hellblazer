@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { Bell, Loader2, Send, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { isNativeApp } from "@/lib/native";
 import {
   deletePushSubscription,
   savePushSubscription,
@@ -49,6 +50,16 @@ export function NotificationsManager({
   useEffect(() => {
     let cancelled = false;
     const detect = async () => {
+      // The iOS app pushes through APNs, not the browser's Web Push.
+      if (isNativeApp()) {
+        const { nativePushEnabled } = await import("@/lib/native-push");
+        const on = await nativePushEnabled().catch(() => false);
+        if (!cancelled) {
+          setSubscribed(on);
+          setStatus("ready");
+        }
+        return;
+      }
       const supported =
         "serviceWorker" in navigator &&
         "PushManager" in window &&
@@ -82,7 +93,36 @@ export function NotificationsManager({
     };
   }, []);
 
+  /** Turns the daily reminder on the first time notifications are enabled. */
+  async function defaultReminderOn() {
+    if (hour == null) {
+      setHour(18);
+      await setReminderHour({ hour: 18 });
+    }
+  }
+
+  async function enableInApp() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { enableNativePush } = await import("@/lib/native-push");
+      const problem = await enableNativePush();
+      if (problem) {
+        setMsg(problem);
+        return;
+      }
+      setSubscribed(true);
+      await defaultReminderOn();
+      setMsg("Notifications on. We'll nudge you when it's time to train.");
+    } catch {
+      setMsg("Couldn't enable notifications. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function enable() {
+    if (isNativeApp()) return enableInApp();
     if (!vapidPublicKey) {
       setMsg("Push isn't configured on the server yet.");
       return;
@@ -115,10 +155,7 @@ export function NotificationsManager({
         userAgent: navigator.userAgent.slice(0, 500),
       });
       setSubscribed(true);
-      if (hour == null) {
-        setHour(18);
-        await setReminderHour({ hour: 18 });
-      }
+      await defaultReminderOn();
       setMsg("Notifications on. We'll nudge you when it's time to train.");
     } catch {
       setMsg("Couldn't enable notifications. Try again.");
@@ -131,6 +168,13 @@ export function NotificationsManager({
     setBusy(true);
     setMsg(null);
     try {
+      if (isNativeApp()) {
+        const { disableNativePush } = await import("@/lib/native-push");
+        await disableNativePush();
+        setSubscribed(false);
+        setMsg("Notifications turned off on this iPhone.");
+        return;
+      }
       const reg = await workerRegistration();
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {

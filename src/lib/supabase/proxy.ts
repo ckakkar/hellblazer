@@ -43,7 +43,13 @@ export async function updateSession(request: NextRequest) {
   const signedIn = Boolean(data?.claims?.sub);
 
   const path = request.nextUrl.pathname;
-  const isPublic = path === "/" || path.startsWith("/auth");
+  const isPublic =
+    path === "/" ||
+    path.startsWith("/auth") ||
+    // Apple fetches this without cookies; the legal pages are for everyone.
+    path.startsWith("/.well-known") ||
+    path === "/privacy" ||
+    path === "/support";
 
   if (!signedIn && !isPublic) {
     const url = request.nextUrl.clone();

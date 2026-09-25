@@ -7,6 +7,7 @@ import {
 } from "date-fns";
 import { createServiceClient } from "@/lib/supabase/service";
 import { pushConfigured, sendPush } from "@/lib/push";
+import { apnsConfigured, sendApns } from "@/lib/apns";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,9 @@ type Sub = {
   timezone: string | null;
   created_at: string;
 };
+
+/** An iPhone running the app, reached through APNs. */
+type Device = { user_id: string; token: string; timezone: string | null };
 
 /** Local wall-clock hour (0-23) and date (yyyy-MM-dd) in a given IANA zone. */
 function localParts(tz: string | null): { hour: number; date: string } {
@@ -117,32 +121,49 @@ export async function GET(request: NextRequest) {
 
   const svc = createServiceClient();
   if (!svc) return NextResponse.json({ skipped: "service client unavailable" });
-  if (!pushConfigured()) return NextResponse.json({ skipped: "push not configured" });
+  const web = pushConfigured();
+  const ios = apnsConfigured();
+  if (!web && !ios) return NextResponse.json({ skipped: "push not configured" });
 
-  const [{ data: profiles, error: pErr }, { data: subs, error: sErr }] =
-    await Promise.all([
-      svc
-        .from("profile")
-        .select("user_id, reminder_hour")
-        .not("reminder_hour", "is", null),
-      svc
-        .from("push_subscription")
-        .select("user_id, endpoint, p256dh, auth, timezone, created_at")
-        .order("created_at", { ascending: false }),
-    ]);
-  if (pErr || sErr) {
-    return NextResponse.json(
-      { ok: false, error: (pErr ?? sErr)?.message ?? "query failed" },
-      { status: 500 },
-    );
+  const [
+    { data: profiles, error: pErr },
+    { data: subs, error: sErr },
+    { data: devices, error: dErr },
+  ] = await Promise.all([
+    svc
+      .from("profile")
+      .select("user_id, reminder_hour")
+      .not("reminder_hour", "is", null),
+    web
+      ? svc
+          .from("push_subscription")
+          .select("user_id, endpoint, p256dh, auth, timezone, created_at")
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as Sub[], error: null }),
+    ios
+      ? svc
+          .from("apns_device")
+          .select("user_id, token, timezone")
+          .order("last_seen_at", { ascending: false })
+      : Promise.resolve({ data: [] as Device[], error: null }),
+  ]);
+  const queryError = pErr ?? sErr ?? dErr;
+  if (queryError) {
+    return NextResponse.json({ ok: false, error: queryError.message }, { status: 500 });
   }
 
-  // Group subscriptions by user (newest first: first seen = "primary" device).
+  // Group devices by user, newest first: the first seen is the "primary" one.
   const byUser = new Map<string, Sub[]>();
   for (const s of (subs ?? []) as Sub[]) {
     const list = byUser.get(s.user_id) ?? [];
     list.push(s);
     byUser.set(s.user_id, list);
+  }
+  const phonesByUser = new Map<string, Device[]>();
+  for (const d of (devices ?? []) as Device[]) {
+    const list = phonesByUser.get(d.user_id) ?? [];
+    list.push(d);
+    phonesByUser.set(d.user_id, list);
   }
 
   let notified = 0;
@@ -150,24 +171,31 @@ export async function GET(request: NextRequest) {
     // reminder_hour set = reminders on. (Hobby's daily cron runs once a day, so
     // the exact hour can't be honored; the value gates on/off.)
     if (p.reminder_hour == null) continue;
-    const userSubs = byUser.get(p.user_id);
-    if (!userSubs || userSubs.length === 0) continue;
+    const userSubs = byUser.get(p.user_id) ?? [];
+    const userPhones = phonesByUser.get(p.user_id) ?? [];
+    if (userSubs.length === 0 && userPhones.length === 0) continue;
 
     // "Today" in the user's primary timezone, for the due check.
-    const { date: localDate } = localParts(userSubs[0].timezone);
+    const { date: localDate } = localParts(userPhones[0]?.timezone ?? userSubs[0]?.timezone ?? null);
     const due = await workoutDue(svc, p.user_id, localDate);
     if (!due) continue;
 
+    const payload = {
+      title: "Time to train",
+      body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
+      url: "/log",
+      tag: "reminder",
+    };
     for (const s of userSubs) {
-      const r = await sendPush(s, {
-        title: "Time to train",
-        body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
-        url: "/log",
-        tag: "reminder",
-      });
+      const r = await sendPush(s, payload);
       if (r.ok) notified++;
       else if (r.gone)
         await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
+    }
+    for (const d of userPhones) {
+      const r = await sendApns(d.token, payload);
+      if (r.ok) notified++;
+      else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
     }
   }
 

@@ -7,7 +7,9 @@
  *   node scripts/ios-signing-setup.mjs --key ~/Downloads/AuthKey_ABC123XYZ.p8 --issuer <issuer-id>
  *
  * It then:
- *   1. registers the bundle ID com.kkrwhofrags.hellblazer (if it isn't already),
+ *   1. registers the app's bundle ID and its widget extension's, and turns
+ *      on their capabilities (Sign in with Apple, Push, HealthKit, App
+ *      Groups, Associated Domains),
  *   2. creates an Apple Distribution certificate from a fresh private key,
  *   3. stores the key, certificate and API key as GitHub Actions secrets,
  *   4. sets the IOS_TEAM_ID and IOS_CERT_ID variables, which switches
@@ -27,6 +29,7 @@ import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
 
 const BUNDLE_ID = "com.kkrwhofrags.hellblazer";
+const WIDGETS_ID = `${BUNDLE_ID}.widgets`;
 const APP_NAME = "Fatty";
 const API = "https://api.appstoreconnect.apple.com/v1";
 
@@ -92,19 +95,60 @@ try {
 console.log(`Repo: ${repo}`);
 
 // 1. Bundle ID.
-const found = await asc(`/bundleIds?filter[identifier]=${BUNDLE_ID}&limit=200`);
-const bundle = found.data.find((b) => b.attributes.identifier === BUNDLE_ID);
-if (bundle) {
-  console.log(`✓ Bundle ID ${BUNDLE_ID} already registered`);
-} else {
-  await asc("/bundleIds", {
+/** The bundle ID's portal record, registering it first if needed. */
+async function ensureBundleId(identifier, name) {
+  const found = await asc(`/bundleIds?filter[identifier]=${identifier}&limit=200`);
+  const existing = found.data.find((b) => b.attributes.identifier === identifier);
+  if (existing) {
+    console.log(`✓ Bundle ID ${identifier} already registered`);
+    return existing.id;
+  }
+  const created = await asc("/bundleIds", {
     method: "POST",
     body: JSON.stringify({
-      data: { type: "bundleIds", attributes: { identifier: BUNDLE_ID, name: APP_NAME, platform: "IOS" } },
+      data: { type: "bundleIds", attributes: { identifier, name, platform: "IOS" } },
     }),
   });
-  console.log(`✓ Registered bundle ID ${BUNDLE_ID}`);
+  console.log(`✓ Registered bundle ID ${identifier}`);
+  return created.data.id;
 }
+
+/** Turns on capabilities the ID doesn't have yet. */
+async function ensureCapabilities(bundleRecordId, identifier, capabilities) {
+  const current = await asc(`/bundleIds/${bundleRecordId}/bundleIdCapabilities?limit=200`);
+  const have = new Set(current.data.map((c) => c.attributes.capabilityType));
+  for (const { type, settings } of capabilities) {
+    if (have.has(type)) continue;
+    await asc("/bundleIdCapabilities", {
+      method: "POST",
+      body: JSON.stringify({
+        data: {
+          type: "bundleIdCapabilities",
+          attributes: { capabilityType: type, ...(settings ? { settings } : {}) },
+          relationships: { bundleId: { data: { type: "bundleIds", id: bundleRecordId } } },
+        },
+      }),
+    });
+  }
+  console.log(`✓ ${identifier}: ${capabilities.map((c) => c.type).join(", ")}`);
+}
+
+// The app and its widget extension (Home Screen widget + rest timer Live
+// Activity). App Groups still need the group itself attached in the portal:
+// Apple has no API for that step.
+const appRecord = await ensureBundleId(BUNDLE_ID, APP_NAME);
+const widgetsRecord = await ensureBundleId(WIDGETS_ID, `${APP_NAME} Widgets`);
+await ensureCapabilities(appRecord, BUNDLE_ID, [
+  {
+    type: "APPLE_ID_AUTH",
+    settings: [{ key: "APPLE_ID_AUTH_APP_CONSENT", options: [{ key: "PRIMARY_APP_CONSENT" }] }],
+  },
+  { type: "PUSH_NOTIFICATIONS" },
+  { type: "HEALTHKIT" },
+  { type: "APP_GROUPS" },
+  { type: "ASSOCIATED_DOMAINS" },
+]);
+await ensureCapabilities(widgetsRecord, WIDGETS_ID, [{ type: "APP_GROUPS" }]);
 
 // 2 + 3. Distribution certificate, stored as a password-protected .p12.
 const existing = JSON.parse(gh(["secret", "list", "--json", "name"])).map((s) => s.name);
@@ -177,5 +221,7 @@ console.log(`✓ Set IOS_TEAM_ID (${teamId}) and IOS_CERT_ID`);
 
 console.log(`
 Done. Next:
+  • Developer portal → Identifiers → + → App Groups: group.${BUNDLE_ID}, then attach
+    it to ${BUNDLE_ID} and ${WIDGETS_ID} (App Groups → Configure).
   • App Store Connect → Apps → + → New App: pick bundle ID ${BUNDLE_ID}, name "${APP_NAME}".
   • Then run the iOS workflow (GitHub → Actions → iOS → Run workflow).`);
