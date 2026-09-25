@@ -15,6 +15,9 @@ class HellBlazerViewController: CAPBridgeViewController {
         bridge?.registerPluginInstance(HellBlazerNativePlugin())
         configureWebView()
         NativeRouter.shared.attach(self)
+        // Capacitor's bridge just took over the notification center; put the
+        // rest alert's handler back in front of it (it forwards the rest).
+        RestNotificationDelegate.shared.install()
     }
 
     override func viewDidLoad() {

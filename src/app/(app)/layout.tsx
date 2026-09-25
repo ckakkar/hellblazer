@@ -11,13 +11,21 @@ import { getTier } from "@/lib/tiers";
 import { NativeBridge } from "@/components/native/native-bridge";
 import { PullToRefresh } from "@/components/native/pull-to-refresh";
 import { WorkoutActivitySync } from "@/components/native/workout-activity-sync";
+import { WatchSync } from "@/components/native/watch-sync";
+import { getAccent, getUnit } from "@/lib/settings";
+import { accentSwatch } from "@/lib/accents";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, shell] = await Promise.all([requireSessionUser(), getShellProfile()]);
+  const [user, shell, unit, accent] = await Promise.all([
+    requireSessionUser(),
+    getShellProfile(),
+    getUnit(),
+    getAccent(),
+  ]);
 
   // First run after Google sign-in: collect the basics before anything else.
   // /welcome lives outside this group, so there's no redirect loop.
@@ -38,6 +46,7 @@ export default async function AppLayout({
           away with the page; the home and profile heroes cover it. */}
       <div aria-hidden className="hb-arena-light pointer-events-none absolute inset-x-0 top-0 -z-10 h-[26rem]" />
       <NativeBridge />
+      <WatchSync userId={user.id} unit={unit} accent={accentSwatch(accent)} />
       <PullToRefresh />
       <RealtimeSync userId={user.id} />
       <AppNav

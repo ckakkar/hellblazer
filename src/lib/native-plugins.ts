@@ -16,6 +16,10 @@ export type WidgetSnapshot = {
   weekStart: string;
   /** Epoch milliseconds. */
   updatedAt: number;
+  /** For Siri and Spotlight (see getSiriSnapshot). */
+  unit?: "kg" | "lb";
+  workouts?: { templateId: string; label: string }[];
+  lifts?: { id: string; name: string; bestWeight: number; bestReps: number; estimatedMax: number }[];
 };
 
 /**
@@ -38,12 +42,53 @@ export type WorkoutActivityState = {
   restTotal?: number;
 };
 
+/**
+ * A rest changed outside the page: the Live Activity's +30s and Skip
+ * buttons, the "Rest's up" alert's +30s, or a set logged on the watch.
+ * `endsAt` null means the rest was skipped. `alert` false: something else
+ * (the watch) already says when it's over, so the phone stays quiet.
+ */
+export type RestCommand = {
+  sessionId: string;
+  endsAt: number | null;
+  /** Seconds, for the progress bar. */
+  total: number;
+  alert: boolean;
+};
+
+/** The paired Apple Watch, as the iPhone app sees it. */
+export type WatchStatus = {
+  /** WatchConnectivity works here and a watch is paired. */
+  paired: boolean;
+  /** Fatty is installed on that watch. */
+  installed: boolean;
+  /** Whose token the watch holds, or null when not connected. */
+  linkedUserId: string | null;
+  /** The lifter turned the watch off in Settings. */
+  disabled: boolean;
+  /** Starting a workout on the phone opens it on the watch. */
+  autoOpen: boolean;
+};
+
+/** What the watch needs from the phone (ios/App/App/WatchBridge.swift). */
+export type WatchSettings = {
+  /** A new token, only when the watch isn't linked to this lifter yet. */
+  token?: string;
+  userId: string;
+  unit: "kg" | "lb";
+  /** The accent's hex, e.g. "#df2d28". */
+  accent: string;
+  restSeconds: number;
+  timeZone: string;
+};
+
 /** The app's own native plugin (ios/App/App/HellBlazerNativePlugin.swift). */
 export interface HellBlazerNative {
   workoutActivity(state: WorkoutActivityState): Promise<void>;
   /** Ends the workout's Live Activity, or every one but `except`'s. */
   endWorkoutActivity(options?: { except?: string }): Promise<void>;
-  scheduleRestAlert(options: { endsAt: number; label?: string }): Promise<void>;
+  /** `sessionId` lets the alert's +30s and a tap find the workout. */
+  scheduleRestAlert(options: { endsAt: number; label?: string; sessionId?: string }): Promise<void>;
   cancelRestAlert(): Promise<void>;
   healthStatus(): Promise<HealthStatus>;
   requestHealth(): Promise<HealthStatus>;
@@ -56,6 +101,22 @@ export interface HellBlazerNative {
   ready(): Promise<void>;
   /** The edge swipe back, on for pushed pages only. */
   setBackGesture(options: { enabled: boolean }): Promise<void>;
+  /** The latest rest change made outside the page for this session, once. */
+  takeRestCommand(options: { sessionId: string }): Promise<Partial<RestCommand>>;
+  watchStatus(): Promise<WatchStatus>;
+  /** Hands the watch its settings, and a token when it needs one. */
+  watchSync(options: WatchSettings): Promise<void>;
+  /** Forgets the watch's token here and on the watch; returns it for revoking. */
+  watchUnlink(options: { disable: boolean }): Promise<{ token: string | null }>;
+  setWatchAutoOpen(options: { on: boolean }): Promise<void>;
+  /**
+   * "restCommand": a RestCommand is waiting (see takeRestCommand).
+   * "watchChanged": the watch logged or finished something.
+   */
+  addListener(
+    event: "restCommand" | "watchChanged",
+    listener: () => void,
+  ): Promise<{ remove: () => Promise<void> }>;
 }
 
 // Boxed: Capacitor's plugin proxy answers to any property, `then` included,
@@ -82,6 +143,28 @@ export function withNative(fn: (api: HellBlazerNative) => Promise<unknown>) {
   const plugin = nativePlugin();
   if (!plugin) return;
   void plugin.then(({ api }) => fn(api)).catch(() => {});
+}
+
+/**
+ * Listens for one of the plugin's events inside the app; does nothing on
+ * the website. Returns the unsubscribe, safe to call before it's attached.
+ */
+export function onNative(event: "restCommand" | "watchChanged", listener: () => void): () => void {
+  const plugin = nativePlugin();
+  if (!plugin) return () => {};
+  let handle: { remove: () => Promise<void> } | null = null;
+  let cancelled = false;
+  void plugin
+    .then(({ api }) => api.addListener(event, listener))
+    .then((h) => {
+      if (cancelled) void h.remove();
+      else handle = h;
+    })
+    .catch(() => {});
+  return () => {
+    cancelled = true;
+    void handle?.remove().catch(() => {});
+  };
 }
 
 const HEALTH_SYNC_KEY = "hell-blazer:health-sync";

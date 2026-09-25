@@ -7,6 +7,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
 export type Program = Database["public"]["Tables"]["program"]["Row"];
@@ -27,7 +28,8 @@ export type ProgramWithDays = Program & {
   program_day: ProgramDayWithTemplate[];
 };
 
-const PROGRAM_SELECT =
+/** A program with its days, each day's template, and the template's exercise ids. */
+export const PROGRAM_SELECT =
   "*, program_day(*, workout_template(id, name, day_label, template_exercise(id)))";
 
 export async function getPrograms(): Promise<ProgramWithDays[]> {
@@ -71,11 +73,16 @@ export type ProgramProgress = {
   endDate: string | null;
 };
 
-/** Derive live progress for a program (week X of N, adherence, next workout). */
+/**
+ * Derive live progress for a program (week X of N, adherence, next workout).
+ * Reads with the signed-in lifter's client and timezone cookie unless given
+ * others: the Apple Watch API passes its own (see src/lib/watch/server.ts).
+ */
 export async function getProgramProgress(
   program: ProgramWithDays,
+  context?: { supabase: SupabaseClient<Database>; timeZone: string },
 ): Promise<ProgramProgress> {
-  const supabase = await createClient();
+  const supabase = context?.supabase ?? (await createClient());
   const days = program.program_day;
   const daysPerWeek = days.length;
   const totalWeeks = program.duration_weeks;
@@ -86,7 +93,7 @@ export async function getProgramProgress(
   const nowRef = parseISO(
     dateInTimeZone(
       program.paused_at ? new Date(program.paused_at) : new Date(),
-      await getTimeZone(),
+      context?.timeZone ?? (await getTimeZone()),
     ),
   );
 

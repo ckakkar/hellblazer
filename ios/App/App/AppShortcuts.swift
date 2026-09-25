@@ -1,18 +1,9 @@
 import AppIntents
 
-/// Siri, Spotlight and the Shortcuts app. Each intent opens the app on the
-/// right page; the phrases work without any setup by the user.
-struct StartWorkoutIntent: AppIntent {
-    static let title: LocalizedStringResource = "Start a Workout"
-    static let description = IntentDescription("Opens Fatty ready to log a new session.")
-    static let openAppWhenRun = true
-
-    @MainActor
-    func perform() async throws -> some IntentResult {
-        NativeRouter.shared.open(path: "/log")
-        return .result()
-    }
-}
+/// Siri, Spotlight and the Shortcuts app; the phrases work without any setup
+/// by the user. "Start a Workout" is in Shared/OpenAppIntents.swift, since the
+/// Control Center button uses it too. The workout days and lifts come from
+/// the snapshot the site hands the app (WidgetSnapshot).
 
 struct ShowProgressIntent: AppIntent {
     static let title: LocalizedStringResource = "Show My Progress"
@@ -38,6 +29,122 @@ struct ShowHistoryIntent: AppIntent {
     }
 }
 
+// MARK: Workout days
+
+/// One of the days /log offers, e.g. "Day 2: Upper".
+struct WorkoutDayEntity: AppEntity {
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Workout"
+    static let defaultQuery = WorkoutDayQuery()
+
+    /// The template id.
+    let id: String
+    let label: String
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(label)")
+    }
+}
+
+struct WorkoutDayQuery: EntityStringQuery {
+    private func all() -> [WorkoutDayEntity] {
+        (WidgetSnapshot.load()?.workouts ?? []).map { WorkoutDayEntity(id: $0.templateId, label: $0.label) }
+    }
+
+    func entities(for identifiers: [String]) async throws -> [WorkoutDayEntity] {
+        all().filter { identifiers.contains($0.id) }
+    }
+
+    func entities(matching string: String) async throws -> [WorkoutDayEntity] {
+        all().filter { $0.label.localizedCaseInsensitiveContains(string) }
+    }
+
+    func suggestedEntities() async throws -> [WorkoutDayEntity] {
+        all()
+    }
+}
+
+/// "Start Day 2 in Fatty": begins that day straight away (/log?start=…).
+struct StartWorkoutDayIntent: AppIntent {
+    static let title: LocalizedStringResource = "Start a Workout Day"
+    static let description = IntentDescription("Starts one of your workout days in Fatty.")
+    static let openAppWhenRun = true
+
+    @Parameter(title: "Workout")
+    var workout: WorkoutDayEntity
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Start \(\.$workout)")
+    }
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        let id = workout.id.addingPercentEncoding(withAllowedCharacters: .alphanumerics.union(.init(charactersIn: "-"))) ?? workout.id
+        NativeRouter.shared.open(path: "/log?start=\(id)")
+        return .result()
+    }
+}
+
+// MARK: Lifts
+
+/// An exercise the lifter has logged, with its bests.
+struct LiftEntity: AppEntity {
+    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Lift"
+    static let defaultQuery = LiftQuery()
+
+    /// The exercise id.
+    let id: String
+    let name: String
+
+    var displayRepresentation: DisplayRepresentation {
+        DisplayRepresentation(title: "\(name)")
+    }
+}
+
+struct LiftQuery: EntityStringQuery {
+    private func all() -> [LiftEntity] {
+        (WidgetSnapshot.load()?.lifts ?? []).map { LiftEntity(id: $0.id, name: $0.name) }
+    }
+
+    func entities(for identifiers: [String]) async throws -> [LiftEntity] {
+        all().filter { identifiers.contains($0.id) }
+    }
+
+    func entities(matching string: String) async throws -> [LiftEntity] {
+        all().filter { $0.name.localizedCaseInsensitiveContains(string) }
+    }
+
+    func suggestedEntities() async throws -> [LiftEntity] {
+        all()
+    }
+}
+
+/// "What's my bench max in Fatty?": answered out loud, without opening the app.
+struct LiftBestIntent: AppIntent {
+    static let title: LocalizedStringResource = "Check a Lift's Best"
+    static let description = IntentDescription("Tells you your best set and estimated max on a lift.")
+
+    @Parameter(title: "Lift")
+    var lift: LiftEntity
+
+    static var parameterSummary: some ParameterSummary {
+        Summary("Best on \(\.$lift)")
+    }
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let snapshot = WidgetSnapshot.load()
+        let unit = snapshot?.unit ?? "kg"
+        guard let best = snapshot?.lifts?.first(where: { $0.id == lift.id }) else {
+            return .result(dialog: "Fatty doesn't have a working set of \(lift.name) from you yet.")
+        }
+        let weight = best.bestWeight.rounded() == best.bestWeight
+            ? String(Int(best.bestWeight))
+            : String(format: "%.1f", best.bestWeight)
+        let text = "Your best \(best.name) is \(weight) \(unit) for \(best.bestReps), "
+            + "an estimated max of \(Int(best.estimatedMax.rounded())) \(unit)."
+        return .result(dialog: "\(text)")
+    }
+}
+
 struct HellBlazerShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -49,6 +156,24 @@ struct HellBlazerShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Start Workout",
             systemImageName: "figure.strengthtraining.traditional"
+        )
+        AppShortcut(
+            intent: StartWorkoutDayIntent(),
+            phrases: [
+                "Start \(\.$workout) in \(.applicationName)",
+                "Train \(\.$workout) in \(.applicationName)",
+            ],
+            shortTitle: "Start a Day",
+            systemImageName: "play.fill"
+        )
+        AppShortcut(
+            intent: LiftBestIntent(),
+            phrases: [
+                "What's my \(\.$lift) max in \(.applicationName)",
+                "What's my best \(\.$lift) in \(.applicationName)",
+            ],
+            shortTitle: "Lift Best",
+            systemImageName: "trophy"
         )
         AppShortcut(
             intent: ShowProgressIntent(),

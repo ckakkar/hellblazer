@@ -5,16 +5,18 @@ import { Pause, Play, RotateCcw, TimerReset } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Switch } from "@/components/ui/switch";
 import { haptic } from "@/lib/haptics";
-import { withNative } from "@/lib/native-plugins";
+import { isNativeApp } from "@/lib/native";
+import { onNative, withNative, type RestCommand } from "@/lib/native-plugins";
 import {
   clampRestDuration,
   DEFAULT_REST_SECONDS,
   formatRestClock,
   MAX_REST_SECONDS,
   MIN_REST_SECONDS,
+  REST_SECONDS_KEY,
 } from "@/lib/rest-timer";
 
-const DURATION_KEY = "hell-blazer:rest-seconds";
+const DURATION_KEY = REST_SECONDS_KEY;
 const AUTO_KEY = "hell-blazer:rest-auto";
 /** The rest in progress, so a reload or a trip to another tab keeps it. */
 const RUNNING_KEY = "hell-blazer:rest-running";
@@ -107,13 +109,17 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
   }, [sessionId]);
 
   const run = useCallback(
-    (end: number, length: number) => {
+    (end: number, length: number, alert = true) => {
       setEndsAt(end);
       setTotal(length);
       setPausedRemaining(null);
       setFinished(false);
       write(RUNNING_KEY, JSON.stringify({ sessionId, endsAt: end, total: length } satisfies Stored));
-      withNative((api) => api.scheduleRestAlert({ endsAt: end, label: labelRef.current }));
+      withNative((api) =>
+        alert
+          ? api.scheduleRestAlert({ endsAt: end, label: labelRef.current, sessionId })
+          : api.cancelRestAlert(),
+      );
     },
     [sessionId],
   );
@@ -186,6 +192,46 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
     setFinished(false);
     setTotal(duration);
   }, [duration, halt]);
+
+  // A rest changed outside the page: the Live Activity's +30s and Skip, the
+  // alert's +30s, a set logged on the watch. The app keeps the latest one
+  // until taken; it says when there's one, and the page also checks on its
+  // way back to the screen, in case it was asleep when that happened.
+  const applyCommand = useCallback(
+    (command: RestCommand) => {
+      if (command.endsAt === null || command.endsAt <= Date.now() + 500) {
+        setEndsAt(null);
+        setPausedRemaining(null);
+        setFinished(false);
+        write(RUNNING_KEY, null);
+        return;
+      }
+      run(command.endsAt, command.total, command.alert);
+    },
+    [run],
+  );
+  const commandRef = useRef(applyCommand);
+  useEffect(() => {
+    commandRef.current = applyCommand;
+  }, [applyCommand]);
+  useEffect(() => {
+    if (!isNativeApp()) return;
+    const take = () =>
+      withNative(async (api) => {
+        const command = await api.takeRestCommand({ sessionId });
+        if (command.sessionId === sessionId) commandRef.current(command as RestCommand);
+      });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") take();
+    };
+    take();
+    document.addEventListener("visibilitychange", onVisible);
+    const off = onNative("restCommand", take);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      off();
+    };
+  }, [sessionId]);
 
   const setAuto = useCallback((on: boolean) => {
     setAutoState(on);

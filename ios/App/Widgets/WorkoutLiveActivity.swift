@@ -7,7 +7,8 @@ import WidgetKit
 /// countdown while you rest. The clock and countdown are drawn by the system
 /// from dates, so they need no updates from the app; when a rest runs out the
 /// activity goes stale and reads "Rest's up" until the app says otherwise.
-/// Tapping it opens the session.
+/// While resting, +30s and Skip work without opening the app (RestControl).
+/// Tapping anywhere else opens the session.
 struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
@@ -128,27 +129,53 @@ private struct RestBar: View {
     }
 }
 
-/// "12 sets, 4,210 kg", with the workout clock on the right while a rest is
-/// using the main clock.
+/// "12 sets, 4,210 kg". While resting, the rest's buttons sit beside it.
 private struct Totals: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center) {
             Text("\(context.state.sets) \(context.state.sets == 1 ? "set" : "sets"), \(context.state.volume)")
                 .font(.subheadline)
                 .foregroundStyle(Brand.muted)
                 .lineLimit(1)
             Spacer(minLength: 8)
             if context.state.hasRest {
-                Text(context.attributes.startedAt, style: .timer)
-                    .font(.subheadline)
-                    .monospacedDigit()
-                    .multilineTextAlignment(.trailing)
-                    .foregroundStyle(Brand.muted)
-                    .frame(maxWidth: 80, alignment: .trailing)
+                RestButtons(context: context)
             }
         }
+    }
+}
+
+/// +30s and Skip ("Done" once the rest is over). They run in the app's
+/// process without opening it; the page catches up when it's next open.
+private struct RestButtons: View {
+    let context: ActivityViewContext<WorkoutActivityAttributes>
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Button(intent: ExtendRestIntent(sessionId: context.attributes.sessionId)) {
+                Label("30s", systemImage: "plus")
+                    .labelStyle(.titleAndIcon)
+                    .foregroundStyle(Brand.bone)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Brand.bone.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            Button(intent: SkipRestIntent(sessionId: context.attributes.sessionId)) {
+                Text(phase(context) == .restOver ? "Done" : "Skip")
+                    .foregroundStyle(phase(context) == .restOver ? Brand.bone : Brand.muted)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(
+                        (phase(context) == .restOver ? Brand.flame : Brand.bone.opacity(0.08)),
+                        in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    )
+            }
+        }
+        .buttonStyle(.plain)
+        .font(.subheadline.weight(.semibold))
+        .fixedSize()
     }
 }
 
@@ -156,7 +183,7 @@ private struct LockScreenView: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: context.state.hasRest ? 10 : 12) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Label(phase(context) == .training ? context.state.title : phase(context).title,
@@ -168,7 +195,7 @@ private struct LockScreenView: View {
                         .font(.headline)
                         .foregroundStyle(Brand.bone)
                         .lineLimit(1)
-                    if let detail = context.state.detail {
+                    if let detail = context.state.detail, !context.state.hasRest {
                         Text(detail)
                             .font(.subheadline)
                             .foregroundStyle(Brand.muted)
@@ -185,6 +212,6 @@ private struct LockScreenView: View {
             }
             Totals(context: context)
         }
-        .padding(16)
+        .padding(context.state.hasRest ? 14 : 16)
     }
 }

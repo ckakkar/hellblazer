@@ -1,7 +1,8 @@
 import Foundation
 
-/// What the Home Screen and Lock Screen widgets show. The app writes it into
-/// the shared App Group whenever the dashboard loads; the widget only reads.
+/// What the Home Screen and Lock Screen widgets show, plus what Siri and
+/// Spotlight know. The app writes it into the shared App Group whenever the
+/// dashboard loads; the widget only reads.
 struct WidgetSnapshot: Codable {
     /// The next programmed workout, e.g. "Upper A (Mon)". Nil without a program.
     var nextBout: String?
@@ -15,6 +16,28 @@ struct WidgetSnapshot: Codable {
     var weekStart: String
     /// Epoch milliseconds.
     var updatedAt: Double
+
+    /// For Siri and Spotlight: the lifter's display unit ("kg" or "lb"),
+    /// the days /log offers, and their bests (src/lib/actions/native.ts).
+    var unit: String?
+    var workouts: [Workout]?
+    var lifts: [Lift]?
+
+    struct Workout: Codable {
+        var templateId: String
+        /// "Day 2: Upper".
+        var label: String
+    }
+
+    struct Lift: Codable {
+        /// The exercise id.
+        var id: String
+        var name: String
+        /// The set behind the best estimated max, in the display unit.
+        var bestWeight: Double
+        var bestReps: Int
+        var estimatedMax: Double
+    }
 
     static let appGroup = "group.com.kkrwhofrags.hellblazer"
     static let storageKey = "widget-snapshot"

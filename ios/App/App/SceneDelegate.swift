@@ -1,5 +1,6 @@
 import UIKit
 import Capacitor
+import CoreSpotlight
 
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     var window: UIWindow?
@@ -13,14 +14,30 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
 
-        // Cold launch from a quick action, a universal link or a widget tap.
+        // Cold launch from a quick action, a universal link, a Spotlight
+        // result or a widget tap.
         if let item = connectionOptions.shortcutItem {
             handle(item)
         } else if let url = connectionOptions.userActivities.first(where: { $0.activityType == NSUserActivityTypeBrowsingWeb })?.webpageURL {
             NativeRouter.shared.open(url)
+        } else if let path = connectionOptions.userActivities.lazy.compactMap(Self.spotlightPath).first {
+            NativeRouter.shared.open(path: path)
         } else if let url = connectionOptions.urlContexts.first?.url {
             NativeRouter.shared.open(url)
         }
+    }
+
+    /// A page an intent left while the app wasn't running it (IntentRouter).
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        if let path = IntentRouter.takePending() {
+            NativeRouter.shared.open(path: path)
+        }
+    }
+
+    /// A tapped Spotlight result's page (SpotlightIndex names items by path).
+    private static func spotlightPath(_ activity: NSUserActivity) -> String? {
+        guard activity.activityType == CSSearchableItemActionType else { return nil }
+        return activity.userInfo?[CSSearchableItemActivityIdentifier] as? String
     }
 
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -34,6 +51,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         SceneDelegateProxy.shared.scene(scene, continue: userActivity)
         if userActivity.activityType == NSUserActivityTypeBrowsingWeb, let url = userActivity.webpageURL {
             NativeRouter.shared.open(url)
+        } else if let path = Self.spotlightPath(userActivity) {
+            NativeRouter.shared.open(path: path)
         }
     }
 

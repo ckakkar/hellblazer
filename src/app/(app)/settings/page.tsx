@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { LogOut } from "lucide-react";
 import { getUser } from "@/lib/auth";
 import { format, parseISO } from "date-fns";
 import { getUnit, getAccent, getTimeZone, getToday } from "@/lib/settings";
@@ -9,8 +8,8 @@ import { getProfile } from "@/lib/data/profile";
 import { getEvalGate } from "@/lib/data/evaluation";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { getNotificationState } from "@/lib/data/push";
-import { signOut } from "@/lib/actions/auth";
 import { getTier } from "@/lib/tiers";
+import { accentSwatch } from "@/lib/accents";
 import { ProfileIdentity } from "@/components/tier/profile-identity";
 import {
   SettingsGroup,
@@ -26,6 +25,8 @@ import { NotificationsManager } from "./notifications-manager";
 import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
 import { AppleHealthSettings } from "./apple-health";
+import { AppleWatchSettings } from "./apple-watch";
+import { SignOutButton } from "./sign-out-button";
 import { ExportButton } from "./export-button";
 import { SignInMethods, type SignInMethod } from "./sign-in-methods";
 
@@ -169,6 +170,10 @@ export default async function ProfilePage({
 
         <AppleHealthSettings />
 
+        {user && (
+          <AppleWatchSettings userId={user.id} unit={unit} accent={accentSwatch(accent)} />
+        )}
+
         <SignInMethods methods={signInMethods} linkError={linkError} />
 
         <SettingsGroup label="Account">
@@ -182,17 +187,7 @@ export default async function ProfilePage({
           <SettingsRow
             label="Signed in"
             hint={user?.email ?? undefined}
-            control={
-              <form action={signOut}>
-                <button
-                  type="submit"
-                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-danger/10 px-3.5 text-[14px] font-medium text-danger transition-colors hover:bg-danger/15"
-                >
-                  <LogOut className="size-4" />
-                  Sign out
-                </button>
-              </form>
-            }
+            control={<SignOutButton />}
           />
         </SettingsGroup>
 

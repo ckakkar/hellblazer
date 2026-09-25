@@ -235,6 +235,47 @@ export async function saveSet(input: z.input<typeof setSchema>) {
   if (error) throw error;
 }
 
+export type SessionSet = {
+  seId: string;
+  id: string;
+  setNumber: number;
+  weightKg: number;
+  reps: number;
+  rpe: number | null;
+  isWarmup: boolean;
+};
+
+/**
+ * Every set in a session as the server has it, and whether it's been
+ * finished. The logger in the iOS app uses it to pick up sets logged, or a
+ * finish, on the Apple Watch.
+ */
+export async function getSessionSets(input: {
+  sessionId: string;
+}): Promise<{ finished: boolean; sets: SessionSet[] }> {
+  const { sessionId } = z.object({ sessionId: z.string().uuid() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data, error } = await supabase
+    .from("session")
+    .select("finished_at, session_exercise(id, set(id, set_number, weight_kg, reps, rpe, is_warmup))")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return { finished: true, sets: [] };
+  const sets = data.session_exercise.flatMap((se) =>
+    se.set.map((s) => ({
+      seId: se.id,
+      id: s.id,
+      setNumber: s.set_number,
+      weightKg: Number(s.weight_kg),
+      reps: s.reps,
+      rpe: s.rpe === null ? null : Number(s.rpe),
+      isWarmup: s.is_warmup,
+    })),
+  );
+  return { finished: data.finished_at !== null, sets };
+}
+
 export async function deleteSet(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase } = await getAuthedContext();

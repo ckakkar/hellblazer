@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ChevronDown, Loader2, Play, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
@@ -30,12 +30,15 @@ export function SessionStarter({
   templates,
   hasActiveProgram = false,
   countsLabel = null,
+  autoStart = null,
 }: {
   templates: TemplateOption[];
   /** Drives the "won't touch your block" copy: only meaningful with a program. */
   hasActiveProgram?: boolean;
   /** e.g. "Counts toward Week 3", or null when the block isn't accruing. */
   countsLabel?: string | null;
+  /** Start this one right away: Siri or Spotlight asked for it. */
+  autoStart?: { templateId: string; programDayId: string | null } | null;
 }) {
   const [pending, start] = useTransition();
   const [chosen, setChosen] = useState<string | null>(null);
@@ -51,6 +54,18 @@ export function SessionStarter({
       });
     });
   }
+
+  const beginRef = useRef(begin);
+  useEffect(() => {
+    beginRef.current = begin;
+  });
+  const autoTemplate = autoStart?.templateId ?? null;
+  const autoDay = autoStart?.programDayId ?? null;
+  useEffect(() => {
+    if (!autoTemplate) return;
+    const frame = window.requestAnimationFrame(() => beginRef.current(autoTemplate, autoDay));
+    return () => window.cancelAnimationFrame(frame);
+  }, [autoTemplate, autoDay]);
 
   const freeform = (
     <button

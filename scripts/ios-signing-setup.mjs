@@ -7,9 +7,9 @@
  *   node scripts/ios-signing-setup.mjs --key ~/Downloads/AuthKey_ABC123XYZ.p8 --issuer <issuer-id>
  *
  * It then:
- *   1. registers the app's bundle ID and its widget extension's, and turns
- *      on their capabilities (Sign in with Apple, Push, HealthKit, App
- *      Groups, Associated Domains),
+ *   1. registers the bundle IDs of the app, its widget extension and its
+ *      Apple Watch app, and turns on their capabilities (Sign in with
+ *      Apple, Push, HealthKit, App Groups, Associated Domains),
  *   2. creates an Apple Distribution certificate from a fresh private key,
  *   3. stores the key, certificate and API key as GitHub Actions secrets,
  *   4. sets the IOS_TEAM_ID and IOS_CERT_ID variables. TestFlight uploads
@@ -32,6 +32,7 @@ import { parseArgs } from "node:util";
 
 const BUNDLE_ID = "com.kkrwhofrags.hellblazer";
 const WIDGETS_ID = `${BUNDLE_ID}.widgets`;
+const WATCH_ID = `${BUNDLE_ID}.watchkitapp`;
 const APP_NAME = "Fatty";
 const API = "https://api.appstoreconnect.apple.com/v1";
 
@@ -140,6 +141,7 @@ async function ensureCapabilities(bundleRecordId, identifier, capabilities) {
 // Apple has no API for that step.
 const appRecord = await ensureBundleId(BUNDLE_ID, APP_NAME);
 const widgetsRecord = await ensureBundleId(WIDGETS_ID, `${APP_NAME} Widgets`);
+const watchRecord = await ensureBundleId(WATCH_ID, `${APP_NAME} Watch`);
 await ensureCapabilities(appRecord, BUNDLE_ID, [
   {
     type: "APPLE_ID_AUTH",
@@ -151,6 +153,8 @@ await ensureCapabilities(appRecord, BUNDLE_ID, [
   { type: "ASSOCIATED_DOMAINS" },
 ]);
 await ensureCapabilities(widgetsRecord, WIDGETS_ID, [{ type: "APP_GROUPS" }]);
+// The watch records workouts to Apple Health.
+await ensureCapabilities(watchRecord, WATCH_ID, [{ type: "HEALTHKIT" }]);
 
 // 2 + 3. Distribution certificate, stored as a password-protected .p12.
 const existing = JSON.parse(gh(["secret", "list", "--json", "name"])).map((s) => s.name);

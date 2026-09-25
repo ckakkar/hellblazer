@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { CalendarRange } from "lucide-react";
 import { getTemplates } from "@/lib/data/templates";
 import { getActiveProgramProgress } from "@/lib/data/programs";
+import { getActiveSession } from "@/lib/data/sessions";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
@@ -12,10 +14,15 @@ export const metadata: Metadata = { title: "Log workout" };
 
 export const dynamic = "force-dynamic";
 
-export default async function LogPage() {
-  const [templates, activeProgress] = await Promise.all([
+export default async function LogPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ start?: string }>;
+}) {
+  const [templates, activeProgress, { start }] = await Promise.all([
     getTemplates(),
     getActiveProgramProgress(),
+    searchParams,
   ]);
 
   // Full template details (movements, target sets/reps) for the preview dropdown,
@@ -76,6 +83,15 @@ export default async function LogPage() {
   }
   const hasProgramNext = Boolean(activeProgress?.nextDay?.template_id);
 
+  // Siri and Spotlight in the iOS app open /log?start=<template id> to begin
+  // that day at once. Only a day offered here counts, and a workout already
+  // in progress wins: that's where they land instead.
+  const autoStart = start ? (options.find((o) => o.id === start) ?? null) : null;
+  if (autoStart) {
+    const active = await getActiveSession();
+    if (active) redirect(`/log/${active.id}`);
+  }
+
   // Only promise a week when the block is actually accruing one. A paused,
   // finished, or not-yet-started program still owns the session, but claiming
   // "counts toward Week N" there would be a lie.
@@ -119,6 +135,9 @@ export default async function LogPage() {
           templates={options}
           hasActiveProgram={Boolean(activeProgress)}
           countsLabel={countsLabel}
+          autoStart={
+            autoStart ? { templateId: autoStart.id, programDayId: autoStart.programDayId } : null
+          }
         />
       )}
     </div>

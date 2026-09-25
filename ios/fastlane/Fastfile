@@ -8,6 +8,8 @@ default_platform(:ios)
 BUNDLE_ID = "com.kkrwhofrags.hellblazer"
 # The Home Screen widget and rest timer Live Activity ship as an extension.
 WIDGETS_ID = "#{BUNDLE_ID}.widgets"
+# The Apple Watch app, embedded in the iPhone app.
+WATCH_ID = "#{BUNDLE_ID}.watchkitapp"
 # Absolute paths: fastlane runs Ruby code and actions from different working
 # directories, so relative paths are easy to get wrong.
 PROJECT = File.join(ENV.fetch("GITHUB_WORKSPACE"), "ios", "App", "App.xcodeproj")
@@ -38,7 +40,7 @@ platform :ios do
     # certificate. A profile generated before a capability was switched on
     # is invalid, so sigh makes a fresh one then.
     profiles = {}
-    { "App" => BUNDLE_ID, "Widgets" => WIDGETS_ID }.each do |target, identifier|
+    { "App" => BUNDLE_ID, "Widgets" => WIDGETS_ID, "Watch" => WATCH_ID }.each do |target, identifier|
       get_provisioning_profile(
         api_key: api_key,
         app_identifier: identifier,

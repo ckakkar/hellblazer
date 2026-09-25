@@ -12,9 +12,11 @@ import WidgetKit
 ///
 /// - Workout: a Live Activity on the Lock Screen and in the Dynamic Island
 ///   for the session in progress, rest countdown included, plus a "Rest's
-///   up" alert for when the phone is locked.
+///   up" alert for when the phone is locked. Rest changes made outside the
+///   page (the activity's buttons, the watch) wait here for the page.
+/// - Apple Watch: linking it, and its settings (WatchBridge).
 /// - Apple Health: finished workouts and logged bodyweight.
-/// - Widgets: the snapshot the Home and Lock Screen widgets draw.
+/// - Widgets, Siri and Spotlight: the snapshot they read.
 /// - The share sheet, for files the site builds (share card, CSV export).
 /// - Web view chrome: lifting the launch screen, the edge swipe back.
 @objc(HellBlazerNativePlugin)
@@ -34,7 +36,34 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "share", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "ready", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setBackGesture", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "takeRestCommand", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "watchStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "watchSync", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "watchUnlink", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setWatchAutoOpen", returnType: CAPPluginReturnPromise),
     ]
+
+    private var observers: [NSObjectProtocol] = []
+
+    /// Tells the page when something outside it changed the workout: it
+    /// then asks for the details (takeRestCommand) or reloads the sets.
+    override public func load() {
+        let center = NotificationCenter.default
+        observers = [
+            center.addObserver(forName: RestControl.commandPosted, object: nil, queue: .main) { [weak self] _ in
+                self?.notifyListeners("restCommand", data: [:])
+            },
+            center.addObserver(forName: WatchBridge.changed, object: nil, queue: .main) { [weak self] _ in
+                self?.notifyListeners("watchChanged", data: [:])
+            },
+        ]
+    }
+
+    deinit {
+        for observer in observers {
+            NotificationCenter.default.removeObserver(observer)
+        }
+    }
 
     // MARK: Workout Live Activity
 
@@ -57,11 +86,10 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             restEndsAt: call.getDouble("restEndsAt").map { Date(timeIntervalSince1970: $0 / 1000) },
             restTotal: call.getDouble("restTotal")
         )
-        WorkoutActivity.upsert(
-            sessionId: sessionId,
-            startedAt: Date(timeIntervalSince1970: startedAtMs / 1000),
-            state: state
-        )
+        let startedAt = Date(timeIntervalSince1970: startedAtMs / 1000)
+        WorkoutActivity.upsert(sessionId: sessionId, startedAt: startedAt, state: state)
+        WatchBridge.shared.phoneChanged()
+        WatchBridge.shared.openOnWatch(sessionId: sessionId, startedAt: startedAt)
         call.resolve()
     }
 
@@ -69,49 +97,50 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     /// discarded. With `except`, keeps that session's (it's still live).
     @objc func endWorkoutActivity(_ call: CAPPluginCall) {
         WorkoutActivity.end(except: call.getString("except"))
+        WatchBridge.shared.phoneChanged()
         call.resolve()
     }
 
     // MARK: Rest alert
 
-    private static let restAlertId = "rest-over"
-
     /// A local notification at the end of the rest, so a locked phone still
-    /// says when to lift. `endsAt` is epoch ms. Asks for permission the first
-    /// time. It never shows while the app is open: the page says it there.
+    /// says when to lift (see RestAlert). `endsAt` is epoch ms. It never
+    /// shows while the app is open: the page says it there.
     @objc func scheduleRestAlert(_ call: CAPPluginCall) {
         guard let endsAtMs = call.getDouble("endsAt") else {
             call.reject("endsAt is required")
             return
         }
-        let label = call.getString("label") ?? "Next set"
-        let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [Self.restAlertId])
-        center.removeDeliveredNotifications(withIdentifiers: [Self.restAlertId])
-        let interval = Date(timeIntervalSince1970: endsAtMs / 1000).timeIntervalSinceNow
-        guard interval >= 1 else {
-            call.resolve()
-            return
-        }
-        center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
-            let content = UNMutableNotificationContent()
-            content.title = "Rest's up"
-            content.body = "\(label). Time to lift."
-            content.sound = .default
-            content.interruptionLevel = .active
-            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: interval, repeats: false)
-            center.add(UNNotificationRequest(identifier: Self.restAlertId, content: content, trigger: trigger))
-        }
+        RestAlert.schedule(
+            sessionId: call.getString("sessionId"),
+            endsAt: Date(timeIntervalSince1970: endsAtMs / 1000),
+            label: call.getString("label")
+        )
         call.resolve()
     }
 
     /// Clears the alert: the rest was skipped, reset, or finished in the app.
     @objc func cancelRestAlert(_ call: CAPPluginCall) {
-        let center = UNUserNotificationCenter.current()
-        center.removePendingNotificationRequests(withIdentifiers: [Self.restAlertId])
-        center.removeDeliveredNotifications(withIdentifiers: [Self.restAlertId])
+        RestAlert.cancel()
         call.resolve()
+    }
+
+    /// The rest change made outside the page for this session, if one is
+    /// waiting (RestControl). Handed over once.
+    @objc func takeRestCommand(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId"),
+              let command = RestControl.take(sessionId: sessionId)
+        else {
+            call.resolve([:])
+            return
+        }
+        var result: [String: Any] = [
+            "sessionId": command.sessionId,
+            "total": command.total,
+            "alert": command.alert,
+        ]
+        result["endsAt"] = command.endsAt.map { $0 as Any } ?? NSNull()
+        call.resolve(result)
     }
 
     // MARK: Apple Health
@@ -168,6 +197,11 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         guard let startMs = call.getDouble("start"), let endMs = call.getDouble("end"), endMs > startMs else {
             call.reject("start and end are required, and end must be after start")
+            return
+        }
+        // The watch recorded this one, heart rate and all: one copy is enough.
+        if let sessionId = call.getString("sessionId"), WatchBridge.shared.recordedOnWatch(sessionId) {
+            call.resolve(["saved": false, "skipped": "watch"])
             return
         }
         let start = Date(timeIntervalSince1970: startMs / 1000)
@@ -238,12 +272,15 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("json is required")
             return
         }
-        guard (try? JSONDecoder().decode(WidgetSnapshot.self, from: data)) != nil else {
+        guard let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data) else {
             call.reject("The widget snapshot didn't match the expected shape")
             return
         }
         UserDefaults(suiteName: WidgetSnapshot.appGroup)?.set(data, forKey: WidgetSnapshot.storageKey)
         WidgetCenter.shared.reloadAllTimelines()
+        // Siri's phrases name the workout days and lifts; Spotlight finds them.
+        HellBlazerShortcuts.updateAppShortcutParameters()
+        SpotlightIndex.update(from: snapshot)
         call.resolve()
     }
 
@@ -288,6 +325,49 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             sheet.popoverPresentationController?.sourceView = presenter.view
             presenter.present(sheet, animated: true)
         }
+    }
+
+    // MARK: Apple Watch
+
+    /// Whether a watch is paired, has Fatty, and whose account it's on.
+    @objc func watchStatus(_ call: CAPPluginCall) {
+        WatchBridge.shared.whenActivated {
+            call.resolve(WatchBridge.shared.status())
+        }
+    }
+
+    /// The lifter's settings for the watch, and a token when it needs one.
+    @objc func watchSync(_ call: CAPPluginCall) {
+        guard let userId = call.getString("userId") else {
+            call.reject("userId is required")
+            return
+        }
+        let settings: [String: Any] = [
+            "unit": call.getString("unit") == "lb" ? "lb" : "kg",
+            "accent": call.getString("accent") ?? "#df2d28",
+            "restSeconds": call.getDouble("restSeconds") ?? 90,
+            "timeZone": call.getString("timeZone") ?? TimeZone.current.identifier,
+        ]
+        WatchBridge.shared.whenActivated {
+            WatchBridge.shared.sync(token: call.getString("token"), userId: userId, settings: settings)
+            call.resolve()
+        }
+    }
+
+    /// Disconnects the watch; resolves with its token for the site to revoke.
+    @objc func watchUnlink(_ call: CAPPluginCall) {
+        let disable = call.getBool("disable") ?? false
+        WatchBridge.shared.whenActivated {
+            let token = WatchBridge.shared.unlink(disable: disable)
+            // Not a Settings switch but signing out: their lifts leave Spotlight too.
+            if !disable { SpotlightIndex.clear() }
+            call.resolve(["token": token.map { $0 as Any } ?? NSNull()])
+        }
+    }
+
+    @objc func setWatchAutoOpen(_ call: CAPPluginCall) {
+        WatchBridge.shared.setAutoOpen(call.getBool("on") ?? true)
+        call.resolve()
     }
 
     // MARK: Web view chrome

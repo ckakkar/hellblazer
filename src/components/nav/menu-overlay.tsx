@@ -7,7 +7,7 @@ import { ChevronRight, Flame, LogOut, Plus, Trophy, X } from "lucide-react";
 import { FighterArt } from "@/components/tier/fighter-art";
 import { Portal } from "@/components/ui/portal";
 import { useModal, usePresence } from "@/components/ui/use-modal";
-import { signOut } from "@/lib/actions/auth";
+import { signOutOfApp } from "@/lib/sign-out";
 import { MAX_RANK, type TierKey } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { BOTTOM_NAV, SECONDARY_NAV } from "./nav-items";
@@ -221,7 +221,7 @@ export function MenuOverlay({
             style={rise(9)}
           >
             <span className="min-w-0 truncate text-[13px] text-muted">{email}</span>
-            <form action={signOut}>
+            <form action={signOutOfApp}>
               <button
                 type="submit"
                 className="flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[14px] font-medium text-muted transition-colors hover:text-danger"

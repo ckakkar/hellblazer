@@ -1,6 +1,7 @@
 # Edits ios/App/App.xcodeproj without Xcode: adds the Widgets extension
-# (Home Screen widget + workout Live Activity), registers the app's own
-# Swift files, and sets entitlements and the minimum iOS version.
+# (Home Screen widget, workout Live Activity, Control Center button) and the
+# Apple Watch app, registers the app's own Swift files, and sets
+# entitlements and the minimum OS versions.
 #
 # Safe to re-run: it only adds what's missing. Needs the xcodeproj gem
 # (`gem install xcodeproj`), the library CocoaPods uses to edit projects.
@@ -10,8 +11,11 @@ require "xcodeproj"
 
 ROOT = File.expand_path("../ios/App", __dir__)
 DEPLOYMENT = "17.0"
+# watchOS 10 is as far as the first Apple Watch SE goes.
+WATCH_DEPLOYMENT = "10.0"
 APP_ID = "com.kkrwhofrags.hellblazer"
 WIDGETS_ID = "#{APP_ID}.widgets"
+WATCH_ID = "#{APP_ID}.watchkitapp"
 
 project = Xcodeproj::Project.open(File.join(ROOT, "App.xcodeproj"))
 app = project.targets.find { |t| t.name == "App" } or abort("No App target")
@@ -35,7 +39,10 @@ end
 
 # --- The app target ---------------------------------------------------------
 app_group = group(project, "App")
-%w[HellBlazerViewController.swift HellBlazerNativePlugin.swift AppShortcuts.swift].each do |name|
+%w[
+  HellBlazerViewController.swift HellBlazerNativePlugin.swift AppShortcuts.swift
+  WatchBridge.swift RestNotificationDelegate.swift SpotlightIndex.swift
+].each do |name|
   compile(app, file(app_group, name))
 end
 file(app_group, "App.entitlements")
@@ -54,7 +61,9 @@ widgets = project.targets.find { |t| t.name == "Widgets" } ||
   project.new_target(:app_extension, "Widgets", :ios, DEPLOYMENT, nil, :swift)
 
 widgets_group = group(project, "Widgets")
-%w[HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift].each do |name|
+%w[
+  HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift StartWorkoutControl.swift
+].each do |name|
   compile(widgets, file(widgets_group, name))
 end
 file(widgets_group, "Info.plist")
@@ -82,12 +91,65 @@ widgets.build_configurations.each do |config|
   s["LD_RUNPATH_SEARCH_PATHS"] = ["$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks"]
 end
 
-# --- Shared by both ---------------------------------------------------------
+# --- Shared by the app and the extension -----------------------------------
 shared_group = group(project, "Shared")
-%w[WorkoutActivityAttributes.swift WidgetSnapshot.swift].each do |name|
+%w[WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)
   compile(widgets, ref)
+end
+
+# --- The Apple Watch app -----------------------------------------------------
+# A single-target watchOS app (no WatchKit extension), embedded in the iPhone
+# app. It needs watchOS 10, the newest the first Apple Watch SE runs.
+watch = project.targets.find { |t| t.name == "Watch" } ||
+  project.new_target(:application, "Watch", :watchos, WATCH_DEPLOYMENT, nil, :swift)
+
+watch_group = group(project, "Watch")
+%w[
+  FattyWatchApp.swift RootView.swift WorkoutView.swift WatchModel.swift
+  WatchAPI.swift PhoneLink.swift WorkoutRecorder.swift
+].each do |name|
+  compile(watch, file(watch_group, name))
+end
+file(watch_group, "Info.plist")
+file(watch_group, "Watch.entitlements")
+bundle(watch, file(watch_group, "Assets.xcassets"))
+bundle(watch, file(watch_group, "PrivacyInfo.xcprivacy"))
+compile(watch, file(widgets_group, "Brand.swift"))
+
+# The keychain helper: the app keeps the watch's token, the watch uses it.
+keychain = file(shared_group, "Keychain.swift")
+compile(app, keychain)
+compile(watch, keychain)
+
+watch.build_configurations.each do |config|
+  s = config.build_settings
+  s["PRODUCT_NAME"] = "$(TARGET_NAME)"
+  s["PRODUCT_BUNDLE_IDENTIFIER"] = WATCH_ID
+  s["INFOPLIST_FILE"] = "Watch/Info.plist"
+  s["GENERATE_INFOPLIST_FILE"] = "NO"
+  s["CODE_SIGN_ENTITLEMENTS"] = "Watch/Watch.entitlements"
+  s["CODE_SIGN_STYLE"] = "Automatic"
+  s["SDKROOT"] = "watchos"
+  s["WATCHOS_DEPLOYMENT_TARGET"] = WATCH_DEPLOYMENT
+  s["TARGETED_DEVICE_FAMILY"] = "4"
+  s["SWIFT_VERSION"] = "5.0"
+  s["ASSETCATALOG_COMPILER_APPICON_NAME"] = "AppIcon"
+  s["MARKETING_VERSION"] = app.build_configurations.first.build_settings["MARKETING_VERSION"] || "1.0"
+  s["CURRENT_PROJECT_VERSION"] = "1"
+  s["SKIP_INSTALL"] = "YES"
+  s["ENABLE_PREVIEWS"] = "NO"
+  s["LD_RUNPATH_SEARCH_PATHS"] = ["$(inherited)", "@executable_path/Frameworks"]
+end
+
+app.add_dependency(watch) unless app.dependencies.any? { |d| d.target == watch }
+embed_watch = app.copy_files_build_phases.find { |p| p.name == "Embed Watch Content" } ||
+  app.new_copy_files_build_phase("Embed Watch Content")
+embed_watch.dst_subfolder_spec = Xcodeproj::Constants::COPY_FILES_BUILD_PHASE_DESTINATIONS[:products_directory]
+embed_watch.dst_path = "$(CONTENTS_FOLDER_PATH)/Watch"
+unless embed_watch.files_references.include?(watch.product_reference)
+  embed_watch.add_file_reference(watch.product_reference, true).settings = { "ATTRIBUTES" => ["RemoveHeadersOnCopy"] }
 end
 
 # --- Build the extension with the app and embed it --------------------------

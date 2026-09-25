@@ -31,3 +31,8 @@ export const DEFAULT_ACCENT: AccentKey = "crimson";
 export function isAccentKey(v: string | undefined | null): v is AccentKey {
   return !!v && (ACCENT_KEYS as string[]).includes(v);
 }
+
+/** The accent's hex, for places that can't read the CSS (the Apple Watch). */
+export function accentSwatch(key: AccentKey): string {
+  return (ACCENTS.find((a) => a.key === key) ?? ACCENTS[0]).swatch;
+}

@@ -10,7 +10,7 @@ import {
   useTransition,
 } from "react";
 import { format, parseISO } from "date-fns";
-import { unstable_rethrow } from "next/navigation";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -46,7 +46,8 @@ import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
-import { healthSyncOn, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
+import { isNativeApp } from "@/lib/native";
+import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
   fromDisplayWeight,
   toDisplayWeight,
@@ -71,6 +72,7 @@ import {
   addSessionExercise,
   deleteSet,
   finishSession,
+  getSessionSets,
   removeSessionExercise,
   saveSet,
   swapSessionExercise,
@@ -134,6 +136,7 @@ export function SessionLogger({
   fighter: TierKey;
 }) {
   const [, startNav] = useTransition();
+  const router = useRouter();
   const [finishing, setFinishing] = useState(false);
   const [picker, setPicker] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -258,6 +261,9 @@ export function SessionLogger({
   // Deleted sets whose delete the server hasn't confirmed: set id → its
   // session_exercise id. They're gone from the screen, so retries look here.
   const pendingDeletes = useRef<Map<string, string>>(new Map());
+  // Every set removed on this page, so a pull of the server's copy that was
+  // already in flight can't bring one back (see the watch merge below).
+  const deletedHere = useRef<Set<string>>(new Set());
 
   // Save health. `failed` holds the ids of sets the server never accepted, so
   // they can be retried and, crucially, shown.
@@ -476,6 +482,76 @@ export function SessionLogger({
     }
   }, [persist, persistDelete]);
 
+  // Sets logged on the Apple Watch go to the server, not into this page's
+  // state. In the app, pick them up when the page comes back to the screen
+  // or the watch says it logged something. Only ever adds sets, and removes
+  // ones that arrived this way and were since undone on the watch: sets from
+  // this page are never touched.
+  const fromWatch = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isNativeApp() || isEditing) return;
+    let busy = false;
+    const pull = async () => {
+      if (busy) return;
+      busy = true;
+      try {
+        const { finished, sets: remote } = await getSessionSets({ sessionId: session.id });
+        // Finished on the watch: this page is done too.
+        if (finished) {
+          withNative((api) => api.endWorkoutActivity());
+          router.replace(`/history/${session.id}`);
+          return;
+        }
+        const onServer = new Set(remote.map((r) => r.id));
+        let changed = false;
+        const next = ref.current.map((ex) => {
+          const known = new Set(ex.sets.map((s) => s.id));
+          const incoming = remote
+            .filter(
+              (r) =>
+                r.seId === ex.seId &&
+                !known.has(r.id) &&
+                !deletedHere.current.has(r.id) &&
+                !pendingDeletes.current.has(r.id),
+            )
+            .sort((a, b) => a.setNumber - b.setNumber);
+          const undone = ex.sets.filter((s) => fromWatch.current.has(s.id) && !onServer.has(s.id));
+          if (incoming.length === 0 && undone.length === 0) return ex;
+          changed = true;
+          const sets = ex.sets.filter((s) => !undone.includes(s));
+          for (const r of incoming) {
+            fromWatch.current.add(r.id);
+            sets.splice(Math.min(r.setNumber - 1, sets.length), 0, {
+              id: r.id,
+              weight: toDisplayWeight(r.weightKg, unit),
+              reps: r.reps,
+              rpe: r.rpe,
+              isWarmup: r.isWarmup,
+            });
+          }
+          return { ...ex, sets };
+        });
+        if (changed) {
+          ref.current = next;
+          setExercises(next);
+        }
+      } catch {
+        // Offline or signed out: the next pull catches up.
+      } finally {
+        busy = false;
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void pull();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    const off = onNative("watchChanged", () => void pull());
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      off();
+    };
+  }, [isEditing, router, session.id, unit]);
+
   // Coming back from a dead connection is the common case (a gym basement),
   // so retry automatically rather than making them find the button.
   useEffect(() => {
@@ -673,6 +749,7 @@ export function SessionLogger({
   }
 
   function removeSet(seId: string, setId: string) {
+    deletedHere.current.add(setId);
     // Cancel any debounced save still queued for the row being deleted, so it
     // can't resurrect the set after the delete lands.
     const queued = timers.current.get(setId);

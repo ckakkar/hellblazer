@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, Ellipsis, Flame, LogOut, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { signOut } from "@/lib/actions/auth";
+import { signOutOfApp } from "@/lib/sign-out";
 import { NAV_SECTIONS, SETTINGS_ITEM, BOTTOM_NAV, type NavItem } from "./nav-items";
 import { MenuOverlay, type NavIdentity } from "./menu-overlay";
 
@@ -128,7 +128,7 @@ export function AppNav({
               {userEmail}
             </p>
           )}
-          <form action={signOut}>
+          <form action={signOutOfApp}>
             <button
               type="submit"
               className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium text-muted transition-colors hover:text-danger"

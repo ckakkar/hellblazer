@@ -551,6 +551,30 @@ export type Database = {
           },
         ]
       }
+      watch_link: {
+        Row: {
+          created_at: string
+          id: string
+          last_seen_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       workout_template: {
         Row: {
           created_at: string
@@ -724,6 +748,19 @@ export type Database = {
           hypertrophy: number
           strength: number
           week: string
+        }[]
+      }
+      watch_last_performances: {
+        Args: {
+          p_exclude_session?: string
+          p_exercise_ids: string[]
+          p_user: string
+        }
+        Returns: {
+          exercise_id: string
+          reps: number
+          set_number: number
+          weight_kg: number
         }[]
       }
     }
