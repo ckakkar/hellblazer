@@ -105,11 +105,9 @@ export default async function ProfilePage() {
             <ProfileDetails
               displayName={profile?.display_name ?? null}
               sex={(profile?.sex as "male" | "female" | "other" | null) ?? null}
-              age={
-                profile?.birth_year
-                  ? new Date().getFullYear() - profile.birth_year
-                  : null
-              }
+              birthDate={profile?.birth_date ?? null}
+              birthYear={profile?.birth_year ?? null}
+              today={today}
               heightCm={profile?.height_cm ?? null}
             />
           </SettingsRow>

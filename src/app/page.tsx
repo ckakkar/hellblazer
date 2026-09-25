@@ -6,18 +6,18 @@ import { LandingFighterRoster } from "@/components/tier/landing-fighter-roster";
 export default async function Landing({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; deleted?: string }>;
 }) {
   const user = await getUser();
   if (user) redirect("/dashboard");
-  const { error } = await searchParams;
+  const { error, deleted } = await searchParams;
 
   return (
     <main className="min-h-dvh bg-bg">
-      <LandingArenaHero error={error} />
+      <LandingArenaHero error={error} deleted={deleted === "1"} />
       <LandingFighterRoster />
       <footer className="flex items-center justify-between gap-4 px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 text-[13px] text-muted sm:px-8 lg:px-14 xl:px-20">
-        <span>Hell Blazer</span>
+        <span>Fatty</span>
         <span>
           App by{" "}
           <a

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Pause, Play, RotateCcw, TimerReset } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
+import { withNative } from "@/lib/native-plugins";
 import {
   clampRestDuration,
   DEFAULT_REST_SECONDS,
@@ -14,7 +15,13 @@ import {
 
 const STORAGE_KEY = "hell-blazer:rest-seconds";
 
-export function RestTimer() {
+/**
+ * In the iOS app the countdown also runs natively: a Live Activity on the Lock
+ * Screen and in the Dynamic Island, and a "Rest's up" alert when it ends,
+ * since the page's own timer stops while the phone is locked. `label` names
+ * what the rest comes before.
+ */
+export function RestTimer({ label }: { label?: string }) {
   const [duration, setDuration] = useState(DEFAULT_REST_SECONDS);
   const [remaining, setRemaining] = useState(DEFAULT_REST_SECONDS);
   const [running, setRunning] = useState(false);
@@ -46,6 +53,7 @@ export function RestTimer() {
         setFinished(true);
         endAt.current = null;
         haptic("rest-done");
+        withNative((api) => api.stopRest());
       }
     };
     tick();
@@ -53,19 +61,31 @@ export function RestTimer() {
     return () => window.clearInterval(id);
   }, [running]);
 
+  // Leaving the session mid-rest ends the native countdown with it.
+  useEffect(
+    () => () => {
+      if (endAt.current !== null) withNative((api) => api.stopRest());
+    },
+    [],
+  );
+
   function toggle() {
     setFinished(false);
     if (running) {
       setRunning(false);
       endAt.current = null;
+      withNative((api) => api.stopRest());
       return;
     }
     if (remaining === 0) setRemaining(duration);
-    endAt.current = Date.now() + (remaining || duration) * 1000;
+    const endsAt = Date.now() + (remaining || duration) * 1000;
+    endAt.current = endsAt;
     setRunning(true);
+    withNative((api) => api.startRest({ endsAt, total: duration, label }));
   }
 
   function adjust(delta: number) {
+    if (running) withNative((api) => api.stopRest());
     const next = clampRestDuration(duration + delta);
     setDuration(next);
     setRemaining(next);
@@ -76,6 +96,7 @@ export function RestTimer() {
   }
 
   function reset() {
+    if (running) withNative((api) => api.stopRest());
     setRemaining(duration);
     setRunning(false);
     setFinished(false);

@@ -140,7 +140,7 @@ export async function GET(
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round">
               <path d={FLAME} />
             </svg>
-            <div style={{ fontSize: 32, color: TEXT }}>Hell Blazer</div>
+            <div style={{ fontSize: 32, color: TEXT }}>Fatty</div>
           </div>
           <div style={{ fontSize: 28, color: MUTED }}>
             {tier ? `Rank ${tier.rank} of ${MAX_RANK}` : "Unranked"}

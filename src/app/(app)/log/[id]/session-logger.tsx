@@ -45,6 +45,7 @@ import type { TierKey } from "@/lib/tiers";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import { haptic } from "@/lib/haptics";
+import { healthSyncOn, withNative } from "@/lib/native-plugins";
 import {
   fromDisplayWeight,
   toDisplayWeight,
@@ -182,6 +183,8 @@ export function SessionLogger({
     value: string;
   } | null>(null);
   const removalTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Set once this session is in Apple Health, so a retried finish doesn't add it twice.
+  const savedToHealth = useRef(false);
   // A change that needs the server and couldn't reach it (add, swap, remove,
   // finish). Shown as a toast above the exercise sheet, since most of these
   // are triggered from inside it.
@@ -823,6 +826,20 @@ export function SessionLogger({
     setActiveSeId(null);
   }
 
+  /**
+   * In the iOS app, with Apple Health sync on: the finished session becomes a
+   * strength-training workout. Only live sessions, and only with a known
+   * length: the typed duration, or the clock while it was still running.
+   */
+  function saveToHealth() {
+    if (isEditing || savedToHealth.current || !healthSyncOn()) return;
+    const minutes = duration ?? autoDuration;
+    if (!minutes || minutes <= 0) return;
+    savedToHealth.current = true;
+    const end = duration != null ? startedAt + duration * 60_000 : Date.now();
+    withNative((api) => api.saveWorkout({ start: startedAt, end, sessionId: session.id }));
+  }
+
   /** Returns whether finishing actually started (the slider resets if not). */
   function finish(force = false): boolean {
     // Finishing discards the page, so unsaved sets would be gone for good.
@@ -836,6 +853,7 @@ export function SessionLogger({
     setConfirmFinish(false);
     setFinishing(true);
     setVictory(isEditing ? "Saved" : randomVictory());
+    saveToHealth();
     setTimeout(() => {
       startNav(async () => {
         try {
@@ -956,7 +974,7 @@ export function SessionLogger({
           </div>
         </div>
         <p className="mt-3 px-1 text-[13px] text-muted">{hype}</p>
-        {!isEditing && <RestTimer />}
+        {!isEditing && <RestTimer label={(active ?? exercises[currentIndex])?.name} />}
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (

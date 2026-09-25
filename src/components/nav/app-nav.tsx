@@ -38,7 +38,7 @@ function Brand() {
     <Link href="/dashboard" className="flex items-center gap-2.5">
       <Flame className="size-5 text-accent" strokeWidth={2.25} />
       <span className="text-[15px] font-semibold tracking-[-0.02em] text-text">
-        Hell Blazer
+        Fatty
       </span>
     </Link>
   );

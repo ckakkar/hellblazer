@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🔥 Hell Blazer
+# 🔥 Fatty
 
 ### Train like a Kengan fighter.
 
@@ -21,7 +21,7 @@ A **Kengan Ashura-themed** strength tracker: a fast mobile set logger, programs 
 
 ---
 
-Hell Blazer is a real, multi-user app, not a demo. Every screen reads live Postgres data behind row-level security, sign-in is Google-only, and it installs to your phone as a PWA with offline logging and push reminders. Every logged set lands in one atomic `set` table; estimated 1RM, tonnage and weekly sets per muscle are computed in the database, so the phone only ever downloads the numbers it shows.
+Fatty is a real, multi-user app, not a demo. Every screen reads live Postgres data behind row-level security, sign-in is Google-only, and it installs to your phone as a PWA with offline logging and push reminders. Every logged set lands in one atomic `set` table; estimated 1RM, tonnage and weekly sets per muscle are computed in the database, so the phone only ever downloads the numbers it shows.
 
 The twist: your training gets **judged**. An AI judge reads your full history and places you on a ten-rung ladder of Kengan Ashura fighters. You climb it one honest rep at a time.
 
@@ -408,7 +408,7 @@ app-shell/  files bundled into the iOS app (offline page)
 
 <div align="center">
 
-**[Hell Blazer](https://hellblazer.vercel.app)**, built by [Cyrus](https://kkrwhofrags.xyz)
+**[Fatty](https://hellblazer.vercel.app)**, built by [Cyrus](https://kkrwhofrags.xyz)
 
 *Numbers don't lie. Make them climb.*
 

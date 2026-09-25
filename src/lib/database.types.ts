@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      apns_device: {
+        Row: {
+          created_at: string
+          id: string
+          last_seen_at: string
+          timezone: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          timezone?: string | null
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string
+          timezone?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      apple_token: {
+        Row: {
+          refresh_token: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          refresh_token: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          refresh_token?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bodyweight_log: {
         Row: {
           created_at: string
@@ -76,6 +121,7 @@ export type Database = {
       }
       profile: {
         Row: {
+          birth_date: string | null
           birth_year: number | null
           created_at: string
           display_name: string | null
@@ -93,6 +139,7 @@ export type Database = {
           username: string | null
         }
         Insert: {
+          birth_date?: string | null
           birth_year?: number | null
           created_at?: string
           display_name?: string | null
@@ -110,6 +157,7 @@ export type Database = {
           username?: string | null
         }
         Update: {
+          birth_date?: string | null
           birth_year?: number | null
           created_at?: string
           display_name?: string | null
@@ -619,6 +667,10 @@ export type Database = {
       }
     }
     Functions: {
+      claim_apns_device: {
+        Args: { p_timezone?: string; p_token: string }
+        Returns: undefined
+      }
       exercise_stats: {
         Args: { p_exclude_session?: string }
         Returns: {

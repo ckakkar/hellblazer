@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getTier, type TierKey } from "@/lib/tiers";
+import { isAcceptedBirthday } from "@/lib/age";
+import type { TablesInsert } from "@/lib/database.types";
 
 export type AcceptTierResult =
   | { ok: true; tierKey: TierKey }
@@ -69,38 +71,48 @@ export async function declineTier() {
   if (error) throw error;
 }
 
+/** A yyyy-MM-dd birthday for an age the app accepts (10 to 100). */
+const birthDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => isAcceptedBirthday(d, new Date().toISOString().slice(0, 10)));
+
+/** Both birthday columns: the exact date, and its year for older readers. */
+function birthColumns(birthDate: string | null) {
+  return { birth_date: birthDate, birth_year: birthDate ? Number(birthDate.slice(0, 4)) : null };
+}
+
 /**
- * Store the lifter's demographics: sex, age and height, which sharpen the
+ * Store the lifter's demographics: sex, birthday and height, which sharpen the
  * strength evaluation (standards are sex- and bodyweight-relative). Age is
- * stored as a birth year so it stays correct over time. All fields nullable so
- * any can be cleared.
+ * worked out from the birthday whenever it's needed, so it stays exact.
+ * `birthDate` left out means unchanged; null clears it.
  */
 export async function updateProfileDetails(input: {
   displayName?: string | null;
   sex?: "male" | "female" | "other" | null;
-  age?: number | null;
+  birthDate?: string | null;
   heightCm?: number | null;
 }) {
   const v = z
     .object({
       displayName: z.string().trim().min(1).max(60).nullable().optional(),
       sex: z.enum(["male", "female", "other"]).nullable().optional(),
-      age: z.number().int().min(10).max(100).nullable().optional(),
+      birthDate: birthDateSchema.nullable().optional(),
       heightCm: z.number().min(80).max(260).nullable().optional(),
     })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
 
-  const birthYear =
-    v.age == null ? null : new Date().getFullYear() - v.age;
-
-  const { error } = await supabase.from("profile").upsert({
+  const row: TablesInsert<"profile"> = {
     user_id: user.id,
     display_name: v.displayName ?? null,
     sex: v.sex ?? null,
-    birth_year: birthYear,
     height_cm: v.heightCm ?? null,
-  });
+    // Left out, a profile that only has a birth year keeps it.
+    ...(v.birthDate !== undefined ? birthColumns(v.birthDate) : {}),
+  };
+  const { error } = await supabase.from("profile").upsert(row);
   if (error) throw error;
   revalidatePath("/settings");
 }
@@ -110,7 +122,7 @@ export async function updateProfileDetails(input: {
  * (optionally) a first bodyweight entry, written in one pass.
  *
  * Every field is optional except the completion itself, someone who'd rather
- * not share their age still gets into the app. Stamping `onboarded_at` is what
+ * not share their birthday still gets into the app. Stamping `onboarded_at` is what
  * stops the (app) layout bouncing them back to /welcome.
  *
  * The ring name is the one field that can fail (it's case-insensitively
@@ -120,7 +132,7 @@ export async function completeOnboarding(input: {
   displayName?: string | null;
   username?: string | null;
   sex?: "male" | "female" | "other" | null;
-  age?: number | null;
+  birthDate?: string | null;
   heightCm?: number | null;
   bodyweightKg?: number | null;
   /** Client's local calendar date (YYYY-MM-DD). See {@link todayLocalISO}. */
@@ -138,7 +150,7 @@ export async function completeOnboarding(input: {
         .nullable()
         .optional(),
       sex: z.enum(["male", "female", "other"]).nullable().optional(),
-      age: z.number().int().min(10).max(100).nullable().optional(),
+      birthDate: birthDateSchema.nullable().optional(),
       heightCm: z.number().min(80).max(260).nullable().optional(),
       bodyweightKg: z.number().min(20).max(400).nullable().optional(),
       localDate: z
@@ -157,7 +169,7 @@ export async function completeOnboarding(input: {
     display_name: v.displayName ?? null,
     username: v.username ?? null,
     sex: v.sex ?? null,
-    birth_year: v.age == null ? null : new Date().getFullYear() - v.age,
+    ...birthColumns(v.birthDate ?? null),
     height_cm: v.heightCm ?? null,
     onboarded_at: new Date().toISOString(),
   });

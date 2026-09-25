@@ -22,4 +22,5 @@ export function isNativeApp(): boolean {
  * be registered as a URL scheme in ios/App/App/Info.plist, or Google's SDK
  * crashes the app on sign-in, so the two always change together.
  */
-export const GOOGLE_IOS_CLIENT_ID = "";
+export const GOOGLE_IOS_CLIENT_ID =
+  "996397364248-4fqchnbekhet58kepnbe4dak6giqspdf.apps.googleusercontent.com";

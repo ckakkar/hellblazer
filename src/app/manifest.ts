@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Hell Blazer",
-    short_name: "Hell Blazer",
+    name: "Fatty",
+    short_name: "Fatty",
     description:
       "Train like a Kengan fighter. Programs, savage-fast set logging, and power analytics.",
     id: "/",

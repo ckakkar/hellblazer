@@ -5,6 +5,7 @@ import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { updateProfileDetails } from "@/lib/actions/profile";
+import { ageOn, birthdayBounds, isAcceptedBirthday } from "@/lib/age";
 
 type Sex = "male" | "female" | "other";
 const SEXES: { key: Sex; label: string }[] = [
@@ -19,42 +20,50 @@ const clamp = (n: number, lo: number, hi: number) =>
 export function ProfileDetails({
   displayName: initName,
   sex: initSex,
-  age: initAge,
+  birthDate: initBirthDate,
+  birthYear,
+  today,
   heightCm: initHeight,
 }: {
   displayName: string | null;
   sex: Sex | null;
-  age: number | null;
+  /** yyyy-MM-dd, or null when they've only ever given a birth year (or nothing). */
+  birthDate: string | null;
+  /** From profiles made before birthdays were asked for. */
+  birthYear: number | null;
+  /** The lifter's local date, yyyy-MM-dd, from the server. */
+  today: string;
   heightCm: number | null;
 }) {
   const [name, setName] = useState(initName ?? "");
   const [sex, setSex] = useState<Sex | null>(initSex);
-  const [age, setAge] = useState(initAge != null ? String(initAge) : "");
+  const [birthday, setBirthday] = useState(initBirthDate ?? "");
   const [height, setHeight] = useState(
     initHeight != null ? String(initHeight) : "",
   );
   const [, start] = useTransition();
+  const bounds = birthdayBounds(today);
+  const age = birthday ? ageOn(birthday, today) : birthYear != null ? Number(today.slice(0, 4)) - birthYear : null;
   const [saved, setSaved] = useState(false);
 
+  /** `birthday` is only sent when it changed, so an old birth year survives other edits. */
   function persist(next: {
     name?: string;
     sex?: Sex | null;
-    age?: string;
+    birthday?: string;
     height?: string;
   }) {
     const n = next.name !== undefined ? next.name : name;
     const s = next.sex !== undefined ? next.sex : sex;
-    const a = next.age !== undefined ? next.age : age;
     const h = next.height !== undefined ? next.height : height;
 
-    const ageN = a.trim() === "" ? null : Math.round(Number(a));
     const heightN = h.trim() === "" ? null : Number(h);
 
     start(async () => {
       await updateProfileDetails({
         displayName: n.trim() === "" ? null : n.trim().slice(0, 60),
         sex: s,
-        age: ageN != null && Number.isFinite(ageN) ? clamp(ageN, 10, 100) : null,
+        ...(next.birthday !== undefined ? { birthDate: next.birthday || null } : {}),
         heightCm:
           heightN != null && Number.isFinite(heightN)
             ? clamp(heightN, 80, 260)
@@ -108,18 +117,23 @@ export function ProfileDetails({
 
       <div className="grid grid-cols-2 gap-3">
         <label className="grid gap-1.5">
-          <span className="text-xs font-medium text-muted">Age</span>
+          <span className="text-xs font-medium text-muted">
+            Birthday
+            {age != null && <span className="tnum"> · {age}</span>}
+          </span>
           <Input
-            type="number"
-            onFocus={selectAllOnFocus}
-            inputMode="numeric"
-            min={10}
-            max={100}
-            value={age}
-            onChange={(e) => setAge(e.target.value)}
-            onBlur={() => persist({})}
-            placeholder="years"
-            aria-label="Age in years"
+            type="date"
+            min={bounds.min}
+            max={bounds.max}
+            value={birthday}
+            onChange={(e) => {
+              const value = e.target.value;
+              setBirthday(value);
+              // Saves once the date is whole and in range (typing a year on a
+              // desktop passes through dates like 0019-05-02 first).
+              if (value === "" || isAcceptedBirthday(value, today)) persist({ birthday: value });
+            }}
+            aria-label="Birthday"
           />
         </label>
         <label className="grid gap-1.5">
@@ -144,6 +158,12 @@ export function ProfileDetails({
           </div>
         </label>
       </div>
+
+      {!birthday && birthYear != null && (
+        <p className="-mt-2 text-xs text-muted">
+          You gave a birth year ({birthYear}) earlier. Add your birthday for an exact age.
+        </p>
+      )}
 
       <p className="flex items-center gap-1.5 text-xs text-muted">
         {saved ? (

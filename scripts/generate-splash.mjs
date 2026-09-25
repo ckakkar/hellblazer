@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Generates iOS PWA launch screens (apple-touch-startup-image): true black with
-// the flame mark centred, so tapping the home-screen icon shows Hell Blazer
+// the flame mark centred, so tapping the home-screen icon shows Fatty
 // instead of a white flash. Mirrors BootSplash exactly (same black, same mark,
 // same 44pt size) so the hand-off from launch image to app is invisible.
 const __dirname = dirname(fileURLToPath(import.meta.url));

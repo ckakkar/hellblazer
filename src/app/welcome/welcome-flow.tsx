@@ -10,6 +10,7 @@ import { cn, selectAllOnFocus } from "@/lib/utils";
 import { todayLocalISO } from "@/lib/local-date";
 import { fromDisplayWeight, type Unit } from "@/lib/units";
 import { completeOnboarding } from "@/lib/actions/profile";
+import { ageOn, birthdayBounds, isAcceptedBirthday } from "@/lib/age";
 import { FighterArt } from "@/components/tier/fighter-art";
 
 type Sex = "male" | "female" | "other";
@@ -35,10 +36,13 @@ export function WelcomeFlow({
   suggestedName,
   email,
   unit,
+  today,
 }: {
   suggestedName: string;
   email: string;
   unit: Unit;
+  /** The lifter's local date (yyyy-MM-dd), for the birthday picker's range. */
+  today: string;
 }) {
   const router = useRouter();
   const [saving, startSave] = useTransition();
@@ -47,7 +51,9 @@ export function WelcomeFlow({
   const [name, setName] = useState(suggestedName);
   const [username, setUsername] = useState("");
   const [sex, setSex] = useState<Sex | null>(null);
-  const [age, setAge] = useState("");
+  const [birthday, setBirthday] = useState("");
+  const bounds = birthdayBounds(today);
+  const age = birthday && isAcceptedBirthday(birthday, today) ? ageOn(birthday, today) : null;
   const [height, setHeight] = useState("");
   const [bodyweight, setBodyweight] = useState("");
 
@@ -59,7 +65,7 @@ export function WelcomeFlow({
         displayName: orNull(name),
         username: orNull(username),
         sex,
-        age: numOrNull(age),
+        birthDate: age != null ? birthday : null,
         heightCm: numOrNull(height),
         // Canonical storage is kg: convert whatever unit they typed in.
         bodyweightKg: bw == null ? null : fromDisplayWeight(bw, unit),
@@ -202,16 +208,17 @@ export function WelcomeFlow({
               </div>
 
               <div className="mt-5">
-                <FieldLabel>Age</FieldLabel>
+                <FieldLabel>
+                  Birthday
+                  {age != null && <span className="tnum font-normal text-muted"> · {age}</span>}
+                </FieldLabel>
                 <Input
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  inputMode="numeric"
-                  type="number"
-                  onFocus={selectAllOnFocus}
-                  placeholder="Years"
-                  min={10}
-                  max={100}
+                  type="date"
+                  value={birthday}
+                  onChange={(e) => setBirthday(e.target.value)}
+                  min={bounds.min}
+                  max={bounds.max}
+                  aria-label="Birthday"
                 />
               </div>
 

@@ -93,7 +93,7 @@ struct NextBoutView: View {
                 .gaugeStyle(.accessoryCircularCapacity)
             case .accessoryRectangular:
                 VStack(alignment: .leading, spacing: 2) {
-                    Label("Hell Blazer", systemImage: "flame")
+                    Label("Fatty", systemImage: "flame")
                         .font(.caption2.weight(.semibold))
                         .widgetAccentable()
                     Text(snapshot.nextBout.map { "Next: \($0)" } ?? "No program")
@@ -204,12 +204,12 @@ private struct EmptyWidget: View {
         case .accessoryCircular:
             Image(systemName: "flame")
         case .accessoryInline:
-            Label("Open Hell Blazer", systemImage: "flame")
+            Label("Open Fatty", systemImage: "flame")
         default:
             VStack(alignment: .leading, spacing: 6) {
                 Image(systemName: "flame.fill")
                     .foregroundStyle(Brand.flame)
-                Text("Open Hell Blazer to see your next bout here.")
+                Text("Open Fatty to see your next bout here.")
                     .font(.caption)
                     .foregroundStyle(Brand.muted)
             }

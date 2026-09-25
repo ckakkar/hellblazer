@@ -25,7 +25,7 @@ export default function GlobalError({
   return (
     <html lang="en">
       <body className="min-h-dvh bg-bg text-text antialiased">
-        <title>Hell Blazer</title>
+        <title>Fatty</title>
         <ErrorState digest={error.digest} onRetry={retry} fullScreen />
       </body>
     </html>

@@ -1,6 +1,6 @@
 # Kengan fighter portraits
 
-The ten portraits in this directory were art-directed for Hell Blazer from
+The ten portraits in this directory were art-directed for Fatty from
 identity references on the [official Kengan Ashura anime character site](https://kengan.net/chara/index.html).
 They are used in this personal, non-commercial fan project. Kengan Ashura and
 its characters remain the property of their respective rights holders.

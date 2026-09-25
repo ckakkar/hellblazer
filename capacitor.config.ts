@@ -8,13 +8,13 @@ import type { CapacitorConfig } from "@capacitor/cli";
  */
 const config: CapacitorConfig = {
   appId: "com.kkrwhofrags.hellblazer",
-  appName: "Hell Blazer",
+  appName: "Fatty",
   // Bundled into the app. Only offline.html is ever shown: when the site
   // can't load at launch and the service worker has nothing cached yet.
   webDir: "app-shell",
   backgroundColor: "#000000",
   // Lets the server tell app traffic apart from the website's.
-  appendUserAgent: "HellBlazerApp",
+  appendUserAgent: "Fatty",
   server: {
     url: "https://hellblazer.vercel.app",
     errorPath: "offline.html",

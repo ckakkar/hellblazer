@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getUser } from "@/lib/auth";
 import { getProfile } from "@/lib/data/profile";
-import { getUnit } from "@/lib/settings";
+import { getToday, getUnit } from "@/lib/settings";
 import { WelcomeFlow } from "./welcome-flow";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +22,7 @@ export default async function WelcomePage() {
   const user = await getUser();
   if (!user) redirect("/");
 
-  const [profile, unit] = await Promise.all([getProfile(), getUnit()]);
+  const [profile, unit, today] = await Promise.all([getProfile(), getUnit(), getToday()]);
   // Already onboarded (e.g. a bookmarked /welcome): nothing to do here.
   if (profile?.onboarded_at) redirect("/dashboard");
 
@@ -39,6 +39,7 @@ export default async function WelcomePage() {
       suggestedName={suggestedName}
       email={user.email ?? ""}
       unit={unit}
+      today={today}
     />
   );
 }

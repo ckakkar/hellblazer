@@ -83,7 +83,7 @@ export async function sendTestPush(): Promise<TestPushResult> {
   let sent = 0;
   for (const s of subs) {
     const r = await sendPush(s, {
-      title: "Hell Blazer",
+      title: "Fatty",
       body: "Push is live. Time to make your numbers climb.",
       url: "/dashboard",
       tag: "test",

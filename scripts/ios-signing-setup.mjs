@@ -27,7 +27,7 @@ import { basename, join } from "node:path";
 import { parseArgs } from "node:util";
 
 const BUNDLE_ID = "com.kkrwhofrags.hellblazer";
-const APP_NAME = "Hell Blazer";
+const APP_NAME = "Fatty";
 const API = "https://api.appstoreconnect.apple.com/v1";
 
 const { values: args } = parseArgs({

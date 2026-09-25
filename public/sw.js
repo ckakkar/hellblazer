@@ -1,4 +1,4 @@
-/* Hell Blazer service worker: offline shell + web push.
+/* Fatty service worker: offline shell + web push.
    Hand-rolled (no build step) so it stays framework-agnostic. */
 const VERSION = "hb-v3";
 const STATIC_CACHE = `static-${VERSION}`;
@@ -85,7 +85,7 @@ self.addEventListener("push", (event) => {
   } catch {
     data = {};
   }
-  const title = data.title || "Hell Blazer";
+  const title = data.title || "Fatty";
   const options = {
     body: data.body || "",
     icon: "/icon.png",

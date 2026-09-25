@@ -15,6 +15,7 @@ import {
 import { logBodyweight, deleteBodyweight } from "@/lib/actions/bodyweight";
 import type { BodyweightLog } from "@/lib/data/bodyweight";
 import { selectAllOnFocus } from "@/lib/utils";
+import { healthSyncOn, withNative } from "@/lib/native-plugins";
 
 export function BodyweightManager({
   logs,
@@ -34,9 +35,16 @@ export function BodyweightManager({
   function submit() {
     const w = Number(weight);
     if (!Number.isFinite(w) || w <= 0) return;
+    const kg = fromDisplayWeight(w, unit);
     start(async () => {
-      await logBodyweight({ date, weightKg: fromDisplayWeight(w, unit) });
+      await logBodyweight({ date, weightKg: kg });
       setWeight("");
+      // In the iOS app with Health sync on, the entry goes to Apple Health
+      // too: timed now for today, midday for an earlier date.
+      if (healthSyncOn()) {
+        const when = date === today ? Date.now() : new Date(`${date}T12:00:00`).getTime();
+        withNative((api) => api.saveBodyweight({ kg, date: when }));
+      }
     });
   }
 

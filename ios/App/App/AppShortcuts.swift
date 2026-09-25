@@ -4,7 +4,7 @@ import AppIntents
 /// right page; the phrases work without any setup by the user.
 struct StartWorkoutIntent: AppIntent {
     static let title: LocalizedStringResource = "Start a Workout"
-    static let description = IntentDescription("Opens Hell Blazer ready to log a new session.")
+    static let description = IntentDescription("Opens Fatty ready to log a new session.")
     static let openAppWhenRun = true
 
     @MainActor

@@ -36,8 +36,8 @@ export function ShareCardButton({
       if (nav.canShare?.({ files: [file] })) {
         await nav.share({
           files: [file],
-          title: "Hell Blazer",
-          text: `${title}: my Hell Blazer workout`,
+          title: "Fatty",
+          text: `${title}: my Fatty workout`,
         });
       } else {
         const url = URL.createObjectURL(blob);

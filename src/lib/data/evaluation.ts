@@ -1,7 +1,8 @@
-import { addDays, differenceInCalendarDays, parseISO, subDays } from "date-fns";
+import { addDays, differenceInCalendarDays, format, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/settings";
 import { getExerciseStats } from "@/lib/data/exercise-stats";
+import { profileAge } from "@/lib/age";
 import {
   EVAL_COOLDOWN_DAYS,
   hasUnlimitedEvaluations,
@@ -147,7 +148,7 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .order("week", { ascending: false }),
       supabase
         .from("profile")
-        .select("sex, birth_year, height_cm")
+        .select("sex, birth_date, birth_year, height_cm")
         .maybeSingle(),
     ]);
 
@@ -230,10 +231,9 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
     };
   }
 
-  const birthYear = profileRes.data?.birth_year ?? null;
   return {
     sex: profileRes.data?.sex ?? null,
-    age: birthYear ? new Date().getFullYear() - birthYear : null,
+    age: profileAge(profileRes.data, format(today, "yyyy-MM-dd")),
     heightCm: profileRes.data?.height_cm ?? null,
     bodyweightKg: bwRes.data?.weight_kg ?? null,
     totalSessions,
