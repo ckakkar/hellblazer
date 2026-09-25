@@ -80,8 +80,11 @@ enum RestControl {
     }
 }
 
-/// The "Rest's up" alert, for when the phone is locked or the page asleep.
-/// Time Sensitive, so it gets through a Focus; with a +30s action.
+/// The "Rest's up" alert, for when the phone is locked or the page asleep,
+/// with a +30s action. Marked Time Sensitive, which gets it through a Focus
+/// once the app has that entitlement (App.entitlements); Apple only grants it
+/// after the capability is ticked for the App ID in the developer portal.
+/// Until then iOS delivers it as an ordinary alert.
 enum RestAlert {
     static let id = "rest-over"
     static let category = "rest-over"
