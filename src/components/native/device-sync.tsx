@@ -16,13 +16,15 @@ import type { Unit } from "@/lib/units";
  */
 export function DeviceSync({ userId, unit, accent }: { userId: string; unit: Unit; accent: string }) {
   useEffect(() => {
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Separately, so one failing (an older app without the phone's methods,
+    // say) can't stop the other.
     withNative(async (api) => {
-      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
       const phone = await api.phoneStatus();
       const phoneToken = phone.linkedUserId === userId ? undefined : (await linkPhone()).token;
       await api.phoneSync({ token: phoneToken, userId, unit, timeZone });
-
+    });
+    withNative(async (api) => {
       const watch = await api.watchStatus();
       if (!watch.paired || watch.disabled) return;
       const watchToken = watch.linkedUserId === userId ? undefined : (await linkWatch()).token;

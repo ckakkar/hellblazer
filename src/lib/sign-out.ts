@@ -12,9 +12,13 @@ export async function signOutOfApp() {
   if (plugin) {
     try {
       const { api } = await plugin;
-      const [watch, phone] = await Promise.all([api.watchUnlink({ disable: false }), api.phoneUnlink()]);
+      // Each on its own: an older app has no phoneUnlink.
+      const tokens = await Promise.all([
+        api.watchUnlink({ disable: false }).then((r) => r.token, () => null),
+        api.phoneUnlink().then((r) => r.token, () => null),
+      ]);
       await Promise.all(
-        [watch.token, phone.token].filter((t): t is string => Boolean(t)).map((token) => unlinkWatch({ token })),
+        tokens.filter((t): t is string => Boolean(t)).map((token) => unlinkWatch({ token })),
       );
     } catch {
       // Signing out matters more than tidying up the watch.
