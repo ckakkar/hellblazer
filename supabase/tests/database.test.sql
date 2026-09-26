@@ -80,10 +80,8 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 
 select is((select count(*) from public.session)::int, 0, 'B sees none of A''s sessions');
 select is((select count(*) from public."set")::int, 0, 'B sees none of A''s sets');
-select is(
-  (with changed as (update public.session set title = 'mine now' returning 1) select count(*) from changed)::int, 0,
-  'B can''t change A''s sessions'
-);
+-- Tried here, checked below once A's row is visible again.
+update public.session set title = 'mine now';
 select throws_ok(
   format('select public.start_session(null, %L, null, null)', current_setting('test.day')), 'P0001', 'program day not found',
   'B can''t start a session from A''s program day'
@@ -96,6 +94,12 @@ select throws_ok(
 -- Signed out ----------------------------------------------------------------
 set local role anon;
 select throws_ok($$select public.start_session()$$, '42501', null, 'anonymous callers can''t start sessions');
+
+reset role;
+select is(
+  (select title from public.session where id = current_setting('test.session')::uuid), 'Day 1: Upper',
+  'B''s update didn''t touch A''s session'
+);
 
 select * from finish();
 rollback;

@@ -40,9 +40,11 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
-      - run: npx tsc --noEmit
       - run: npm test
       - run: npm run build
+      # After the build: it writes next-env.d.ts (git-ignored), which gives
+      # TypeScript Next's types for image imports and routes.
+      - run: npx tsc --noEmit
 
       # Only what ships to the site; build tools (the Capacitor CLI) are
       # dev dependencies.
