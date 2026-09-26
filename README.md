@@ -49,7 +49,8 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 
 ## Highlights
 
-- **A native iPhone app.** The same app in a Capacitor shell, built and shipped to TestFlight by GitHub Actions. The workout lives on the Lock Screen and in the Dynamic Island, there's a Home Screen widget, finished workouts go to Apple Health, and it scrolls, swipes and taps like an iOS app. A web deploy updates it instantly.
+- **A native iPhone app.** The same app in a Capacitor shell, built and shipped to TestFlight by GitHub Actions. The workout lives on the Lock Screen and in the Dynamic Island, with +30s and Skip for the rest right there. There's a Home Screen widget, a Control Center button, Siri ("Start Day 2 in Fatty", "What's my bench max in Fatty"), finished workouts go to Apple Health, and it scrolls, swipes and taps like an iOS app. A web deploy updates it instantly.
+- **An Apple Watch app.** Start a workout day, log sets with the Digital Crown, rest with a countdown that taps your wrist, and record the workout to Apple Health with heart rate. Runs on watchOS 10, so the first Apple Watch SE too.
 - **A set logger built for mid-set use.** Exercises run as a queue. Each one opens in a focused sheet where every new set **copies the last one forward**, and last session's numbers sit above as the target. Thumb-sized steppers, a rest timer that starts itself when a set lands (shown in the sheet too, so it's in view mid-set), a live workout clock, and autosave that can't create duplicates.
 - **It keeps logging offline.** Sets you log without a signal are queued on the device (IndexedDB) and uploaded when you're back. The logger tells you plainly when something hasn't saved yet.
 - **Removal: live PR detection.** When a working set beats your all-time best on a lift (heaviest load, or best estimated 1RM), a **Removal** banner drops in, the screen's edge rings in your accent, the phone buzzes (the Taptic Engine in the iPhone app), and the set is tagged PR.
@@ -196,8 +197,10 @@ Nothing derived is stored. It's computed from the `set` grain by **security-invo
 | AI judge | **DeepSeek** (`deepseek-v4-flash`), optional |
 | Push | **web-push** (VAPID) and a hand-written service worker; **APNs** for the iPhone app |
 | iPhone app | **Capacitor 8** (Swift Package Manager) around the live site; Swift for ActivityKit, WidgetKit, HealthKit and App Intents |
+| Apple Watch | **SwiftUI** on watchOS 10, HealthKit workout sessions, WatchConnectivity to the phone; talks to `/api/watch` itself |
 | iOS builds | **GitHub Actions** macOS runners and **fastlane**, straight to TestFlight (no local Xcode) |
-| Tests | **Vitest** |
+| Tests | **Vitest** (unit) and **pgTAP** (the database, rebuilt from migrations in CI) |
+| CI | **GitHub Actions**: lint, typecheck, tests, build and a dependency audit on every push; iOS builds on native changes |
 | Primitives | `class-variance-authority`, `clsx`, `tailwind-merge`, `lucide-react`, `date-fns` |
 
 There's no Redux, no tRPC and no component library: Server Components, Supabase, and a small set of hand-built primitives.
@@ -208,6 +211,7 @@ There's no Redux, no tRPC and no component library: Server Components, Supabase,
 flowchart TD
     subgraph Client["Phone / browser"]
         IOS["iPhone app (Capacitor)<br/>Live Activity, widget, Health"]
+        WATCH["Apple Watch app<br/>logging, rest, heart rate"]
         SW["Service worker<br/>offline shell, push"]
         Q["Offline set queue<br/>IndexedDB"]
         UI["Client islands<br/>logger, charts, menu"]
@@ -217,12 +221,12 @@ flowchart TD
         PX["proxy.ts<br/>session refresh + JWT check"]
         RSC["Server Components<br/>typed data layer"]
         SA["Server Actions<br/>Zod-validated writes"]
-        API["Route handlers<br/>share PNG, CSV, cron"]
+        API["Route handlers<br/>share PNG, CSV, cron, watch API"]
     end
 
     subgraph DB["Supabase (Tokyo)"]
         RLS["RLS on every table"]
-        AGG["Views + RPCs<br/>1RM, volume, weekly sets"]
+        AGG["Views + RPCs<br/>1RM, volume, weekly sets,<br/>transactional writes"]
         AUTH["Google + Apple sign-in"]
     end
 
@@ -241,16 +245,19 @@ flowchart TD
     AUTH --> PX
     SA --> JUDGE
     IOS -->|loads the live site| PX
+    WATCH -->|its own token| API
+    IOS <-->|token, settings, sets| WATCH
     API --> APPLE
     SA --> APPLE
 ```
 
 - **Reads** go through a typed data layer (`src/lib/data/*`), not raw Supabase calls in components.
-- **Writes** are Server Actions (`src/lib/actions/*`), each validated with Zod and scoped by RLS.
+- **Writes** are Server Actions (`src/lib/actions/*`), each validated with Zod and scoped by RLS. Anything that touches more than one row at once (starting a session, creating a program, switching the active one, loading a preset, reordering) is a single Postgres function, so it lands all-or-nothing.
 - **Sessions** are refreshed and checked in `src/proxy.ts` (Next 16's replacement for middleware); pages read the verified identity from the cookie.
+- **The schema** lives in `supabase/migrations` (every migration, as applied to production) plus `supabase/seed.sql` (the exercise library). CI rebuilds it from those alone and runs the database tests against it.
 - **Types** are generated from the live schema into `src/lib/database.types.ts`.
 - **Realtime** keeps open tabs in sync when you log from another device, and a page refreshes when you come back to it after a minute away.
-- **The iPhone app** is this same site in a native shell; everything app-only sits behind `isNativeApp()`. See [iOS app](#ios-app).
+- **The iPhone app** is this same site in a native shell; everything app-only sits behind `isNativeApp()`. The **watch app** is native SwiftUI with its own small API. See [iOS app](#ios-app).
 
 ## Data model
 
@@ -269,6 +276,7 @@ push_subscription   Web Push endpoints per browser
 apns_device         iPhone push tokens, claimed per phone (claim_apns_device)
 apple_token         Sign in with Apple refresh tokens: service role only,
                     kept so account deletion can revoke Apple access
+watch_link          Apple Watch tokens, stored as SHA-256 only
 ```
 
 **Muscle groups** (`muscle_group` enum, 14): chest, back, side delts, rear delts, front delts, biceps, triceps, quads, hamstrings, glutes, calves, abs, forearms and traps.
@@ -282,6 +290,7 @@ Unit, accent and timezone preferences are cookies, read on the server so the fir
 - **The leaderboard exposes only public columns** (ring name, rank, volume) through a `security definer` function that requires a signed-in caller.
 - **Google or Apple, nothing else.** Google on the web; Google or Sign in with Apple in the iPhone app, linkable to one account. No passwords and no magic links. The app's native sign-in trades an ID token carrying a hashed nonce (so a captured token can't be replayed), and only from the site's own origin.
 - **Deleting an account deletes everything.** Every table cascades from `auth.users`, and Sign in with Apple access is revoked first, as App Store rules require.
+- **The watch has its own credential.** The iPhone app mints a random token for the watch (`linkWatch`); only its SHA-256 is stored, and signing out or turning the watch off in Settings revokes it. The watch API (`src/lib/watch/server.ts`) runs with the service role, so every query in it is scoped to the token's lifter, and tests hold it to that.
 - **No secrets in the browser.** Only the Supabase URL and anon key reach the client. The service-role key, VAPID and Apple private keys, DeepSeek key and cron secret stay on the server.
 - **No keys in the repo.** It's public: `.p8` files are git-ignored, iOS signing material lives in GitHub secrets, and server keys live in Vercel.
 - **Headers.** Every response carries `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY` and a restrictive `Permissions-Policy`.
@@ -289,7 +298,7 @@ Unit, accent and timezone preferences are cookies, read on the server so the fir
 ## PWA, offline and notifications
 
 - **Installable.** Standalone display, maskable icons, and **iOS launch screens** for current iPhones (`scripts/generate-splash.mjs`), so a cold start shows the brand instead of a white flash. A boot screen holds that frame until the app is ready (installed app only).
-- **Offline.** A hand-written service worker (`public/sw.js`): network-first pages with an offline fallback (`public/offline.html`), cached media. It never caches Next's own scripts and styles, so a deploy can't pair new HTML with old code.
+- **Offline.** A hand-written service worker (`public/sw.js`): network-first pages with an offline fallback (`public/offline.html`), and media served from cache while a fresh copy is fetched behind it (stale-while-revalidate, capped at 150 files), so a replaced image shows on the next visit. It never caches Next's own scripts and styles, so a deploy can't pair new HTML with old code.
 - **Offline logging.** Sets go to an IndexedDB queue first and upload when there's a connection; failures are shown, retried, and never silently dropped.
 - **Push reminders.** Web Push (VAPID) and a **daily cron** (`/api/cron/reminders`) that nudges you when today's programmed workout isn't done. In a browser on iPhone, push works once the site is added to the Home Screen (iOS 16.4+); the iPhone app uses APNs.
 
@@ -299,7 +308,9 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 
 **What's native**
 
-- **Live workout.** A Live Activity on the Lock Screen and in the Dynamic Island for the whole session: the workout clock, the exercise you're on, sets and volume, and the rest countdown while you rest. The clocks are dates the system draws from, so they tick while the app sleeps; a "Rest's up" alert covers a locked phone. Tapping it opens the session. The logger sends the whole state on each change, and `WorkoutActivitySync` ends it when the server says no workout is live.
+- **Live workout.** A Live Activity on the Lock Screen and in the Dynamic Island for the whole session: the workout clock, the exercise you're on, sets and volume, and the rest countdown while you rest. The clocks are dates the system draws from, so they tick while the app sleeps. Tapping it opens the session. The logger sends the whole state on each change, and `WorkoutActivitySync` ends it when the server says no workout is live.
+- **Rest from the Lock Screen.** While resting, the Live Activity has **+30s** and **Skip** buttons (App Intents that run in the app without opening it), and the "Rest's up" alert has **Rest 30s more**. `RestControl` updates the activity and the alert at once and leaves the change for the page, which takes it when it's next awake (`takeRestCommand`). The alert is marked Time Sensitive; it breaks through a Focus once the app ID has that capability (see setup).
+- **Apple Watch app** (`ios/App/Watch`, watchOS 10+, so the first Apple Watch SE). Start your next programmed day or any workout, log sets with the Digital Crown (weight and reps copy forward, with last session's set as the target), rest with a ring countdown that taps your wrist, and undo or end from the controls page. It records the workout as a HealthKit workout session with live heart rate and calories, which also keeps it on screen when you raise your wrist; the phone then skips its own Health copy. It talks to the server directly (`/api/watch`, with a token the phone hands over through WatchConnectivity), so the phone can stay in your bag; sets logged offline wait on the watch. Starting a workout on the phone opens it on the watch, sets logged on the watch appear in the phone's logger when you look, and a finish on either ends it on both.
 - **Sign-in.** Google through Google's iOS SDK (Google blocks OAuth inside web views) and Sign in with Apple, listed first. Each returns an ID token with a hashed nonce, and `POST /auth/native` swaps it for the same Supabase session cookies the website's redirect flow sets. Apple's refresh token is kept server-side (`apple_token`) only so it can be revoked on account deletion.
 - **Linking.** Settings → Sign-in methods connects the other provider to the same account (`linkIdentity`: Google by redirect on the web or natively in the app, Apple in the app), so either signs you in. Needs Supabase's *Allow manual linking*.
 - **Feels like an app, not a web page.**
@@ -313,13 +324,16 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 - **Apple Health.** With the switch on in Settings, finished sessions are saved as strength-training workouts and logged bodyweight as body mass. Nothing is read from Health.
 - **Push.** APNs (`src/lib/apns.ts`) beside Web Push; the daily reminder cron sends to both. Tapping a notification opens its page.
 - **Share sheet.** The share card and the CSV export go to the iOS share sheet (a web view can't download files).
-- **Siri, Spotlight and Shortcuts** (App Intents), **Home Screen quick actions**, and **universal links** (`/.well-known/apple-app-site-association`) all land on the right page through `NativeRouter`.
+- **Siri and Shortcuts** (App Intents): "Start a workout", "Start Day 2" (begins that day straight away, through `/log?start=`), "What's my bench max" (answered aloud from your bests, without opening the app), progress and history. The workout days and lifts come from the snapshot the dashboard writes.
+- **Spotlight** finds your workout days (starts one) and lifts (opens its progress).
+- **Control Center and the Lock Screen** (iOS 18): a Start Workout control, which the Action button can run too.
+- **Home Screen quick actions** and **universal links** (`/.well-known/apple-app-site-association`) land on the right page through `NativeRouter`.
 - A true-black launch screen with the flame, and dark system UI.
 
 **How it's put together**
 
-- **The native code:** `ios/App/App` (the app's plugin `HellBlazerNativePlugin`, the view controller and router, App Intents), `ios/App/Widgets` (the widget and the Live Activity), `ios/App/Shared` (types both targets compile). `scripts/ios-configure-project.rb` edits the Xcode project without Xcode.
-- **The site's side:** `src/components/native/` (`NativeShell` in the root layout: launch hand-off, in-place navigation, swipe back; plus pull to refresh, the Live Activity sync, the widget snapshot and push) and `src/lib/native*.ts`.
+- **The native code:** `ios/App/App` (the app's plugin `HellBlazerNativePlugin`, the view controller and router, App Intents, `WatchBridge`, Spotlight), `ios/App/Widgets` (the widget, the Live Activity and the control), `ios/App/Shared` (compiled into both: the activity's types, the rest controls, the snapshot), `ios/App/Watch` (the watch app). `scripts/ios-configure-project.rb` edits the Xcode project without Xcode.
+- **The site's side:** `src/components/native/` (`NativeShell` in the root layout: launch hand-off, in-place navigation, swipe back; plus pull to refresh, the Live Activity sync, the widget and Siri snapshot, push, and `WatchSync`, which links the watch) and `src/lib/native*.ts`. The watch's API is `src/app/api/watch/[action]` and `src/lib/watch/`.
 - **Web and PWA are untouched.** Everything app-only sits behind `isNativeApp()` (`src/lib/native.ts`), and plugin code loads through dynamic imports inside that check, so the website never downloads it.
 - **Offline.** App-Bound Domains are on, which lets the service worker run in the app, and `app-shell/offline.html` covers a first launch with no signal.
 
@@ -327,15 +341,15 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 
 `.github/workflows/ios.yml` builds on a GitHub-hosted Mac whenever `ios/`, `app-shell/` or `capacitor.config.ts` changes, or by hand from the Actions tab.
 
-- With uploads on (`IOS_TESTFLIGHT=on`), fastlane (`ios/fastlane/Fastfile`) signs the app and the widget extension, uploads to TestFlight, then `scripts/testflight-notes.mjs` sets the commit message as **What to Test**, and the internal group (automatic distribution) gets it on their phones within minutes. Otherwise, or when run by hand with *compile only*, it just checks that everything compiles.
-- **Build numbers** count up by themselves (`run number.attempt`). **To ship a new version number**, bump `MARKETING_VERSION` on both targets in `ios/App/App.xcodeproj` (the app and the widgets must match). The app is on **1.1**.
+- With uploads on (`IOS_TESTFLIGHT=on`), fastlane (`ios/fastlane/Fastfile`) signs the app, the widget extension and the watch app, uploads to TestFlight, then `scripts/testflight-notes.mjs` sets the commit message as **What to Test**, and the internal group (automatic distribution) gets it on their phones within minutes. Otherwise, or when run by hand with *compile only*, it just checks that everything compiles.
+- **Build numbers** count up by themselves (`run number.attempt`). **To ship a new version number**, bump `MARKETING_VERSION` on every target in `ios/App/App.xcodeproj` (the app, the widgets and the watch must match). The app is on **1.2**.
 - **Web changes** don't need any of this: a push to `main` reaches the app within a minute of the Vercel deploy.
 
 **One-time setup** (a fresh Apple account or a fork)
 
 1. Enroll in the Apple Developer Program and accept the agreements in App Store Connect.
-2. Create an App Store Connect API key (Admin), then run `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>`. It registers both bundle IDs and their capabilities (Sign in with Apple, Push, HealthKit, App Groups, Associated Domains), creates the distribution certificate, and stores everything as GitHub secrets and variables without printing any of it.
-3. In the developer portal, create the App Group `group.com.kkrwhofrags.hellblazer` and attach it to both IDs (Apple has no API for this).
+2. Create an App Store Connect API key (Admin), then run `node scripts/ios-signing-setup.mjs --key AuthKey_XXXX.p8 --issuer <id>`. It registers the three bundle IDs (app, widgets, watch) and their capabilities (Sign in with Apple, Push, HealthKit, App Groups, Associated Domains), creates the distribution certificate, and stores everything as GitHub secrets and variables without printing any of it.
+3. In the developer portal, create the App Group `group.com.kkrwhofrags.hellblazer` and attach it to the app and widget IDs (Apple has no API for this). Optionally tick **Time Sensitive Notifications** on the app's ID (also portal-only), then add `com.apple.developer.usernotifications.time-sensitive` back to `App.entitlements` so the rest alert gets through a Focus.
 4. Create a server key (APNs + Sign in with Apple) and add `APPLE_TEAM_ID`, `APPLE_KEY_ID` and `APPLE_PRIVATE_KEY` to Vercel.
 5. Create the app record in App Store Connect, then `gh variable set IOS_TESTFLIGHT --body on && gh workflow run ios.yml`.
 6. In TestFlight, add an internal group with automatic distribution, and install TestFlight on the phone.
@@ -361,7 +375,7 @@ npm run dev      # http://localhost:3000
 |----------|:--------:|---------|
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Public anon key (safe in the browser) |
-| `SUPABASE_SERVICE_ROLE_KEY` | for rank + cron | Server only. Applies accepted verdicts and runs the reminder cron |
+| `SUPABASE_SERVICE_ROLE_KEY` | for rank, cron, watch | Server only. Writes rank verdicts, runs the reminder cron, serves the Apple Watch API, stores Apple tokens for account deletion |
 | `DEEPSEEK_API_KEY` | optional | Turns on the strength judge |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | optional | Web Push public key |
 | `VAPID_PRIVATE_KEY` | optional | Web Push private key (server only) |
@@ -376,9 +390,9 @@ Generate a VAPID pair with `npx web-push generate-vapid-keys`. The App Store Con
 **Supabase setup**
 
 1. Enable the **Google** provider and add `<your-site>/auth/callback` (and `http://localhost:3000/auth/callback`) to the allowed redirect URLs. For the iPhone app, also allow its iOS Google client ID, enable **Apple** with the bundle ID `com.kkrwhofrags.hellblazer` as a client ID, and turn on **Allow manual linking** so the two can be linked.
-2. The schema (tables, enum, RLS policies, views, RPCs and column grants) is managed as migrations applied to the Supabase project itself; this repository doesn't carry a migrations folder. To stand up your own copy, dump the schema from an existing project (`supabase db dump --schema public`) and apply it. `src/lib/database.types.ts` documents every table, view and function.
-3. Seed the global exercise library. The one-off scripts in `scripts/sql/` add common movements and remove duplicates.
-4. After schema changes, regenerate types into `src/lib/database.types.ts` (`supabase gen types typescript`).
+2. Apply the schema: every migration is in `supabase/migrations` (tables, enum, RLS policies, grants, views and RPCs), exactly as applied to production. `supabase link` then `supabase db push` applies them to a new project; `supabase db start` builds a local one.
+3. Seed the global exercise library: `supabase/seed.sql` (run automatically locally; paste it into the SQL editor for a hosted project).
+4. New schema changes are new files in `supabase/migrations`, applied to production and kept in step with `supabase_migrations.schema_migrations`. Regenerate types into `src/lib/database.types.ts` afterwards (`supabase gen types typescript`).
 
 **Scripts**
 
@@ -388,6 +402,7 @@ npm run build    # production build
 npm run start    # serve the production build
 npm run lint     # ESLint
 npm test         # Vitest
+supabase db start && supabase test db   # rebuild the schema locally, run the database tests (Docker)
 node scripts/generate-splash.mjs   # regenerate iOS launch screens
 ```
 
@@ -400,8 +415,11 @@ node scripts/generate-splash.mjs   # regenerate iOS launch screens
 - **`rest-timer`:** the rest timer's arithmetic.
 - **`workout-clock`:** the workout clock's format, and which routes get the swipe back in the iPhone app.
 - **`age`:** age from a birthday, exact to the day.
+- **`watch/token`, `watch/server`:** the Apple Watch API's boundary. Unknown tokens are refused, a watch can only log to, finish or delete its own lifter's rows (including reusing another lifter's set id), weights convert from the display unit, and starts go through `start_session` as that lifter.
 
-Before shipping, `npx tsc --noEmit`, `npm run lint` and `npm run build` should all pass clean. Native changes are checked by the iOS workflow on a real Xcode, since there's no local one.
+`supabase test db` runs `supabase/tests` (pgTAP) against a database built only from the migrations and seed: two lifters see none of each other's sessions or sets and can't change them, rank columns and the watch's service-role function stay off limits, anonymous callers can't write, and `load_preset` and `start_session` build what the app expects.
+
+**CI** (`.github/workflows/ci.yml`) runs all of it on every push to `main` and every pull request: lint, typecheck, Vitest, a production build (with placeholder keys; it needs no secrets), `npm audit` of the dependencies that ship, and the database job. Native changes are checked by the iOS workflow on a real Xcode, since there's no local one.
 
 ## Deployment
 
@@ -411,6 +429,7 @@ The app deploys on **Vercel**, and a push to `main` is a production deploy.
 - The reminder cron runs daily (`0 16 * * *`), which is the Hobby plan's limit. Hourly, per-user reminder times would need Pro.
 - Set the environment variables above in the Vercel project (server-only keys in Production and Preview; the `APPLE_*` keys matter only in Production, which is what the app loads).
 - The iPhone app follows production automatically. Only native changes go through TestFlight (see [iOS app](#ios-app)).
+- CI checks every push, but Vercel deploys `main` regardless; watch the CI run for a push that matters.
 
 ## Project structure
 
@@ -425,7 +444,8 @@ src/
 │   ├── api/
 │   │   ├── share/[id]/        session → 1080×1350 PNG (next/og)
 │   │   ├── export/            your set log as CSV
-│   │   └── cron/reminders/    daily push reminders
+│   │   ├── cron/reminders/    daily push reminders
+│   │   └── watch/[action]/    the Apple Watch app's API (bearer token)
 │   ├── .well-known/           apple-app-site-association (universal links)
 │   ├── auth/callback/         OAuth callback (and linking Google from Settings)
 │   ├── auth/native/           ID-token sign-in and account linking for the iOS app
@@ -439,7 +459,7 @@ src/
 ├── components/
 │   ├── nav/                   tab bar, sidebar, top bar, full-page menu, page transitions
 │   ├── native/                iOS app hooks: launch hand-off, swipe back, pull to refresh,
-│   │                          Live Activity sync, widget snapshot, push taps
+│   │                          Live Activity sync, widget + Siri snapshot, push taps, watch link
 │   ├── auth/                  Google and Apple sign-in buttons
 │   ├── legal/                 the Privacy and Support frame
 │   ├── ui/                    primitives: Button, Sheet, NumberStepper, PlateLoader, …
@@ -457,16 +477,21 @@ src/
 │   ├── offline-set-queue.ts   IndexedDB queue for offline logging
 │   ├── native*.ts, haptics.ts the iOS bridge (app only, loaded on demand)
 │   ├── apns.ts, apple.ts      APNs sender, Apple key signing and token revocation
+│   ├── watch/                 the watch API: token, protocol, service-role queries
 │   └── database.types.ts      generated from the live schema
 └── proxy.ts                   session refresh and route gate
 
 public/     sw.js, offline.html, splash/, art/fighters/
+supabase/   migrations/ (the whole schema), seed.sql (exercise library),
+            tests/ (pgTAP), config.toml (the local stack)
 scripts/    generate-splash.mjs, generate-ios-assets.mjs, ios-signing-setup.mjs,
             ios-configure-project.rb, sql/
-ios/        App/App (plugin, router, intents), App/Widgets (widget + Live Activity),
-            App/Shared, fastlane/ (signing and TestFlight lane)
+ios/        App/App (plugin, router, intents, watch bridge), App/Widgets (widget,
+            Live Activity, control), App/Shared, App/Watch (the watch app),
+            fastlane/ (signing and TestFlight lane)
 app-shell/  files bundled into the iOS app (offline page)
 capacitor.config.ts         the iOS shell: live-site URL, web view settings, plugins
+.github/workflows/ci.yml    lint, typecheck, tests, build, audit, database tests
 .github/workflows/ios.yml   builds, signs and uploads the iOS app
 ```
 
