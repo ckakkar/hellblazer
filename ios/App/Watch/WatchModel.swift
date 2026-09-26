@@ -23,6 +23,17 @@ final class WatchModel: ObservableObject {
         var total: Double
     }
 
+    /// The end-of-workout summary, as the Workout app shows one.
+    struct Summary {
+        var title: String
+        var duration: TimeInterval
+        var sets: Int
+        var volume: Double
+        var exercises: Int
+        var calories: Double?
+        var averageHeartRate: Double?
+    }
+
     @Published private(set) var token: String?
     @Published private(set) var settings: Settings
     @Published private(set) var state: WatchState?
@@ -33,6 +44,14 @@ final class WatchModel: ObservableObject {
     @Published private(set) var problemIsOffline = true
     /// The exercise on screen; nil follows the workout's order.
     @Published var selectedExerciseId: String?
+    /// A workout starting from the watch: the 3-2-1 countdown is on screen.
+    @Published private(set) var starting: StartOption?
+    /// The last workout's summary, until Done.
+    @Published var summary: Summary?
+
+    private var countdownDone = false
+    private var startDone = false
+    private var concludedId: String?
 
     let recorder = WorkoutRecorder.shared
 
@@ -154,6 +173,7 @@ final class WatchModel: ObservableObject {
     }
 
     private func apply(state fresh: WatchState) {
+        let previous = state?.active
         var next = fresh
         // Sets still on their way to the server stay on screen.
         if var active = next.active {
@@ -181,11 +201,34 @@ final class WatchModel: ObservableObject {
                 }
             }
         } else {
-            // Finished or discarded elsewhere.
+            // Finished (or discarded) elsewhere: end it here too.
             selectedExerciseId = nil
             clearRest()
-            if recorder.isRecording { Task { await recorder.finish() } }
+            if let previous {
+                Task { await conclude(previous) }
+            } else if recorder.isRecording {
+                Task { await recorder.finish() }
+            }
         }
+    }
+
+    /// The workout's over, here or on the phone: stop recording and show its
+    /// summary. Once per workout.
+    private func conclude(_ workout: Workout) async {
+        guard concludedId != workout.id else { return }
+        concludedId = workout.id
+        clearRest()
+        let health = await recorder.finish()
+        let working = workout.exercises.flatMap(\.workingSets)
+        summary = Summary(
+            title: workout.title,
+            duration: health?.duration ?? Date().timeIntervalSince(workout.startDate),
+            sets: working.count,
+            volume: working.reduce(0) { $0 + $1.weight * Double($1.reps) },
+            exercises: workout.exercises.filter { !$0.workingSets.isEmpty }.count,
+            calories: health?.calories,
+            averageHeartRate: health?.averageHeartRate
+        )
     }
 
     /// The exercise to log next: the one picked, else the latest one worked
@@ -214,7 +257,32 @@ final class WatchModel: ObservableObject {
 
     // MARK: Starting and finishing
 
-    func start(_ option: StartOption) async {
+    /// Tapping a workout: the countdown runs while the server opens the
+    /// session, and the workout appears once both are done.
+    func begin(_ option: StartOption) {
+        guard starting == nil, !busy else { return }
+        problem = nil
+        starting = option
+        countdownDone = false
+        startDone = false
+        Task {
+            await start(option)
+            startDone = true
+            finishStarting()
+        }
+    }
+
+    func countdownFinished() {
+        countdownDone = true
+        finishStarting()
+    }
+
+    private func finishStarting() {
+        guard countdownDone, startDone else { return }
+        starting = nil
+    }
+
+    private func start(_ option: StartOption) async {
         guard let api, !busy else { return }
         busy = true
         defer { busy = false }
@@ -222,7 +290,6 @@ final class WatchModel: ObservableObject {
             let fresh = try await api.start(option, localDate: localDate())
             selectedExerciseId = nil
             apply(state: fresh)
-            WKInterfaceDevice.current().play(.start)
         } catch APIError.unlinked {
             forget()
         } catch {
@@ -243,11 +310,10 @@ final class WatchModel: ObservableObject {
         let minutes = Int((Date().timeIntervalSince(active.startDate) / 60).rounded())
         do {
             let fresh = try await api.finish(sessionId: active.id, durationMin: minutes <= 360 ? max(1, minutes) : nil)
-            clearRest()
-            await recorder.finish()
             PhoneLink.shared.sendGuaranteed(["finished": active.id])
-            apply(state: fresh)
             WKInterfaceDevice.current().play(.success)
+            await conclude(state?.active ?? active)
+            apply(state: fresh)
         } catch APIError.unlinked {
             forget()
         } catch {

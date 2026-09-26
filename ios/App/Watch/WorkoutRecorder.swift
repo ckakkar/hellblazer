@@ -18,8 +18,22 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
     @Published private(set) var calories: Double?
     /// The Fatty session being recorded.
     @Published private(set) var sessionId: String?
+    /// Paused from the controls: the clock and Health recording stop.
+    @Published private(set) var paused = false
 
     var isRecording: Bool { session != nil }
+
+    /// Time recorded so far, pauses excluded; nil when not recording.
+    func elapsed(at date: Date) -> TimeInterval? {
+        builder?.elapsedTime(at: date)
+    }
+
+    /// What Health measured, for the summary at the end.
+    struct Summary {
+        var duration: TimeInterval
+        var calories: Double?
+        var averageHeartRate: Double?
+    }
 
     private func authorize() async -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
@@ -52,6 +66,7 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
             sessionId = workout.id
             heartRate = nil
             calories = nil
+            paused = false
 
             let recent = Date().timeIntervalSince(workout.startDate) < 2 * 60 * 60
             let start = recent ? min(workout.startDate, Date()) : Date()
@@ -67,10 +82,28 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
         }
     }
 
-    /// Stops recording; saves the workout to Health unless `save` is false.
     @MainActor
-    func finish(save: Bool = true) async {
-        guard let session, let builder else { return }
+    func pause() {
+        session?.pause()
+    }
+
+    @MainActor
+    func resume() {
+        session?.resume()
+    }
+
+    /// Stops recording; saves the workout to Health unless `save` is false.
+    /// Returns what was measured, for the summary.
+    @MainActor
+    @discardableResult
+    func finish(save: Bool = true) async -> Summary? {
+        guard let session, let builder else { return nil }
+        let bpm = HKUnit.count().unitDivided(by: .minute())
+        let summary = Summary(
+            duration: builder.elapsedTime(at: Date()),
+            calories: builder.statistics(for: HKQuantityType(.activeEnergyBurned))?.sumQuantity()?.doubleValue(for: .kilocalorie()),
+            averageHeartRate: builder.statistics(for: HKQuantityType(.heartRate))?.averageQuantity()?.doubleValue(for: bpm)
+        )
         session.end()
         do {
             try await builder.endCollection(at: Date())
@@ -83,6 +116,7 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
             // Health said no; the sets are safe on the server regardless.
         }
         reset()
+        return summary
     }
 
     @MainActor
@@ -90,6 +124,7 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
         session = nil
         builder = nil
         sessionId = nil
+        paused = false
     }
 
     // MARK: HKWorkoutSessionDelegate
@@ -99,7 +134,9 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
         didChangeTo toState: HKWorkoutSessionState,
         from fromState: HKWorkoutSessionState,
         date: Date
-    ) {}
+    ) {
+        DispatchQueue.main.async { self.paused = toState == .paused }
+    }
 
     func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {}
 

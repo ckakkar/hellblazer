@@ -1,18 +1,21 @@
 import SwiftUI
 import WatchKit
 
-/// The workout on the wrist, two pages like Apple's Workout app: swipe right
-/// for the controls (time, heart rate, undo, end), left to log. While
-/// resting, the log page is the countdown.
+/// The workout on the wrist, paged like Apple's Workout app: swipe right for
+/// the controls, left for the metrics and then Now Playing. It opens on the
+/// logger, since logging sets is the job; while resting, that page is the
+/// rest countdown.
 struct WorkoutView: View {
     @EnvironmentObject private var model: WatchModel
     let workout: Workout
-    @State private var page = 1
+    @State private var page = Page.log
+
+    enum Page { case controls, log, metrics, media }
 
     var body: some View {
         TabView(selection: $page) {
-            ControlsPage(workout: workout)
-                .tag(0)
+            ControlsPage(workout: workout, page: $page)
+                .tag(Page.controls)
             Group {
                 if let rest = model.rest {
                     RestPage(rest: rest)
@@ -25,16 +28,43 @@ struct WorkoutView: View {
                         .multilineTextAlignment(.center)
                 }
             }
-            .tag(1)
+            .tag(Page.log)
+            MetricsPage(workout: workout)
+                .tag(Page.metrics)
+            NowPlayingView()
+                .tag(Page.media)
         }
         .tabViewStyle(.page)
     }
+}
+
+/// Workout's colours: time in yellow, heart rate in red, energy in pink.
+private enum Metric {
+    static let time = Color.yellow
+    static let heart = Color.red
+    static let energy = Color(red: 1, green: 0.25, blue: 0.45)
+}
+
+/// Time recorded so far: Health's clock (which stops while paused) when
+/// recording, else since the session started.
+private func elapsed(_ workout: Workout, at date: Date) -> TimeInterval {
+    WorkoutRecorder.shared.elapsed(at: date) ?? date.timeIntervalSince(workout.startDate)
+}
+
+/// "12:34.56" (or "1:02:03" past the hour), hundredths when the screen's awake.
+private func stopwatch(_ seconds: TimeInterval, hundredths: Bool) -> String {
+    let t = max(0, seconds)
+    let whole = Int(t)
+    if whole >= 3600 || !hundredths { return clock(t) }
+    let centi = Int((t - Double(whole)) * 100)
+    return String(format: "%d:%02d.%02d", whole / 60, whole % 60, centi)
 }
 
 // MARK: Logging
 
 private struct LoggerPage: View {
     @EnvironmentObject private var model: WatchModel
+    @ObservedObject private var recorder = WorkoutRecorder.shared
     let workout: Workout
     let exercise: Exercise
 
@@ -51,44 +81,59 @@ private struct LoggerPage: View {
     private var seedKey: String { "\(exercise.id)#\(exercise.sets.count)" }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
+            // The Workout app's top line: the clock, and your heart rate.
+            HStack(alignment: .firstTextBaseline) {
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    Text(clock(elapsed(workout, at: context.date)))
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(recorder.paused ? Metric.time.opacity(0.5) : Metric.time)
+                }
+                Spacer(minLength: 4)
+                if let bpm = recorder.heartRate {
+                    HStack(spacing: 2) {
+                        Text("\(Int(bpm.rounded()))")
+                            .font(.system(size: 14, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(Metric.heart)
+                    }
+                }
+            }
+
             Button {
                 picking = true
             } label: {
-                VStack(spacing: 1) {
+                VStack(alignment: .leading, spacing: 0) {
                     Text(exercise.name)
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Text(setLabel)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
 
             HStack(spacing: 4) {
                 number(trim(weight), unit: model.unit, field: .weight, value: $weight, through: 999, by: model.weightStep)
                 Text("×")
-                    .font(.title3)
+                    .font(.system(.title3, design: .rounded))
                     .foregroundStyle(.secondary)
                 number(String(Int(reps)), unit: "reps", field: .reps, value: $reps, through: 100, by: 1)
-            }
-
-            if let hint = lastHint {
-                Text(hint)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
             }
 
             Button {
                 model.log(exerciseId: exercise.id, weight: weight, reps: Int(reps))
             } label: {
-                Text("Log set")
-                    .font(.headline)
+                Text("Log Set")
+                    .font(.system(.headline, design: .rounded))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -115,22 +160,22 @@ private struct LoggerPage: View {
     ) -> some View {
         VStack(spacing: 0) {
             Text(text)
-                .font(.system(.title2, design: .rounded).weight(.semibold))
+                .font(.system(size: 26, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text(unit)
-                .font(.caption2)
+            Text(unit.uppercased())
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.white.opacity(focus == field ? 0.14 : 0.06))
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.white.opacity(focus == field ? 0.16 : 0.07))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .strokeBorder(focus == field ? model.accent : .clear, lineWidth: 2)
         )
         .focusable()
@@ -144,17 +189,16 @@ private struct LoggerPage: View {
         .onTapGesture { focus = field }
     }
 
+    /// "Set 3 of 4 · last 60×5" (or the target reps before any history).
     private var setLabel: String {
         let next = exercise.workingSets.count + 1
         var label = exercise.targetSets.map { "Set \(next) of \($0)" } ?? "Set \(next)"
-        if let reps = exercise.targetReps, !reps.isEmpty { label += " · \(reps)" }
+        if let past = pastSet {
+            label += " · last \(trim(past.weight))×\(past.reps)"
+        } else if let reps = exercise.targetReps, !reps.isEmpty {
+            label += " · \(reps)"
+        }
         return label
-    }
-
-    /// "Last time 60 × 5": the same set from the last session.
-    private var lastHint: String? {
-        guard let past = pastSet else { return nil }
-        return "Last time \(trim(past.weight)) × \(past.reps)"
     }
 
     /// Last session's set in this position, else its final one.
@@ -197,12 +241,19 @@ private struct ExercisePicker: View {
                 model.selectedExerciseId = exercise.id
                 dismiss()
             } label: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(exercise.name)
-                        .lineLimit(2)
-                    Text(progress(exercise))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(exercise.name)
+                            .lineLimit(2)
+                        Text(progress(exercise))
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 4)
+                    if exercise.id == model.currentExercise()?.id {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(model.accent)
+                    }
                 }
             }
         }
@@ -228,100 +279,176 @@ private struct RestPage: View {
             VStack(spacing: 8) {
                 ZStack {
                     Circle()
-                        .stroke(Color.white.opacity(0.12), lineWidth: 7)
+                        .stroke(model.accent.opacity(0.22), lineWidth: 12)
                     Circle()
                         .trim(from: 0, to: rest.total > 0 ? min(1, left / rest.total) : 0)
-                        .stroke(model.accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
+                        .stroke(model.accent, style: StrokeStyle(lineWidth: 12, lineCap: .round))
                         .rotationEffect(.degrees(-90))
+                        .animation(.linear(duration: 1), value: left)
                     VStack(spacing: 0) {
-                        Text(clock(left))
-                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                        Text(clock(left.rounded(.up)))
+                            .font(.system(size: 34, weight: .semibold, design: .rounded))
                             .monospacedDigit()
-                        Text("Rest")
-                            .font(.footnote)
+                            .contentTransition(.numericText(countsDown: true))
+                        Text("REST")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                 }
-                .padding(.horizontal, 18)
+                .padding(.horizontal, 14)
+                if let next = model.currentExercise() {
+                    Text("Up next · \(next.name)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 HStack(spacing: 6) {
                     Button("+30s") { model.extendRest(by: 30) }
                     Button("Skip") { model.skipRest() }
                 }
-                .font(.footnote.weight(.semibold))
+                .font(.system(.footnote, design: .rounded).weight(.semibold))
+                .buttonStyle(.bordered)
             }
         }
     }
+}
 
-    private func clock(_ seconds: Double) -> String {
-        let total = Int(seconds.rounded(.up))
-        return "\(total / 60):" + String(format: "%02d", total % 60)
+// MARK: Metrics
+
+/// The Workout app's metrics: the running clock with hundredths in yellow,
+/// then energy, heart rate, and the lifting totals.
+private struct MetricsPage: View {
+    @EnvironmentObject private var model: WatchModel
+    @ObservedObject private var recorder = WorkoutRecorder.shared
+    @Environment(\.isLuminanceReduced) private var dimmed
+    let workout: Workout
+
+    private var working: [LoggedSet] { workout.exercises.flatMap(\.workingSets) }
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: dimmed ? 1 : 0.05)) { context in
+            VStack(alignment: .leading, spacing: 1) {
+                Text(stopwatch(elapsed(workout, at: context.date), hundredths: !dimmed && !recorder.paused))
+                    .font(.system(size: 32, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundStyle(Metric.time)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                if recorder.paused {
+                    Text("PAUSED")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(Metric.time)
+                }
+                metric(recorder.calories.map { "\(Int($0.rounded()))" } ?? "--", unit: "ACTIVE CAL")
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    metric(recorder.heartRate.map { "\(Int($0.rounded()))" } ?? "--", unit: "BPM")
+                    Image(systemName: "heart.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Metric.heart)
+                }
+                metric("\(working.count)", unit: working.count == 1 ? "SET" : "SETS")
+                metric(
+                    Int(working.reduce(0) { $0 + $1.weight * Double($1.reps) }.rounded()).formatted(),
+                    unit: model.unit.uppercased()
+                )
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func metric(_ value: String, unit: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(value)
+                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(unit)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
     }
 }
 
 // MARK: Controls
 
+/// Workout's controls: big rounded buttons, each labelled underneath.
 private struct ControlsPage: View {
     @EnvironmentObject private var model: WatchModel
     @ObservedObject private var recorder = WorkoutRecorder.shared
     let workout: Workout
-    @State private var confirmEnd = false
-
-    private var working: [LoggedSet] { workout.exercises.flatMap(\.workingSets) }
+    @Binding var page: WorkoutView.Page
+    @State private var picking = false
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(workout.title)
-                    .font(.headline)
-                    .lineLimit(2)
-                Text(workout.startDate, style: .timer)
-                    .font(.system(.title2, design: .rounded).weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.tint)
-                HStack(spacing: 12) {
-                    Label(recorder.heartRate.map { "\(Int($0.rounded()))" } ?? "--", systemImage: "heart.fill")
-                        .foregroundStyle(.red)
-                    Label(recorder.calories.map { "\(Int($0.rounded())) kcal" } ?? "-- kcal", systemImage: "flame.fill")
-                        .foregroundStyle(.orange)
+        VStack(spacing: 8) {
+            Text(workout.title)
+                .font(.system(.footnote, design: .rounded).weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                GridRow {
+                    control("End", symbol: "xmark", color: .red) {
+                        Task { await model.finish() }
+                    }
+                    .disabled(model.busy)
+                    if recorder.paused {
+                        control("Resume", symbol: "arrow.clockwise", color: .green) {
+                            recorder.resume()
+                            WKInterfaceDevice.current().play(.start)
+                            page = .metrics
+                        }
+                    } else {
+                        control("Pause", symbol: "pause.fill", color: .yellow) {
+                            recorder.pause()
+                            WKInterfaceDevice.current().play(.stop)
+                        }
+                        .disabled(!recorder.isRecording)
+                    }
                 }
-                .font(.footnote.weight(.semibold))
-                Text("\(working.count) \(working.count == 1 ? "set" : "sets") · \(volume)")
+                GridRow {
+                    control("Undo Set", symbol: "arrow.uturn.backward", color: .white) {
+                        Task { await model.undoLast() }
+                        page = .log
+                    }
+                    .disabled(workout.exercises.allSatisfy { $0.sets.isEmpty } || model.busy)
+                    control("Exercises", symbol: "list.bullet", color: .white) {
+                        picking = true
+                    }
+                }
+            }
+            if let problem = model.problem {
+                Text(problem)
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    Task { await model.undoLast() }
-                } label: {
-                    Label("Undo last set", systemImage: "arrow.uturn.backward")
-                        .frame(maxWidth: .infinity)
-                }
-                .disabled(working.isEmpty || model.busy)
-
-                Button(role: .destructive) {
-                    confirmEnd = true
-                } label: {
-                    Label("End workout", systemImage: "xmark")
-                        .frame(maxWidth: .infinity)
-                }
-                .disabled(model.busy)
-
-                if let problem = model.problem {
-                    Text(problem)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                }
+                    .foregroundStyle(.red)
+                    .lineLimit(2)
             }
         }
-        .confirmationDialog("End this workout?", isPresented: $confirmEnd, titleVisibility: .visible) {
-            Button("End and save") {
-                Task { await model.finish() }
+        .sheet(isPresented: $picking) {
+            NavigationStack {
+                ExercisePicker(workout: workout)
             }
-            Button("Keep going", role: .cancel) {}
+        }
+        .onChange(of: model.selectedExerciseId) { _, _ in
+            // Picked an exercise from here: go log it.
+            if picking { page = .log }
         }
     }
 
-    private var volume: String {
-        let total = working.reduce(0) { $0 + $1.weight * Double($1.reps) }
-        return "\(Int(total.rounded()).formatted()) \(model.unit)"
+    private func control(_ title: String, symbol: String, color: Color, action: @escaping () -> Void) -> some View {
+        VStack(spacing: 3) {
+            Button(action: action) {
+                Image(systemName: symbol)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(color)
+                    .frame(maxWidth: .infinity, minHeight: 46)
+                    .background(color.opacity(0.22), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            Text(title)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .lineLimit(1)
+        }
     }
 }
