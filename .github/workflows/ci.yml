@@ -1,0 +1,67 @@
+name: CI
+
+# The website's checks, on every push to main and every pull request:
+#   web       lint, typecheck, unit tests, a production build, and an audit
+#             of the dependencies that ship (npm audit, high and above).
+#   database  rebuilds the schema from supabase/migrations + seed.sql in a
+#             throwaway local Postgres and runs supabase/tests (RLS between
+#             two lifters, grants, and the transactional functions).
+# Neither needs a secret: the build never talks to Supabase, and the
+# database job runs entirely on the runner.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      # Placeholders: the build reads them but never connects.
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm test
+      - run: npm run build
+
+      # Only what ships to the site; build tools (the Capacitor CLI) are
+      # dev dependencies.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  database:
+    name: Migrations and RLS tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # A local Postgres with Supabase's roles and auth schema, built from
+      # the migrations and seed alone: proof the repo can rebuild production.
+      - run: supabase db start
+
+      - run: supabase test db

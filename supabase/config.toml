@@ -1,0 +1,13 @@
+# The local Supabase stack, for `supabase db start` / `supabase test db`. CI
+# uses it to rebuild the schema from migrations/ and seed.sql and run tests/
+# (.github/workflows/ci.yml). Production is the hosted project and isn't
+# configured from here.
+project_id = "hellblazer"
+
+[db]
+# Matches production (Postgres 17).
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
