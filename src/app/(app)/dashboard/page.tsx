@@ -3,7 +3,7 @@ import { ViewTransition } from "react";
 import Link from "next/link";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import { getCurrentWeekSetsPerMuscle } from "@/lib/data/analytics";
-import { getSessionSummaries } from "@/lib/data/sessions";
+import { getSessionSummaries, hasAnySession } from "@/lib/data/sessions";
 import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
 import { getProfile } from "@/lib/data/profile";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
@@ -27,28 +27,35 @@ export const metadata: Metadata = { title: "Dashboard" };
 
 export const dynamic = "force-dynamic";
 
+/** The furthest back anything here looks: the 52-week heatmap and trend, plus a week. */
+const HISTORY_WEEKS = 53;
+
 export default async function DashboardPage() {
+  const today = await getToday();
+  const since = format(subWeeks(startOfISOWeek(parseISO(today)), HISTORY_WEEKS), "yyyy-MM-dd");
   const [
     weeklySets,
     summaries,
+    anySession,
     activeProgress,
     programs,
     profile,
     unit,
-    today,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
-    getSessionSummaries(),
+    // Only the window the page draws: the read stays the same size however
+    // long someone has been logging.
+    getSessionSummaries({ since }),
+    hasAnySession(),
     getActiveProgramProgress(),
     getPrograms(),
     getProfile(),
     getUnit(),
-    getToday(),
   ]);
   const tier = getTier(profile?.tier);
 
   // A brand-new lifter (no history, no programs) gets pushed straight at a split.
-  const isNewUser = summaries.length === 0 && programs.length === 0;
+  const isNewUser = !anySession && programs.length === 0;
   const featuredPreset =
     PRESETS.find((p) => p.days.length === 5) ?? PRESETS[0];
   const presetLite = (p: (typeof PRESETS)[number]) => ({

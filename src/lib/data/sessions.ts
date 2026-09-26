@@ -56,19 +56,35 @@ export async function getActiveSession(): Promise<ActiveSession | null> {
   };
 }
 
-/** Per-session rollups for history + dashboard, most recent first. */
+/**
+ * Per-session rollups for history + dashboard, most recent first. `since`
+ * (yyyy-MM-dd, inclusive) bounds the read to a window, so a page that only
+ * charts the last year doesn't pull a lifter's whole history.
+ */
 export async function getSessionSummaries(
-  limit?: number,
+  options: { since?: string; limit?: number } = {},
 ): Promise<SessionSummary[]> {
   const supabase = await createClient();
   let query = supabase
     .from("v_session_summary")
     .select("*")
     .order("session_date", { ascending: false });
-  if (limit) query = query.limit(limit);
+  if (options.since) query = query.gte("session_date", options.since);
+  if (options.limit) query = query.limit(options.limit);
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+/** Whether the lifter has logged any session at all, however long ago. */
+export async function hasAnySession(): Promise<boolean> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("session")
+    .select("id", { count: "exact", head: true })
+    .limit(1);
+  if (error) throw error;
+  return (count ?? 0) > 0;
 }
 
 /** Full session with its exercises and every set (warmups included). */
