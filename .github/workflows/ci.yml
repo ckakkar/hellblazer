@@ -58,9 +58,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
+      # Pinned, so a new CLI release can't change what the tests run against.
+      # Bump deliberately (github.com/supabase/cli/releases).
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.118.0
 
       # A local Postgres with Supabase's roles and auth schema, built from
       # the migrations and seed alone: proof the repo can rebuild production.

@@ -94,6 +94,7 @@ function fakeDb(tables: Tables) {
 const A = "00000000-0000-4000-8000-00000000000a";
 const B = "00000000-0000-4000-8000-00000000000b";
 const TOKEN_A = "a".repeat(43);
+const PHONE_TOKEN_A = "p".repeat(43);
 const SE_A = "10000000-0000-4000-8000-000000000001";
 const SE_B = "10000000-0000-4000-8000-000000000002";
 const SESSION_A = "20000000-0000-4000-8000-000000000001";
@@ -105,7 +106,10 @@ let db: ReturnType<typeof fakeDb>;
 
 beforeEach(() => {
   tables = {
-    watch_link: [{ id: "link-a", user_id: A, token_hash: hashWatchToken(TOKEN_A), last_seen_at: null }],
+    watch_link: [
+      { id: "link-a", user_id: A, kind: "watch", token_hash: hashWatchToken(TOKEN_A), last_seen_at: null },
+      { id: "phone-a", user_id: A, kind: "phone", token_hash: hashWatchToken(PHONE_TOKEN_A), last_seen_at: null },
+    ],
     session: [
       { id: SESSION_A, user_id: A, finished_at: new Date().toISOString(), created_at: new Date().toISOString() },
       { id: SESSION_B, user_id: B, finished_at: null, created_at: new Date().toISOString() },
@@ -137,6 +141,17 @@ describe("who's asking", () => {
     expect((await handleWatch(request(), run)).status).toBe(401);
     expect((await handleWatch(request({ authorization: `Bearer ${"b".repeat(43)}` }), run)).status).toBe(401);
     expect(run).not.toHaveBeenCalled();
+  });
+
+  it("only accepts a token minted for that kind of device", async () => {
+    const run = vi.fn(async () => ({}));
+    // The phone's read-only token can't drive the watch's write API…
+    expect((await handleWatch(request({ authorization: `Bearer ${PHONE_TOKEN_A}` }), run, "watch")).status).toBe(401);
+    // …and the watch's can't stand in for the phone's.
+    expect((await handleWatch(signedIn(), run, "phone")).status).toBe(401);
+    expect(run).not.toHaveBeenCalled();
+    expect((await handleWatch(request({ authorization: `Bearer ${PHONE_TOKEN_A}` }), run, "phone")).status).toBe(200);
+    expect(run).toHaveBeenCalledWith(expect.objectContaining({ userId: A }));
   });
 
   it("is a clear 503 when the server has no service key", async () => {

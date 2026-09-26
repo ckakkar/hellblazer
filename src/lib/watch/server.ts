@@ -42,13 +42,21 @@ class WatchError extends Error {
   }
 }
 
-async function resolve(db: Svc, request: Request): Promise<WatchContext | null> {
+/**
+ * Which device a token was minted for (watch_link.kind). Each endpoint takes
+ * one: the watch's token can log and finish workouts; the phone's can only
+ * read the widget snapshot.
+ */
+export type DeviceKind = "watch" | "phone";
+
+async function resolve(db: Svc, request: Request, kind: DeviceKind): Promise<WatchContext | null> {
   const token = bearerToken(request.headers.get("authorization"));
   if (!token) return null;
   const { data: link, error } = await db
     .from("watch_link")
     .select("id, user_id, last_seen_at")
     .eq("token_hash", hashWatchToken(token))
+    .eq("kind", kind)
     .maybeSingle();
   if (error) throw error;
   if (!link) return null;
@@ -71,18 +79,20 @@ async function resolve(db: Svc, request: Request): Promise<WatchContext | null> 
 }
 
 /**
- * Runs one watch API call: 401 when the token is missing or was revoked
- * (the watch then asks the iPhone for a new one), 400 for a malformed body.
+ * Runs one device API call: 401 when the token is missing, was revoked, or
+ * was minted for the other kind of device (the watch then asks the iPhone
+ * for a new one), 400 for a malformed body.
  */
 export async function handleWatch(
   request: Request,
   run: (ctx: WatchContext) => Promise<unknown>,
+  kind: DeviceKind = "watch",
 ): Promise<Response> {
   const headers = { "cache-control": "no-store" };
   const db = createServiceClient();
   if (!db) return Response.json({ error: "unavailable" }, { status: 503, headers });
   try {
-    const ctx = await resolve(db, request);
+    const ctx = await resolve(db, request, kind);
     if (!ctx) return Response.json({ error: "unlinked" }, { status: 401, headers });
     return Response.json(await run(ctx), { headers });
   } catch (err) {

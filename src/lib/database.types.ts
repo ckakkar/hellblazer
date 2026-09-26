@@ -243,17 +243,17 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "program_day_program_id_fkey"
-            columns: ["program_id"]
+            columns: ["program_id", "user_id"]
             isOneToOne: false
             referencedRelation: "program"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
           {
             foreignKeyName: "program_day_template_id_fkey"
-            columns: ["template_id"]
+            columns: ["template_id", "user_id"]
             isOneToOne: false
             referencedRelation: "workout_template"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -285,17 +285,17 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "program_skip_program_day_id_fkey"
-            columns: ["program_day_id"]
+            columns: ["program_day_id", "user_id"]
             isOneToOne: false
             referencedRelation: "program_day"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
           {
             foreignKeyName: "program_skip_program_id_fkey"
-            columns: ["program_id"]
+            columns: ["program_id", "user_id"]
             isOneToOne: false
             referencedRelation: "program"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -372,17 +372,17 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "session_program_id_fkey"
-            columns: ["program_id"]
+            columns: ["program_id", "user_id"]
             isOneToOne: false
             referencedRelation: "program"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
           {
             foreignKeyName: "session_template_id_fkey"
-            columns: ["template_id"]
+            columns: ["template_id", "user_id"]
             isOneToOne: false
             referencedRelation: "workout_template"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -421,31 +421,17 @@ export type Database = {
           },
           {
             foreignKeyName: "session_exercise_session_id_fkey"
-            columns: ["session_id"]
+            columns: ["session_id", "user_id"]
             isOneToOne: false
             referencedRelation: "session"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
           {
             foreignKeyName: "session_exercise_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "v_exercise_progression"
-            referencedColumns: ["session_id"]
-          },
-          {
-            foreignKeyName: "session_exercise_session_id_fkey"
-            columns: ["session_id"]
+            columns: ["session_id", "user_id"]
             isOneToOne: false
             referencedRelation: "v_session_summary"
-            referencedColumns: ["session_id"]
-          },
-          {
-            foreignKeyName: "session_exercise_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "v_working_set"
-            referencedColumns: ["session_id"]
+            referencedColumns: ["session_id", "user_id"]
           },
         ]
       }
@@ -489,17 +475,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "set_session_exercise_id_fkey"
-            columns: ["session_exercise_id"]
+            columns: ["session_exercise_id", "user_id"]
             isOneToOne: false
             referencedRelation: "session_exercise"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "set_session_exercise_id_fkey"
-            columns: ["session_exercise_id"]
-            isOneToOne: false
-            referencedRelation: "v_working_set"
-            referencedColumns: ["session_exercise_id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -544,10 +523,10 @@ export type Database = {
           },
           {
             foreignKeyName: "template_exercise_template_id_fkey"
-            columns: ["template_id"]
+            columns: ["template_id", "user_id"]
             isOneToOne: false
             referencedRelation: "workout_template"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }
@@ -645,10 +624,10 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "session_template_id_fkey"
-            columns: ["template_id"]
+            columns: ["template_id", "user_id"]
             isOneToOne: false
             referencedRelation: "workout_template"
-            referencedColumns: ["id"]
+            referencedColumns: ["id", "user_id"]
           },
         ]
       }

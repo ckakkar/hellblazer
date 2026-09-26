@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request, { params }: { params: Promise<{ action: string }> }) {
   const { action } = await params;
   if (action !== "state") return Response.json({ error: "not found" }, { status: 404 });
-  return handleWatch(request, watchState);
+  return handleWatch(request, watchState, "watch");
 }
 
 const writes = {
@@ -40,5 +40,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ act
   }
   const run = writes[action as keyof typeof writes];
   const body: unknown = await request.json().catch(() => null);
-  return handleWatch(request, (ctx) => run(ctx, body));
+  return handleWatch(request, (ctx) => run(ctx, body), "watch");
 }

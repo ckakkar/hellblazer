@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(17);
+select plan(20);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -66,6 +66,18 @@ order by position
 limit 1;
 
 insert into public.profile (user_id, display_name) values ('00000000-0000-0000-0000-00000000000a', 'A');
+select set_config(
+  'test.se',
+  (select id::text from public.session_exercise where session_id = current_setting('test.session')::uuid order by position limit 1),
+  true
+);
+insert into public.exercise (user_id, name, primary_muscle)
+values ('00000000-0000-0000-0000-00000000000a', 'A''s own lift', 'chest');
+select set_config(
+  'test.custom',
+  (select id::text from public.exercise where user_id = '00000000-0000-0000-0000-00000000000a'),
+  true
+);
 select throws_ok(
   $$update public.profile set tier = 'king'$$, '42501', null,
   'rank columns are written by the server only'
@@ -87,6 +99,37 @@ select is(
 select is(
   (select count(*) from public.lift_trends('00000000-0000-0000-0000-00000000000a'))::int, 0,
   'nor A''s lift trends'
+);
+-- Even knowing A's ids, B can't hang rows off A's data: parents and
+-- children must share an owner (composite foreign keys, exercise trigger).
+select throws_ok(
+  format(
+    $$insert into public.session_exercise (user_id, session_id, exercise_id)
+      values ('00000000-0000-0000-0000-00000000000b', %L, (select id from public.exercise where user_id is null limit 1))$$,
+    current_setting('test.session')
+  ),
+  '23503', null,
+  'B can''t add an exercise to A''s session'
+);
+select throws_ok(
+  format(
+    $$insert into public."set" (user_id, session_exercise_id, set_number, weight_kg, reps)
+      values ('00000000-0000-0000-0000-00000000000b', %L, 1, 100, 5)$$,
+    current_setting('test.se')
+  ),
+  '23503', null,
+  'B can''t log a set under A''s exercise'
+);
+insert into public.workout_template (user_id, name) values ('00000000-0000-0000-0000-00000000000b', 'B day');
+select throws_ok(
+  format(
+    $$insert into public.template_exercise (user_id, template_id, exercise_id)
+      select '00000000-0000-0000-0000-00000000000b', id, %L from public.workout_template
+      where user_id = '00000000-0000-0000-0000-00000000000b'$$,
+    current_setting('test.custom')
+  ),
+  '23503', null,
+  'B can''t use A''s custom exercise'
 );
 -- Tried here, checked below once A's row is visible again.
 update public.session set title = 'mine now';
