@@ -49,7 +49,7 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 
 ## Highlights
 
-- **A native iPhone app.** The same app in a Capacitor shell, built and shipped to TestFlight by GitHub Actions. The workout lives on the Lock Screen and in the Dynamic Island, with +30s and Skip for the rest right there. There's a Home Screen widget, a Control Center button, Siri ("Start Day 2 in Fatty", "What's my bench max in Fatty"), finished workouts go to Apple Health, and it scrolls, swipes and taps like an iOS app. A web deploy updates it instantly.
+- **A native iPhone app.** The same app in a Capacitor shell, built and shipped to TestFlight by GitHub Actions. The workout lives on the Lock Screen and in the Dynamic Island, with +30s and Skip for the rest right there. There are Home Screen widgets (next workout with a Start button, sets per muscle, a lift's trend) that refresh themselves after every workout, a Control Center button, Siri ("Start Day 2 in Fatty", "What's my bench max in Fatty"), finished workouts go to Apple Health, and it scrolls, swipes and taps like an iOS app. A web deploy updates it instantly.
 - **An Apple Watch app.** Start a workout day, log sets with the Digital Crown, rest with a countdown that taps your wrist, and record the workout to Apple Health with heart rate. Runs on watchOS 10, so the first Apple Watch SE too.
 - **A set logger built for mid-set use.** Exercises run as a queue. Each one opens in a focused sheet where every new set **copies the last one forward**, and last session's numbers sit above as the target. Thumb-sized steppers, a rest timer that starts itself when a set lands (shown in the sheet too, so it's in view mid-set), a live workout clock, and autosave that can't create duplicates.
 - **It keeps logging offline.** Sets you log without a signal are queued on the device (IndexedDB) and uploaded when you're back. The logger tells you plainly when something hasn't saved yet.
@@ -276,7 +276,8 @@ push_subscription   Web Push endpoints per browser
 apns_device         iPhone push tokens, claimed per phone (claim_apns_device)
 apple_token         Sign in with Apple refresh tokens: service role only,
                     kept so account deletion can revoke Apple access
-watch_link          Apple Watch tokens, stored as SHA-256 only
+watch_link          device tokens (the watch's, and the iPhone's for widget
+                    refreshes), stored as SHA-256 only
 ```
 
 **Muscle groups** (`muscle_group` enum, 14): chest, back, side delts, rear delts, front delts, biceps, triceps, quads, hamstrings, glutes, calves, abs, forearms and traps.
@@ -320,7 +321,11 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
   - The launch screen stays up until the page says it's ready, so a cold start has no blank frame.
   - Widget, Live Activity, quick action and Siri taps navigate in place rather than reloading.
 - **Haptics** that match system controls: switch and stepper detents, a knock when a set lands or a rest starts, success on a finished workout or a record, and a warning when a hold-to-delete completes (`src/lib/haptics.ts`).
-- **Widgets.** "Next Bout" for the Home Screen (small, medium) and Lock Screen (rectangular, circular, inline). The dashboard writes a snapshot into the App Group; the widget resets when the week rolls over, and tapping it opens Log.
+- **Widgets.**
+  - **Next Bout** for the Home Screen (small, medium) and Lock Screen (rectangular, circular, inline): the next programmed day and the week so far. The medium one has a **Start** button that begins that day. Tapping elsewhere opens Log.
+  - **Sets per Muscle** (medium, large): the dashboard's chart, this week's working sets over the 10–20 band, weak points flagged.
+  - **Lift Trend** (small, medium, Lock Screen): one lift's estimated max over its last 16 sessions. Long-press → Edit to pick the lift; tapping opens its progress.
+  - All of them read one snapshot (`src/lib/widget-snapshot.ts`) in the App Group, and reset when the week rolls over. The app writes it when the dashboard opens, and **after any workout is finished** (on the website, in the app or on the watch) the server sends the phone a silent push; the app then fetches a fresh one from `/api/device/snapshot` with its own device token (`WidgetRefresher`), so the widgets are current without opening Fatty.
 - **Apple Health.** With the switch on in Settings, finished sessions are saved as strength-training workouts and logged bodyweight as body mass. Nothing is read from Health.
 - **Push.** APNs (`src/lib/apns.ts`) beside Web Push; the daily reminder cron sends to both. Tapping a notification opens its page.
 - **Share sheet.** The share card and the CSV export go to the iOS share sheet (a web view can't download files).
@@ -342,7 +347,7 @@ A native iPhone app built with **Capacitor**. It's a thin shell around the live 
 `.github/workflows/ios.yml` builds on a GitHub-hosted Mac whenever `ios/`, `app-shell/` or `capacitor.config.ts` changes, or by hand from the Actions tab.
 
 - With uploads on (`IOS_TESTFLIGHT=on`), fastlane (`ios/fastlane/Fastfile`) signs the app, the widget extension and the watch app, uploads to TestFlight, then `scripts/testflight-notes.mjs` sets the commit message as **What to Test**, and the internal group (automatic distribution) gets it on their phones within minutes. Otherwise, or when run by hand with *compile only*, it just checks that everything compiles.
-- **Build numbers** count up by themselves (`run number.attempt`). **To ship a new version number**, bump `MARKETING_VERSION` on every target in `ios/App/App.xcodeproj` (the app, the widgets and the watch must match). The app is on **1.2**.
+- **Build numbers** count up by themselves (`run number.attempt`). **To ship a new version number**, bump `MARKETING_VERSION` on every target in `ios/App/App.xcodeproj` (the app, the widgets and the watch must match). The app is on **1.3**.
 - **Web changes** don't need any of this: a push to `main` reaches the app within a minute of the Vercel deploy.
 
 **One-time setup** (a fresh Apple account or a fork)
@@ -445,7 +450,8 @@ src/
 │   │   ├── share/[id]/        session → 1080×1350 PNG (next/og)
 │   │   ├── export/            your set log as CSV
 │   │   ├── cron/reminders/    daily push reminders
-│   │   └── watch/[action]/    the Apple Watch app's API (bearer token)
+│   │   ├── watch/[action]/    the Apple Watch app's API (bearer token)
+│   │   └── device/snapshot/   the widget snapshot, for the iPhone's background refresh
 │   ├── .well-known/           apple-app-site-association (universal links)
 │   ├── auth/callback/         OAuth callback (and linking Google from Settings)
 │   ├── auth/native/           ID-token sign-in and account linking for the iOS app

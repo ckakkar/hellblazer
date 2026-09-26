@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
 import {
@@ -9,6 +10,7 @@ import { isValidTimeZone } from "@/lib/local-date";
 import { fromDisplayWeight, toDisplayWeight, type Unit } from "@/lib/units";
 import { STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { bearerToken, hashWatchToken } from "@/lib/watch/token";
+import { refreshWidgets, widgetDevices } from "@/lib/widget-push";
 import type {
   WatchExercise,
   WatchStartOption,
@@ -355,5 +357,8 @@ export async function finishWatchWorkout(ctx: WatchContext, body: unknown): Prom
       .eq("user_id", userId);
     if (error) throw error;
   }
+  // The iPhone's widgets catch up on their own (a silent push).
+  const devices = await widgetDevices(db, userId).catch(() => []);
+  after(() => refreshWidgets(devices));
   return watchState(ctx);
 }

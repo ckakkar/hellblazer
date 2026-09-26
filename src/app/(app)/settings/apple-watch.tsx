@@ -10,7 +10,7 @@ import type { Unit } from "@/lib/units";
 
 /**
  * iPhone app only, and only with a watch paired: the Apple Watch switches.
- * Connecting is automatic (WatchSync); this is where it's turned off, and
+ * Connecting is automatic (DeviceSync); this is where it's turned off, and
  * where the watch stops opening by itself when a workout starts here.
  */
 export function AppleWatchSettings({

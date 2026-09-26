@@ -3,8 +3,10 @@
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { getAuthedContext } from "@/lib/auth";
 import { getLastPerformances, type LastPerformance } from "@/lib/data/sessions";
+import { refreshWidgets, widgetDevices } from "@/lib/widget-push";
 import type { TablesUpdate } from "@/lib/database.types";
 
 /**
@@ -301,7 +303,7 @@ export async function finishSession(input: {
       durationMin: z.number().int().min(0).max(1000).nullable().optional(),
     })
     .parse(input);
-  const { supabase } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext();
   // Saving a session reopened to fix it keeps its original finish time.
   const { data: current, error: readErr } = await supabase
     .from("session")
@@ -325,6 +327,9 @@ export async function finishSession(input: {
   }
   revalidatePath("/dashboard");
   revalidatePath("/history");
+  // The iPhone's widgets catch up on their own (a silent push), after the redirect.
+  const devices = await widgetDevices(supabase, user.id).catch(() => []);
+  after(() => refreshWidgets(devices));
   redirect(`/history/${v.sessionId}`);
 }
 

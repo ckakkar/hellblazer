@@ -26,9 +26,6 @@ function providerToken(key: NonNullable<ReturnType<typeof appleKey>>) {
  * (app deleted, or it belongs to another app) and the caller should forget it.
  */
 export function sendApns(deviceToken: string, payload: PushPayload): Promise<{ ok: boolean; gone: boolean }> {
-  const key = appleKey();
-  if (!key) return Promise.resolve({ ok: false, gone: false });
-
   const body = JSON.stringify({
     aps: {
       alert: { title: payload.title, body: payload.body },
@@ -38,6 +35,26 @@ export function sendApns(deviceToken: string, payload: PushPayload): Promise<{ o
     // Read by the app when the notification is tapped (NativeBridge).
     ...(payload.url ? { url: payload.url } : {}),
   });
+  return deliver(deviceToken, body, "alert", "10");
+}
+
+/**
+ * A silent push: nothing shows, the app gets a few seconds in the background
+ * with `data` (AppDelegate's didReceiveRemoteNotification). Apple rations
+ * these, so they're for things like refreshing widgets, not every set.
+ */
+export function sendApnsBackground(deviceToken: string, data: Record<string, string>) {
+  return deliver(deviceToken, JSON.stringify({ aps: { "content-available": 1 }, ...data }), "background", "5");
+}
+
+function deliver(
+  deviceToken: string,
+  body: string,
+  pushType: "alert" | "background",
+  priority: "10" | "5",
+): Promise<{ ok: boolean; gone: boolean }> {
+  const key = appleKey();
+  if (!key) return Promise.resolve({ ok: false, gone: false });
 
   return new Promise((resolve) => {
     const session = connect(APNS_ORIGIN);
@@ -55,8 +72,8 @@ export function sendApns(deviceToken: string, payload: PushPayload): Promise<{ o
       ":path": `/3/device/${deviceToken}`,
       authorization: `bearer ${providerToken(key)}`,
       "apns-topic": APP_BUNDLE_ID,
-      "apns-push-type": "alert",
-      "apns-priority": "10",
+      "apns-push-type": pushType,
+      "apns-priority": priority,
       "content-type": "application/json",
     });
     req.setTimeout(10_000, () => {

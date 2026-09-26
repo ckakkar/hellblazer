@@ -1,26 +1,21 @@
 "use client";
 
 import { useEffect } from "react";
-import { getSiriSnapshot } from "@/lib/actions/native";
-import { withNative, type WidgetSnapshot } from "@/lib/native-plugins";
+import { getNativeSnapshot } from "@/lib/actions/native";
+import { withNative } from "@/lib/native-plugins";
 
 /**
- * Hands the dashboard's numbers to the iOS Home Screen and Lock Screen
- * widgets, which can't reach the server themselves, along with what Siri
- * and Spotlight know (your workout days and best lifts). Renders nothing,
- * and does nothing on the website.
+ * Hands the iOS widgets, Siri and Spotlight a fresh snapshot (the week, the
+ * next day, your lifts and their trends) whenever the dashboard opens in the
+ * app. Between visits, a silent push after each finished workout has the app
+ * fetch one itself. Renders nothing, and does nothing on the website.
  */
-export function WidgetSync({ snapshot }: { snapshot: Omit<WidgetSnapshot, "updatedAt" | keyof SiriFields> }) {
-  const json = JSON.stringify(snapshot);
+export function WidgetSync() {
   useEffect(() => {
     withNative(async (api) => {
-      const siri = await getSiriSnapshot().catch(() => null);
-      await api.updateWidget({
-        json: JSON.stringify({ ...JSON.parse(json), ...siri, updatedAt: Date.now() }),
-      });
+      const snapshot = await getNativeSnapshot();
+      await api.updateWidget({ json: JSON.stringify({ ...snapshot, updatedAt: Date.now() }) });
     });
-  }, [json]);
+  }, []);
   return null;
 }
-
-type SiriFields = Pick<WidgetSnapshot, "unit" | "workouts" | "lifts">;

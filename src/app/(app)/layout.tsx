@@ -11,7 +11,7 @@ import { getTier } from "@/lib/tiers";
 import { NativeBridge } from "@/components/native/native-bridge";
 import { PullToRefresh } from "@/components/native/pull-to-refresh";
 import { WorkoutActivitySync } from "@/components/native/workout-activity-sync";
-import { WatchSync } from "@/components/native/watch-sync";
+import { DeviceSync } from "@/components/native/device-sync";
 import { getAccent, getUnit } from "@/lib/settings";
 import { accentSwatch } from "@/lib/accents";
 
@@ -46,7 +46,7 @@ export default async function AppLayout({
           away with the page; the home and profile heroes cover it. */}
       <div aria-hidden className="hb-arena-light pointer-events-none absolute inset-x-0 top-0 -z-10 h-[26rem]" />
       <NativeBridge />
-      <WatchSync userId={user.id} unit={unit} accent={accentSwatch(accent)} />
+      <DeviceSync userId={user.id} unit={unit} accent={accentSwatch(accent)} />
       <PullToRefresh />
       <RealtimeSync userId={user.id} />
       <AppNav

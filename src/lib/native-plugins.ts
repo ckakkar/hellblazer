@@ -8,6 +8,8 @@ export type HealthStatus =
 /** What the Home Screen and Lock Screen widgets draw (ios/App/Shared/WidgetSnapshot.swift). */
 export type WidgetSnapshot = {
   nextBout: string | null;
+  /** The next day's template, for the widget's Start button. */
+  nextTemplateId?: string | null;
   programName: string | null;
   sessionsThisWeek: number;
   sessionsPlanned: number | null;
@@ -16,10 +18,14 @@ export type WidgetSnapshot = {
   weekStart: string;
   /** Epoch milliseconds. */
   updatedAt: number;
-  /** For Siri and Spotlight (see getSiriSnapshot). */
+  /** For Siri and Spotlight (see buildWidgetSnapshot). */
   unit?: "kg" | "lb";
   workouts?: { templateId: string; label: string }[];
   lifts?: { id: string; name: string; bestWeight: number; bestReps: number; estimatedMax: number }[];
+  /** This week's sets per muscle, in the dashboard chart's order. */
+  muscles?: { key: string; label: string; sets: number; weak: boolean }[];
+  /** Estimated-max history (display unit) for the Lift Trend widget. */
+  trends?: { id: string; name: string; points: { date: string; e1rm: number }[] }[];
 };
 
 /**
@@ -109,6 +115,12 @@ export interface HellBlazerNative {
   /** Forgets the watch's token here and on the watch; returns it for revoking. */
   watchUnlink(options: { disable: boolean }): Promise<{ token: string | null }>;
   setWatchAutoOpen(options: { on: boolean }): Promise<void>;
+  /** Whose device token this iPhone holds, for background widget refreshes. */
+  phoneStatus(): Promise<{ linkedUserId?: string }>;
+  /** Unit and timezone for those refreshes, and a token when it needs one. */
+  phoneSync(options: { token?: string; userId: string; unit: "kg" | "lb"; timeZone: string }): Promise<void>;
+  /** Forgets this iPhone's token; returns it for revoking. */
+  phoneUnlink(): Promise<{ token: string | null }>;
   /**
    * "restCommand": a RestCommand is waiting (see takeRestCommand).
    * "watchChanged": the watch logged or finished something.

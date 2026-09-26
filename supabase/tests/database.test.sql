@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(15);
+select plan(17);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -80,6 +80,14 @@ select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000
 
 select is((select count(*) from public.session)::int, 0, 'B sees none of A''s sessions');
 select is((select count(*) from public."set")::int, 0, 'B sees none of A''s sets');
+select is(
+  (select count(*) from public.exercise_stats(null, '00000000-0000-0000-0000-00000000000a'))::int, 0,
+  'B can''t read A''s lift stats by passing A''s id'
+);
+select is(
+  (select count(*) from public.lift_trends('00000000-0000-0000-0000-00000000000a'))::int, 0,
+  'nor A''s lift trends'
+);
 -- Tried here, checked below once A's row is visible again.
 update public.session set title = 'mine now';
 select throws_ok(

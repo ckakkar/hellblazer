@@ -152,21 +152,10 @@ export default async function DashboardPage() {
     },
   ];
 
-  const nextTemplate = activeProgress?.nextDay?.workout_template;
-  const widgetSnapshot = {
-    nextBout: activeProgress?.isCompleted
-      ? null
-      : nextTemplate?.day_label || nextTemplate?.name || null,
-    programName: activeProgress?.program.name ?? null,
-    sessionsThisWeek: thisWeek.length,
-    sessionsPlanned: sessionTarget,
-    setsThisWeek: workingSetsThisWeek,
-    weekStart: format(weekStart, "yyyy-MM-dd"),
-  };
 
   return (
     <div className="space-y-10">
-      <WidgetSync snapshot={widgetSnapshot} />
+      <WidgetSync />
       {/* The hero, and the next workout overlapping its foot on a phone: one
           screen that says who you are and what to do next, with Start in
           thumb reach. Side by side from `lg`. */}

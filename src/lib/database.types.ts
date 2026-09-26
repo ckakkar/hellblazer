@@ -555,6 +555,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: string
           last_seen_at: string | null
           token_hash: string
           user_id: string
@@ -562,6 +563,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          kind?: string
           last_seen_at?: string | null
           token_hash: string
           user_id: string
@@ -569,6 +571,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          kind?: string
           last_seen_at?: string | null
           token_hash?: string
           user_id?: string
@@ -706,7 +709,7 @@ export type Database = {
         Returns: string
       }
       exercise_stats: {
-        Args: { p_exclude_session?: string }
+        Args: { p_exclude_session?: string; p_user?: string }
         Returns: {
           best_est_1rm: number
           best_reps: number
@@ -737,6 +740,15 @@ export type Database = {
           tier: string
           total_volume: number
           username: string
+        }[]
+      }
+      lift_trends: {
+        Args: { p_lifts?: number; p_points?: number; p_user?: string }
+        Returns: {
+          best_est_1rm: number
+          exercise_id: string
+          exercise_name: string
+          session_date: string
         }[]
       }
       load_preset: {
