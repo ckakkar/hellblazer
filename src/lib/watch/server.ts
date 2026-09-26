@@ -252,68 +252,22 @@ const startSchema = z.object({
 });
 
 /**
- * Starts a session from a template, as startSession does on the web (keep
- * the two in step). A second tap, or a start on the phone a moment ago,
- * returns the session already in progress instead of opening another.
+ * Starts a session from a template, through the same start_session() the web
+ * uses (one transaction; as the service role, the user is passed in). A
+ * second tap, or a start on the phone a moment ago, returns the session
+ * already in progress instead of opening another.
  */
 export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promise<WatchState> {
   const v = startSchema.parse(body);
   if (await activeWorkout(ctx)) return watchState(ctx);
-  const { db, userId } = ctx;
-
-  let templateId = v.templateId;
-  let programId: string | null = null;
-  if (v.programDayId) {
-    const { data: day } = await db
-      .from("program_day")
-      .select("template_id, program_id")
-      .eq("id", v.programDayId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (!day?.template_id) throw new WatchError(404, "not found");
-    templateId = day.template_id;
-    programId = day.program_id;
-  }
-
-  const { data: template } = await db
-    .from("workout_template")
-    .select("id, name, day_label")
-    .eq("id", templateId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!template) throw new WatchError(404, "not found");
-
-  const { data: session, error } = await db
-    .from("session")
-    .insert({
-      user_id: userId,
-      template_id: template.id,
-      program_id: programId,
-      title: template.day_label || template.name,
-      date: v.localDate,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
-
-  const { data: planned, error: plannedError } = await db
-    .from("template_exercise")
-    .select("exercise_id, position, note")
-    .eq("template_id", template.id)
-    .eq("user_id", userId)
-    .order("position", { ascending: true });
-  if (plannedError) throw plannedError;
-  if (planned && planned.length > 0) {
-    const { error: insertError } = await db.from("session_exercise").insert(
-      planned.map((te) => ({
-        user_id: userId,
-        session_id: session.id,
-        exercise_id: te.exercise_id,
-        position: te.position,
-        note: te.note,
-      })),
-    );
-    if (insertError) throw insertError;
+  const { error } = await ctx.db.rpc("start_session", {
+    p_user: ctx.userId,
+    ...(v.programDayId ? { p_program_day_id: v.programDayId } : { p_template_id: v.templateId }),
+    p_date: v.localDate,
+  });
+  if (error) {
+    // start_session raises "… not found" for a day or template that isn't theirs.
+    throw error.code === "P0001" ? new WatchError(404, "not found") : error;
   }
   return watchState(ctx);
 }

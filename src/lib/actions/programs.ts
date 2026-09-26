@@ -8,18 +8,6 @@ import { getTimeZone, getToday } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
 import type { TablesUpdate } from "@/lib/database.types";
 
-/** Ensure at most one active program: clear any others for this user. */
-async function deactivateAll(
-  supabase: Awaited<ReturnType<typeof getAuthedContext>>["supabase"],
-  userId: string,
-) {
-  await supabase
-    .from("program")
-    .update({ is_active: false })
-    .eq("user_id", userId)
-    .eq("is_active", true);
-}
-
 export async function createProgram(input: {
   name: string;
   durationWeeks: number;
@@ -40,37 +28,23 @@ export async function createProgram(input: {
       setActive: z.boolean(),
     })
     .parse(input);
-  const { supabase, user } = await getAuthedContext();
+  const { supabase } = await getAuthedContext();
 
-  if (v.setActive) await deactivateAll(supabase, user.id);
-
-  const { data: program, error } = await supabase
-    .from("program")
-    .insert({
-      user_id: user.id,
-      name: v.name,
-      duration_weeks: v.durationWeeks,
-      start_date: v.startDate ?? null,
-      is_active: v.setActive,
-    })
-    .select("id")
-    .single();
+  // One transaction (create_program): switching the active program, the
+  // program and its days all land together.
+  const { data: id, error } = await supabase.rpc("create_program", {
+    p_name: v.name,
+    p_duration_weeks: v.durationWeeks,
+    // Generated arg types can't say "nullable"; null means not started yet.
+    p_start_date: (v.startDate ?? null) as string,
+    p_template_ids: v.templateIds,
+    p_set_active: v.setActive,
+  });
   if (error) throw error;
-
-  if (v.templateIds.length > 0) {
-    const rows = v.templateIds.map((templateId, i) => ({
-      user_id: user.id,
-      program_id: program.id,
-      template_id: templateId,
-      position: i,
-    }));
-    const { error: dErr } = await supabase.from("program_day").insert(rows);
-    if (dErr) throw dErr;
-  }
 
   revalidatePath("/programs");
   revalidatePath("/dashboard");
-  return { id: program.id };
+  return { id };
 }
 
 export async function updateProgram(input: {
@@ -110,31 +84,15 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
   const v = z
     .object({ id: z.string().uuid(), active: z.boolean() })
     .parse(input);
-  const { supabase, user } = await getAuthedContext();
-  if (v.active) {
-    await deactivateAll(supabase, user.id);
-    const patch: TablesUpdate<"program"> = { is_active: true };
-    // Starting a program with no start date begins it today.
-    const { data: existing } = await supabase
-      .from("program")
-      .select("start_date")
-      .eq("id", v.id)
-      .maybeSingle();
-    if (existing && !existing.start_date) {
-      patch.start_date = await getToday();
-    }
-    const { error } = await supabase
-      .from("program")
-      .update(patch)
-      .eq("id", v.id);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from("program")
-      .update({ is_active: false })
-      .eq("id", v.id);
-    if (error) throw error;
-  }
+  const { supabase } = await getAuthedContext();
+  // One step (set_active_program), so switching never leaves no program
+  // active. Starting a program with no start date begins it today.
+  const { error } = await supabase.rpc("set_active_program", {
+    p_id: v.id,
+    p_active: v.active,
+    p_today: await getToday(),
+  });
+  if (error) throw error;
   revalidatePath("/programs");
   revalidatePath(`/programs/${v.id}`);
   revalidatePath("/dashboard");
@@ -368,30 +326,11 @@ export async function moveProgramDay(input: {
     })
     .parse(input);
   const { supabase } = await getAuthedContext();
-  const { data: current } = await supabase
-    .from("program_day")
-    .select("id, position")
-    .eq("id", v.id)
-    .maybeSingle();
-  if (!current) return;
-  const q = supabase
-    .from("program_day")
-    .select("id, position")
-    .eq("program_id", v.programId)
-    .order("position", { ascending: v.direction === "down" })
-    .limit(1);
-  const { data: neighbour } = await (v.direction === "up"
-    ? q.lt("position", current.position)
-    : q.gt("position", current.position)
-  ).maybeSingle();
-  if (!neighbour) return;
-  await supabase
-    .from("program_day")
-    .update({ position: neighbour.position })
-    .eq("id", current.id);
-  await supabase
-    .from("program_day")
-    .update({ position: current.position })
-    .eq("id", neighbour.id);
+  // Both rows move in one transaction (move_program_day).
+  const { error } = await supabase.rpc("move_program_day", {
+    p_id: v.id,
+    p_direction: v.direction,
+  });
+  if (error) throw error;
   revalidatePath(`/programs/${v.programId}`);
 }

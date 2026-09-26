@@ -695,6 +695,16 @@ export type Database = {
         Args: { p_timezone?: string; p_token: string }
         Returns: undefined
       }
+      create_program: {
+        Args: {
+          p_duration_weeks: number
+          p_name: string
+          p_set_active: boolean
+          p_start_date: string
+          p_template_ids: string[]
+        }
+        Returns: string
+      }
       exercise_stats: {
         Args: { p_exclude_session?: string }
         Returns: {
@@ -729,6 +739,19 @@ export type Database = {
           username: string
         }[]
       }
+      load_preset: {
+        Args: { p_days: Json; p_name: string; p_today: string; p_weeks: number }
+        Returns: string
+      }
+      move_program_day: {
+        Args: { p_direction: string; p_id: string }
+        Returns: undefined
+      }
+      move_template_exercise: {
+        Args: { p_direction: string; p_id: string }
+        Returns: undefined
+      }
+      purge_abandoned_templates: { Args: never; Returns: undefined }
       recent_records: {
         Args: { p_limit?: number }
         Returns: {
@@ -749,6 +772,19 @@ export type Database = {
           strength: number
           week: string
         }[]
+      }
+      set_active_program: {
+        Args: { p_active: boolean; p_id: string; p_today: string }
+        Returns: undefined
+      }
+      start_session: {
+        Args: {
+          p_date?: string
+          p_program_day_id?: string
+          p_template_id?: string
+          p_user?: string
+        }
+        Returns: string
       }
       watch_last_performances: {
         Args: {

@@ -28,21 +28,7 @@ export async function startSession(input: {
         .optional(),
     })
     .parse(input);
-  const { supabase, user } = await getAuthedContext();
-
-  let templateId: string | null = v.templateId ?? null;
-  let programId: string | null = null;
-
-  if (v.programDayId) {
-    const { data: pd } = await supabase
-      .from("program_day")
-      .select("template_id, program_id")
-      .eq("id", v.programDayId)
-      .maybeSingle();
-    if (!pd) throw new Error("Program day not found");
-    templateId = pd.template_id;
-    programId = pd.program_id;
-  }
+  const { supabase } = await getAuthedContext();
 
   // A session advances the program ONLY when it was started from an explicit
   // program day. Freeform work and bare templates stay off-plan by design: we
@@ -50,55 +36,17 @@ export async function startSession(input: {
   // which silently burned a rung of the rotation on workouts the lifter never
   // meant as program work. Callers that want a start to count must pass
   // `programDayId` (see the /log starter and StartWorkoutButton).
-
-  let title: string | null = null;
-  if (templateId) {
-    const { data: tmpl } = await supabase
-      .from("workout_template")
-      .select("name, day_label")
-      .eq("id", templateId)
-      .maybeSingle();
-    if (tmpl) title = tmpl.day_label || tmpl.name;
-  }
-
-  const { data: session, error } = await supabase
-    .from("session")
-    .insert({
-      user_id: user.id,
-      template_id: templateId,
-      program_id: programId,
-      title,
-      // Stamp the lifter's local day; fall back to the DB `current_date` default.
-      ...(v.localDate ? { date: v.localDate } : {}),
-    })
-    .select("id")
-    .single();
+  //
+  // One transaction in Postgres (start_session): the session and its copied
+  // exercises land together or not at all.
+  const { data: sessionId, error } = await supabase.rpc("start_session", {
+    ...(v.templateId ? { p_template_id: v.templateId } : {}),
+    ...(v.programDayId ? { p_program_day_id: v.programDayId } : {}),
+    ...(v.localDate ? { p_date: v.localDate } : {}),
+  });
   if (error) throw error;
 
-  // Instantiate the template's exercises into the session (preserving order).
-  if (templateId) {
-    const { data: tmplExercises } = await supabase
-      .from("template_exercise")
-      .select("exercise_id, position, note")
-      .eq("template_id", templateId)
-      .order("position", { ascending: true });
-
-    if (tmplExercises && tmplExercises.length > 0) {
-      const rows = tmplExercises.map((te) => ({
-        user_id: user.id,
-        session_id: session.id,
-        exercise_id: te.exercise_id,
-        position: te.position,
-        note: te.note,
-      }));
-      const { error: seErr } = await supabase
-        .from("session_exercise")
-        .insert(rows);
-      if (seErr) throw seErr;
-    }
-  }
-
-  redirect(`/log/${session.id}`);
+  redirect(`/log/${sessionId}`);
 }
 
 /**
