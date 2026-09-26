@@ -1,6 +1,8 @@
 /* Fatty service worker: offline shell + web push.
    Hand-rolled (no build step) so it stays framework-agnostic. */
-const VERSION = "hb-v3";
+// Bump to drop every cached file at once (e.g. a change to this file's
+// caching rules). Replacing a single image doesn't need it: media revalidates.
+const VERSION = "hb-v4";
 const STATIC_CACHE = `static-${VERSION}`;
 const RUNTIME_CACHE = `runtime-${VERSION}`;
 const OFFLINE_URL = "/offline.html";
@@ -55,27 +57,41 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Only authored media/fonts are cache-first. JS and CSS always stay on the
-  // network so a deployment can never mix two application revisions.
+  // Authored media and fonts: stale-while-revalidate. A cached copy answers
+  // at once (and offline), and a fresh one is fetched behind it, so an asset
+  // replaced under the same URL shows on the next visit without bumping
+  // VERSION. JS and CSS always stay on the network so a deployment can never
+  // mix two application revisions.
   const isStatic = /\.(?:png|jpg|jpeg|svg|webp|ico|woff2?|ttf)$/.test(url.pathname);
   if (isStatic) {
+    const cacheName = PRECACHE.includes(url.pathname) ? STATIC_CACHE : RUNTIME_CACHE;
+    const fresh = fetch(req)
+      .then((res) => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches
+            .open(cacheName)
+            .then((c) => c.put(req, copy))
+            .then(() => cacheName === RUNTIME_CACHE && trim(RUNTIME_CACHE, RUNTIME_MAX));
+        }
+        return res;
+      })
+      .catch(() => undefined);
     event.respondWith(
-      caches.match(req).then(
-        (cached) =>
-          cached ||
-          fetch(req)
-            .then((res) => {
-              if (res.ok) {
-                const copy = res.clone();
-                caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy));
-              }
-              return res;
-            })
-            .catch(() => cached),
-      ),
+      caches.match(req).then((cached) => cached || fresh.then((res) => res || Response.error())),
     );
+    // Keep the worker alive until the background refresh is stored.
+    event.waitUntil(fresh);
   }
 });
+
+/** Oldest-first eviction, so the media cache can't grow without bound. */
+const RUNTIME_MAX = 150;
+async function trim(name, max) {
+  const cache = await caches.open(name);
+  const keys = await cache.keys();
+  await Promise.all(keys.slice(0, Math.max(0, keys.length - max)).map((k) => cache.delete(k)));
+}
 
 /* ── Web Push ─────────────────────────────────────────────────────────── */
 self.addEventListener("push", (event) => {
