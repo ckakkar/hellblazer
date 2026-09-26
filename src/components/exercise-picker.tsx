@@ -1,9 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
-import { Input } from "@/components/ui/input";
+import { SearchField } from "@/components/ui/search-field";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
 
@@ -48,17 +47,13 @@ export function ExercisePicker({
   return (
     <Sheet open={open} onClose={close} title="Add exercise">
       <div className="sticky top-0 z-10 border-b border-border bg-surface p-3">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
-          <Input
-            autoFocus={finePointer}
-            aria-label="Search exercises"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search exercises…"
-            className="pl-9"
-          />
-        </div>
+        <SearchField
+          autoFocus={finePointer}
+          label="Search exercises"
+          value={q}
+          onValueChange={setQ}
+          placeholder="Search exercises…"
+        />
       </div>
       <ul className="divide-y divide-border">
         {filtered.map((e) => (
