@@ -2,8 +2,9 @@ import SwiftUI
 import WidgetKit
 
 /// Home Screen and Lock Screen widget: the next programmed workout and how
-/// the week is going. The app writes the snapshot whenever the dashboard
-/// loads; when the week rolls over, the widget starts the new week at zero.
+/// the week is going, with a Start button on the medium size. The app writes
+/// the snapshot whenever the dashboard loads, and after a workout's finished
+/// anywhere (a silent push); when the week rolls over, it starts at zero.
 struct NextBoutWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "NextBout", provider: NextBoutProvider()) { entry in
@@ -31,7 +32,15 @@ struct NextBoutProvider: TimelineProvider {
         sessionsPlanned: 5,
         setsThisWeek: 62,
         weekStart: "2026-01-05",
-        updatedAt: 0
+        updatedAt: 0,
+        muscles: [
+            ("chest", "Chest", 12, false), ("front_delt", "Front Delt", 6, false),
+            ("side_delt", "Side Delt", 14, true), ("rear_delt", "Rear Delt", 8, false),
+            ("triceps", "Triceps", 11, true), ("back", "Back", 16, true),
+            ("biceps", "Biceps", 9, true), ("quads", "Quads", 10, false),
+            ("hamstrings", "Hamstrings", 7, false), ("glutes", "Glutes", 6, false),
+            ("calves", "Calves", 4, false),
+        ].map { WidgetSnapshot.MuscleSets(key: $0.0, label: $0.1, sets: $0.2, weak: $0.3) }
     )
 
     func placeholder(in context: Context) -> NextBoutEntry {
@@ -110,7 +119,21 @@ struct NextBoutView: View {
                 Label(snapshot.nextBout.map { "Next: \($0)" } ?? "\(week.sessionsText) sessions this week", systemImage: "flame")
             case .systemMedium:
                 HStack(spacing: 16) {
-                    NextBoutBlock(snapshot: snapshot)
+                    VStack(alignment: .leading, spacing: 0) {
+                        NextBoutBlock(snapshot: snapshot)
+                        Spacer(minLength: 8)
+                        // Starts that day in the app, straight into the logger.
+                        if let start = snapshot.startURL {
+                            Link(destination: start) {
+                                Label("Start", systemImage: "play.fill")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Brand.bone)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 7)
+                                    .background(Brand.flame, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+                        }
+                    }
                     Spacer(minLength: 0)
                     WeekRing(week: week)
                 }

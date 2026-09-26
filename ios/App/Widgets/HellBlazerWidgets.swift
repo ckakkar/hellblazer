@@ -5,6 +5,8 @@ import WidgetKit
 struct HellBlazerWidgets: WidgetBundle {
     var body: some Widget {
         NextBoutWidget()
+        MuscleSetsWidget()
+        LiftTrendWidget()
         WorkoutLiveActivity()
         if #available(iOSApplicationExtension 18.0, *) {
             StartWorkoutControl()

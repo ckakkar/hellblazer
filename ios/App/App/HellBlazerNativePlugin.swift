@@ -41,6 +41,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "watchSync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "watchUnlink", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setWatchAutoOpen", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "phoneStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "phoneSync", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "phoneUnlink", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -276,11 +279,8 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             call.reject("The widget snapshot didn't match the expected shape")
             return
         }
-        UserDefaults(suiteName: WidgetSnapshot.appGroup)?.set(data, forKey: WidgetSnapshot.storageKey)
-        WidgetCenter.shared.reloadAllTimelines()
-        // Siri's phrases name the workout days and lifts; Spotlight finds them.
-        HellBlazerShortcuts.updateAppShortcutParameters()
-        SpotlightIndex.update(from: snapshot)
+        // Widgets redraw; Siri's phrases name the days and lifts; Spotlight finds them.
+        WidgetRefresher.apply(data, snapshot)
         call.resolve()
     }
 
@@ -368,6 +368,36 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     @objc func setWatchAutoOpen(_ call: CAPPluginCall) {
         WatchBridge.shared.setAutoOpen(call.getBool("on") ?? true)
         call.resolve()
+    }
+
+    // MARK: Background widget refresh
+
+    /// Whose device token this phone holds (WidgetRefresher).
+    @objc func phoneStatus(_ call: CAPPluginCall) {
+        var status: [String: Any] = [:]
+        if let userId = WidgetRefresher.linkedUserId { status["linkedUserId"] = userId }
+        call.resolve(status)
+    }
+
+    /// The unit and timezone for background fetches, and a token when new.
+    @objc func phoneSync(_ call: CAPPluginCall) {
+        guard let userId = call.getString("userId") else {
+            call.reject("userId is required")
+            return
+        }
+        WidgetRefresher.link(
+            token: call.getString("token"),
+            userId: userId,
+            unit: call.getString("unit") == "lb" ? "lb" : "kg",
+            timeZone: call.getString("timeZone") ?? TimeZone.current.identifier
+        )
+        call.resolve()
+    }
+
+    /// Signing out: forgets the token; resolves with it for the site to revoke.
+    @objc func phoneUnlink(_ call: CAPPluginCall) {
+        let token = WidgetRefresher.unlink()
+        call.resolve(["token": token.map { $0 as Any } ?? NSNull()])
     }
 
     // MARK: Web view chrome

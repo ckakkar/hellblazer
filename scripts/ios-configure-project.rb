@@ -41,7 +41,7 @@ end
 app_group = group(project, "App")
 %w[
   HellBlazerViewController.swift HellBlazerNativePlugin.swift AppShortcuts.swift
-  WatchBridge.swift RestNotificationDelegate.swift SpotlightIndex.swift
+  WatchBridge.swift RestNotificationDelegate.swift SpotlightIndex.swift WidgetRefresher.swift
 ].each do |name|
   compile(app, file(app_group, name))
 end
@@ -63,6 +63,7 @@ widgets = project.targets.find { |t| t.name == "Widgets" } ||
 widgets_group = group(project, "Widgets")
 %w[
   HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift StartWorkoutControl.swift
+  MuscleSetsWidget.swift LiftTrendWidget.swift
 ].each do |name|
   compile(widgets, file(widgets_group, name))
 end
@@ -93,7 +94,9 @@ end
 
 # --- Shared by the app and the extension -----------------------------------
 shared_group = group(project, "Shared")
-%w[WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift].each do |name|
+%w[
+  WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift SiriEntities.swift
+].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)
   compile(widgets, ref)

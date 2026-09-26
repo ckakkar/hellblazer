@@ -29,6 +29,8 @@ final class WatchModel: ObservableObject {
     @Published private(set) var rest: Rest?
     @Published private(set) var busy = false
     @Published var problem: String?
+    /// Whether `problem` is the connection (true) or the server (false).
+    @Published private(set) var problemIsOffline = true
     /// The exercise on screen; nil follows the workout's order.
     @Published var selectedExerciseId: String?
 
@@ -137,8 +139,17 @@ final class WatchModel: ObservableObject {
         } catch APIError.unlinked {
             forget()
             PhoneLink.shared.requestContext()
+        } catch APIError.offline {
+            if state == nil {
+                problemIsOffline = true
+                problem = "Can't reach Fatty. Keep your iPhone nearby, or join Wi-Fi."
+            }
         } catch {
-            if state == nil { problem = "Can't reach Fatty. Check your iPhone or Wi-Fi is nearby." }
+            // Reached the server, which failed: not the watch's connection.
+            if state == nil {
+                problemIsOffline = false
+                problem = "Fatty's server had a problem. Try again in a minute."
+            }
         }
     }
 

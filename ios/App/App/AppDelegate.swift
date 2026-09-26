@@ -49,6 +49,22 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
+    /// A silent push: a workout was finished somewhere, so the widgets fetch
+    /// a fresh snapshot (WidgetRefresher). Anything else isn't ours.
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard userInfo["fatty"] as? String == "widgets" else {
+            completionHandler(.noData)
+            return
+        }
+        WidgetRefresher.refresh { refreshed in
+            completionHandler(refreshed ? .newData : .failed)
+        }
+    }
+
     func application(_ application: UIApplication,
                      configurationForConnecting connectingSceneSession: UISceneSession,
                      options: UIScene.ConnectionOptions) -> UISceneConfiguration {

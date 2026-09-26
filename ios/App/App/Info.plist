@@ -41,6 +41,10 @@
 	<string>Fatty checks its Apple Health access so it knows whether it can save your workouts.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Fatty saves your finished workouts and your bodyweight to Apple Health.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

@@ -17,7 +17,11 @@ struct RootView: View {
                     StartView(state: state)
                 }
             } else if let problem = model.problem {
-                MessageView(symbol: "wifi.exclamationmark", title: "Offline", message: problem) {
+                MessageView(
+                    symbol: model.problemIsOffline ? "wifi.exclamationmark" : "exclamationmark.icloud",
+                    title: model.problemIsOffline ? "Offline" : "Server problem",
+                    message: problem
+                ) {
                     Task { await model.refresh() }
                 }
             } else {
