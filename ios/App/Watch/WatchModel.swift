@@ -1,6 +1,7 @@
 import SwiftUI
 import UserNotifications
 import WatchKit
+import WidgetKit
 
 /// Everything the watch app knows and does. The server is the source of
 /// truth (/api/watch); sets logged here show at once and wait on the watch
@@ -50,6 +51,9 @@ final class WatchModel: ObservableObject {
     @Published var summary: Summary?
 
     private var countdownDone = false
+    /// What the complications last redrew for (see updateComplications).
+    private var complicationKey: String?
+    private var lastComplicationData: ComplicationData?
     private var startDone = false
     private var concludedId: String?
 
@@ -109,8 +113,40 @@ final class WatchModel: ObservableObject {
         Task { await refresh() }
     }
 
+    /// The watch face complications' data (ComplicationData), redrawn only
+    /// when something they show at a glance changes: Apple rations widget
+    /// reloads, and a set logged mid-workout isn't worth one (the workout's
+    /// clock runs by itself).
+    private func updateComplications() {
+        guard let state else { return }
+        let data = ComplicationData(
+            nextLabel: state.next?.label,
+            weekStart: state.week?.start ?? "",
+            sessions: state.week?.sessions ?? 0,
+            planned: state.week?.planned,
+            sets: state.week?.sets ?? 0,
+            activeTitle: state.active?.title,
+            activeStartedAt: state.active?.startedAt
+        )
+        if data != lastComplicationData {
+            data.save()
+            lastComplicationData = data
+        }
+        let key = [
+            data.nextLabel ?? "", data.weekStart, String(data.sessions), String(data.planned ?? -1),
+            data.activeTitle ?? "", data.activeTitle == nil ? String(data.sets) : "",
+        ].joined(separator: "|")
+        guard key != complicationKey else { return }
+        complicationKey = key
+        WidgetCenter.shared.reloadAllTimelines()
+    }
+
     /// Signed out on the phone, or the token was revoked.
     private func forget() {
+        ComplicationData.clear()
+        complicationKey = nil
+        lastComplicationData = nil
+        WidgetCenter.shared.reloadAllTimelines()
         Keychain.token = nil
         token = nil
         state = nil
@@ -188,6 +224,7 @@ final class WatchModel: ObservableObject {
             next.active = active
         }
         state = next
+        updateComplications()
 
         if let active = next.active {
             if let selected = selectedExerciseId, !active.exercises.contains(where: { $0.id == selected }) {
@@ -306,7 +343,12 @@ final class WatchModel: ObservableObject {
         guard let api, let active = state?.active, !busy else { return }
         busy = true
         defer { busy = false }
-        await flush()
+        // Every set of this workout lands before it's finished.
+        let sent = await flush()
+        guard sent || !pending.contains(where: { $0.sessionId == active.id }) else {
+            problem = "Your last sets haven't reached Fatty yet. Check your connection and try again."
+            return
+        }
         let minutes = Int((Date().timeIntervalSince(active.startDate) / 60).rounded())
         do {
             let fresh = try await api.finish(sessionId: active.id, durationMin: minutes <= 360 ? max(1, minutes) : nil)
@@ -381,25 +423,32 @@ final class WatchModel: ObservableObject {
         tellPhone()
     }
 
-    /// Sends waiting sets, oldest first. Offline, they wait for next time.
-    private func flush() async {
-        guard !flushing, let api else { return }
+    /// Sends waiting sets, oldest first; true once none are left. Offline,
+    /// they wait for next time. A send already under way is waited out
+    /// first, so a finish can never overtake a set still on its way.
+    @discardableResult
+    private func flush() async -> Bool {
+        while flushing {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
+        guard let api else { return pending.isEmpty }
         flushing = true
         defer { flushing = false }
         while let write = pending.first {
             do {
                 try await api.save(write)
             } catch APIError.unlinked {
-                return
+                return false
             } catch APIError.server(let status) where (400..<500).contains(status) {
                 // Refused for good (the workout was deleted, say): drop it.
             } catch {
-                return
+                return false
             }
             pending.removeFirst()
             savePending()
         }
         tellPhone()
+        return true
     }
 
     private func savePending() {

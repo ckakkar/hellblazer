@@ -16,6 +16,17 @@ export type WatchState = {
   next: WatchStartOption | null;
   /** What the watch can start: the active program's days, else every template. */
   options: WatchStartOption[];
+  /** This week so far, for the watch face complications. */
+  week: WatchWeek;
+};
+
+export type WatchWeek = {
+  /** Monday, yyyy-MM-dd in the lifter's calendar. */
+  start: string;
+  sessions: number;
+  /** Days a week in the active program; null without one. */
+  planned: number | null;
+  sets: number;
 };
 
 export type WatchWorkout = {

@@ -7,9 +7,10 @@
  *   node scripts/ios-signing-setup.mjs --key ~/Downloads/AuthKey_ABC123XYZ.p8 --issuer <issuer-id>
  *
  * It then:
- *   1. registers the bundle IDs of the app, its widget extension and its
- *      Apple Watch app, and turns on their capabilities (Sign in with
- *      Apple, Push, HealthKit, App Groups, Associated Domains),
+ *   1. registers the bundle IDs of the app, its widget extension, its Apple
+ *      Watch app and the watch's complications, and turns on their
+ *      capabilities (Sign in with Apple, Push, HealthKit, App Groups,
+ *      Associated Domains),
  *   2. creates an Apple Distribution certificate from a fresh private key,
  *   3. stores the key, certificate and API key as GitHub Actions secrets,
  *   4. sets the IOS_TEAM_ID and IOS_CERT_ID variables. TestFlight uploads
@@ -33,6 +34,7 @@ import { parseArgs } from "node:util";
 const BUNDLE_ID = "com.kkrwhofrags.hellblazer";
 const WIDGETS_ID = `${BUNDLE_ID}.widgets`;
 const WATCH_ID = `${BUNDLE_ID}.watchkitapp`;
+const WATCH_WIDGETS_ID = `${WATCH_ID}.widgets`;
 const APP_NAME = "Fatty";
 const API = "https://api.appstoreconnect.apple.com/v1";
 
@@ -142,6 +144,9 @@ async function ensureCapabilities(bundleRecordId, identifier, capabilities) {
 const appRecord = await ensureBundleId(BUNDLE_ID, APP_NAME);
 const widgetsRecord = await ensureBundleId(WIDGETS_ID, `${APP_NAME} Widgets`);
 const watchRecord = await ensureBundleId(WATCH_ID, `${APP_NAME} Watch`);
+// The watch face complications need no capabilities: they share data with
+// the watch app through the team's keychain group, which every profile allows.
+await ensureBundleId(WATCH_WIDGETS_ID, `${APP_NAME} Watch Complications`);
 await ensureCapabilities(appRecord, BUNDLE_ID, [
   {
     type: "APPLE_ID_AUTH",

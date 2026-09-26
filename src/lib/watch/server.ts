@@ -6,7 +6,8 @@ import {
   PROGRAM_SELECT,
   type ProgramWithDays,
 } from "@/lib/data/programs";
-import { isValidTimeZone } from "@/lib/local-date";
+import { format, parseISO, startOfISOWeek } from "date-fns";
+import { dateInTimeZone, isValidTimeZone } from "@/lib/local-date";
 import { fromDisplayWeight, toDisplayWeight, type Unit } from "@/lib/units";
 import { STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { bearerToken, hashWatchToken } from "@/lib/watch/token";
@@ -15,6 +16,7 @@ import type {
   WatchExercise,
   WatchStartOption,
   WatchState,
+  WatchWeek,
   WatchWorkout,
 } from "@/lib/watch/protocol";
 
@@ -109,8 +111,28 @@ export async function handleWatch(
 
 /** Everything the watch shows: the workout in progress and what it can start. */
 export async function watchState(ctx: WatchContext): Promise<WatchState> {
-  const [active, start] = await Promise.all([activeWorkout(ctx), startOptions(ctx)]);
-  return { unit: ctx.unit, active, ...start };
+  const [active, { planned, ...start }, week] = await Promise.all([
+    activeWorkout(ctx),
+    startOptions(ctx),
+    thisWeek(ctx),
+  ]);
+  return { unit: ctx.unit, active, ...start, week: { ...week, planned } };
+}
+
+/** Sessions and working sets since Monday, in the lifter's calendar. */
+async function thisWeek(ctx: WatchContext): Promise<Omit<WatchWeek, "planned">> {
+  const start = format(startOfISOWeek(parseISO(dateInTimeZone(new Date(), ctx.timeZone))), "yyyy-MM-dd");
+  const { data, error } = await ctx.db
+    .from("v_session_summary")
+    .select("working_sets")
+    .eq("user_id", ctx.userId)
+    .gte("session_date", start);
+  if (error) throw error;
+  return {
+    start,
+    sessions: (data ?? []).length,
+    sets: (data ?? []).reduce((n, s) => n + Number(s.working_sets ?? 0), 0),
+  };
 }
 
 /**
@@ -200,7 +222,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
 /** What /log offers: the active program's days, else every template. */
 async function startOptions(
   ctx: WatchContext,
-): Promise<{ next: WatchStartOption | null; options: WatchStartOption[] }> {
+): Promise<{ next: WatchStartOption | null; options: WatchStartOption[]; planned: number | null }> {
   const { db, userId, timeZone } = ctx;
   const { data, error } = await db
     .from("program")
@@ -237,7 +259,7 @@ async function startOptions(
             exercises: nextTemplate.template_exercise.length,
           }
         : null;
-    return { next, options };
+    return { next, options, planned: progress.daysPerWeek };
   }
 
   const { data: templates, error: templateError } = await db
@@ -247,6 +269,7 @@ async function startOptions(
     .order("position", { ascending: true });
   if (templateError) throw templateError;
   return {
+    planned: null,
     next: null,
     options: (templates ?? []).map((t) => ({
       templateId: t.id,

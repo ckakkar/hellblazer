@@ -9,6 +9,16 @@ struct WatchState: Codable, Equatable {
     var active: Workout?
     var next: StartOption?
     var options: [StartOption]
+    /// This week so far, for the complications. Optional: older servers.
+    var week: Week?
+
+    struct Week: Codable, Equatable {
+        /// Monday, yyyy-MM-dd.
+        var start: String
+        var sessions: Int
+        var planned: Int?
+        var sets: Int
+    }
 }
 
 struct Workout: Codable, Equatable, Identifiable {

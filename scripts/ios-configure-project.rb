@@ -16,6 +16,7 @@ WATCH_DEPLOYMENT = "10.0"
 APP_ID = "com.kkrwhofrags.hellblazer"
 WIDGETS_ID = "#{APP_ID}.widgets"
 WATCH_ID = "#{APP_ID}.watchkitapp"
+WATCH_WIDGETS_ID = "#{WATCH_ID}.widgets"
 
 project = Xcodeproj::Project.open(File.join(ROOT, "App.xcodeproj"))
 app = project.targets.find { |t| t.name == "App" } or abort("No App target")
@@ -144,6 +145,52 @@ watch.build_configurations.each do |config|
   s["SKIP_INSTALL"] = "YES"
   s["ENABLE_PREVIEWS"] = "NO"
   s["LD_RUNPATH_SEARCH_PATHS"] = ["$(inherited)", "@executable_path/Frameworks"]
+end
+
+# --- The watch face complications (a watchOS widget extension) -------------
+# Inside the watch app. It reads what the watch app writes to the team's
+# shared keychain group (WatchShared/ComplicationData.swift).
+watch_widgets = project.targets.find { |t| t.name == "WatchWidgets" } ||
+  project.new_target(:app_extension, "WatchWidgets", :watchos, WATCH_DEPLOYMENT, nil, :swift)
+
+watch_widgets_group = group(project, "WatchWidgets")
+compile(watch_widgets, file(watch_widgets_group, "FattyComplication.swift"))
+file(watch_widgets_group, "Info.plist")
+file(watch_widgets_group, "WatchWidgets.entitlements")
+bundle(watch_widgets, file(watch_widgets_group, "PrivacyInfo.xcprivacy"))
+compile(watch_widgets, file(widgets_group, "Brand.swift"))
+
+watch_shared_group = group(project, "WatchShared")
+complication_data = file(watch_shared_group, "ComplicationData.swift")
+compile(watch, complication_data)
+compile(watch_widgets, complication_data)
+
+watch_widgets.build_configurations.each do |config|
+  s = config.build_settings
+  s["PRODUCT_NAME"] = "$(TARGET_NAME)"
+  s["PRODUCT_BUNDLE_IDENTIFIER"] = WATCH_WIDGETS_ID
+  s["INFOPLIST_FILE"] = "WatchWidgets/Info.plist"
+  s["GENERATE_INFOPLIST_FILE"] = "NO"
+  s["CODE_SIGN_ENTITLEMENTS"] = "WatchWidgets/WatchWidgets.entitlements"
+  s["CODE_SIGN_STYLE"] = "Automatic"
+  s["SDKROOT"] = "watchos"
+  s["WATCHOS_DEPLOYMENT_TARGET"] = WATCH_DEPLOYMENT
+  s["TARGETED_DEVICE_FAMILY"] = "4"
+  s["SWIFT_VERSION"] = "5.0"
+  s["MARKETING_VERSION"] = app.build_configurations.first.build_settings["MARKETING_VERSION"] || "1.0"
+  s["CURRENT_PROJECT_VERSION"] = "1"
+  s["SKIP_INSTALL"] = "YES"
+  s["APPLICATION_EXTENSION_API_ONLY"] = "YES"
+  s["LD_RUNPATH_SEARCH_PATHS"] = ["$(inherited)", "@executable_path/Frameworks", "@executable_path/../../Frameworks"]
+end
+
+watch.add_dependency(watch_widgets) unless watch.dependencies.any? { |d| d.target == watch_widgets }
+embed_complications = watch.copy_files_build_phases.find { |p| p.name == "Embed Foundation Extensions" } ||
+  watch.new_copy_files_build_phase("Embed Foundation Extensions")
+embed_complications.dst_subfolder_spec = Xcodeproj::Constants::COPY_FILES_BUILD_PHASE_DESTINATIONS[:plug_ins]
+embed_complications.dst_path = ""
+unless embed_complications.files_references.include?(watch_widgets.product_reference)
+  embed_complications.add_file_reference(watch_widgets.product_reference, true).settings = { "ATTRIBUTES" => ["RemoveHeadersOnCopy"] }
 end
 
 app.add_dependency(watch) unless app.dependencies.any? { |d| d.target == watch }
