@@ -269,47 +269,76 @@ private struct ExercisePicker: View {
 
 // MARK: Rest
 
+/// The rest countdown: a ring as large as the screen allows, the time and
+/// label sized to sit inside it on any watch (the first SE's 40 mm included),
+/// what's next underneath, and slim +30s and Skip buttons.
 private struct RestPage: View {
     @EnvironmentObject private var model: WatchModel
     let rest: WatchModel.Rest
 
+    private let buttonHeight: CGFloat = 34
+
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             let left = max(0, rest.endsAt.timeIntervalSince(context.date))
-            VStack(spacing: 8) {
-                ZStack {
-                    Circle()
-                        .stroke(model.accent.opacity(0.22), lineWidth: 12)
-                    Circle()
-                        .trim(from: 0, to: rest.total > 0 ? min(1, left / rest.total) : 0)
-                        .stroke(model.accent, style: StrokeStyle(lineWidth: 12, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.linear(duration: 1), value: left)
-                    VStack(spacing: 0) {
-                        Text(clock(left.rounded(.up)))
-                            .font(.system(size: 34, weight: .semibold, design: .rounded))
-                            .monospacedDigit()
-                            .contentTransition(.numericText(countsDown: true))
-                        Text("REST")
-                            .font(.system(size: 12, weight: .bold, design: .rounded))
+            GeometryReader { geo in
+                let next = model.currentExercise()?.name
+                // Whatever the label and buttons leave, the ring takes, keeping
+                // clear of the page dots at the bottom.
+                let reserved = buttonHeight + 10 + (next == nil ? 6 : 26)
+                let ring = max(60, min(geo.size.width, geo.size.height - reserved))
+                let stroke = ring * 0.085
+                VStack(spacing: 6) {
+                    ZStack {
+                        Circle()
+                            .stroke(model.accent.opacity(0.22), lineWidth: stroke)
+                        Circle()
+                            .trim(from: 0, to: rest.total > 0 ? min(1, left / rest.total) : 0)
+                            .stroke(model.accent, style: StrokeStyle(lineWidth: stroke, lineCap: .round))
+                            .rotationEffect(.degrees(-90))
+                            .animation(.linear(duration: 1), value: left)
+                        VStack(spacing: ring * 0.01) {
+                            Text("REST")
+                                .font(.system(size: ring * 0.1, weight: .bold, design: .rounded))
+                                .foregroundStyle(.secondary)
+                            Text(clock(left.rounded(.up)))
+                                .font(.system(size: ring * 0.27, weight: .semibold, design: .rounded))
+                                .monospacedDigit()
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.5)
+                                .contentTransition(.numericText(countsDown: true))
+                        }
+                        // Inside the ring's hole, never on the ring.
+                        .padding(stroke + ring * 0.1)
+                    }
+                    .frame(width: ring, height: ring)
+
+                    if let next {
+                        Text("Next: \(next)")
+                            .font(.system(.footnote, design: .rounded))
                             .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+
+                    HStack(spacing: 6) {
+                        restButton("+30s") { model.extendRest(by: 30) }
+                        restButton("Skip") { model.skipRest() }
                     }
                 }
-                .padding(.horizontal, 14)
-                if let next = model.currentExercise() {
-                    Text("Up next · \(next.name)")
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                HStack(spacing: 6) {
-                    Button("+30s") { model.extendRest(by: 30) }
-                    Button("Skip") { model.skipRest() }
-                }
-                .font(.system(.footnote, design: .rounded).weight(.semibold))
-                .buttonStyle(.bordered)
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
             }
         }
+    }
+
+    private func restButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(.footnote, design: .rounded).weight(.semibold))
+                .frame(maxWidth: .infinity, minHeight: buttonHeight)
+                .background(Color.white.opacity(0.14), in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 
