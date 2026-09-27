@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(20);
+select plan(23);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -85,6 +85,18 @@ select throws_ok(
 select throws_ok(
   $$select * from public.watch_last_performances('00000000-0000-0000-0000-00000000000a', '{}')$$, '42501', null,
   'the watch API''s service-role function is off limits to lifters'
+);
+select lives_ok(
+  $$update public.profile set weekly_recap = false$$,
+  'a lifter can turn the Sunday recap off'
+);
+select throws_ok(
+  $$update public.profile set recap_sent_on = current_date$$, '42501', null,
+  'when the recap last went out is the cron''s to record'
+);
+select throws_ok(
+  $$update public.template_exercise set rest_seconds = 5$$, '23514', null,
+  'a rest is at least 15 seconds'
 );
 
 -- Lifter B ------------------------------------------------------------------
