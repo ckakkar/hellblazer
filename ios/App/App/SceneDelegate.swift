@@ -29,13 +29,17 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
 
     /// A page an intent left while the app wasn't running it (IntentRouter),
-    /// and effort ratings waiting on a watch workout to sync (WorkoutEffort).
+    /// effort ratings waiting on a watch workout to sync (WorkoutEffort), and
+    /// today's Recovery call for its widget.
     func sceneDidBecomeActive(_ scene: UIScene) {
         if let path = IntentRouter.takePending() {
             NativeRouter.shared.open(path: path)
         }
         if HKHealthStore.isHealthDataAvailable() {
-            WorkoutEffort.retryPending(store: HKHealthStore())
+            let store = HKHealthStore()
+            WorkoutEffort.retryPending(store: store)
+            // The Recovery widget, now that the phone's unlocked.
+            Task { await RecoveryRefresher.refresh(store: store) }
         }
     }
 

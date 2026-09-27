@@ -233,7 +233,8 @@ final class WatchBridge: NSObject, WCSessionDelegate {
             sets: (a["sets"] as? NSNumber)?.intValue ?? 0,
             volume: a["volume"] as? String ?? "",
             restEndsAt: restEndsAt.map { Date(timeIntervalSince1970: $0 / 1000) },
-            restTotal: restTotal
+            restTotal: restTotal,
+            next: WorkoutActivityAttributes.NextSet(a["next"])
         )
         WorkoutActivity.upsert(sessionId: sessionId, startedAt: Date(timeIntervalSince1970: startedAt / 1000), state: state)
         RestAlert.cancel()

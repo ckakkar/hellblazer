@@ -8,6 +8,7 @@ import {
   Eraser,
   GripVertical,
   Plus,
+  Timer,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,6 +32,7 @@ import {
   updateTemplateExercise,
 } from "@/lib/actions/templates";
 import { selectAllOnFocus } from "@/lib/utils";
+import { formatRestClock, REST_CHOICES } from "@/lib/rest-timer";
 
 export function TemplatesManager({
   templates,
@@ -294,6 +296,33 @@ function TemplateCard({
                       : ""}
                     {row.note ? `, ${row.note}` : ""}
                   </div>
+                  {/* How long to rest after this one's sets, everywhere a
+                      set is logged: the logger, the watch, Siri. A native
+                      select, so iOS gives it its picker wheel. */}
+                  <label className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted">
+                    <Timer aria-hidden className="size-3 shrink-0" />
+                    <select
+                      defaultValue={row.rest_seconds ?? ""}
+                      aria-label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        start(async () => {
+                          await updateTemplateExercise({
+                            id: row.id,
+                            restSeconds: val ? Number(val) : null,
+                          });
+                        });
+                      }}
+                      className="min-w-0 appearance-none truncate rounded bg-transparent text-xs text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-text/25"
+                    >
+                      <option value="">Your usual rest</option>
+                      {REST_CHOICES.map((s) => (
+                        <option key={s} value={s}>
+                          {formatRestClock(s)} rest
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
 
                 <input

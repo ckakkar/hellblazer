@@ -65,7 +65,7 @@ widgets = project.targets.find { |t| t.name == "Widgets" } ||
 widgets_group = group(project, "Widgets")
 %w[
   HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift StartWorkoutControl.swift
-  MuscleSetsWidget.swift LiftTrendWidget.swift
+  MuscleSetsWidget.swift LiftTrendWidget.swift RecoveryWidget.swift
 ].each do |name|
   compile(widgets, file(widgets_group, name))
 end
@@ -98,7 +98,7 @@ end
 shared_group = group(project, "Shared")
 %w[
   WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift SiriEntities.swift
-  SetLogging.swift
+  SetLogging.swift RecoveryCache.swift
 ].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)

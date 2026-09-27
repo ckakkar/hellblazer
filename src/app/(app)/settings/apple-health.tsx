@@ -3,7 +3,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { SettingsGroup, SettingsRow } from "@/components/ui/settings-list";
 import { isNativeApp } from "@/lib/native";
-import { healthSyncOn, nativePlugin, setHealthSync } from "@/lib/native-plugins";
+import { healthSyncOn, nativePlugin, setHealthSync, withNative } from "@/lib/native-plugins";
 import { Switch } from "@/components/ui/switch";
 import { recoveryOnHome, setRecoveryOnHome } from "@/components/native/recovery-card";
 
@@ -46,6 +46,7 @@ function HealthRow() {
     if (on) {
       setHealthSync(false);
       setOn(false);
+      withNative((api) => api.setHealthSync({ on: false }));
       return;
     }
     const plugin = nativePlugin();
@@ -59,6 +60,7 @@ function HealthRow() {
       } else if (status.workouts === "authorized" || status.bodyweight === "authorized") {
         setHealthSync(true);
         setOn(true);
+        withNative((api) => api.setHealthSync({ on: true }));
       } else {
         setMsg("Fatty isn't allowed to save to Health yet. Turn it on in the Health app under Sharing → Apps → Fatty.");
       }

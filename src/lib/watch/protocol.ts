@@ -43,6 +43,8 @@ export type WatchExercise = {
   name: string;
   targetSets: number | null;
   targetReps: string | null;
+  /** Seconds to rest after its sets (the template's); null: the lifter's usual. */
+  restSeconds: number | null;
   sets: WatchSet[];
   /** The last session's working sets on this movement, for copy-forward. */
   last: { weight: number; reps: number }[];
@@ -62,4 +64,18 @@ export type WatchStartOption = {
   programDayId: string | null;
   label: string;
   exercises: number;
+  /**
+   * The day's exercises, so the watch can start it with no connection and
+   * catch the server up later. Sent while no workout is on (that's when a
+   * start can happen), and kept on the watch.
+   */
+  plan?: WatchPlanExercise[];
+};
+
+export type WatchPlanExercise = {
+  name: string;
+  targetSets: number | null;
+  targetReps: string | null;
+  restSeconds: number | null;
+  last: { weight: number; reps: number }[];
 };

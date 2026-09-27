@@ -11,6 +11,8 @@ enum SetLogging {
         /// In the lifter's unit. Nil with `reps`: the next set, same again.
         var weight: Double?
         var reps: Int?
+        /// The exercise the Lock Screen showed; nil lets the server pick.
+        var sessionExerciseId: String?
     }
 
     /// Returns what Siri says back.
@@ -34,6 +36,39 @@ struct LogNextSetIntent: LiveActivityIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let reply = await SetLogging.run(SetLogging.Request())
         return .result(dialog: "\(reply)")
+    }
+}
+
+/// The Live Activity's Log Set: exactly the set it shows ("80 kg × 5"), on
+/// the exercise it shows, without opening the app.
+struct LogShownSetIntent: LiveActivityIntent {
+    static let title: LocalizedStringResource = "Log the Shown Set"
+    static let isDiscoverable = false
+
+    @Parameter(title: "Workout")
+    var sessionId: String
+
+    @Parameter(title: "Exercise")
+    var sessionExerciseId: String
+
+    @Parameter(title: "Weight")
+    var weight: Double
+
+    @Parameter(title: "Reps")
+    var reps: Int
+
+    init() {}
+
+    init(sessionId: String, set: WorkoutActivityAttributes.NextSet) {
+        self.sessionId = sessionId
+        sessionExerciseId = set.sessionExerciseId
+        weight = set.weight
+        reps = set.reps
+    }
+
+    func perform() async throws -> some IntentResult {
+        _ = await SetLogging.run(SetLogging.Request(weight: weight, reps: reps, sessionExerciseId: sessionExerciseId))
+        return .result()
     }
 }
 

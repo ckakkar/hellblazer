@@ -331,10 +331,36 @@ private struct DonePage: View {
 
 /// The rest countdown: a ring as large as the screen allows, the time and
 /// label sized to sit inside it on any watch (the first SE's 40 mm included),
-/// what's next underneath, and slim +30s and Skip buttons.
+/// what's next underneath, and slim +30s and Skip buttons. With heart-rate
+/// rest on, the label is the heart rate coming down, then READY (and a tap)
+/// once it's halfway back to resting.
 private struct RestPage: View {
     @EnvironmentObject private var model: WatchModel
+    @ObservedObject private var recorder = WorkoutRecorder.shared
     let rest: WatchModel.Rest
+
+    @ViewBuilder
+    private func label(size: CGFloat) -> some View {
+        if rest.recoveredAt != nil {
+            Text("READY")
+                .font(.system(size: size, weight: .bold, design: .rounded))
+                .foregroundStyle(.green)
+        } else if rest.heartRateTarget != nil, let bpm = recorder.heartRate {
+            HStack(spacing: size * 0.25) {
+                Image(systemName: "heart.fill")
+                    .foregroundStyle(.red)
+                Text("\(Int(bpm.rounded()))")
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+            .font(.system(size: size, weight: .bold, design: .rounded))
+            .accessibilityLabel("Heart rate \(Int(bpm.rounded()))")
+        } else {
+            Text("REST")
+                .font(.system(size: size, weight: .bold, design: .rounded))
+                .foregroundStyle(.secondary)
+        }
+    }
 
     private let buttonHeight: CGFloat = 34
 
@@ -358,9 +384,7 @@ private struct RestPage: View {
                             .rotationEffect(.degrees(-90))
                             .animation(.linear(duration: 1), value: left)
                         VStack(spacing: ring * 0.01) {
-                            Text("REST")
-                                .font(.system(size: ring * 0.1, weight: .bold, design: .rounded))
-                                .foregroundStyle(.secondary)
+                            label(size: ring * 0.1)
                             Text(clock(left.rounded(.up)))
                                 .font(.system(size: ring * 0.27, weight: .semibold, design: .rounded))
                                 .monospacedDigit()

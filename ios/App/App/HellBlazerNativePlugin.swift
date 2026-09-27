@@ -6,6 +6,7 @@ import ActivityKit
 import HealthKit
 import UserNotifications
 import WidgetKit
+import AppIntents
 
 /// The app's own bridge to iOS, called from the site through
 /// `src/lib/native-plugins.ts` (registered as "HellBlazerNative"):
@@ -52,6 +53,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setRestDefaults", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recoveryStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recoveryData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "takeRemovedSets", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "donateWorkoutStart", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setHealthSync", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -69,6 +73,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             },
             center.addObserver(forName: WatchBridge.heartRateChanged, object: nil, queue: .main) { [weak self] note in
                 self?.notifyListeners("heartRate", data: note.userInfo as? [String: Any] ?? [:])
+            },
+            center.addObserver(forName: RemovedSets.posted, object: nil, queue: .main) { [weak self] _ in
+                self?.notifyListeners("setsRemoved", data: [:])
             },
         ]
     }
@@ -98,7 +105,8 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             sets: call.getInt("sets") ?? 0,
             volume: call.getString("volume") ?? "",
             restEndsAt: call.getDouble("restEndsAt").map { Date(timeIntervalSince1970: $0 / 1000) },
-            restTotal: call.getDouble("restTotal")
+            restTotal: call.getDouble("restTotal"),
+            next: WorkoutActivityAttributes.NextSet(call.options["next"])
         )
         let startedAt = Date(timeIntervalSince1970: startedAtMs / 1000)
         WorkoutActivity.upsert(sessionId: sessionId, startedAt: startedAt, state: state)
@@ -224,40 +232,16 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             call.resolve(["saved": false, "skipped": "watch"])
             return
         }
-        let start = Date(timeIntervalSince1970: startMs / 1000)
-        let end = Date(timeIntervalSince1970: endMs / 1000)
-
-        let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .traditionalStrengthTraining
-        configuration.locationType = .indoor
-        let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: configuration, device: .local())
-        var metadata: [String: Any] = [HKMetadataKeyIndoorWorkout: true]
-        if let sessionId = call.getString("sessionId") {
-            metadata[HKMetadataKeyExternalUUID] = sessionId
-        }
-
-        builder.beginCollection(withStart: start) { began, error in
-            guard began else {
-                call.reject(error?.localizedDescription ?? "Couldn't start the workout")
-                return
-            }
-            builder.addMetadata(metadata) { _, _ in
-                builder.endCollection(withEnd: end) { ended, error in
-                    guard ended else {
-                        call.reject(error?.localizedDescription ?? "Couldn't end the workout")
-                        return
-                    }
-                    builder.finishWorkout { workout, error in
-                        if let error = error {
-                            call.reject(error.localizedDescription)
-                        } else {
-                            if let workout, let effort, let sessionId = call.getString("sessionId") {
-                                WorkoutEffort.rate(workout, score: effort, sessionId: sessionId, store: self.healthStore)
-                            }
-                            call.resolve(["saved": workout != nil])
-                        }
-                    }
-                }
+        HealthWorkouts.save(
+            start: Date(timeIntervalSince1970: startMs / 1000),
+            end: Date(timeIntervalSince1970: endMs / 1000),
+            sessionId: call.getString("sessionId"),
+            effort: effort,
+            store: healthStore
+        ) { result in
+            switch result {
+            case .success(let saved): call.resolve(["saved": saved])
+            case .failure(let error): call.reject(error.localizedDescription)
             }
         }
     }
@@ -305,7 +289,10 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         Task {
-            call.resolve(["days": await RecoveryReadings.read(self.healthStore)])
+            let days = await RecoveryReadings.read(self.healthStore)
+            call.resolve(["days": days.map(\.dictionary)])
+            // The widget shows the same call as the card.
+            await RecoveryRefresher.refresh(store: self.healthStore, days: days)
         }
     }
 
@@ -389,6 +376,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             "unit": call.getString("unit") == "lb" ? "lb" : "kg",
             "accent": call.getString("accent") ?? "#df2d28",
             "restSeconds": call.getDouble("restSeconds") ?? 90,
+            "hrRest": call.getBool("hrRest") ?? true,
             "timeZone": call.getString("timeZone") ?? TimeZone.current.identifier,
         ]
         WatchBridge.shared.whenActivated {
@@ -444,6 +432,43 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     // MARK: Voice logging
+
+    /// Sets "Undo my last set" took back for this session, once (RemovedSets).
+    @objc func takeRemovedSets(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId") else {
+            call.resolve(["setIds": []])
+            return
+        }
+        call.resolve(["setIds": RemovedSets.take(sessionId: sessionId)])
+    }
+
+    /// Whether the lifter saves workouts to Health (the Settings switch), for
+    /// a workout finished by voice.
+    @objc func setHealthSync(_ call: CAPPluginCall) {
+        HealthSync.set(call.getBool("on") ?? false)
+        call.resolve()
+    }
+
+    /// A workout day started: Siri learns when it's trained, and suggests it
+    /// on the Lock Screen and in Spotlight around then. Once per session.
+    @objc func donateWorkoutStart(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId"),
+              let templateId = call.getString("templateId"),
+              let label = call.getString("label"),
+              UserDefaults.standard.string(forKey: "siri.donatedSession") != sessionId
+        else {
+            call.resolve()
+            return
+        }
+        UserDefaults.standard.set(sessionId, forKey: "siri.donatedSession")
+        var intent = StartWorkoutDayIntent()
+        intent.workout = WorkoutDayEntity(id: templateId, label: label)
+        let donation = intent
+        Task {
+            _ = try? await IntentDonationManager.shared.donate(intent: donation)
+        }
+        call.resolve()
+    }
 
     /// The rest length and whether a set starts one, for sets logged by
     /// voice while the page is asleep (VoiceSetLogger).

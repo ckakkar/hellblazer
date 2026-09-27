@@ -119,6 +119,8 @@ export async function updateTemplateExercise(input: {
   targetSets?: number | null;
   targetRepRange?: string | null;
   note?: string | null;
+  /** Seconds to rest after this exercise's sets; null for the lifter's usual. */
+  restSeconds?: number | null;
 }) {
   const v = z
     .object({
@@ -126,6 +128,7 @@ export async function updateTemplateExercise(input: {
       targetSets: z.number().int().min(1).max(20).nullable().optional(),
       targetRepRange: z.string().max(20).nullable().optional(),
       note: z.string().max(200).nullable().optional(),
+      restSeconds: z.number().int().min(15).max(600).nullable().optional(),
     })
     .parse(input);
   const { supabase } = await getAuthedContext();
@@ -133,6 +136,7 @@ export async function updateTemplateExercise(input: {
   if (v.targetSets !== undefined) patch.target_sets = v.targetSets;
   if (v.targetRepRange !== undefined) patch.target_rep_range = v.targetRepRange;
   if (v.note !== undefined) patch.note = v.note;
+  if (v.restSeconds !== undefined) patch.rest_seconds = v.restSeconds;
   const { error } = await supabase
     .from("template_exercise")
     .update(patch)

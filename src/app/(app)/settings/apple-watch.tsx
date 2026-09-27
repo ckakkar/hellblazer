@@ -6,12 +6,14 @@ import { Switch } from "@/components/ui/switch";
 import { linkWatch, unlinkWatch } from "@/lib/actions/watch";
 import { nativePlugin, type WatchStatus } from "@/lib/native-plugins";
 import { savedRestSeconds } from "@/lib/rest-timer";
+import { hrRestOn, setHrRest } from "@/lib/watch-prefs";
 import type { Unit } from "@/lib/units";
 
 /**
  * iPhone app only, and only with a watch paired: the Apple Watch switches.
  * Connecting is automatic (DeviceSync); this is where it's turned off, and
- * where the watch stops opening by itself when a workout starts here.
+ * where the watch stops opening by itself when a workout starts here, and
+ * where its heart-rate rest tap is switched off.
  */
 export function AppleWatchSettings({
   userId,
@@ -25,6 +27,13 @@ export function AppleWatchSettings({
   const [status, setStatus] = useState<WatchStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [hrRest, setHrRestState] = useState(true);
+
+  // Per device, so read after mount.
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setHrRestState(hrRestOn()));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     const plugin = nativePlugin();
@@ -60,6 +69,7 @@ export function AppleWatchSettings({
           unit,
           accent,
           restSeconds: savedRestSeconds(),
+          hrRest: hrRestOn(),
           timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         });
       } else {
@@ -72,6 +82,25 @@ export function AppleWatchSettings({
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Heart-rate rest: saved here, then passed to the watch with its settings. */
+  async function setHeartRateRest(next: boolean) {
+    setHrRest(next);
+    setHrRestState(next);
+    const plugin = nativePlugin();
+    if (!plugin) return;
+    const { api } = await plugin;
+    await api
+      .watchSync({
+        userId,
+        unit,
+        accent,
+        restSeconds: savedRestSeconds(),
+        hrRest: next,
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      })
+      .catch(() => {});
   }
 
   async function setAutoOpen(next: boolean) {
@@ -118,6 +147,19 @@ export function AppleWatchSettings({
               checked={status.autoOpen}
               onChange={(next) => void setAutoOpen(next)}
               label="Open workouts on Apple Watch"
+            />
+          }
+        />
+      )}
+      {on && (
+        <SettingsRow
+          label="Tap when heart rate's down"
+          hint="During a rest, your watch taps your wrist once your heart rate has come most of the way back to resting, even before the timer's up."
+          control={
+            <Switch
+              checked={hrRest}
+              onChange={(next) => void setHeartRateRest(next)}
+              label="Tap when heart rate's down"
             />
           }
         />

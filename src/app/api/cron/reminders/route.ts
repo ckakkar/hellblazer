@@ -8,6 +8,7 @@ import {
 import { createServiceClient } from "@/lib/supabase/service";
 import { pushConfigured, sendPush } from "@/lib/push";
 import { apnsConfigured, sendApns } from "@/lib/apns";
+import { gatherRecap, recapMessage, recapWeek } from "@/lib/weekly-recap";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -130,10 +131,7 @@ export async function GET(request: NextRequest) {
     { data: subs, error: sErr },
     { data: devices, error: dErr },
   ] = await Promise.all([
-    svc
-      .from("profile")
-      .select("user_id, reminder_hour")
-      .not("reminder_hour", "is", null),
+    svc.from("profile").select("user_id, reminder_hour, weekly_recap, recap_sent_on"),
     web
       ? svc
           .from("push_subscription")
@@ -167,37 +165,60 @@ export async function GET(request: NextRequest) {
   }
 
   let notified = 0;
+  let recapped = 0;
   for (const p of profiles ?? []) {
-    // reminder_hour set = reminders on. (Hobby's daily cron runs once a day, so
-    // the exact hour can't be honored; the value gates on/off.)
-    if (p.reminder_hour == null) continue;
     const userSubs = byUser.get(p.user_id) ?? [];
     const userPhones = phonesByUser.get(p.user_id) ?? [];
     if (userSubs.length === 0 && userPhones.length === 0) continue;
 
-    // "Today" in the user's primary timezone, for the due check.
-    const { date: localDate } = localParts(userPhones[0]?.timezone ?? userSubs[0]?.timezone ?? null);
-    const due = await workoutDue(svc, p.user_id, localDate);
-    if (!due) continue;
-
-    const payload = {
-      title: "Time to train",
-      body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
-      url: "/log",
-      tag: "reminder",
+    const send = async (payload: { title: string; body: string; url: string; tag: string }) => {
+      let sent = 0;
+      for (const s of userSubs) {
+        const r = await sendPush(s, payload);
+        if (r.ok) sent++;
+        else if (r.gone)
+          await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
+      }
+      for (const d of userPhones) {
+        const r = await sendApns(d.token, payload);
+        if (r.ok) sent++;
+        else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
+      }
+      return sent;
     };
-    for (const s of userSubs) {
-      const r = await sendPush(s, payload);
-      if (r.ok) notified++;
-      else if (r.gone)
-        await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
+
+    // "Today" in the user's primary timezone, for the due check and the recap.
+    const { date: localDate, hour } = localParts(userPhones[0]?.timezone ?? userSubs[0]?.timezone ?? null);
+
+    // reminder_hour set = reminders on. (Hobby's daily cron runs once a day, so
+    // the exact hour can't be honored; the value gates on/off.)
+    if (p.reminder_hour != null) {
+      const due = await workoutDue(svc, p.user_id, localDate);
+      if (due) {
+        notified += await send({
+          title: "Time to train",
+          body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
+          url: "/log",
+          tag: "reminder",
+        });
+      }
     }
-    for (const d of userPhones) {
-      const r = await sendApns(d.token, payload);
-      if (r.ok) notified++;
-      else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
+
+    // The Sunday recap, once a week (recap_sent_on is the week's Monday).
+    const week = p.weekly_recap ? recapWeek(localDate, hour) : null;
+    if (week && p.recap_sent_on !== week) {
+      try {
+        const facts = await gatherRecap(svc, p.user_id, week);
+        const sent = await send({ ...recapMessage(facts), url: "/dashboard", tag: "recap" });
+        if (sent > 0) {
+          recapped++;
+          await svc.from("profile").update({ recap_sent_on: week }).eq("user_id", p.user_id);
+        }
+      } catch (err) {
+        console.error("weekly recap", p.user_id, err);
+      }
     }
   }
 
-  return NextResponse.json({ ok: true, notified });
+  return NextResponse.json({ ok: true, notified, recapped });
 }

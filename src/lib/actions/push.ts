@@ -98,6 +98,17 @@ export async function setReminderHour(input: { hour: number | null }) {
   revalidatePath("/settings");
 }
 
+/** The Sunday recap on or off. */
+export async function setWeeklyRecap(input: { on: boolean }) {
+  const v = z.object({ on: z.boolean() }).parse(input);
+  const { supabase, user } = await getAuthedContext();
+  const { error } = await supabase
+    .from("profile")
+    .upsert({ user_id: user.id, weekly_recap: v.on }, { onConflict: "user_id" });
+  if (error) throw error;
+  revalidatePath("/settings");
+}
+
 export type TestPushResult =
   | { ok: true; sent: number }
   | { ok: false; error: "not_configured" | "no_subscription" | "send_failed" };

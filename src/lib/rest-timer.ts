@@ -6,6 +6,9 @@ export function clampRestDuration(seconds: number) {
   return Math.min(MAX_REST_SECONDS, Math.max(MIN_REST_SECONDS, seconds));
 }
 
+/** The rests a template can set per exercise (seconds); null is "your usual". */
+export const REST_CHOICES = [30, 45, 60, 75, 90, 120, 150, 180, 240, 300] as const;
+
 export function formatRestClock(seconds: number) {
   const safe = Math.max(0, Math.floor(seconds));
   return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, "0")}`;

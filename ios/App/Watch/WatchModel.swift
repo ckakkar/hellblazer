@@ -1,3 +1,4 @@
+import Combine
 import SwiftUI
 import UserNotifications
 import WatchKit
@@ -5,8 +6,11 @@ import WidgetKit
 
 /// Everything the watch app knows and does. The server is the source of
 /// truth (/api/watch); sets logged here show at once and wait on the watch
-/// until the server has them. The rest timer runs here, with a haptic when
-/// it's over, and the phone hears about each change for its Lock Screen.
+/// until the server has them. With no connection at all, a workout can still
+/// start from the plans the server last sent, and finish: the server hears
+/// about it all once the watch is back online. The rest timer runs here,
+/// with a haptic when it's over (and one when the heart rate's back down),
+/// and the phone hears about each change for its Lock Screen.
 @MainActor
 final class WatchModel: ObservableObject {
     static let shared = WatchModel()
@@ -17,11 +21,38 @@ final class WatchModel: ObservableObject {
         var accent = "#df2d28"
         var restSeconds: Double = 90
         var timeZone = TimeZone.current.identifier
+        /// Tap when the heart rate's back down in a rest; nil (older
+        /// settings) means on.
+        var hrRest: Bool?
     }
 
     struct Rest: Equatable {
         var endsAt: Date
         var total: Double
+        /// The heart rate that counts as recovered: halfway from the set's
+        /// peak back to resting. Nil when there's nothing to recover from.
+        var heartRateTarget: Double?
+        var startedAt = Date()
+        /// When the heart rate got there (the wrist was tapped).
+        var recoveredAt: Date?
+    }
+
+    /// A workout started with no connection, until the server has it. Its
+    /// ids are made up here; the sets logged against them are re-pointed at
+    /// the server's once it's started there.
+    private struct OfflineWorkout: Codable {
+        var option: StartOption
+        var localDate: String
+        var workout: Workout
+        /// Finished before it ever reached the server.
+        var finished = false
+        var finishedMinutes: Int?
+    }
+
+    /// A finish that couldn't reach the server, to send once it can.
+    private struct PendingFinish: Codable {
+        var sessionId: String
+        var durationMin: Int?
     }
 
     /// The end-of-workout summary, as the Workout app shows one.
@@ -63,16 +94,39 @@ final class WatchModel: ObservableObject {
     let recorder = WorkoutRecorder.shared
 
     private var pending: [SetWrite]
+    private var offline: OfflineWorkout?
+    private var pendingFinish: PendingFinish?
     private var flushing = false
     private var restTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
+    private var heartRateWatch: AnyCancellable?
     private let defaults = UserDefaults.standard
 
     private init() {
         let stored = UserDefaults.standard
-        settings = stored.data(forKey: "settings").flatMap { try? JSONDecoder().decode(Settings.self, from: $0) } ?? Settings()
-        pending = stored.data(forKey: "pending").flatMap { try? JSONDecoder().decode([SetWrite].self, from: $0) } ?? []
+        func load<T: Decodable>(_ key: String, as type: T.Type) -> T? {
+            stored.data(forKey: key).flatMap { try? JSONDecoder().decode(T.self, from: $0) }
+        }
+        settings = load("settings", as: Settings.self) ?? Settings()
+        pending = load("pending", as: [SetWrite].self) ?? []
+        offline = load("offline", as: OfflineWorkout.self)
+        pendingFinish = load("pendingFinish", as: PendingFinish.self)
         token = Keychain.token
+        // The last state the server sent, so the workouts to start are there
+        // with no connection. Not its workout: that may have ended since,
+        // unless it's one started here offline.
+        if var cached = load("state", as: WatchState.self) {
+            cached.active = offline?.finished == false ? offline?.workout : nil
+            state = cached
+        }
+    }
+
+    private func save<T: Encodable>(_ value: T?, as key: String) {
+        if let value, let data = try? JSONEncoder().encode(value) {
+            defaults.set(data, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
     }
 
     var accent: Color { Color(hex: settings.accent) ?? Brand.flame }
@@ -82,6 +136,9 @@ final class WatchModel: ObservableObject {
     // MARK: Launch and the phone
 
     func boot() {
+        heartRateWatch = recorder.$heartRate.sink { [weak self] bpm in
+            Task { @MainActor in self?.heartRateChanged(bpm) }
+        }
         PhoneLink.shared.onContext = { [weak self] context in self?.apply(context: context) }
         PhoneLink.shared.onPhoneChanged = { [weak self] in
             Task { await self?.refresh() }
@@ -103,6 +160,7 @@ final class WatchModel: ObservableObject {
             next.accent = s["accent"] as? String ?? next.accent
             next.restSeconds = (s["restSeconds"] as? NSNumber)?.doubleValue ?? next.restSeconds
             next.timeZone = s["timeZone"] as? String ?? next.timeZone
+            next.hrRest = s["hrRest"] as? Bool
             if next != settings {
                 settings = next
                 defaults.set(try? JSONEncoder().encode(next), forKey: "settings")
@@ -155,6 +213,11 @@ final class WatchModel: ObservableObject {
         state = nil
         pending = []
         savePending()
+        offline = nil
+        save(offline, as: "offline")
+        pendingFinish = nil
+        save(pendingFinish, as: "pendingFinish")
+        save(Optional<WatchState>.none, as: "state")
         clearRest()
         Task { await recorder.finish() }
     }
@@ -211,10 +274,32 @@ final class WatchModel: ObservableObject {
         }
     }
 
-    private func apply(state fresh: WatchState) {
+    /// A new state: the server's (`fromServer`), or this watch's own for a
+    /// workout started offline.
+    private func apply(state fresh: WatchState, fromServer: Bool = true) {
         let previous = state?.active
-        if previous?.id != fresh.active?.id { keepGoing = false }
         var next = fresh
+        if fromServer {
+            // The plans for starting offline only come while no workout's on:
+            // keep the last ones through a workout.
+            let known = ((state?.options ?? []) + [state?.next].compactMap { $0 })
+            let withPlan = { (option: StartOption) -> StartOption in
+                var kept = option
+                if kept.plan == nil { kept.plan = known.first { $0.templateId == option.templateId }?.plan }
+                return kept
+            }
+            next.options = next.options.map(withPlan)
+            next.next = next.next.map(withPlan)
+            // A workout started here offline is the workout until the server
+            // has it; one finished offline is over. A finish on its way
+            // hasn't reached the server yet either.
+            if let offline { next.active = offline.finished ? nil : offline.workout }
+            if let pendingFinish, next.active?.id == pendingFinish.sessionId { next.active = nil }
+            var cached = next
+            cached.active = nil
+            save(cached, as: "state")
+        }
+        if previous?.id != next.active?.id { keepGoing = false }
         // Sets still on their way to the server stay on screen.
         if var active = next.active {
             for write in pending where write.sessionId == active.id {
@@ -353,9 +438,88 @@ final class WatchModel: ObservableObject {
             apply(state: fresh)
         } catch APIError.unlinked {
             forget()
+        } catch APIError.offline where option.plan?.isEmpty == false {
+            startOffline(option)
         } catch {
             problem = "Couldn't start the workout. Check your connection."
         }
+    }
+
+    /// No connection: the workout starts here from the plan the server last
+    /// sent, and reaches the server when the watch does (syncOffline).
+    private func startOffline(_ option: StartOption) {
+        guard let plan = option.plan, var base = state else { return }
+        let id = "offline-\(UUID().uuidString.lowercased())"
+        let workout = Workout(
+            id: id,
+            title: option.label,
+            startedAt: Date().timeIntervalSince1970 * 1000,
+            exercises: plan.enumerated().map { item in
+                Exercise(
+                    id: "\(id)-\(item.offset)", name: item.element.name, targetSets: item.element.targetSets,
+                    targetReps: item.element.targetReps, restSeconds: item.element.restSeconds, sets: [],
+                    last: item.element.last
+                )
+            }
+        )
+        offline = OfflineWorkout(option: option, localDate: localDate(), workout: workout)
+        save(offline, as: "offline")
+        selectedExerciseId = nil
+        base.active = workout
+        apply(state: base, fromServer: false)
+    }
+
+    /// The offline workout reaches the server: it's started there (dated the
+    /// day it happened), its sets are re-pointed at the server's exercises,
+    /// and a finish made offline follows them. False while still offline.
+    private func syncOffline(_ api: WatchAPI) async -> Bool {
+        guard let started = offline else { return true }
+        let fresh: WatchState
+        do {
+            fresh = try await api.start(started.option, localDate: started.localDate)
+        } catch APIError.server(let status) where (400..<500).contains(status) {
+            // The day was deleted since: nothing left to attach the sets to.
+            pending.removeAll { $0.sessionId == started.workout.id }
+            savePending()
+            offline = nil
+            save(offline, as: "offline")
+            problem = "That workout's day was deleted, so its sets couldn't be saved."
+            return true
+        } catch {
+            return false
+        }
+        guard let server = fresh.active else { return false }
+
+        // In order where the names agree, else by name.
+        var ids: [String: String] = [:]
+        var unmatched = server.exercises
+        for (i, local) in started.workout.exercises.enumerated() {
+            let inPlace = i < server.exercises.count && server.exercises[i].name == local.name
+                && unmatched.contains { $0.id == server.exercises[i].id }
+            guard let match = inPlace ? server.exercises[i] : unmatched.first(where: { $0.name == local.name }) else { continue }
+            ids[local.id] = match.id
+            unmatched.removeAll { $0.id == match.id }
+        }
+        pending = pending.compactMap { write in
+            guard write.sessionId == started.workout.id else { return write }
+            guard let exerciseId = ids[write.sessionExerciseId] else { return nil }
+            var moved = write
+            moved.sessionId = server.id
+            moved.sessionExerciseId = exerciseId
+            return moved
+        }
+        savePending()
+        if let selected = selectedExerciseId { selectedExerciseId = ids[selected] ?? selected }
+        offline = nil
+        save(offline, as: "offline")
+        if started.finished {
+            pendingFinish = PendingFinish(sessionId: server.id, durationMin: started.finishedMinutes)
+            save(pendingFinish, as: "pendingFinish")
+        } else {
+            if recorder.sessionId == started.workout.id { recorder.retag(server.id) }
+            apply(state: fresh)
+        }
+        return true
     }
 
     /// The phone opened this app to record a workout it just started.
@@ -363,27 +527,32 @@ final class WatchModel: ObservableObject {
         await refresh()
     }
 
+    /// Ends the workout. It ends here at once, connection or not; the
+    /// server hears about it (after every set) as soon as it can.
     func finish() async {
-        guard let api, let active = state?.active, !busy else { return }
+        guard let active = state?.active, !busy else { return }
         busy = true
         defer { busy = false }
-        // Every set of this workout lands before it's finished.
-        let sent = await flush()
-        guard sent || !pending.contains(where: { $0.sessionId == active.id }) else {
-            problem = "Your last sets haven't reached Fatty yet. Check your connection and try again."
-            return
-        }
         let minutes = Int((Date().timeIntervalSince(active.startDate) / 60).rounded())
-        do {
-            let fresh = try await api.finish(sessionId: active.id, durationMin: minutes <= 360 ? max(1, minutes) : nil)
+        let duration = minutes <= 360 ? max(1, minutes) : nil
+        if var started = offline, started.workout.id == active.id {
+            started.finished = true
+            started.finishedMinutes = duration
+            offline = started
+            save(offline, as: "offline")
+        } else {
+            pendingFinish = PendingFinish(sessionId: active.id, durationMin: duration)
+            save(pendingFinish, as: "pendingFinish")
+            // The phone's Lock Screen can end now, before the server knows.
             PhoneLink.shared.sendGuaranteed(["finished": active.id])
-            WKInterfaceDevice.current().play(.success)
-            await conclude(state?.active ?? active)
+        }
+        WKInterfaceDevice.current().play(.success)
+        clearRest()
+        await conclude(state?.active ?? active)
+        state?.active = nil
+        problem = nil
+        if await flush(), let api, let fresh = try? await api.state() {
             apply(state: fresh)
-        } catch APIError.unlinked {
-            forget()
-        } catch {
-            problem = "Couldn't finish. Your sets are safe; try again in a moment."
         }
     }
 
@@ -422,7 +591,8 @@ final class WatchModel: ObservableObject {
             clearRest()
             tellPhone()
         } else {
-            startRest()
+            // This exercise's own rest (its template's), else the usual.
+            startRest(seconds: exercise.restSeconds)
         }
         Task { await flush() }
     }
@@ -461,9 +631,10 @@ final class WatchModel: ObservableObject {
         while flushing {
             try? await Task.sleep(nanoseconds: 50_000_000)
         }
-        guard let api else { return pending.isEmpty }
+        guard let api else { return pending.isEmpty && offline == nil && pendingFinish == nil }
         flushing = true
         defer { flushing = false }
+        guard await syncOffline(api) else { return false }
         while let write = pending.first {
             do {
                 try await api.save(write)
@@ -477,6 +648,19 @@ final class WatchModel: ObservableObject {
             pending.removeFirst()
             savePending()
         }
+        if let finish = pendingFinish {
+            do {
+                _ = try await api.finish(sessionId: finish.sessionId, durationMin: finish.durationMin)
+            } catch APIError.server(let status) where (400..<500).contains(status) {
+                // Gone or already finished: nothing more to send.
+            } catch {
+                return false
+            }
+            pendingFinish = nil
+            save(pendingFinish, as: "pendingFinish")
+            PhoneLink.shared.sendGuaranteed(["finished": finish.sessionId])
+            return true
+        }
         tellPhone()
         return true
     }
@@ -489,18 +673,42 @@ final class WatchModel: ObservableObject {
 
     func startRest(seconds: Double? = nil) {
         let total = seconds ?? settings.restSeconds
-        rest = Rest(endsAt: Date().addingTimeInterval(total), total: total)
+        rest = Rest(endsAt: Date().addingTimeInterval(total), total: total, heartRateTarget: heartRateTarget())
         scheduleRestEnd()
         tellPhone()
     }
 
+    /// Recovered, for this rest: halfway from the set's peak back down to
+    /// resting (Health's resting heart rate, else 65). Only when the set
+    /// raised it 20 or more, and the lifter hasn't turned it off.
+    private func heartRateTarget() -> Double? {
+        guard settings.hrRest != false, let peak = recorder.peakHeartRate() else { return nil }
+        let resting = recorder.restingHeartRate ?? 65
+        guard peak - resting >= 20 else { return nil }
+        return resting + (peak - resting) / 2
+    }
+
+    /// Heart rate back down mid-rest: a tap on the wrist, and the rest page
+    /// says Ready. The timer keeps running; it's their call.
+    private func heartRateChanged(_ bpm: Double?) {
+        guard let bpm, var current = rest, current.recoveredAt == nil,
+              let target = current.heartRateTarget, bpm <= target,
+              current.endsAt > Date(), Date().timeIntervalSince(current.startedAt) >= 20
+        else { return }
+        current.recoveredAt = Date()
+        rest = current
+        WKInterfaceDevice.current().play(.directionDown)
+    }
+
     func extendRest(by seconds: Double) {
-        guard let rest else {
+        guard var extended = rest else {
             startRest(seconds: seconds)
             return
         }
-        let end = max(rest.endsAt, Date()).addingTimeInterval(seconds)
-        self.rest = Rest(endsAt: end, total: max(rest.total, end.timeIntervalSinceNow))
+        let end = max(extended.endsAt, Date()).addingTimeInterval(seconds)
+        extended.total = max(extended.total, end.timeIntervalSinceNow)
+        extended.endsAt = end
+        self.rest = extended
         scheduleRestEnd()
         tellPhone()
         WKInterfaceDevice.current().play(.click)
@@ -542,7 +750,7 @@ final class WatchModel: ObservableObject {
         restTask = Task { [weak self] in
             let wait = rest.endsAt.timeIntervalSinceNow
             if wait > 0 { try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000)) }
-            guard !Task.isCancelled, let self, self.rest == rest else { return }
+            guard !Task.isCancelled, let self, self.rest?.endsAt == rest.endsAt else { return }
             if WKApplication.shared().applicationState == .active {
                 UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: ["rest"])
                 WKInterfaceDevice.current().play(.notification)
@@ -555,7 +763,9 @@ final class WatchModel: ObservableObject {
 
     /// The workout as it stands, for the phone's Live Activity and page.
     private func tellPhone() {
-        guard let active = state?.active else { return }
+        // A workout started offline isn't the server's yet: nothing the
+        // phone's Lock Screen could act on.
+        guard let active = state?.active, offline?.workout.id != active.id else { return }
         let working = active.exercises.flatMap(\.workingSets)
         let volume = working.reduce(0) { $0 + $1.weight * Double($1.reps) }
         var activity: [String: Any] = [
@@ -568,15 +778,36 @@ final class WatchModel: ObservableObject {
         if let exercise = currentExercise() {
             activity["exercise"] = exercise.name
             let done = exercise.workingSets.count
-            activity["detail"] = isComplete(active) && !keepGoing
+            let finished = isComplete(active) && !keepGoing
+            activity["detail"] = finished
                 ? "All sets done"
                 : done > 0 ? "\(done) \(done == 1 ? "set" : "sets") done" : "Up next"
+            // What the Lock Screen's Log Set logs: what the logger here would fill in.
+            if !finished, let numbers = plannedNext(exercise) {
+                let weight = numbers.weight.rounded() == numbers.weight
+                    ? String(Int(numbers.weight)) : String(format: "%.1f", numbers.weight)
+                activity["next"] = [
+                    "sessionExerciseId": exercise.id,
+                    "weight": numbers.weight,
+                    "reps": numbers.reps,
+                    "label": "\(weight) \(settings.unit) × \(numbers.reps)",
+                ] as [String: Any]
+            }
         }
         if let rest {
             activity["restEndsAt"] = rest.endsAt.timeIntervalSince1970 * 1000
             activity["restTotal"] = rest.total
         }
         PhoneLink.shared.sendIfReachable(["activity": activity])
+    }
+
+    /// The next set's numbers, as the logger fills them in: this session's
+    /// last set, else the same set last time.
+    func plannedNext(_ exercise: Exercise) -> (weight: Double, reps: Int)? {
+        if let latest = exercise.sets.max(by: { $0.n < $1.n }) { return (latest.weight, latest.reps) }
+        let done = exercise.workingSets.count
+        let past = done < exercise.last.count ? exercise.last[done] : exercise.last.last
+        return past.map { ($0.weight, $0.reps) }
     }
 
     /// Today in the lifter's calendar, for the session's date.

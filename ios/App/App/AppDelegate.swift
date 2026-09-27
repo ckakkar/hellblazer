@@ -15,6 +15,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Before returning: the "Rest's up" alert's +30s and the watch can
         // both launch the app in the background.
         RestAlert.registerCategory()
+        // The Recovery widget's morning read (must register before launch ends).
+        RecoveryRefresher.register()
         RestNotificationDelegate.shared.install()
         WatchBridge.shared.activate()
         return true

@@ -17,6 +17,10 @@ vi.mock("@/lib/supabase/service", () => ({
   createServiceClient: () => (fake.available ? fake.client : null),
 }));
 
+// A finish schedules a widget refresh for after the response; there's no
+// response here.
+vi.mock("next/server", () => ({ after: () => {} }));
+
 /** Just enough of supabase-js's query builder: eq/is filters, reads, writes. */
 function fakeDb(tables: Tables) {
   const rpc = vi.fn<(name: string, args: Row) => Promise<{ data: unknown; error: unknown }>>(async () => ({
@@ -29,10 +33,14 @@ function fakeDb(tables: Tables) {
     let returning = false;
     const filters: [string, unknown][] = [];
     const within: [string, unknown[]][] = [];
+    const without: [string, unknown][] = [];
+    const atLeast: [string, string][] = [];
     const rows = () => (tables[table] ??= []);
     const matches = (row: Row) =>
       filters.every(([column, value]) => row[column] === value) &&
-      within.every(([column, values]) => values.includes(row[column]));
+      within.every(([column, values]) => values.includes(row[column])) &&
+      without.every(([column, value]) => (row[column] ?? null) !== value) &&
+      atLeast.every(([column, value]) => String(row[column] ?? "") >= value);
     const run = (): { data: unknown; error: { code: string; message: string } | null } => {
       if (op === "select") return { data: rows().filter(matches), error: null };
       if (op === "update") {
@@ -67,6 +75,14 @@ function fakeDb(tables: Tables) {
       },
       in(column: string, values: unknown[]) {
         within.push([column, values]);
+        return builder;
+      },
+      gte(column: string, value: string) {
+        atLeast.push([column, value]);
+        return builder;
+      },
+      not(column: string, _op: "is", value: unknown) {
+        without.push([column, value]);
         return builder;
       },
       order: () => builder,
@@ -134,8 +150,17 @@ beforeEach(() => {
   fake.available = true;
 });
 
-const { handleWatch, saveWatchSet, deleteWatchSet, finishWatchWorkout, startWatchWorkout, logVoiceSet } =
-  await import("./server");
+const {
+  handleWatch,
+  saveWatchSet,
+  deleteWatchSet,
+  finishWatchWorkout,
+  startWatchWorkout,
+  logVoiceSet,
+  undoVoiceSet,
+  finishVoiceWorkout,
+  watchState,
+} = await import("./server");
 
 function request(headers: Record<string, string> = {}) {
   return new Request("https://example.test/api/watch/x", { headers });
@@ -310,6 +335,28 @@ describe("logging by voice on the phone", () => {
     expect(await say({ weight: 85, reps: 3 })).toMatchObject({ status: "logged", weight: 85, reps: 3 });
   });
 
+  it("logs the Lock Screen's set on the exercise it showed", async () => {
+    expect(await say({ weight: 60, reps: 10, sessionExerciseId: ROW })).toMatchObject({
+      status: "logged",
+      exercise: "Row",
+      setNumber: 1,
+    });
+    expect(tables.set.filter((row) => row.session_exercise_id === ROW)).toHaveLength(1);
+  });
+
+  it("takes back the last set", async () => {
+    const res = await handleWatch(phone(), undoVoiceSet, "phone");
+    expect(await res.json()).toMatchObject({ status: "undone", setId: FIRST, exercise: "Bench Press", weight: 80 });
+    expect(tables.set.some((row) => row.id === FIRST)).toBe(false);
+  });
+
+  it("finishes the workout, with its average RPE as the effort", async () => {
+    tables.set.find((row) => row.id === FIRST)!.rpe = 8;
+    const res = await handleWatch(phone(), finishVoiceWorkout, "phone");
+    expect(await res.json()).toMatchObject({ status: "finished", sessionId: LIVE, sets: 1, volume: "400 kg", effort: 8 });
+    expect(tables.session.find((row) => row.id === LIVE)?.finished_at).toEqual(expect.any(String));
+  });
+
   it("wants both numbers or neither", async () => {
     const res = await handleWatch(phone(), (ctx) => logVoiceSet(ctx, { weight: 85 }), "phone");
     expect(res.status).toBe(400);
@@ -323,5 +370,40 @@ describe("logging by voice on the phone", () => {
   it("is the phone's to use, not the watch's", async () => {
     const res = await handleWatch(signedIn(), (ctx) => logVoiceSet(ctx, {}), "phone");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("starting on the watch with no connection", () => {
+  const TEMPLATE = "50000000-0000-4000-8000-000000000002";
+
+  it("sends each day's plan while no workout is on", async () => {
+    tables.workout_template.push({
+      id: TEMPLATE,
+      user_id: A,
+      name: "Upper",
+      day_label: "Day 1: Upper",
+      position: 0,
+      template_exercise: [{ id: "te-1" }],
+    });
+    tables.template_exercise = [
+      {
+        template_id: TEMPLATE,
+        user_id: A,
+        position: 0,
+        exercise_id: "e1",
+        target_sets: 3,
+        target_rep_range: "5",
+        rest_seconds: 180,
+        exercise: { name: "Bench Press" },
+      },
+      { template_id: TEMPLATE, user_id: B, position: 0, exercise_id: "e9", exercise: { name: "Not yours" } },
+    ];
+    tables.v_session_summary = [];
+    const res = await handleWatch(signedIn(), watchState);
+    const state = await res.json();
+    expect(state.active).toBeNull();
+    expect(state.options[0].plan).toEqual([
+      { name: "Bench Press", targetSets: 3, targetReps: "5", restSeconds: 180, last: [] },
+    ]);
   });
 });

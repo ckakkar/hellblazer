@@ -260,7 +260,7 @@ export function NotificationsManager({
             Enable notifications
           </Button>
           <p className="text-xs text-muted">
-            A daily nudge when your programmed workout is due, nothing else.
+            A nudge on days your programmed workout is due.
           </p>
         </div>
       ) : (
