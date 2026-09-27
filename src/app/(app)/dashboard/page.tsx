@@ -22,6 +22,7 @@ import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { formatVolume } from "@/lib/units";
 import { WidgetSync } from "@/components/native/widget-sync";
+import { fitFigure } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -137,7 +138,7 @@ export default async function DashboardPage() {
       delta: <Delta tone={toneOf(volumeMove)}>{deltaLabel(volumeMove)}</Delta>,
     },
     {
-      label: "Working sets",
+      label: "Sets",
       value: String(workingSetsThisWeek),
       delta: <Delta tone={toneOf(setsMove)}>{deltaLabel(setsMove)}</Delta>,
     },
@@ -159,7 +160,7 @@ export default async function DashboardPage() {
       {/* The hero, and the next workout overlapping its foot on a phone: one
           screen that says who you are and what to do next, with Start in
           thumb reach. Side by side from `lg`. */}
-      <div className="grid lg:grid-cols-[1.35fr_1fr] lg:gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] lg:gap-3">
         <FightCardHero tier={tier} />
         {isNewUser ? null : activeProgress ? (
           <ProgramProgressCard
@@ -203,15 +204,25 @@ export default async function DashboardPage() {
         >
           This week
         </SectionLabel>
-        <div className="grid grid-cols-3 divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
+        {/* Volume gets the wider column, and the figures shrink to fit, so
+            "12.5k kg" still fits a 320pt phone. */}
+        <div className="grid grid-cols-[1.3fr_1fr_1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
           {stats.map((st) => (
-            <div key={st.label} className="min-w-0 px-4">
+            <div
+              key={st.label}
+              className="@container min-w-0 px-3 [--stat-max:1.625rem] min-[400px]:px-4 sm:[--stat-max:2rem]"
+            >
               <p className="truncate text-[13px] text-muted">{st.label}</p>
-              <p className="mt-1.5 flex items-baseline gap-1">
-                <span className="font-display text-[1.625rem] leading-none text-text sm:text-[2rem]">
-                  {st.value}
+              <p className="mt-1.5 flex h-[1.625rem] items-end leading-none sm:h-8">
+                <span className="whitespace-nowrap">
+                  <span
+                    className="font-display hb-fit text-text"
+                    style={fitFigure(st.value, "var(--stat-max)", st.unit ? "1.25rem" : "0px")}
+                  >
+                    {st.value}
+                  </span>
+                  {st.unit && <span className="ml-1 text-[13px] text-muted">{st.unit}</span>}
                 </span>
-                {st.unit && <span className="text-[13px] text-muted">{st.unit}</span>}
               </p>
               {st.delta && <div className="mt-1.5">{st.delta}</div>}
             </div>
@@ -219,7 +230,7 @@ export default async function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <ChartCard
           title="Consistency"
           subtitle="Working sets per day"

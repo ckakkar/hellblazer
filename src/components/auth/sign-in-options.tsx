@@ -15,7 +15,7 @@ export function SignInOptions({ next }: { next?: string }) {
   const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
   if (!inApp) return <GoogleSignIn next={next} />;
   return (
-    <div className="grid gap-3">
+    <div className="grid grid-cols-1 gap-3">
       <AppleSignIn next={next} />
       <GoogleSignIn next={next} />
     </div>

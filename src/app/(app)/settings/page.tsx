@@ -99,8 +99,8 @@ export default async function ProfilePage({
         className="mb-10"
       />
 
-      <div className="grid gap-10 lg:grid-cols-12 lg:items-start">
-        <div className="grid gap-10 lg:col-span-7">
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:items-start">
+        <div className="grid min-w-0 grid-cols-1 gap-10 lg:col-span-7">
         <section>
           <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">Strength rank</h2>
           <TierEvaluator
@@ -132,7 +132,7 @@ export default async function ProfilePage({
 
         <section>
           <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">Bodyweight</h2>
-          <div className="grid gap-4 rounded-2xl bg-surface p-4">
+          <div className="grid grid-cols-1 gap-4 rounded-2xl bg-surface p-4">
             <BodyweightChart logs={logs} unit={unit} />
             <BodyweightManager logs={logs} unit={unit} today={today} />
           </div>
@@ -142,7 +142,7 @@ export default async function ProfilePage({
         </section>
         </div>
 
-        <aside className="grid gap-10 lg:col-span-5 lg:sticky lg:top-8">
+        <aside className="grid min-w-0 grid-cols-1 gap-10 lg:col-span-5 lg:sticky lg:top-8">
         <SettingsGroup
           label="Preferences"
           caption="Weights are always stored in kg and converted for display."

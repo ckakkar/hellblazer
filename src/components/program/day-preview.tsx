@@ -159,7 +159,7 @@ export function DayPreview({
         </div>
       ) : (
         <div className="p-4">
-          <ul className="grid gap-2">
+          <ul className="grid grid-cols-1 gap-2">
             {rows.map((r, i) => (
               <li
                 key={r.id}
@@ -171,11 +171,11 @@ export function DayPreview({
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-sm text-text">{r.name}</span>
-                    <Badge variant="muted">
+                    <Badge variant="muted" className="shrink-0">
                       {MUSCLE_LABEL[r.primaryMuscle]}
                     </Badge>
                   </div>
-                  <div className="mt-0.5 tnum text-xs text-muted">
+                  <div className="mt-0.5 tnum truncate text-xs text-muted">
                     {r.targetSets ?? 3} × {r.targetReps || "-"}
                     {r.note ? `, ${r.note}` : ""}
                   </div>

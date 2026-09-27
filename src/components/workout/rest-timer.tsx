@@ -283,7 +283,7 @@ export function RestTimerCard({ timer }: { timer: RestTimerControls }) {
         className="absolute inset-y-0 left-0 bg-white/[0.04] transition-[width] duration-300"
         style={{ width: `${running || timer.pausedRemaining !== null ? progress : 0}%` }}
       />
-      <div className="relative flex items-center gap-3 px-4 py-3">
+      <div className="relative flex items-center gap-2 px-4 py-3 min-[360px]:gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[13px] text-muted">
             <TimerReset className={cn("size-3.5", finished && "text-accent")} />
@@ -296,13 +296,17 @@ export function RestTimerCard({ timer }: { timer: RestTimerControls }) {
                   : "Rest"}
           </div>
           <div
-            className={cn("font-display mt-1 text-[1.75rem] leading-none", finished ? "text-accent" : "text-text")}
+            className={cn(
+              // Shrinks a little on a 320pt phone, where the controls need the row.
+              "font-display mt-1 text-[clamp(1.5rem,7.5vw,1.75rem)] leading-none",
+              finished ? "text-accent" : "text-text",
+            )}
             aria-live="polite"
           >
             {finished ? "Go" : formatRestClock(remaining)}
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 min-[360px]:gap-1.5">
           <button
             type="button"
             onClick={() => timer.adjust(-15)}
@@ -330,7 +334,7 @@ export function RestTimerCard({ timer }: { timer: RestTimerControls }) {
           <button
             type="button"
             onClick={timer.skip}
-            className="flex size-10 items-center justify-center rounded-full text-muted transition-colors hover:text-text"
+            className="-mr-1.5 flex size-10 items-center justify-center rounded-full text-muted transition-colors hover:text-text"
             aria-label="Reset rest timer"
           >
             <RotateCcw className="size-3.5" />
@@ -356,7 +360,7 @@ export function RestTimerBar({ timer }: { timer: RestTimerControls }) {
   const { finished } = timer;
   const progress = timer.total > 0 ? ((timer.total - remaining) / timer.total) * 100 : 0;
   const pill =
-    "tnum flex h-9 min-w-9 items-center justify-center rounded-full bg-white/[0.07] px-2.5 text-[13px] text-text active:bg-white/[0.12]";
+    "tnum flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.07] px-2 text-[13px] text-text active:bg-white/[0.12] min-[360px]:px-2.5";
 
   return (
     <div
@@ -366,15 +370,19 @@ export function RestTimerBar({ timer }: { timer: RestTimerControls }) {
         finished ? "bg-accent/[0.12]" : "bg-white/[0.05]",
       )}
     >
-      <div className="flex h-12 items-center gap-2 pl-3.5 pr-1.5">
+      <div className="flex h-12 items-center gap-1.5 pl-3.5 pr-1.5 min-[360px]:gap-2">
         <TimerReset className={cn("size-4 shrink-0", finished || running ? "text-accent" : "text-muted")} />
-        <span className="min-w-0 flex-1 truncate text-[14px] text-muted" aria-live="polite">
+        <span className="flex min-w-0 flex-1 items-baseline gap-1 text-[14px] text-muted" aria-live="polite">
           {finished ? (
-            <span className="font-medium text-accent">Rest&apos;s over. Go</span>
+            <span className="truncate font-medium text-accent">Rest&apos;s over. Go</span>
           ) : (
             <>
-              {running ? "Resting " : paused ? "Paused " : "Rest "}
-              <span className="font-display text-[17px] text-text">{formatRestClock(remaining)}</span>
+              {/* The word gives way before the clock does: on a 320pt phone
+                  the controls leave room for the countdown alone. */}
+              <span className="truncate max-[359px]:sr-only">
+                {running ? "Resting" : paused ? "Paused" : "Rest"}
+              </span>
+              <span className="font-display shrink-0 text-[17px] text-text">{formatRestClock(remaining)}</span>
             </>
           )}
         </span>

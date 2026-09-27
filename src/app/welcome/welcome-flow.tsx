@@ -95,7 +95,7 @@ export function WelcomeFlow({
         paddingBottom: "calc(env(safe-area-inset-bottom) + 2rem)",
       }}
     >
-      <div className="grid w-full max-w-5xl overflow-hidden lg:grid-cols-[1.12fr_0.88fr] lg:rounded-3xl lg:bg-surface">
+      <div className="grid w-full max-w-5xl grid-cols-1 overflow-hidden lg:grid-cols-[1.12fr_0.88fr] lg:rounded-3xl lg:bg-surface">
         <section className="relative hidden min-h-[42rem] overflow-hidden lg:block">
           <FighterArt
             fighterKey="ohma"

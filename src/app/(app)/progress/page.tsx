@@ -84,7 +84,7 @@ export default async function ProgressPage({
             body="Log some working sets and your 1RM and volume trends will appear here."
           />
         ) : (
-          <div className="grid gap-10">
+          <div className="grid grid-cols-1 gap-10">
           <LiftsOverview unit={unit} />
           <ExerciseTab
             exerciseId={selectedExercise}
@@ -121,7 +121,7 @@ async function LiftsOverview({ unit }: { unit: "kg" | "lb" }) {
   const [lifts, records] = await Promise.all([getTopLiftTrends(4, 12), getRecentRecords(5)]);
   if (lifts.length === 0 && records.length === 0) return null;
   return (
-    <div className="grid gap-10">
+    <div className="grid grid-cols-1 gap-10">
       <LiftTrends lifts={lifts} unit={unit} />
       <RecentRecords records={records} unit={unit} />
     </div>
@@ -141,7 +141,7 @@ async function ExerciseTab({
 
   return (
     // The top-lift cards link here (#lift); the margin clears the top bar.
-    <div id="lift" className="grid scroll-mt-24 gap-4">
+    <div id="lift" className="grid scroll-mt-24 grid-cols-1 gap-4">
       {/* A lift's personal records are a tale of the tape by any other name, so
           they're set as one: the lift is named, and the records read down a
           column instead of sitting in four equal boxes. */}
@@ -205,7 +205,7 @@ async function MuscleTab({
   const hasMuscleData = points.some((p) => p.sets > 0);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <ChartCard
         title="Rep ranges"
         subtitle="Working sets per week: strength 1-5, hypertrophy 6-12, endurance 13+"

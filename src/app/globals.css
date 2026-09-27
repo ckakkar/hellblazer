@@ -126,6 +126,13 @@ html[data-accent="violet"] {
    like a broadcast scoreboard, and tabular figures keep columns still while
    values change. */
 @layer components {
+  /* See fitFigure() in lib/utils: full size when it fits, smaller when not. */
+  .hb-fit {
+    font-size: min(
+      var(--fit-max),
+      calc((100cqw - var(--fit-reserve, 0px)) / var(--fit-em, 4))
+    );
+  }
   .font-display,
   .font-impact {
     font-variation-settings: "wdth" 125;
@@ -1455,6 +1462,17 @@ input[type="number"] {
   textarea:not([data-display]) {
     font-size: max(16px, 1em);
   }
+}
+
+/* WebKit sizes a date field to its own text, not its box: in a narrow grid
+   cell it spills into whatever sits beside it. */
+input[type="date"] {
+  min-width: 0;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  /* iOS centres it otherwise, whatever the field says. */
+  text-align: inherit;
 }
 
 * {

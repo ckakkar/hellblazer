@@ -75,8 +75,8 @@ export function ProfileDetails({
   }
 
   return (
-    <div className="grid gap-4">
-      <label className="grid gap-1.5">
+    <div className="grid grid-cols-1 gap-4">
+      <label className="grid grid-cols-1 gap-1.5">
         <span className="text-xs font-medium text-muted">Name</span>
         <Input
           value={name}
@@ -89,7 +89,7 @@ export function ProfileDetails({
         />
       </label>
 
-      <div className="grid gap-1.5">
+      <div className="grid grid-cols-1 gap-1.5">
         <span className="text-xs font-medium text-muted">Sex</span>
         <div className="inline-flex w-full rounded-full bg-white/[0.06] p-0.5">
           {SEXES.map((o) => (
@@ -115,8 +115,8 @@ export function ProfileDetails({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="grid gap-1.5">
+      <div className="grid grid-cols-2 gap-3 max-[359px]:grid-cols-1">
+        <label className="grid min-w-0 grid-cols-1 gap-1.5">
           <span className="text-xs font-medium text-muted">
             Birthday
             {age != null && <span className="tnum"> · {age}</span>}
@@ -136,7 +136,7 @@ export function ProfileDetails({
             aria-label="Birthday"
           />
         </label>
-        <label className="grid gap-1.5">
+        <label className="grid min-w-0 grid-cols-1 gap-1.5">
           <span className="text-xs font-medium text-muted">Height</span>
           <div className="relative">
             <Input

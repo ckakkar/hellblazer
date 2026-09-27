@@ -21,7 +21,7 @@ export function DangerZone({
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       {activeProgram && (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -117,7 +117,7 @@ export default async function LogPage({
       )}
 
       {options.length === 0 && !activeProgress ? (
-        <div className="grid gap-4">
+        <div className="grid grid-cols-1 gap-4">
           <SessionStarter templates={[]} hasActiveProgram={false} countsLabel={null} />
           <EmptyState
             icon={<CalendarRange className="size-6" />}

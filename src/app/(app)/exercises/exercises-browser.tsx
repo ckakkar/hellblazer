@@ -82,7 +82,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         </Select>
       </div>
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
         {groups.map((g) => (
           <section key={g.muscle}>
             <h2 className="mb-2 flex items-center justify-between px-4 text-[13px] font-medium text-muted">
@@ -277,7 +277,7 @@ function CreateExerciseSheet({
         </Button>
       }
     >
-      <div className="grid gap-4 p-4">
+      <div className="grid grid-cols-1 gap-4 p-4">
         <Field label="Name">
           <Input
             autoFocus
@@ -372,7 +372,7 @@ function Field({
   children: React.ReactNode;
 }) {
   return (
-    <label className="grid gap-1.5">
+    <label className="grid grid-cols-1 gap-1.5">
       <span className="text-xs font-medium text-muted">{label}</span>
       {children}
     </label>

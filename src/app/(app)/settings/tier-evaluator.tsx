@@ -90,7 +90,7 @@ export function TierEvaluator({
           : "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result.";
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       {/* The standing verdict. Who you are (fighter, name, rank) is the page
           header now, so this card is the judge's reasoning and the ladder. */}
       <div className="rounded-2xl bg-surface p-5">
@@ -210,7 +210,7 @@ export function TierEvaluator({
             <TierLadder rank={result.rank} />
             <p className="mt-4 text-[15px] leading-[1.5] text-text">{result.rationale}</p>
             {result.highlights.length > 0 && (
-              <ul className="mt-3 grid gap-1.5">
+              <ul className="mt-3 grid grid-cols-1 gap-1.5">
                 {result.highlights.map((h, i) => (
                   <li
                     key={i}

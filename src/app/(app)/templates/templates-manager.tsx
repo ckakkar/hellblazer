@@ -121,7 +121,7 @@ export function TemplatesManager({
           >
             Your split
           </SectionLabel>
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {currentSplit.map((t) => (
               <TemplateCard
                 key={t.id}
@@ -150,7 +150,7 @@ export function TemplatesManager({
                 <CleanupButton pending={pending} start={start} />
               </div>
               {showOthers && (
-                <div className="mt-3 grid gap-3">
+                <div className="mt-3 grid grid-cols-1 gap-3">
                   {otherTemplates.map((t) => (
                     <TemplateCard
                       key={t.id}
@@ -171,7 +171,7 @@ export function TemplatesManager({
             <span className="text-[13px] font-medium text-muted">All templates</span>
             <CleanupButton pending={pending} start={start} />
           </div>
-          <div className="grid gap-3">
+          <div className="grid grid-cols-1 gap-3">
             {otherTemplates.map((t) => (
               <TemplateCard
                 key={t.id}

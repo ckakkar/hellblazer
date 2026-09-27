@@ -36,7 +36,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
             aria-pressed={active}
             aria-label={a.name}
             className={cn(
-              "group flex flex-col items-center gap-2 rounded-xl p-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40",
+              "group flex min-w-0 flex-col items-center gap-2 rounded-xl px-1.5 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40",
               active
                 ? "bg-white/[0.08] shadow-[inset_0_0_0_1.5px_rgb(244_242_238/0.55)]"
                 : "bg-surface-2/60 hover:bg-surface-2",
@@ -53,7 +53,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
             </span>
             <span
               className={cn(
-                "text-[13px] font-medium",
+                "max-w-full truncate text-[13px] font-medium",
                 active ? "text-text" : "text-muted",
               )}
             >

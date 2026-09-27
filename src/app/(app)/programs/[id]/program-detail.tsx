@@ -132,8 +132,8 @@ export function ProgramDetail({
         <CardHeader>
           <CardTitle>Block settings</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-5">
-          <div className="grid gap-1.5">
+        <CardContent className="grid grid-cols-1 gap-5">
+          <div className="grid grid-cols-1 gap-1.5">
             <span className="text-xs font-medium text-muted">Run it for</span>
             <div className="flex flex-wrap items-center gap-2">
               {DURATIONS.map((w) => (
@@ -162,7 +162,7 @@ export function ProgramDetail({
           </div>
 
           <div className="flex flex-wrap items-end gap-4">
-            <label className="grid gap-1.5">
+            <label className="grid grid-cols-1 gap-1.5">
               <span className="text-xs font-medium text-muted">Start date</span>
               <Input
                 type="date"
@@ -225,17 +225,27 @@ export function ProgramDetail({
                   key={d.id}
                   className="flex items-center gap-3 px-4 py-3"
                 >
-                  <span className="tnum flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] text-muted">
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm text-text">
-                      {tmpl?.day_label || tmpl?.name || "Deleted template"}
-                    </div>
-                    <div className="tnum text-xs text-muted">
-                      {tmpl ? `${tmpl.template_exercise.length} exercises` : "-"}
-                    </div>
-                  </div>
+                  {/* The day itself opens its preview, as a row does on iOS,
+                      leaving room for the name on a narrow phone. */}
+                  <button
+                    type="button"
+                    onClick={() => setPreviewDayId(d.id)}
+                    title="Preview this day"
+                    className="-my-1.5 flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1.5 text-left"
+                  >
+                    <span className="tnum flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] text-muted">
+                      {i + 1}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-text">
+                        {tmpl?.day_label || tmpl?.name || "Deleted template"}
+                      </span>
+                      <span className="tnum flex items-center gap-1 text-xs text-muted">
+                        {tmpl ? `${tmpl.template_exercise.length} exercises` : "-"}
+                        <Eye className="size-3 shrink-0" aria-hidden />
+                      </span>
+                    </span>
+                  </button>
                   <div className="hidden shrink-0 flex-col sm:flex">
                     <button
                       disabled={i === 0 || pending}
@@ -270,20 +280,15 @@ export function ProgramDetail({
                       <ChevronDown className="size-4" />
                     </button>
                   </div>
-                  <button
-                    onClick={() => setPreviewDayId(d.id)}
-                    aria-label="Preview this day"
-                    title="Preview this day"
-                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted transition-colors hover:text-text"
-                  >
-                    <Eye className="size-4" />
-                  </button>
                   {tmpl && (
                     <StartWorkoutButton
                       programDayId={d.id}
                       label="Start"
                       variant="secondary"
                       size="sm"
+                      // On a 320pt phone the day's name needs the room more.
+                      className="shrink-0 max-[359px]:w-8 max-[359px]:px-0"
+                      labelClassName="max-[359px]:sr-only"
                     />
                   )}
                   <button
@@ -297,7 +302,7 @@ export function ProgramDetail({
                         });
                       })
                     }
-                    className="shrink-0 text-muted transition-colors hover:text-danger"
+                    className="-mr-2 flex size-9 shrink-0 items-center justify-center text-muted transition-colors hover:text-danger"
                   >
                     <X className="size-4" />
                   </button>

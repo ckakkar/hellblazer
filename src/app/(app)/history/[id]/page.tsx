@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL } from "@/lib/muscles";
+import { fitFigure } from "@/lib/utils";
 import { DeleteSessionButton } from "./delete-session-button";
 import { ShareCardButton } from "./share-card-button";
 
@@ -59,7 +60,7 @@ export default async function SessionDetailPage({
         }
         subtitle={session.date ? format(parseISO(session.date), "EEEE, MMM d, yyyy") : undefined}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
           <ShareCardButton
             sessionId={session.id}
             title={session.title ?? "Session"}
@@ -79,12 +80,21 @@ export default async function SessionDetailPage({
         {[
           { label: "Volume", value: formatVolume(totalVolume, unit) },
           { label: "Sets", value: String(totalSets) },
-          { label: "Duration", value: session.duration_min ? `${session.duration_min} min` : "Not timed" },
+          { label: "Duration", value: session.duration_min ? `${session.duration_min} min` : null },
         ].map((st) => (
-          <div key={st.label} className="min-w-0 px-3.5">
+          <div key={st.label} className="@container min-w-0 px-3 min-[400px]:px-3.5">
             <p className="text-[13px] text-muted">{st.label}</p>
-            <p className="font-display mt-1.5 whitespace-nowrap text-[clamp(1.125rem,5vw,1.5rem)] leading-none text-text">
-              {st.value}
+            <p className="mt-1.5 flex h-6 items-end whitespace-nowrap leading-none">
+              {st.value ? (
+                <span
+                  className="font-display hb-fit text-text"
+                  style={fitFigure(st.value, "clamp(1.125rem, 5vw, 1.5rem)")}
+                >
+                  {st.value}
+                </span>
+              ) : (
+                <span className="text-[15px] text-muted">Not timed</span>
+              )}
             </p>
           </div>
         ))}
@@ -94,7 +104,7 @@ export default async function SessionDetailPage({
         <Card className="mb-4 p-4 text-[15px] leading-[1.5] text-muted">{session.notes}</Card>
       )}
 
-      <div className="grid items-start gap-3 lg:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
         {session.session_exercise.map((se) => {
           const working = se.set.filter((s) => !s.is_warmup);
           const exVolume = working.reduce(
@@ -102,7 +112,7 @@ export default async function SessionDetailPage({
             0,
           );
           return (
-            <Card key={se.id} className="overflow-hidden">
+            <Card key={se.id} className="@container overflow-hidden">
               <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-4">
                 <div className="min-w-0">
                   <div className="truncate text-[17px] font-semibold tracking-[-0.015em] text-text">
@@ -127,15 +137,24 @@ export default async function SessionDetailPage({
                       <span className="w-14 shrink-0 text-[13px] text-muted">
                         {s.is_warmup ? "Warm-up" : `Set ${i + 1}`}
                       </span>
-                      <span className="flex-1 text-text">
-                        {trimNum(toDisplayWeight(s.weight_kg, unit))}
-                        <span className="text-muted">{unit}</span> × {s.reps}
+                      {/* In a phone-width card the RPE drops under the
+                          weight rather than squeezing it onto two lines. */}
+                      <span className="min-w-0 flex-1 text-text">
+                        <span className="whitespace-nowrap">
+                          {trimNum(toDisplayWeight(s.weight_kg, unit))}
+                          <span className="text-muted">{unit}</span> × {s.reps}
+                        </span>
+                        {s.rpe != null && (
+                          <span className="block text-[13px] text-muted @sm:hidden">RPE {s.rpe}</span>
+                        )}
                       </span>
                       {s.rpe != null && (
-                        <span className="text-[13px] text-muted">RPE {s.rpe}</span>
+                        <span className="hidden shrink-0 whitespace-nowrap text-[13px] text-muted @sm:inline">
+                          RPE {s.rpe}
+                        </span>
                       )}
                       {!s.is_warmup && (
-                        <span className="w-20 shrink-0 text-right text-[13px] text-muted">
+                        <span className="shrink-0 whitespace-nowrap text-right text-[13px] text-muted @sm:w-20">
                           1RM {trimNum(toDisplayWeight(est1rm, unit))}
                         </span>
                       )}

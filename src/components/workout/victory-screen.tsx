@@ -1,6 +1,7 @@
 import { FighterArt } from "@/components/tier/fighter-art";
 import { Portal } from "@/components/ui/portal";
 import type { TierKey } from "@/lib/tiers";
+import { fitFigure } from "@/lib/utils";
 
 /**
  * The bell after the last set. Your fighter fills the screen, the result word
@@ -48,10 +49,15 @@ export function VictoryScreen({
         {/* One flash of the accent as the word lands */}
         <div aria-hidden className="hb-victory-flash pointer-events-none absolute inset-0 bg-accent" />
 
-        <div className="relative px-6 pb-[calc(env(safe-area-inset-bottom)+3.5rem)] sm:mx-auto sm:w-full sm:max-w-xl">
+        <div className="@container relative px-6 pb-[calc(env(safe-area-inset-bottom)+3.5rem)] sm:mx-auto sm:w-full sm:max-w-xl">
           <div className="relative">
             <span aria-hidden className="hb-victory-slash absolute -bottom-3 -left-6 right-0 h-[3px] bg-accent" />
-            <p className="hb-victory-word font-display relative text-[clamp(2.75rem,12.5vw,5rem)] leading-[0.92] text-text">
+            {/* Sized to its widest word: "DOMINATED" at full size runs off a
+                375pt phone. */}
+            <p
+              className="hb-victory-word font-display hb-fit relative leading-[0.92] text-text"
+              style={fitFigure(word.split(" "), "clamp(2.75rem, 12.5vw, 5rem)")}
+            >
               {word}
             </p>
           </div>
@@ -60,13 +66,20 @@ export function VictoryScreen({
               {records === 1 ? "1 record broken" : `${records} records broken`}
             </p>
           )}
-          <dl className="mt-7 grid grid-cols-3 gap-4">
+          <dl className="mt-7 grid grid-cols-[1.3fr_0.8fr_1.1fr] gap-3">
             {stats.map((s, i) => (
-              <div key={s.label} className="hb-victory-rise min-w-0" style={{ animationDelay: `${480 + i * 90}ms` }}>
+              <div key={s.label} className="hb-victory-rise @container min-w-0" style={{ animationDelay: `${480 + i * 90}ms` }}>
                 <dt className="text-[13px] text-text/60">{s.label}</dt>
-                <dd className="mt-1 flex items-baseline gap-1 whitespace-nowrap">
-                  <span className="font-display text-[clamp(1.25rem,6vw,1.75rem)] leading-none text-text">{s.value}</span>
-                  {s.unit && <span className="text-[13px] text-text/60">{s.unit}</span>}
+                <dd className="mt-1 flex h-7 items-end leading-none">
+                  <span className="whitespace-nowrap">
+                    <span
+                      className="font-display hb-fit text-text"
+                      style={fitFigure(s.value, "clamp(1.25rem, 6vw, 1.75rem)", s.unit ? "1.25rem" : "0px")}
+                    >
+                      {s.value}
+                    </span>
+                    {s.unit && <span className="ml-1 text-[13px] text-text/60">{s.unit}</span>}
+                  </span>
                 </dd>
               </div>
             ))}

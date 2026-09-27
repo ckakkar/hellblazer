@@ -27,7 +27,9 @@ export function PageHeader({
       )}
     >
       <div className="min-w-0 max-w-2xl">
-        <h1 className="font-display text-[2.125rem] leading-[1.05] text-text sm:text-[2.75rem]">
+        {/* A long one-word name (a template called "Upper/Lower/Arms") breaks
+            rather than running off a narrow phone. */}
+        <h1 className="font-display text-[2.125rem] leading-[1.05] text-text [overflow-wrap:anywhere] sm:text-[2.75rem]">
           {title}
         </h1>
         {subtitle && (
@@ -67,7 +69,7 @@ export function SectionLabel({
     <div
       className={cn("mb-3 flex items-baseline justify-between gap-3 px-1", className)}
     >
-      <h2 className="text-[19px] font-semibold tracking-[-0.02em] text-text">
+      <h2 className="min-w-0 text-[19px] font-semibold tracking-[-0.02em] text-text [overflow-wrap:anywhere]">
         {children}
       </h2>
       {action}

@@ -248,7 +248,7 @@ export function NotificationsManager({
   }
 
   return (
-    <div className="grid gap-4">
+    <div className="grid grid-cols-1 gap-4">
       {!subscribed ? (
         <div className="flex flex-col gap-2">
           <Button onClick={enable} disabled={busy} className="w-full sm:w-auto">

@@ -36,13 +36,14 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet } from "@/components/ui/sheet";
 import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
+import { TitleField } from "@/components/ui/title-field";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CountUp } from "@/components/reactbits/count-up";
 import { RestTimerBar, RestTimerCard, useRestTimer, type RestTimerControls } from "@/components/workout/rest-timer";
 import { VictoryScreen } from "@/components/workout/victory-screen";
 import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
-import { cn, selectAllOnFocus } from "@/lib/utils";
+import { cn, fitFigure, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
@@ -98,6 +99,9 @@ type LocalExercise = {
 // Running personal-best tracker per exercise. `hadHistory` gates the Removal
 // callout to exercises with prior-session data, so a brand-new lift never fires.
 type PrBest = { weight: number; est1rm: number; hadHistory: boolean };
+
+/** The stat strip's figures: scale with the phone, and fit their column. */
+const STAT_SIZE = "clamp(1.25rem, 5.4vw, 1.625rem)";
 
 /**
  * Live connectivity. useSyncExternalStore rather than state+effect so the
@@ -1039,18 +1043,17 @@ export function SessionLogger({
             className="tnum rounded-lg bg-transparent px-1 py-0.5 text-right text-[13px] text-muted [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-text/25"
           />
         </div>
-        <input
+        <TitleField
           defaultValue={session.title ?? "Session"}
-          aria-label="Session title"
-          data-display
-          onBlur={(e) => {
-            setTitle(e.target.value.trim() || "Workout");
+          label="Session title"
+          onCommit={(value) => {
+            setTitle(value.trim() || "Workout");
             updateSessionMeta({
               sessionId: session.id,
-              title: e.target.value.trim() || null,
+              title: value.trim() || null,
             }).catch(() => showNotice("Couldn't save the session title."));
           }}
-          className="font-display mt-1 w-full bg-transparent text-[2rem] leading-tight text-text focus:outline-none sm:text-[2.5rem]"
+          className="font-display mt-1 text-[2rem] leading-tight text-text sm:text-[2.5rem]"
         />
         <p className="tnum mt-0.5 text-[13px] text-muted">
           {exercises.length > 0
@@ -1062,30 +1065,47 @@ export function SessionLogger({
             baseline. The clock is the only accent because it is the thing
             moving. */}
         <div className="mt-5 grid grid-cols-[1.3fr_0.8fr_1.1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
-          <div className="min-w-0 px-3.5">
+          <div className="@container min-w-0 px-3 min-[400px]:px-3.5">
             <p className="text-[13px] text-muted">Volume</p>
-            <p className="font-display mt-1.5 whitespace-nowrap text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none text-text">
-              {/* Animates only when it changes, which here means a set just
-                  landed. The move is the information. */}
-              <CountUp to={Math.round(totalForce)} animateOnMount={false} duration={0.7} separator="," />
-              <span className="ml-1 text-[13px] font-normal text-muted">{unit}</span>
+            <p className="mt-1.5 flex h-[1.625rem] items-end leading-none">
+              <span className="whitespace-nowrap">
+                {/* Animates only when it changes, which here means a set just
+                    landed. The move is the information. */}
+                <span
+                  className="font-display hb-fit text-text"
+                  style={fitFigure(Math.round(totalForce).toLocaleString("en-US"), STAT_SIZE, "1.25rem")}
+                >
+                  <CountUp to={Math.round(totalForce)} animateOnMount={false} duration={0.7} separator="," />
+                </span>
+                <span className="ml-1 text-[13px] text-muted">{unit}</span>
+              </span>
             </p>
           </div>
-          <div className="min-w-0 px-3.5">
+          <div className="@container min-w-0 px-3 min-[400px]:px-3.5">
             <p className="text-[13px] text-muted">Sets</p>
-            <p className="font-display mt-1.5 text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none text-text">
-              <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
+            <p className="mt-1.5 flex h-[1.625rem] items-end leading-none">
+              <span className="font-display hb-fit text-text" style={fitFigure(String(totalSets), STAT_SIZE)}>
+                <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
+              </span>
             </p>
           </div>
-          <div className="min-w-0 px-3.5" title="Workout time" aria-label={`Time ${timeLabel}`}>
+          <div
+            className="@container min-w-0 px-3 min-[400px]:px-3.5"
+            title="Workout time"
+            aria-label={`Time ${timeLabel}`}
+          >
             <p className="text-[13px] text-muted">Time</p>
-            <p
-              className={cn(
-                "font-display mt-1.5 whitespace-nowrap text-[clamp(1.25rem,5.4vw,1.625rem)] leading-none",
-                clockLive ? "text-accent" : "text-text",
+            <p className="mt-1.5 flex h-[1.625rem] items-end whitespace-nowrap leading-none">
+              {clockLive || duration ? (
+                <span
+                  className={cn("font-display hb-fit", clockLive ? "text-accent" : "text-text")}
+                  style={fitFigure(timeLabel, STAT_SIZE)}
+                >
+                  {timeLabel}
+                </span>
+              ) : (
+                <span className="text-[15px] text-muted">{timeLabel}</span>
               )}
-            >
-              {timeLabel}
             </p>
           </div>
         </div>
@@ -1574,7 +1594,7 @@ function ActiveExerciseModal({
             <div className="mb-3 text-[13px] text-muted">{exercise.note}</div>
           )}
 
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {exercise.sets.map((s, i) => (
               <SetRow
                 key={s.id}

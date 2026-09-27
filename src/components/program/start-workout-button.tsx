@@ -13,10 +13,13 @@ export function StartWorkoutButton({
   variant = "primary",
   size = "md",
   className,
+  labelClassName,
 }: {
   programDayId?: string | null;
   templateId?: string | null;
   label?: string;
+  /** For hiding the word on a narrow phone; the icon stays, and so does the name. */
+  labelClassName?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
   className?: string;
@@ -43,7 +46,7 @@ export function StartWorkoutButton({
       ) : (
         <Play className="size-4" />
       )}
-      {label}
+      <span className={labelClassName}>{label}</span>
     </Button>
   );
 }

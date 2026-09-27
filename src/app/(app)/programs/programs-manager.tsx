@@ -202,8 +202,8 @@ function CreateProgramSheet({
         </Button>
       }
     >
-      <div className="grid gap-5 p-4">
-        <label className="grid gap-1.5">
+      <div className="grid grid-cols-1 gap-5 p-4">
+        <label className="grid grid-cols-1 gap-1.5">
           <span className="text-[13px] font-medium text-muted">Program name</span>
           <Input
             autoFocus
@@ -213,7 +213,7 @@ function CreateProgramSheet({
           />
         </label>
 
-        <div className="grid gap-1.5">
+        <div className="grid grid-cols-1 gap-1.5">
           <span className="text-[13px] font-medium text-muted">Run it for</span>
           <div className="flex flex-wrap items-center gap-2">
             {DURATIONS.map((w) => (
@@ -243,7 +243,7 @@ function CreateProgramSheet({
           </div>
         </div>
 
-        <label className="grid gap-1.5">
+        <label className="grid grid-cols-1 gap-1.5">
           <span className="text-[13px] font-medium text-muted">Start date</span>
           <Input
             type="date"
@@ -253,14 +253,14 @@ function CreateProgramSheet({
           />
         </label>
 
-        <div className="grid gap-2">
+        <div className="grid grid-cols-1 gap-2">
           <span className="text-[13px] font-medium text-muted">
             Weekly schedule{" "}
             <span className="text-muted/60">
               Tap templates in order ({selected.length} selected)
             </span>
           </span>
-          <div className="grid gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {templates.map((t) => {
               const order = selected.indexOf(t.id);
               const active = order >= 0;

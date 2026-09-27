@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { MAX_RANK, TIERS, type Tier } from "@/lib/tiers";
-import { cn } from "@/lib/utils";
+import { cn, fitFigure } from "@/lib/utils";
 import { FighterArt } from "@/components/tier/fighter-art";
 
 /* ── Your rank ─────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ export function FightCardHero({
         />
       </div>
 
-      <div className="relative px-5 pb-20 md:px-7 md:pb-7 md:pt-7">
+      <div className="@container relative px-5 pb-20 md:px-7 md:pb-7 md:pt-7">
         <p className="hb-hero-rise flex items-center gap-2 text-[13px] font-medium text-text/80">
           {tier ? (
             <>
@@ -87,10 +87,12 @@ export function FightCardHero({
         </p>
         <h1
           className={cn(
-            "hb-hero-rise hb-hero-name font-display mt-3 text-[clamp(2.75rem,13.5vw,3.75rem)] leading-[0.9] md:max-w-[8ch] md:text-[4rem]",
+            "hb-hero-rise hb-hero-name font-display hb-fit mt-3 leading-[0.9] md:max-w-[8ch] md:text-[4rem]",
             tier ? "text-text" : "text-text/70",
           )}
-          style={{ animationDelay: "80ms" }}
+          // Sized so the widest word fits the card: "Wongsawat" at full size
+          // runs off a 375pt phone.
+          style={{ animationDelay: "80ms", ...fitFigure([first, ...rest], "clamp(2.75rem, 13.5vw, 3.75rem)") }}
         >
           {first}
           {rest.length > 0 && (
