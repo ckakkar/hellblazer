@@ -12,12 +12,36 @@ import WatchConnectivity
 ///   Live Activity and tells the page; a workout recorded there keeps the
 ///   phone from saving a second copy to Apple Health.
 /// - Opens the workout on the watch when one starts here, if the lifter wants.
+/// - Passes on the heart rate the watch is reading, for the Lock Screen and
+///   the logger.
 ///
 /// Activated at launch, so a message from the watch can wake the app.
 final class WatchBridge: NSObject, WCSessionDelegate {
     static let shared = WatchBridge()
     /// Posted on the main queue when the watch changed the workout.
     static let changed = Notification.Name("FattyWatchChanged")
+    /// Posted on the main queue with a new reading: userInfo "bpm", "sessionId".
+    static let heartRateChanged = Notification.Name("FattyHeartRate")
+
+    private struct HeartRate {
+        var bpm: Int
+        var sessionId: String
+        var at: Date
+    }
+
+    private let heartRateLock = NSLock()
+    private var latestHeartRate: HeartRate?
+
+    /// The watch's reading for this session from the last minute, or nil
+    /// (it stopped sending: out of range, or the workout ended there).
+    func heartRate(for sessionId: String) -> Int? {
+        heartRateLock.lock()
+        defer { heartRateLock.unlock() }
+        guard let latest = latestHeartRate, latest.sessionId == sessionId,
+              Date().timeIntervalSince(latest.at) < 60
+        else { return nil }
+        return latest.bpm
+    }
 
     private let defaults = UserDefaults.standard
     private enum Key {
@@ -158,6 +182,9 @@ final class WatchBridge: NSObject, WCSessionDelegate {
 
     /// A message or queued transfer from the watch.
     private func handle(_ message: [String: Any]) {
+        if let bpm = (message["heartRate"] as? NSNumber)?.intValue, let sessionId = message["sessionId"] as? String {
+            receivedHeartRate(bpm, sessionId: sessionId)
+        }
         if let sessionId = message["workoutStarted"] as? String {
             markRecorded(sessionId)
         }
@@ -173,6 +200,19 @@ final class WatchBridge: NSObject, WCSessionDelegate {
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: Self.changed, object: nil)
             }
+        }
+    }
+
+    private func receivedHeartRate(_ bpm: Int, sessionId: String) {
+        guard (25...250).contains(bpm) else { return }
+        heartRateLock.lock()
+        latestHeartRate = HeartRate(bpm: bpm, sessionId: sessionId, at: Date())
+        heartRateLock.unlock()
+        WorkoutActivity.showHeartRate(bpm, sessionId: sessionId)
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(
+                name: Self.heartRateChanged, object: nil, userInfo: ["bpm": bpm, "sessionId": sessionId]
+            )
         }
     }
 

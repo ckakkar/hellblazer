@@ -15,10 +15,14 @@ import WidgetKit
 ///   up" alert for when the phone is locked. Rest changes made outside the
 ///   page (the activity's buttons, the watch) wait here for the page.
 /// - Apple Watch: linking it, and its settings (WatchBridge).
-/// - Apple Health: finished workouts and logged bodyweight.
+/// - Apple Health: finished workouts (with their effort) and logged
+///   bodyweight; sleep, heart rate variability and resting heart rate for
+///   Recovery on Home, read on the phone only (HealthExtras.swift).
 /// - Widgets, Siri and Spotlight: the snapshot they read.
 /// - The share sheet, for files the site builds (share card, CSV export).
-/// - Web view chrome: lifting the launch screen, the edge swipe back.
+/// - Web view chrome: lifting the launch screen, the edge swipe back, and
+///   keeping the screen on during a workout.
+/// - Voice logging (VoiceSetLogger): the rest settings it goes by.
 @objc(HellBlazerNativePlugin)
 public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "HellBlazerNativePlugin"
@@ -44,6 +48,10 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "phoneStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "phoneSync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "phoneUnlink", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "keepAwake", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setRestDefaults", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "recoveryStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "recoveryData", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -58,6 +66,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             },
             center.addObserver(forName: WatchBridge.changed, object: nil, queue: .main) { [weak self] _ in
                 self?.notifyListeners("watchChanged", data: [:])
+            },
+            center.addObserver(forName: WatchBridge.heartRateChanged, object: nil, queue: .main) { [weak self] note in
+                self?.notifyListeners("heartRate", data: note.userInfo as? [String: Any] ?? [:])
             },
         ]
     }
@@ -149,8 +160,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     // MARK: Apple Health
 
     private lazy var healthStore = HKHealthStore()
-    private let bodyMass = HKQuantityType(.bodyMass)
-    private var shareTypes: Set<HKSampleType> { [HKObjectType.workoutType(), bodyMass] }
+    private let bodyMass = HealthAccess.bodyMass
 
     private func status(of type: HKObjectType) -> String {
         switch healthStore.authorizationStatus(for: type) {
@@ -173,14 +183,15 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         ])
     }
 
-    /// Shows Apple's Health permission sheet (only the first time; after
-    /// that, changes happen in the Health app).
+    /// Shows Apple's Health permission sheet, for everything Fatty saves and
+    /// reads (HealthAccess). It only appears while something's unasked;
+    /// after that, changes happen in the Health app.
     @objc func requestHealth(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
             call.resolve(["available": false])
             return
         }
-        healthStore.requestAuthorization(toShare: shareTypes, read: nil) { _, _ in
+        healthStore.requestAuthorization(toShare: HealthAccess.shareTypes, read: HealthAccess.readTypes) { _, _ in
             call.resolve([
                 "available": true,
                 "workouts": self.status(of: HKObjectType.workoutType()),
@@ -191,7 +202,10 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
 
     /// Saves a finished session as a strength-training workout. `start` and
     /// `end` are epoch milliseconds; `sessionId` tags it so it can be traced.
+    /// `effort` (1-10, the session's average RPE) becomes its Effort rating
+    /// on iOS 18, the watch's copy included when the watch recorded it.
     @objc func saveWorkout(_ call: CAPPluginCall) {
+        let effort = call.getDouble("effort").flatMap { (1...10).contains($0) ? $0 : nil }
         guard HKHealthStore.isHealthDataAvailable(),
               healthStore.authorizationStatus(for: HKObjectType.workoutType()) == .sharingAuthorized
         else {
@@ -204,6 +218,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         }
         // The watch recorded this one, heart rate and all: one copy is enough.
         if let sessionId = call.getString("sessionId"), WatchBridge.shared.recordedOnWatch(sessionId) {
+            if let effort {
+                WorkoutEffort.rateWatchWorkout(sessionId: sessionId, score: effort, store: healthStore)
+            }
             call.resolve(["saved": false, "skipped": "watch"])
             return
         }
@@ -234,6 +251,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
                         if let error = error {
                             call.reject(error.localizedDescription)
                         } else {
+                            if let workout, let effort, let sessionId = call.getString("sessionId") {
+                                WorkoutEffort.rate(workout, score: effort, sessionId: sessionId, store: self.healthStore)
+                            }
                             call.resolve(["saved": workout != nil])
                         }
                     }
@@ -263,6 +283,29 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             } else {
                 call.resolve(["saved": saved])
             }
+        }
+    }
+
+    /// Recovery on Home: whether Health's sheet has anything left to ask.
+    @objc func recoveryStatus(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.resolve(["available": false, "shouldRequest": false])
+            return
+        }
+        Task {
+            let ask = await RecoveryReadings.shouldRequest(self.healthStore)
+            call.resolve(["available": true, "shouldRequest": ask])
+        }
+    }
+
+    /// Recovery on Home: four weeks of sleep, HRV and resting heart rate.
+    @objc func recoveryData(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.resolve(["days": []])
+            return
+        }
+        Task {
+            call.resolve(["days": await RecoveryReadings.read(self.healthStore)])
         }
     }
 
@@ -400,7 +443,26 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["token": token.map { $0 as Any } ?? NSNull()])
     }
 
+    // MARK: Voice logging
+
+    /// The rest length and whether a set starts one, for sets logged by
+    /// voice while the page is asleep (VoiceSetLogger).
+    @objc func setRestDefaults(_ call: CAPPluginCall) {
+        RestDefaults.save(seconds: call.getDouble("seconds"), auto: call.getBool("auto"))
+        call.resolve()
+    }
+
     // MARK: Web view chrome
+
+    /// Keeps the screen from locking while a workout's open (and lets it
+    /// lock again after).
+    @objc func keepAwake(_ call: CAPPluginCall) {
+        let on = call.getBool("on") ?? false
+        DispatchQueue.main.async {
+            UIApplication.shared.isIdleTimerDisabled = on
+        }
+        call.resolve()
+    }
 
     /// The page is up: lift the launch screen that's been covering it.
     @objc func ready(_ call: CAPPluginCall) {
@@ -428,8 +490,12 @@ enum WorkoutActivity {
         activity.activityState == .active || activity.activityState == .stale
     }
 
-    static func upsert(sessionId: String, startedAt: Date, state: WorkoutActivityAttributes.ContentState) {
+    static func upsert(sessionId: String, startedAt: Date, state incoming: WorkoutActivityAttributes.ContentState) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        // Whoever sends the state (the page, the watch, a set said to Siri),
+        // the heart rate is the watch's latest.
+        var state = incoming
+        if state.heartRate == nil { state.heartRate = WatchBridge.shared.heartRate(for: sessionId) }
         // Stale when the rest runs out, so the Lock Screen flips to "Rest's
         // up" even while the app is suspended and can't update it.
         let staleDate = state.restEndsAt.flatMap { $0 > Date() ? $0 : nil }
@@ -449,6 +515,25 @@ enum WorkoutActivity {
                 pushType: nil
             )
         }
+    }
+
+    private static var heartRateShown: (bpm: Int, at: Date)?
+
+    /// A new reading from the watch onto the Lock Screen: every 10 seconds
+    /// at most, sooner for a jump of 5 or more.
+    static func showHeartRate(_ bpm: Int, sessionId: String) {
+        guard let current = Activity<WorkoutActivityAttributes>.activities.first(where: {
+            $0.attributes.sessionId == sessionId && isLive($0)
+        }) else { return }
+        if let shown = heartRateShown,
+           Date().timeIntervalSince(shown.at) < 10, abs(shown.bpm - bpm) < 5 {
+            return
+        }
+        heartRateShown = (bpm, Date())
+        var state = current.content.state
+        state.heartRate = bpm
+        let content = ActivityContent(state: state, staleDate: current.content.staleDate)
+        Task { await current.update(content) }
     }
 
     static func end(except sessionId: String? = nil) {

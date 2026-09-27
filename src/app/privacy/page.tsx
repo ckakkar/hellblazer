@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy" updated="25 September 2026">
+    <LegalPage title="Privacy" updated="28 September 2026">
       <p className="text-text">
         Fatty keeps your training data so it can show it back to you. It isn&apos;t sold, used for
         advertising, or used to track you across other apps and sites.
@@ -60,9 +60,12 @@ export default function PrivacyPage() {
         <h2>Apple Health</h2>
         <p>
           In the iPhone app, if you turn on Apple Health in Settings, Fatty saves your finished
-          workouts and the bodyweight you log to Health. It never reads your Health data. Anything
-          involving Health is not used for advertising and not shared with anyone. You can switch it
-          off in Fatty, or in the Health app under Sharing → Apps → Fatty.
+          workouts, how hard they were (from the RPE you log), and the bodyweight you log to Health.
+          If you connect Recovery, Fatty reads your sleep, heart rate variability and resting heart
+          rate, and the workouts your Apple Watch recorded, to show how recovered you are. Those
+          readings are used on your iPhone only: they are never sent to Fatty&apos;s servers or
+          anyone else. Anything involving Health is not used for advertising and not shared with
+          anyone. You can switch it off in Fatty, or in the Health app under Sharing → Apps → Fatty.
         </p>
       </section>
 

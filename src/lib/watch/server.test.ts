@@ -28,8 +28,11 @@ function fakeDb(tables: Tables) {
     let payload: Row | Row[] | undefined;
     let returning = false;
     const filters: [string, unknown][] = [];
+    const within: [string, unknown[]][] = [];
     const rows = () => (tables[table] ??= []);
-    const matches = (row: Row) => filters.every(([column, value]) => row[column] === value);
+    const matches = (row: Row) =>
+      filters.every(([column, value]) => row[column] === value) &&
+      within.every(([column, values]) => values.includes(row[column]));
     const run = (): { data: unknown; error: { code: string; message: string } | null } => {
       if (op === "select") return { data: rows().filter(matches), error: null };
       if (op === "update") {
@@ -60,6 +63,10 @@ function fakeDb(tables: Tables) {
       },
       is(column: string, value: unknown) {
         filters.push([column, value]);
+        return builder;
+      },
+      in(column: string, values: unknown[]) {
+        within.push([column, values]);
         return builder;
       },
       order: () => builder,
@@ -127,7 +134,8 @@ beforeEach(() => {
   fake.available = true;
 });
 
-const { handleWatch, saveWatchSet, deleteWatchSet, finishWatchWorkout, startWatchWorkout } = await import("./server");
+const { handleWatch, saveWatchSet, deleteWatchSet, finishWatchWorkout, startWatchWorkout, logVoiceSet } =
+  await import("./server");
 
 function request(headers: Record<string, string> = {}) {
   return new Request("https://example.test/api/watch/x", { headers });
@@ -145,7 +153,7 @@ describe("who's asking", () => {
 
   it("only accepts a token minted for that kind of device", async () => {
     const run = vi.fn(async () => ({}));
-    // The phone's read-only token can't drive the watch's write API…
+    // The phone's token can't drive the watch's API…
     expect((await handleWatch(request({ authorization: `Bearer ${PHONE_TOKEN_A}` }), run, "watch")).status).toBe(401);
     // …and the watch's can't stand in for the phone's.
     expect((await handleWatch(signedIn(), run, "phone")).status).toBe(401);
@@ -255,5 +263,65 @@ describe("starting and finishing", () => {
     );
     expect(res.status).toBe(404);
     expect(tables.session.find((row) => row.id === SESSION_B)?.finished_at).toBeNull();
+  });
+});
+
+describe("logging by voice on the phone", () => {
+  const LIVE = "20000000-0000-4000-8000-000000000003";
+  const BENCH = "10000000-0000-4000-8000-000000000003";
+  const ROW = "10000000-0000-4000-8000-000000000004";
+  const FIRST = "31000000-0000-4000-8000-000000000001";
+  const phone = () => request({ authorization: `Bearer ${PHONE_TOKEN_A}` });
+  const say = async (body: unknown) => (await handleWatch(phone(), (ctx) => logVoiceSet(ctx, body), "phone")).json();
+
+  beforeEach(() => {
+    const first = { id: FIRST, set_number: 1, weight_kg: 80, reps: 5, is_warmup: false };
+    tables.session.push({
+      id: LIVE,
+      user_id: A,
+      title: "Upper",
+      template_id: null,
+      finished_at: null,
+      created_at: new Date().toISOString(),
+    });
+    tables.session_exercise.push(
+      { id: BENCH, user_id: A, session_id: LIVE, exercise_id: "e1", position: 0, exercise: { name: "Bench Press" }, set: [first] },
+      { id: ROW, user_id: A, session_id: LIVE, exercise_id: "e2", position: 1, exercise: { name: "Row" }, set: [] },
+    );
+    tables.set.push({ ...first, user_id: A, session_exercise_id: BENCH });
+  });
+
+  it("logs the same set again on the exercise being worked", async () => {
+    expect(await say({})).toMatchObject({
+      status: "logged",
+      exercise: "Bench Press",
+      weight: 80,
+      reps: 5,
+      setNumber: 2,
+      complete: false,
+      activity: { sessionId: LIVE, sets: 2, volume: "800 kg" },
+    });
+    const bench = tables.set.filter((row) => row.session_exercise_id === BENCH);
+    expect(bench).toHaveLength(2);
+    expect(bench[1]).toMatchObject({ user_id: A, set_number: 2, weight_kg: 80, reps: 5, is_warmup: false });
+  });
+
+  it("logs the numbers it's told", async () => {
+    expect(await say({ weight: 85, reps: 3 })).toMatchObject({ status: "logged", weight: 85, reps: 3 });
+  });
+
+  it("wants both numbers or neither", async () => {
+    const res = await handleWatch(phone(), (ctx) => logVoiceSet(ctx, { weight: 85 }), "phone");
+    expect(res.status).toBe(400);
+  });
+
+  it("says so when no workout's going", async () => {
+    tables.session.find((row) => row.id === LIVE)!.finished_at = new Date().toISOString();
+    expect(await say({})).toEqual({ status: "no-workout" });
+  });
+
+  it("is the phone's to use, not the watch's", async () => {
+    const res = await handleWatch(signedIn(), (ctx) => logVoiceSet(ctx, {}), "phone");
+    expect(res.status).toBe(401);
   });
 });

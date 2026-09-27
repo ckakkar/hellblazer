@@ -8,6 +8,7 @@ import WidgetKit
 /// from dates, so they need no updates from the app; when a rest runs out the
 /// activity goes stale and reads "Rest's up" until the app says otherwise.
 /// While resting, +30s and Skip work without opening the app (RestControl).
+/// With the Apple Watch recording, its heart rate sits under the clock.
 /// Tapping anywhere else opens the session.
 struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
@@ -31,10 +32,16 @@ struct WorkoutLiveActivity: Widget {
                     .padding(.leading, 4)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    MainClock(context: context)
-                        .font(.system(.title2, design: .rounded).weight(.semibold))
-                        .frame(maxWidth: 110, alignment: .trailing)
-                        .padding(.trailing, 4)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        MainClock(context: context)
+                            .font(.system(.title2, design: .rounded).weight(.semibold))
+                        if let bpm = context.state.heartRate {
+                            HeartRateLabel(bpm: bpm)
+                                .font(.caption.weight(.semibold))
+                        }
+                    }
+                    .frame(maxWidth: 110, alignment: .trailing)
+                    .padding(.trailing, 4)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -107,6 +114,23 @@ private struct MainClock: View {
                 .multilineTextAlignment(.trailing)
                 .foregroundStyle(Brand.bone)
         }
+    }
+}
+
+/// The watch's heart rate: a red heart, as in Apple's Workout app.
+private struct HeartRateLabel: View {
+    let bpm: Int
+
+    var body: some View {
+        HStack(spacing: 3) {
+            Image(systemName: "heart.fill")
+                .foregroundStyle(Brand.flame)
+            Text("\(bpm)")
+                .monospacedDigit()
+                .foregroundStyle(Brand.bone)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(bpm) beats per minute")
     }
 }
 
@@ -203,9 +227,15 @@ private struct LockScreenView: View {
                     }
                 }
                 Spacer(minLength: 12)
-                MainClock(context: context)
-                    .font(.system(size: 40, weight: .semibold, design: .rounded))
-                    .frame(maxWidth: 150, alignment: .trailing)
+                VStack(alignment: .trailing, spacing: 2) {
+                    MainClock(context: context)
+                        .font(.system(size: 40, weight: .semibold, design: .rounded))
+                    if let bpm = context.state.heartRate {
+                        HeartRateLabel(bpm: bpm)
+                            .font(.subheadline.weight(.semibold))
+                    }
+                }
+                .frame(maxWidth: 150, alignment: .trailing)
             }
             if context.state.hasRest {
                 RestBar(context: context)

@@ -43,6 +43,7 @@ app_group = group(project, "App")
 %w[
   HellBlazerViewController.swift HellBlazerNativePlugin.swift AppShortcuts.swift
   WatchBridge.swift RestNotificationDelegate.swift SpotlightIndex.swift WidgetRefresher.swift
+  HealthExtras.swift VoiceSetLogger.swift
 ].each do |name|
   compile(app, file(app_group, name))
 end
@@ -97,6 +98,7 @@ end
 shared_group = group(project, "Shared")
 %w[
   WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift SiriEntities.swift
+  SetLogging.swift
 ].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)

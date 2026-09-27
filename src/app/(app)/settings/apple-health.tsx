@@ -5,14 +5,16 @@ import { SettingsGroup, SettingsRow } from "@/components/ui/settings-list";
 import { isNativeApp } from "@/lib/native";
 import { healthSyncOn, nativePlugin, setHealthSync } from "@/lib/native-plugins";
 import { Switch } from "@/components/ui/switch";
+import { recoveryOnHome, setRecoveryOnHome } from "@/components/native/recovery-card";
 
 const noop = () => () => {};
 
 /**
- * iPhone app only: the Apple Health switch. On, finished workouts and logged
- * bodyweight are saved to Health (see saveToHealth in the session logger and
- * the bodyweight manager). Nothing is ever read from Health. Renders nothing
- * on the website.
+ * iPhone app only: the Apple Health switches. Saving: finished workouts
+ * (with their effort) and logged bodyweight go to Health (saveToHealth in
+ * the session logger, the bodyweight manager). Recovery: sleep, HRV and
+ * resting heart rate are read for the card on Home, on the phone only.
+ * Renders nothing on the website.
  */
 export function AppleHealthSettings() {
   const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
@@ -20,9 +22,10 @@ export function AppleHealthSettings() {
   return (
     <SettingsGroup
       label="Apple Health"
-      caption="Fatty only writes to Health, never reads from it. Manage access in the Health app under Sharing → Apps → Fatty."
+      caption="What Fatty reads from Health stays on this iPhone. Manage access in the Health app under Sharing → Apps → Fatty."
     >
       <HealthRow />
+      <RecoveryRow />
     </SettingsGroup>
   );
 }
@@ -69,13 +72,40 @@ function HealthRow() {
   return (
     <SettingsRow
       label="Save workouts to Health"
-      hint={msg ?? "Finished sessions as strength training, plus the bodyweight you log."}
+      hint={msg ?? "Finished sessions as strength training, with your RPE as their effort, plus the bodyweight you log."}
       control={
         <Switch
           checked={on}
           onChange={() => void toggle()}
           label="Save workouts to Apple Health"
           disabled={busy}
+        />
+      }
+    />
+  );
+}
+
+/** Whether Recovery shows on Home (its "Not now" turns it off). */
+function RecoveryRow() {
+  const [on, setOn] = useState(true);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setOn(recoveryOnHome()));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  return (
+    <SettingsRow
+      label="Recovery on Home"
+      hint="Sleep, heart rate variability and resting heart rate, read against your usual to say whether to push or go lighter."
+      control={
+        <Switch
+          checked={on}
+          onChange={() => {
+            setRecoveryOnHome(!on);
+            setOn(!on);
+          }}
+          label="Show Recovery on Home"
         />
       }
     />

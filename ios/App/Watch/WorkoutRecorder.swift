@@ -23,6 +23,9 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
 
     var isRecording: Bool { session != nil }
 
+    /// The heart rate the iPhone last heard, and when.
+    private var sentHeartRate: (bpm: Int, at: Date)?
+
     /// Time recorded so far, pauses excluded; nil when not recording.
     func elapsed(at date: Date) -> TimeInterval? {
         builder?.elapsedTime(at: date)
@@ -125,6 +128,22 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
         builder = nil
         sessionId = nil
         paused = false
+        sentHeartRate = nil
+    }
+
+    /// Live heart rate for the iPhone's Lock Screen and logger: on a change,
+    /// at most every 5 seconds, and every 15 while it holds, so the phone can
+    /// tell a steady reading from a stale one. Only while the phone's in reach.
+    private func sendHeartRate(_ bpm: Double) {
+        guard let sessionId else { return }
+        let rounded = Int(bpm.rounded())
+        let now = Date()
+        if let last = sentHeartRate {
+            let since = now.timeIntervalSince(last.at)
+            guard since >= 15 || (rounded != last.bpm && since >= 5) else { return }
+        }
+        sentHeartRate = (rounded, now)
+        PhoneLink.shared.sendIfReachable(["heartRate": rounded, "sessionId": sessionId])
     }
 
     // MARK: HKWorkoutSessionDelegate
@@ -152,7 +171,10 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
             .sumQuantity()?
             .doubleValue(for: .kilocalorie())
         DispatchQueue.main.async {
-            if let bpm { self.heartRate = bpm }
+            if let bpm {
+                self.heartRate = bpm
+                self.sendHeartRate(bpm)
+            }
             if let kcal { self.calories = kcal }
         }
     }

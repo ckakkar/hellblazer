@@ -88,6 +88,32 @@ export type WatchSettings = {
   timeZone: string;
 };
 
+/**
+ * One day of Apple Health readings for Recovery on Home, read on the phone
+ * (ios/App/App/HealthExtras.swift). A night's sleep is dated by the morning
+ * it ends. Every field but the date may be missing.
+ */
+export type RecoveryDay = {
+  /** yyyy-MM-dd, the phone's calendar. */
+  date: string;
+  /** Minutes asleep the night before. */
+  sleepMin?: number;
+  /** Heart rate variability (SDNN), the day's average, ms. */
+  hrv?: number;
+  /** Resting heart rate, bpm. */
+  rhr?: number;
+};
+
+/** What the plugin's events carry. */
+export type NativeEvents = {
+  /** A RestCommand is waiting (see takeRestCommand). */
+  restCommand: Record<string, never>;
+  /** Something outside the page (the watch, a set said to Siri) logged or finished. */
+  watchChanged: Record<string, never>;
+  /** The Apple Watch's latest heart rate, every 5-15 seconds while it records. */
+  heartRate: { bpm: number; sessionId: string };
+};
+
 /** The app's own native plugin (ios/App/App/HellBlazerNativePlugin.swift). */
 export interface HellBlazerNative {
   workoutActivity(state: WorkoutActivityState): Promise<void>;
@@ -98,7 +124,13 @@ export interface HellBlazerNative {
   cancelRestAlert(): Promise<void>;
   healthStatus(): Promise<HealthStatus>;
   requestHealth(): Promise<HealthStatus>;
-  saveWorkout(options: { start: number; end: number; sessionId?: string }): Promise<{ saved: boolean }>;
+  /** `effort` (1-10, the session's average RPE) becomes its Effort rating (iOS 18). */
+  saveWorkout(options: {
+    start: number;
+    end: number;
+    sessionId?: string;
+    effort?: number;
+  }): Promise<{ saved: boolean }>;
   saveBodyweight(options: { kg: number; date: number }): Promise<{ saved: boolean }>;
   updateWidget(options: { json: string }): Promise<void>;
   /** The iOS share sheet for a file; `data` is base64. */
@@ -121,13 +153,17 @@ export interface HellBlazerNative {
   phoneSync(options: { token?: string; userId: string; unit: "kg" | "lb"; timeZone: string }): Promise<void>;
   /** Forgets this iPhone's token; returns it for revoking. */
   phoneUnlink(): Promise<{ token: string | null }>;
-  /**
-   * "restCommand": a RestCommand is waiting (see takeRestCommand).
-   * "watchChanged": the watch logged or finished something.
-   */
-  addListener(
-    event: "restCommand" | "watchChanged",
-    listener: () => void,
+  /** Keeps the screen from locking (a workout's open), or lets it lock again. */
+  keepAwake(options: { on: boolean }): Promise<void>;
+  /** The rest a set logged by voice starts, while the page is asleep. */
+  setRestDefaults(options: { seconds: number; auto: boolean }): Promise<void>;
+  /** Whether Health's permission sheet still has something to ask. */
+  recoveryStatus(): Promise<{ available: boolean; shouldRequest: boolean }>;
+  /** Four weeks of sleep, HRV and resting heart rate, oldest first. */
+  recoveryData(): Promise<{ days: RecoveryDay[] }>;
+  addListener<E extends keyof NativeEvents>(
+    event: E,
+    listener: (data: NativeEvents[E]) => void,
   ): Promise<{ remove: () => Promise<void> }>;
 }
 
@@ -161,7 +197,10 @@ export function withNative(fn: (api: HellBlazerNative) => Promise<unknown>) {
  * Listens for one of the plugin's events inside the app; does nothing on
  * the website. Returns the unsubscribe, safe to call before it's attached.
  */
-export function onNative(event: "restCommand" | "watchChanged", listener: () => void): () => void {
+export function onNative<E extends keyof NativeEvents>(
+  event: E,
+  listener: (data: NativeEvents[E]) => void,
+): () => void {
   const plugin = nativePlugin();
   if (!plugin) return () => {};
   let handle: { remove: () => Promise<void> } | null = null;

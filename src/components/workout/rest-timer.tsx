@@ -13,11 +13,12 @@ import {
   formatRestClock,
   MAX_REST_SECONDS,
   MIN_REST_SECONDS,
+  REST_AUTO_KEY,
   REST_SECONDS_KEY,
 } from "@/lib/rest-timer";
 
 const DURATION_KEY = REST_SECONDS_KEY;
-const AUTO_KEY = "hell-blazer:rest-auto";
+const AUTO_KEY = REST_AUTO_KEY;
 /** The rest in progress, so a reload or a trip to another tab keeps it. */
 const RUNNING_KEY = "hell-blazer:rest-running";
 
@@ -182,8 +183,10 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
       setTotal(next);
       setFinished(false);
       write(DURATION_KEY, String(next));
+      // A set said to Siri while this page sleeps starts the same rest.
+      withNative((api) => api.setRestDefaults({ seconds: next, auto }));
     },
-    [endsAt, pausedRemaining, duration, total, run],
+    [endsAt, pausedRemaining, duration, total, auto, run],
   );
 
   const skip = useCallback(() => {
@@ -233,10 +236,14 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
     };
   }, [sessionId]);
 
-  const setAuto = useCallback((on: boolean) => {
-    setAutoState(on);
-    write(AUTO_KEY, on ? "on" : "off");
-  }, []);
+  const setAuto = useCallback(
+    (on: boolean) => {
+      setAutoState(on);
+      write(AUTO_KEY, on ? "on" : "off");
+      withNative((api) => api.setRestDefaults({ seconds: duration, auto: on }));
+    },
+    [duration],
+  );
 
   return { duration, endsAt, pausedRemaining, total, finished, auto, start, toggle, adjust, skip, setAuto };
 }

@@ -49,6 +49,9 @@ final class WatchModel: ObservableObject {
     @Published private(set) var starting: StartOption?
     /// The last workout's summary, until Done.
     @Published var summary: Summary?
+    /// Every set of the plan is done, and they chose One More Set rather
+    /// than End: log on instead of being offered the finish again.
+    @Published var keepGoing = false
 
     private var countdownDone = false
     /// What the complications last redrew for (see updateComplications).
@@ -210,6 +213,7 @@ final class WatchModel: ObservableObject {
 
     private func apply(state fresh: WatchState) {
         let previous = state?.active
+        if previous?.id != fresh.active?.id { keepGoing = false }
         var next = fresh
         // Sets still on their way to the server stay on screen.
         if var active = next.active {
@@ -269,7 +273,8 @@ final class WatchModel: ObservableObject {
     }
 
     /// The exercise to log next: the one picked, else the latest one worked
-    /// until its target's met, then the next.
+    /// until its target's met, then the next one that isn't finished (back
+    /// round to any skipped earlier).
     func currentExercise() -> Exercise? {
         guard let exercises = state?.active?.exercises, !exercises.isEmpty else { return nil }
         if let id = selectedExerciseId, let chosen = exercises.first(where: { $0.id == id }) {
@@ -277,10 +282,29 @@ final class WatchModel: ObservableObject {
         }
         guard let i = exercises.lastIndex(where: { !$0.workingSets.isEmpty }) else { return exercises.first }
         let latest = exercises[i]
-        guard let target = latest.targetSets, latest.workingSets.count >= target, i + 1 < exercises.count else {
-            return latest
-        }
-        return exercises[i + 1]
+        guard Self.metTarget(latest) else { return latest }
+        return Self.nextUnfinished(after: i, in: exercises) ?? latest
+    }
+
+    /// Whether every exercise has had its sets: the workout's done bar the
+    /// tap on End. An exercise without a target counts once it has a set;
+    /// a workout with no targets at all (freeform) is never done by itself.
+    func isComplete(_ workout: Workout) -> Bool {
+        workout.exercises.contains { $0.targetSets != nil } && workout.exercises.allSatisfy(Self.isDone)
+    }
+
+    private static func metTarget(_ exercise: Exercise) -> Bool {
+        guard let target = exercise.targetSets else { return false }
+        return exercise.workingSets.count >= target
+    }
+
+    private static func isDone(_ exercise: Exercise) -> Bool {
+        exercise.targetSets == nil ? !exercise.workingSets.isEmpty : metTarget(exercise)
+    }
+
+    /// The first unfinished exercise after position `i`, wrapping round.
+    private static func nextUnfinished(after i: Int, in exercises: [Exercise]) -> Exercise? {
+        (Array(exercises[(i + 1)...]) + Array(exercises[..<i])).first { !isDone($0) }
     }
 
     /// The exercise after the one on screen, if there is one.
@@ -384,16 +408,22 @@ final class WatchModel: ObservableObject {
         pending.append(write)
         savePending()
 
-        // Done with this one: the next exercise comes up after the rest.
+        // Done with this one: the next unfinished exercise comes up after the rest.
         let exercise = active.exercises[i]
-        if let target = exercise.targetSets, exercise.workingSets.count >= target, i + 1 < active.exercises.count {
-            selectedExerciseId = active.exercises[i + 1].id
+        if Self.metTarget(exercise), let next = Self.nextUnfinished(after: i, in: active.exercises) {
+            selectedExerciseId = next.id
         } else {
             selectedExerciseId = exerciseId
         }
 
         WKInterfaceDevice.current().play(.success)
-        startRest()
+        if isComplete(active) && !keepGoing {
+            // That was the last set: no rest, the finish comes up instead.
+            clearRest()
+            tellPhone()
+        } else {
+            startRest()
+        }
         Task { await flush() }
     }
 
@@ -538,7 +568,9 @@ final class WatchModel: ObservableObject {
         if let exercise = currentExercise() {
             activity["exercise"] = exercise.name
             let done = exercise.workingSets.count
-            activity["detail"] = done > 0 ? "\(done) \(done == 1 ? "set" : "sets") done" : "Up next"
+            activity["detail"] = isComplete(active) && !keepGoing
+                ? "All sets done"
+                : done > 0 ? "\(done) \(done == 1 ? "set" : "sets") done" : "Up next"
         }
         if let rest {
             activity["restEndsAt"] = rest.endsAt.timeIntervalSince1970 * 1000

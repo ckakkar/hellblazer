@@ -16,6 +16,7 @@ import {
   Check,
   CloudOff,
   Flame,
+  Heart,
   Loader2,
   Lock,
   Pencil,
@@ -48,6 +49,7 @@ import { pickHype, randomVictory } from "@/lib/hype";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
+import { useKeepAwake } from "@/lib/keep-awake";
 import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
   fromDisplayWeight,
@@ -121,6 +123,30 @@ function useOnline(): boolean {
     () => navigator.onLine,
     () => true,
   );
+}
+
+/**
+ * The Apple Watch's heart rate while it records this session (iOS app).
+ * It arrives every 5 to 15 seconds; a minute without one means the watch
+ * stopped, and the reading goes.
+ */
+function useWatchHeartRate(sessionId: string, live: boolean): number | null {
+  const [bpm, setBpm] = useState<number | null>(null);
+  useEffect(() => {
+    if (!live) return;
+    let stale: number | undefined;
+    const off = onNative("heartRate", (data) => {
+      if (data.sessionId !== sessionId) return;
+      setBpm(data.bpm);
+      window.clearTimeout(stale);
+      stale = window.setTimeout(() => setBpm(null), 60_000);
+    });
+    return () => {
+      off();
+      window.clearTimeout(stale);
+    };
+  }, [sessionId, live]);
+  return live ? bpm : null;
 }
 
 export function SessionLogger({
@@ -908,11 +934,20 @@ export function SessionLogger({
     if (!minutes || minutes <= 0) return;
     savedToHealth.current = true;
     const typed = duration;
+    // The session's average RPE is its Effort rating in the Fitness app.
+    const rpes = exercises
+      .flatMap((e) => e.sets)
+      .filter((s) => !s.isWarmup && s.rpe != null)
+      .map((s) => Number(s.rpe));
+    const effort = rpes.length
+      ? Math.min(10, Math.max(1, Math.round(rpes.reduce((a, b) => a + b, 0) / rpes.length)))
+      : undefined;
     withNative((api) =>
       api.saveWorkout({
         start: startedAt,
         end: typed != null ? startedAt + typed * 60_000 : Date.now(),
         sessionId: session.id,
+        effort,
       }),
     );
   }
@@ -1017,6 +1052,10 @@ export function SessionLogger({
     return () => window.clearTimeout(id);
   }, [activityState, activityEnded, isEditing, startedAt]);
 
+  // Mid-workout the phone sits on a bench: it shouldn't lock between sets.
+  useKeepAwake(!isEditing && !activityEnded);
+  const heartRate = useWatchHeartRate(session.id, !isEditing && !activityEnded);
+
   return (
     <div className="mx-auto max-w-3xl">
       <header className="mb-8">
@@ -1027,6 +1066,13 @@ export function SessionLogger({
             <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent">
               <span className="size-1.5 rounded-full bg-accent" />
               Live
+              {heartRate !== null && (
+                <span className="tnum ml-2 inline-flex items-center gap-1 text-text">
+                  <Heart aria-hidden className="size-3.5 fill-danger text-danger" />
+                  {heartRate}
+                  <span className="sr-only">beats per minute, from your Apple Watch</span>
+                </span>
+              )}
             </span>
           )}
           <input

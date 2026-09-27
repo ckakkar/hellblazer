@@ -10,6 +10,7 @@ struct HellBlazerWidgets: WidgetBundle {
         WorkoutLiveActivity()
         if #available(iOSApplicationExtension 18.0, *) {
             StartWorkoutControl()
+            LogSetControl()
         }
     }
 }

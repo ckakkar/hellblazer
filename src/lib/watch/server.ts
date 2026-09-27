@@ -12,6 +12,12 @@ import { fromDisplayWeight, toDisplayWeight, type Unit } from "@/lib/units";
 import { STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { bearerToken, hashWatchToken } from "@/lib/watch/token";
 import { refreshWidgets, widgetDevices } from "@/lib/widget-push";
+import {
+  activitySummary,
+  exerciseForNextSet,
+  isComplete,
+  sameAgain,
+} from "@/lib/watch/next-set";
 import type {
   WatchExercise,
   WatchStartOption,
@@ -46,8 +52,9 @@ class WatchError extends Error {
 
 /**
  * Which device a token was minted for (watch_link.kind). Each endpoint takes
- * one: the watch's token can log and finish workouts; the phone's can only
- * read the widget snapshot.
+ * one: the watch's token can start, log and finish workouts; the phone's can
+ * read the widget snapshot and log a set by voice (logVoiceSet), nothing
+ * more.
  */
 export type DeviceKind = "watch" | "phone";
 
@@ -394,4 +401,96 @@ export async function finishWatchWorkout(ctx: WatchContext, body: unknown): Prom
   const devices = await widgetDevices(db, userId).catch(() => []);
   after(() => refreshWidgets(devices));
   return watchState(ctx);
+}
+
+const voiceSetSchema = z
+  .object({
+    weight: z.number().min(0).max(9999).optional(),
+    reps: z.number().int().min(1).max(999).optional(),
+  })
+  .refine((v) => (v.weight === undefined) === (v.reps === undefined));
+
+export type VoiceSetReply =
+  | { status: "no-workout" }
+  | { status: "no-numbers"; exercise: string }
+  | { status: "all-done" }
+  | {
+      status: "logged";
+      exercise: string;
+      weight: number;
+      reps: number;
+      unit: Unit;
+      /** Its place among the exercise's working sets, 1-based. */
+      setNumber: number;
+      targetSets: number | null;
+      /** That set was the plan's last. */
+      complete: boolean;
+      /** The workout for the Live Activity (activitySummary). */
+      activity: ReturnType<typeof activitySummary>;
+    };
+
+/**
+ * A set logged from the iPhone without the page (ios/App/App/
+ * VoiceSetLogger.swift): Siri, the Action button, the Control Center button.
+ * With no numbers it's "same again". The exercise and the numbers follow
+ * the watch's rules (next-set.ts); the set is saved as the watch saves one,
+ * and the page picks it up when it next looks.
+ */
+export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<VoiceSetReply> {
+  const v = voiceSetSchema.parse(body ?? {});
+  const workout = await activeWorkout(ctx);
+  if (!workout || workout.exercises.length === 0) return { status: "no-workout" };
+
+  const repeat = v.weight === undefined || v.reps === undefined;
+  // Every set's in: "same again" means they think there's one left, so say
+  // so rather than add one. Numbers said out loud are an extra set.
+  if (repeat && isComplete(workout.exercises)) return { status: "all-done" };
+
+  const { data: latest, error } = await ctx.db
+    .from("set")
+    .select("session_exercise_id")
+    .eq("user_id", ctx.userId)
+    .eq("is_warmup", false)
+    .in(
+      "session_exercise_id",
+      workout.exercises.map((e) => e.id),
+    )
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+
+  const exercise = exerciseForNextSet(workout.exercises, latest?.session_exercise_id ?? null);
+  if (!exercise) return { status: "no-workout" };
+  const numbers = repeat ? sameAgain(exercise) : { weight: v.weight!, reps: v.reps! };
+  if (!numbers) return { status: "no-numbers", exercise: exercise.name };
+
+  const id = crypto.randomUUID();
+  const setNumber = Math.max(0, ...exercise.sets.map((s) => s.n)) + 1;
+  await saveWatchSet(ctx, {
+    id,
+    sessionExerciseId: exercise.id,
+    setNumber,
+    weight: numbers.weight,
+    reps: numbers.reps,
+  });
+
+  const logged = {
+    ...exercise,
+    sets: [...exercise.sets, { id, n: setNumber, weight: numbers.weight, reps: numbers.reps, warmup: false }],
+  };
+  const exercises = workout.exercises.map((e) => (e.id === exercise.id ? logged : e));
+  const complete = isComplete(exercises);
+  const next = complete ? logged : exerciseForNextSet(exercises, logged.id);
+  return {
+    status: "logged",
+    exercise: exercise.name,
+    weight: numbers.weight,
+    reps: numbers.reps,
+    unit: ctx.unit,
+    setNumber: logged.sets.filter((s) => !s.warmup).length,
+    targetSets: exercise.targetSets,
+    complete,
+    activity: activitySummary({ ...workout, exercises }, next, complete, ctx.unit),
+  };
 }

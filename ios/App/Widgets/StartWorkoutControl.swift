@@ -16,3 +16,19 @@ struct StartWorkoutControl: ControlWidget {
         .description("Opens Fatty ready to log a session.")
     }
 }
+
+/// Logs the next set of the workout in progress, same weight and reps as
+/// the last, without opening Fatty (LogNextSetIntent). For the Lock Screen
+/// and the Action button, mid-workout; the Live Activity shows it land.
+@available(iOS 18.0, *)
+struct LogSetControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "com.kkrwhofrags.hellblazer.log-set") {
+            ControlWidgetButton(action: LogNextSetIntent()) {
+                Label("Log Set", systemImage: "checkmark.circle")
+            }
+        }
+        .displayName("Log Next Set")
+        .description("Logs your next set, same weight and reps as the last.")
+    }
+}

@@ -1,8 +1,9 @@
 import AppIntents
 
 /// Siri, Spotlight and the Shortcuts app; the phrases work without any setup
-/// by the user. "Start a Workout" is in Shared/OpenAppIntents.swift, since the
-/// Control Center button uses it too. The workout days and lifts come from
+/// by the user. "Start a Workout" is in Shared/OpenAppIntents.swift and the
+/// set logging in Shared/SetLogging.swift, since Control Center buttons use
+/// them too. The workout days and lifts come from
 /// the snapshot the site hands the app (WidgetSnapshot).
 
 struct ShowProgressIntent: AppIntent {
@@ -92,6 +93,25 @@ struct HellBlazerShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Start Workout",
             systemImageName: "figure.strengthtraining.traditional"
+        )
+        AppShortcut(
+            intent: LogNextSetIntent(),
+            phrases: [
+                "Same again in \(.applicationName)",
+                "Log my next set in \(.applicationName)",
+                "Log the same set in \(.applicationName)",
+            ],
+            shortTitle: "Log Next Set",
+            systemImageName: "checkmark.circle"
+        )
+        AppShortcut(
+            intent: LogSetIntent(),
+            phrases: [
+                "Log a set in \(.applicationName)",
+                "Log weight and reps in \(.applicationName)",
+            ],
+            shortTitle: "Log a Set",
+            systemImageName: "plus.circle"
         )
         AppShortcut(
             intent: StartWorkoutDayIntent(),

@@ -22,6 +22,7 @@ import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { formatVolume } from "@/lib/units";
 import { WidgetSync } from "@/components/native/widget-sync";
+import { RecoveryCard } from "@/components/native/recovery-card";
 import { fitFigure } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -229,6 +230,9 @@ export default async function DashboardPage() {
           ))}
         </div>
       </section>
+
+      {/* iPhone app only, and only once Health has something to say. */}
+      <RecoveryCard />
 
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <ChartCard

@@ -38,9 +38,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
-	<string>Fatty checks its Apple Health access so it knows whether it can save your workouts.</string>
+	<string>Fatty reads your sleep, heart rate variability and resting heart rate to show how recovered you are, and finds the workouts your Apple Watch recorded to add their effort. It all stays on this iPhone.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>Fatty saves your finished workouts and your bodyweight to Apple Health.</string>
+	<string>Fatty saves your finished workouts, how hard they were, and your bodyweight to Apple Health.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

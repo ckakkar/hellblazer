@@ -14,6 +14,18 @@ export function formatRestClock(seconds: number) {
 /** Where the rest timer keeps its default length (seconds), per device. */
 export const REST_SECONDS_KEY = "hell-blazer:rest-seconds";
 
+/** Whether logging a set starts the rest ("off" when not), per device. */
+export const REST_AUTO_KEY = "hell-blazer:rest-auto";
+
+/** The saved auto-start switch, for sets logged by voice; on when unset. */
+export function savedRestAuto(): boolean {
+  try {
+    return window.localStorage.getItem(REST_AUTO_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
 /** The saved default rest, for the Apple Watch; the default when unset. */
 export function savedRestSeconds(): number {
   try {

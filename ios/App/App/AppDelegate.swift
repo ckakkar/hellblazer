@@ -9,6 +9,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Intents that open the app (Siri, the Control Center button) land here.
         IntentRouter.handler = { NativeRouter.shared.open(path: $0) }
+        // "Same again" and "Log a set" (Siri, the Action button, Control
+        // Center) run here, often with the app in the background.
+        SetLogging.handler = { await VoiceSetLogger.log($0) }
         // Before returning: the "Rest's up" alert's +30s and the watch can
         // both launch the app in the background.
         RestAlert.registerCategory()

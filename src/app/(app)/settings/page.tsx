@@ -26,6 +26,7 @@ import { TierEvaluator } from "./tier-evaluator";
 import { DangerZone } from "./danger-zone";
 import { AppleHealthSettings } from "./apple-health";
 import { AppleWatchSettings } from "./apple-watch";
+import { KeepAwakeRow } from "./keep-awake-row";
 import { SignOutButton } from "./sign-out-button";
 import { ExportButton } from "./export-button";
 import { SignInMethods, type SignInMethod } from "./sign-in-methods";
@@ -154,6 +155,7 @@ export default async function ProfilePage({
           >
             <ThemeSelector current={accent} />
           </SettingsRow>
+          <KeepAwakeRow />
         </SettingsGroup>
 
         <SettingsGroup

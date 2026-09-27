@@ -4,7 +4,7 @@ import WatchKit
 /// The workout on the wrist, paged like Apple's Workout app: swipe right for
 /// the controls, left for the metrics and then Now Playing. It opens on the
 /// logger, since logging sets is the job; while resting, that page is the
-/// rest countdown.
+/// rest countdown, and once every set is done, the finish.
 struct WorkoutView: View {
     @EnvironmentObject private var model: WatchModel
     let workout: Workout
@@ -19,6 +19,8 @@ struct WorkoutView: View {
             Group {
                 if let rest = model.rest {
                     RestPage(rest: rest)
+                } else if model.isComplete(workout) && !model.keepGoing {
+                    DonePage(workout: workout)
                 } else if let exercise = model.currentExercise() {
                     LoggerPage(workout: workout, exercise: exercise)
                 } else {
@@ -190,9 +192,15 @@ private struct LoggerPage: View {
     }
 
     /// "Set 3 of 4 · last 60×5" (or the target reps before any history).
+    /// Past the target it's an extra set, never "Set 5 of 4".
     private var setLabel: String {
         let next = exercise.workingSets.count + 1
-        var label = exercise.targetSets.map { "Set \(next) of \($0)" } ?? "Set \(next)"
+        var label: String
+        if let target = exercise.targetSets {
+            label = next > target ? "Extra set" : "Set \(next) of \(target)"
+        } else {
+            label = "Set \(next)"
+        }
         if let past = pastSet {
             label += " · last \(trim(past.weight))×\(past.reps)"
         } else if let reps = exercise.targetReps, !reps.isEmpty {
@@ -264,6 +272,58 @@ private struct ExercisePicker: View {
         let done = exercise.workingSets.count
         if let target = exercise.targetSets { return "\(done) of \(target) sets" }
         return done == 0 ? "Not started" : "\(done) \(done == 1 ? "set" : "sets")"
+    }
+}
+
+// MARK: Done
+
+/// Every set of the plan logged: the finish, with a way to keep going for
+/// anyone who wants one more. Undoing a set brings the logger back.
+private struct DonePage: View {
+    @EnvironmentObject private var model: WatchModel
+    let workout: Workout
+
+    var body: some View {
+        let working = workout.exercises.flatMap(\.workingSets)
+        VStack(spacing: 6) {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 28, weight: .semibold))
+                .foregroundStyle(model.accent)
+            Text("All Sets Done")
+                .font(.system(.headline, design: .rounded))
+            if let problem = model.problem {
+                Text(problem)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+            } else {
+                Text("\(working.count) \(working.count == 1 ? "set" : "sets") · \(workout.exercises.count) \(workout.exercises.count == 1 ? "exercise" : "exercises")")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            Button {
+                Task { await model.finish() }
+            } label: {
+                Text("End Workout")
+                    .font(.system(.headline, design: .rounded))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.red)
+            .disabled(model.busy)
+            Button("One More Set") {
+                model.keepGoing = true
+            }
+            .buttonStyle(.plain)
+            .font(.system(.footnote, design: .rounded).weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.vertical, 2)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

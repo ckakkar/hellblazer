@@ -46,19 +46,26 @@ enum WidgetRefresher {
         SpotlightIndex.update(from: snapshot)
     }
 
-    /// Fetches a fresh snapshot. Calls back with whether it got one.
-    static func refresh(completion: @escaping (Bool) -> Void) {
+    /// A request to the site's device API as this phone: its token, unit
+    /// and timezone. Nil until the site has given it a token.
+    static func deviceRequest(_ path: String) -> URLRequest? {
         guard let token = Keychain.phoneToken,
-              let url = URL(string: "https://hellblazer.vercel.app/api/device/snapshot")
-        else {
-            completion(false)
-            return
-        }
+              let url = URL(string: "https://hellblazer.vercel.app\(path)")
+        else { return nil }
         var request = URLRequest(url: url)
         request.timeoutInterval = 20
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(defaults.string(forKey: Key.unit) ?? "kg", forHTTPHeaderField: "X-Fatty-Unit")
         request.setValue(defaults.string(forKey: Key.timeZone) ?? TimeZone.current.identifier, forHTTPHeaderField: "X-Fatty-TZ")
+        return request
+    }
+
+    /// Fetches a fresh snapshot. Calls back with whether it got one.
+    static func refresh(completion: @escaping (Bool) -> Void) {
+        guard let request = deviceRequest("/api/device/snapshot") else {
+            completion(false)
+            return
+        }
         URLSession.shared.dataTask(with: request) { data, response, _ in
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   let data,

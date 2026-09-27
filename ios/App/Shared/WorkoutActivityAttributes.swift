@@ -25,6 +25,8 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var restEndsAt: Date?
         /// The rest's full length in seconds, for the progress bar.
         var restTotal: Double?
+        /// Beats per minute from the Apple Watch, while it's recording.
+        var heartRate: Int? = nil
     }
 
     /// The session's id: tapping the activity opens /log/<id>.

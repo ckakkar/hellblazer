@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { linkPhone, linkWatch } from "@/lib/actions/watch";
 import { withNative } from "@/lib/native-plugins";
-import { savedRestSeconds } from "@/lib/rest-timer";
+import { savedRestAuto, savedRestSeconds } from "@/lib/rest-timer";
 import type { Unit } from "@/lib/units";
 
 /**
@@ -11,7 +11,7 @@ import type { Unit } from "@/lib/units";
  * Watch in step with the lifter. The first time (or after someone else signs
  * in) it links each: a device token for the phone, so a silent push can have
  * it refresh the widgets on its own, and one the watch uses for /api/watch.
- * Every visit it also passes along the unit, accent, rest length and
+ * Every visit it also passes along the unit, accent, rest settings and
  * timezone. Renders nothing, and does nothing on the website.
  */
 export function DeviceSync({ userId, unit, accent }: { userId: string; unit: Unit; accent: string }) {
@@ -24,6 +24,8 @@ export function DeviceSync({ userId, unit, accent }: { userId: string; unit: Uni
       const phoneToken = phone.linkedUserId === userId ? undefined : (await linkPhone()).token;
       await api.phoneSync({ token: phoneToken, userId, unit, timeZone });
     });
+    // For sets said to Siri while no workout page is awake to start the rest.
+    withNative((api) => api.setRestDefaults({ seconds: savedRestSeconds(), auto: savedRestAuto() }));
     withNative(async (api) => {
       const watch = await api.watchStatus();
       if (!watch.paired || watch.disabled) return;
