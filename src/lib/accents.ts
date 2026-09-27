@@ -20,7 +20,7 @@ export const ACCENTS: Accent[] = [
   { key: "crimson", name: "Nogi", swatch: "#df2d28" },
   { key: "ember", name: "Motorhead", swatch: "#e86c26" },
   { key: "gold", name: "Dainippon", swatch: "#e2a02c" },
-  { key: "green", name: "Kouou", swatch: "#74bfa0" },
+  { key: "green", name: "Kouou", swatch: "#9caf88" },
   { key: "slate", name: "Under Mount", swatch: "#96a2b4" },
   { key: "violet", name: "Gandai", swatch: "#a86cff" },
 ];

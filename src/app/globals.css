@@ -71,8 +71,8 @@ html[data-accent="gold"] {
   --accent-dim-rgb: 154 105 26;
 }
 html[data-accent="green"] {
-  --accent-rgb: 116 191 160;
-  --accent-dim-rgb: 60 122 100;
+  --accent-rgb: 156 175 136;
+  --accent-dim-rgb: 92 108 78;
 }
 html[data-accent="slate"] {
   --accent-rgb: 150 162 180;
