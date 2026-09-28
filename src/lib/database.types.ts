@@ -399,6 +399,7 @@ export type Database = {
           note: string | null
           position: number
           session_id: string
+          superset: number | null
           user_id: string
         }
         Insert: {
@@ -407,6 +408,7 @@ export type Database = {
           note?: string | null
           position?: number
           session_id: string
+          superset?: number | null
           user_id: string
         }
         Update: {
@@ -415,6 +417,7 @@ export type Database = {
           note?: string | null
           position?: number
           session_id?: string
+          superset?: number | null
           user_id?: string
         }
         Relationships: [
@@ -447,6 +450,7 @@ export type Database = {
           id: string
           is_completed: boolean
           is_warmup: boolean
+          kind: string | null
           reps: number
           rpe: number | null
           session_exercise_id: string
@@ -459,6 +463,7 @@ export type Database = {
           id?: string
           is_completed?: boolean
           is_warmup?: boolean
+          kind?: string | null
           reps: number
           rpe?: number | null
           session_exercise_id: string
@@ -471,6 +476,7 @@ export type Database = {
           id?: string
           is_completed?: boolean
           is_warmup?: boolean
+          kind?: string | null
           reps?: number
           rpe?: number | null
           session_exercise_id?: string
@@ -495,6 +501,7 @@ export type Database = {
           note: string | null
           position: number
           rest_seconds: number | null
+          superset: number | null
           target_rep_range: string | null
           target_sets: number | null
           template_id: string
@@ -506,6 +513,7 @@ export type Database = {
           note?: string | null
           position?: number
           rest_seconds?: number | null
+          superset?: number | null
           target_rep_range?: string | null
           target_sets?: number | null
           template_id: string
@@ -517,6 +525,7 @@ export type Database = {
           note?: string | null
           position?: number
           rest_seconds?: number | null
+          superset?: number | null
           target_rep_range?: string | null
           target_sets?: number | null
           template_id?: string
@@ -655,6 +664,7 @@ export type Database = {
           est_1rm: number | null
           exercise_id: string | null
           exercise_name: string | null
+          kind: string | null
           primary_muscle: Database["public"]["Enums"]["muscle_group"] | null
           reps: number | null
           rpe: number | null

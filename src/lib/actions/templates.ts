@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { supersetChanges } from "@/lib/supersets";
 import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
 import { getPreset } from "@/lib/presets";
@@ -142,6 +143,34 @@ export async function updateTemplateExercise(input: {
     .update(patch)
     .eq("id", v.id);
   if (error) throw error;
+  revalidatePath("/templates");
+}
+
+/**
+ * Links a template's exercise with the one after it in a superset, or takes
+ * it out of its superset (supersets.ts).
+ */
+export async function setTemplateSuperset(input: { id: string; link: boolean }) {
+  const v = z.object({ id: z.string().uuid(), link: z.boolean() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data: row, error: rowErr } = await supabase
+    .from("template_exercise")
+    .select("id, template_id")
+    .eq("id", v.id)
+    .maybeSingle();
+  if (rowErr) throw rowErr;
+  if (!row) throw new Error("Template exercise not found");
+  const { data: rows, error } = await supabase
+    .from("template_exercise")
+    .select("id, superset")
+    .eq("template_id", row.template_id)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  const list = rows ?? [];
+  for (const change of supersetChanges(list, list.findIndex((r) => r.id === row.id), v.link)) {
+    const { error: upErr } = await supabase.from("template_exercise").update({ superset: change.superset }).eq("id", change.id);
+    if (upErr) throw upErr;
+  }
   revalidatePath("/templates");
 }
 

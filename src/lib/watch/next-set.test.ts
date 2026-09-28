@@ -5,6 +5,7 @@ import {
   exerciseForNextSet,
   isComplete,
   nextUnfinished,
+  restsAfter,
   sameAgain,
 } from "./next-set";
 
@@ -24,6 +25,7 @@ function ex(id: string, targetSets: number | null, done: number, last: [number, 
     })),
     last: last.map(([weight, reps]) => ({ weight, reps })),
     target: null,
+    superset: null,
   };
 }
 
@@ -105,5 +107,45 @@ describe("the Live Activity's view", () => {
     expect(activitySummary(workout, workout.exercises[0], true, "kg").next).toBeNull();
     expect(activitySummary(workout, workout.exercises[1], false, "kg").detail).toBe("Up next");
     expect(activitySummary(workout, workout.exercises[0], true, "kg").detail).toBe("All sets done");
+  });
+});
+
+describe("supersets", () => {
+  const pair = (a: number, b: number, target: number | null = 3) => [
+    { ...ex("a", target, a), superset: 1 },
+    { ...ex("b", target, b), superset: 1 },
+    ex("c", target, 0),
+  ];
+
+  it("alternates between the pair, the one behind going next", () => {
+    expect(exerciseForNextSet(pair(1, 0))?.id).toBe("b");
+    expect(exerciseForNextSet(pair(1, 1))?.id).toBe("a");
+    expect(exerciseForNextSet(pair(2, 1))?.id).toBe("b");
+  });
+
+  it("moves on once both are done", () => {
+    expect(exerciseForNextSet(pair(3, 3))?.id).toBe("c");
+  });
+
+  it("finishes the one still going when the other's done", () => {
+    expect(exerciseForNextSet([{ ...ex("a", 2, 2), superset: 1 }, { ...ex("b", 4, 2), superset: 1 }])?.id).toBe("b");
+  });
+
+  it("rests after the round, not between the pair", () => {
+    expect(restsAfter(pair(1, 0), "a")).toBe(false);
+    expect(restsAfter(pair(1, 1), "b")).toBe(true);
+    expect(restsAfter([ex("a", 3, 1), ex("b", 3, 0)], "a")).toBe(true);
+  });
+
+  it("doesn't count a drop set toward the plan, or copy its numbers", () => {
+    const withDrop = {
+      ...ex("a", 2, 1),
+      sets: [
+        { id: "a-1", n: 1, weight: 100, reps: 8, warmup: false },
+        { id: "a-2", n: 2, weight: 80, reps: 10, warmup: false, kind: "drop" },
+      ],
+    };
+    expect(exerciseForNextSet([withDrop, ex("b", 2, 0)])?.id).toBe("a");
+    expect(sameAgain(withDrop)).toEqual({ weight: 100, reps: 8 });
   });
 });

@@ -1,5 +1,6 @@
 import type { Unit } from "@/lib/units";
 import type { WatchWorkout } from "@/lib/watch/protocol";
+import { supersetSlots } from "@/lib/supersets";
 
 /**
  * Where the next set goes, and with what numbers, wherever it's logged
@@ -14,14 +15,17 @@ import type { WatchWorkout } from "@/lib/watch/protocol";
 export type PlanExercise = {
   id: string;
   targetSets: number | null;
-  sets: { n: number; weight: number; reps: number; warmup: boolean }[];
+  sets: { n: number; weight: number; reps: number; warmup: boolean; kind?: string | null }[];
+  /** Its superset group (supersets.ts); null or absent on its own. */
+  superset?: number | null;
   /** The last session's working sets on this movement. */
   last: { weight: number; reps: number }[];
   /** Today's target from those (progression.ts), for the first set. */
   target?: { weight: number; reps: number } | null;
 };
 
-const working = (e: PlanExercise) => e.sets.filter((s) => !s.warmup);
+/** The sets that count toward the plan: no warm-ups, no drop sets. */
+const working = (e: PlanExercise) => e.sets.filter((s) => !s.warmup && s.kind !== "drop");
 
 /**
  * Its target sets are all in. An exercise without a target never is,
@@ -58,7 +62,9 @@ export function nextUnfinished<E extends PlanExercise>(
 /**
  * The exercise the next set belongs to: the last one in order with a set,
  * until its target's met, then the next unfinished one. Before any set, the
- * first unfinished exercise.
+ * first unfinished exercise. In a superset (supersets.ts) it's whichever of
+ * its unfinished exercises has the fewest sets, the first on a tie, so they
+ * alternate: A1, A2, A1, A2.
  */
 export function exerciseForNextSet<E extends PlanExercise>(
   exercises: E[],
@@ -70,9 +76,30 @@ export function exerciseForNextSet<E extends PlanExercise>(
     if (working(e).length > 0) i = j;
   });
   if (i < 0) return exercises.find((e) => !isDone(e, ended)) ?? exercises[0];
+  const slot = supersetSlots(exercises, (e) => e.superset)[i];
+  if (slot) {
+    const open = slot.members.map((m) => exercises[m]).filter((e) => !metTarget(e, ended));
+    if (open.length > 0) return open.reduce((a, b) => (working(b).length < working(a).length ? b : a));
+    return nextUnfinished(exercises, slot.members[slot.members.length - 1], ended) ?? exercises[i];
+  }
   const latest = exercises[i];
   if (!metTarget(latest, ended)) return latest;
   return nextUnfinished(exercises, i, ended) ?? latest;
+}
+
+/**
+ * After a set on `loggedId`, whether a rest comes before the next one: not
+ * when the next set is a superset partner's that's still behind on the
+ * round. `exercises` already has the set.
+ */
+export function restsAfter(exercises: PlanExercise[], loggedId: string, ended?: ReadonlySet<string>): boolean {
+  const next = exerciseForNextSet(exercises, ended);
+  const logged = exercises.find((e) => e.id === loggedId);
+  if (!next || !logged || next.id === loggedId) return true;
+  const slots = supersetSlots(exercises, (e) => e.superset);
+  const slot = slots[exercises.indexOf(logged)];
+  if (!slot || !slot.members.includes(exercises.indexOf(next))) return true;
+  return working(next).length >= working(logged).length;
 }
 
 /**
@@ -82,6 +109,7 @@ export function exerciseForNextSet<E extends PlanExercise>(
  * there's nothing to go on.
  */
 export function sameAgain(e: PlanExercise): { weight: number; reps: number } | null {
+  // A drop set's lighter numbers are never the next straight set's.
   const done = working(e);
   if (done.length > 0) {
     const latest = done.reduce((a, b) => (b.n > a.n ? b : a));

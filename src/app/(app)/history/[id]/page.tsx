@@ -9,6 +9,7 @@ import { getProfile } from "@/lib/data/profile";
 import { profileAge } from "@/lib/age";
 import { estimatedMaxHr, type TimedSet } from "@/lib/heart-insights";
 import { HeartCard } from "@/components/workout/heart-card";
+import { slotLabel, supersetSlots } from "@/lib/supersets";
 import { getUnit } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -53,6 +54,7 @@ export default async function SessionDetailPage({
       warmup: s.is_warmup,
     })),
   );
+  const slots = supersetSlots(session.session_exercise, (se) => se.superset);
   const maxHr = estimatedMaxHr(session.date ? profileAge(profile, session.date) : null);
 
   let totalVolume = 0;
@@ -136,7 +138,7 @@ export default async function SessionDetailPage({
       )}
 
       <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-2">
-        {session.session_exercise.map((se) => {
+        {session.session_exercise.map((se, index) => {
           const working = se.set.filter((s) => !s.is_warmup);
           const exVolume = working.reduce(
             (n, s) => n + s.weight_kg * s.reps,
@@ -146,8 +148,15 @@ export default async function SessionDetailPage({
             <Card key={se.id} className="@container overflow-hidden">
               <div className="flex items-center justify-between gap-2 px-4 pb-2 pt-4">
                 <div className="min-w-0">
-                  <div className="truncate text-[17px] font-semibold tracking-[-0.015em] text-text">
-                    {se.exercise?.name ?? "Exercise"}
+                  <div className="flex min-w-0 items-center gap-2">
+                    {slots[index] && (
+                      <span className="tnum shrink-0 rounded-md bg-white/[0.08] px-1.5 py-0.5 text-[12px] font-semibold text-text">
+                        {slotLabel(slots[index])}
+                      </span>
+                    )}
+                    <span className="truncate text-[17px] font-semibold tracking-[-0.015em] text-text">
+                      {se.exercise?.name ?? "Exercise"}
+                    </span>
                   </div>
                   {se.exercise && (
                     <div className="text-[13px] text-muted">
@@ -160,14 +169,20 @@ export default async function SessionDetailPage({
               <ul className="divide-y divide-white/[0.05] px-1 pb-1">
                 {se.set.map((s, i) => {
                   const est1rm = s.weight_kg * (1 + s.reps / 30);
+                  // Plain sets are numbered on their own; the rest say what they are.
+                  const label = s.is_warmup
+                    ? "Warm-up"
+                    : s.kind === "drop"
+                      ? "Drop"
+                      : s.kind === "rest_pause"
+                        ? "Rest-pause"
+                        : `Set ${se.set.slice(0, i + 1).filter((x) => !x.is_warmup && !x.kind).length}`;
                   return (
                     <li
                       key={s.id}
                       className="tnum flex items-center justify-between gap-3 px-3 py-2.5 text-[15px]"
                     >
-                      <span className="w-14 shrink-0 text-[13px] text-muted">
-                        {s.is_warmup ? "Warm-up" : `Set ${i + 1}`}
-                      </span>
+                      <span className="w-14 shrink-0 text-[13px] text-muted">{label}</span>
                       {/* In a phone-width card the RPE drops under the
                           weight rather than squeezing it onto two lines. */}
                       <span className="min-w-0 flex-1 text-text">

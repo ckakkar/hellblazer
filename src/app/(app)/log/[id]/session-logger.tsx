@@ -13,6 +13,7 @@ import {
 import { format, parseISO } from "date-fns";
 import { unstable_rethrow, useRouter } from "next/navigation";
 import {
+  ArrowDownRight,
   ArrowRight,
   ArrowUpRight,
   Check,
@@ -20,6 +21,7 @@ import {
   Equal,
   Flame,
   Heart,
+  Link2,
   Loader2,
   Lock,
   Pencil,
@@ -31,6 +33,7 @@ import {
   Trash2,
   TriangleAlert,
   Trophy,
+  Unlink,
   X,
   Zap,
 } from "lucide-react";
@@ -54,7 +57,8 @@ import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
 import { useKeepAwake } from "@/lib/keep-awake";
-import { exerciseForNextSet, nextSetLabel, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
+import { exerciseForNextSet, nextSetLabel, restsAfter, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
+import { slotLabel, supersetSlots, type SupersetSlot } from "@/lib/supersets";
 import { nextTarget, targetLabel, targetReason, type Target } from "@/lib/progression";
 import type { SpokenExercise, SpokenSet } from "@/lib/spoken-sets";
 import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
@@ -86,16 +90,20 @@ import {
   getSessionSets,
   removeSessionExercise,
   saveSet,
+  setSessionSuperset,
   swapSessionExercise,
   updateSessionMeta,
 } from "@/lib/actions/sessions";
 
+type SetKind = "drop" | "rest_pause" | null;
 type LocalSet = {
   id: string;
   weight: number | null;
   reps: number | null;
   rpe: number | null;
   isWarmup: boolean;
+  /** A drop or rest-pause set; null for a plain one. */
+  kind: SetKind;
 };
 type LocalExercise = {
   seId: string;
@@ -103,6 +111,8 @@ type LocalExercise = {
   name: string;
   primaryMuscle: Muscle;
   note: string | null;
+  /** Its superset group (supersets.ts); null on its own. */
+  superset: number | null;
   sets: LocalSet[];
 };
 
@@ -257,12 +267,14 @@ export function SessionLogger({
       name: se.exercise?.name ?? "Exercise",
       primaryMuscle: se.exercise?.primary_muscle ?? "chest",
       note: se.note,
+      superset: se.superset,
       sets: se.set.map((s) => ({
         id: s.id,
         weight: toDisplayWeight(s.weight_kg, unit),
         reps: s.reps,
         rpe: s.rpe,
         isWarmup: s.is_warmup,
+        kind: s.kind === "drop" || s.kind === "rest_pause" ? (s.kind as SetKind) : null,
       })),
     })),
   );
@@ -360,6 +372,7 @@ export function SessionLogger({
       reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
       rpe: set.rpe,
       isWarmup: set.isWarmup,
+      kind: set.kind,
       updatedAt: nextStamp(),
     }),
     [session.id, unit],
@@ -389,6 +402,7 @@ export function SessionLogger({
             reps: write.reps,
             rpe: write.rpe,
             isWarmup: write.isWarmup,
+            kind: write.kind ?? null,
           }),
         )
         .then(async () => {
@@ -482,6 +496,7 @@ export function SessionLogger({
               reps: write.reps,
               rpe: write.rpe,
               isWarmup: write.isWarmup,
+              kind: write.kind ?? null,
             };
             const existing = sets.findIndex((set) => set.id === write.id);
             if (existing >= 0) sets[existing] = restored;
@@ -593,6 +608,7 @@ export function SessionLogger({
               reps: r.reps,
               rpe: r.rpe,
               isWarmup: r.isWarmup,
+              kind: r.kind,
             });
           }
           return { ...ex, sets };
@@ -822,6 +838,28 @@ export function SessionLogger({
     scheduleSave(seId, setId);
   }
 
+  /** The exercises as the shared next-set rules see them (next-set.ts). */
+  function planOf(list: LocalExercise[]): (PlanExercise & { ex: LocalExercise })[] {
+    return list.map((ex) => ({
+      ex,
+      id: ex.seId,
+      targetSets: targets[ex.seId]?.sets ?? null,
+      superset: ex.superset,
+      sets: ex.sets.map((s, i) => ({
+        n: i + 1,
+        weight: Number(s.weight) || 0,
+        reps: Number(s.reps) || 0,
+        warmup: s.isWarmup,
+        kind: s.kind,
+      })),
+      last: (lastFor(ex.exerciseId)?.sets ?? []).map((s) => ({
+        weight: toDisplayWeight(s.weight_kg, unit),
+        reps: s.reps,
+      })),
+      target: targetFor(ex),
+    }));
+  }
+
   function addSet(seId: string) {
     const ex = ref.current.find((e) => e.seId === seId);
     if (!ex) return;
@@ -841,6 +879,7 @@ export function SessionLogger({
       reps: prev ? prev.reps : target ? target.reps : (last?.reps ?? null),
       rpe: null,
       isWarmup: false,
+      kind: null,
     };
     const nextNumber = ex.sets.length + 1;
     // `ref.current` is also synced from an effect, which lands a commit behind.
@@ -853,10 +892,66 @@ export function SessionLogger({
     setExercises(next);
     setFlashId(seed.id);
     void persist(seId, seed, nextNumber);
+    // In a superset, straight on to the partner still behind on the round;
+    // the rest comes after the round.
+    const after = planOf(next);
+    const upNext = exerciseForNextSet(after, endedHere);
+    if (!restsAfter(after, seId, endedHere)) {
+      haptic("tap");
+      if (upNext && activeSeId === seId) setActiveSeId(upNext.id);
+      return;
+    }
+    // A superset's round done: its first exercise is ready while you rest.
+    const slot = supersetSlots(next, (e) => e.superset)[next.findIndex((e) => e.seId === seId)];
+    if (slot && upNext && upNext.id !== seId && activeSeId === seId) {
+      const index = next.findIndex((e) => e.seId === upNext.id);
+      if (slot.members.includes(index)) setActiveSeId(upNext.id);
+    }
     // A set just landed: that's when the rest starts, as in any gym app.
     // The template's rest for this exercise, else the lifter's usual.
     if (!isEditing && rest.auto) rest.start(targets[seId]?.rest ?? undefined);
     else haptic("tap");
+  }
+
+  // A drop set: the set before's reps at about a fifth less weight, rounded
+  // to the plates, straight after it with no rest.
+  function addDropSet(seId: string) {
+    const ex = ref.current.find((e) => e.seId === seId);
+    const prev = ex?.sets[ex.sets.length - 1];
+    if (!ex || !prev || prev.isWarmup) return;
+    const weight = Number(prev.weight) || 0;
+    const set: LocalSet = {
+      id: crypto.randomUUID(),
+      weight: Math.max(0, Math.round((weight * 0.8) / weightStep) * weightStep),
+      reps: prev.reps,
+      rpe: null,
+      isWarmup: false,
+      kind: "drop",
+    };
+    const next = ref.current.map((e) => (e.seId === seId ? { ...e, sets: [...e.sets, set] } : e));
+    ref.current = next;
+    setExercises(next);
+    setFlashId(set.id);
+    void persist(seId, set, ex.sets.length + 1);
+    haptic("tap");
+  }
+
+  // Links an exercise with the one after it in a superset, or takes it out.
+  function linkSuperset(seId: string, link: boolean) {
+    if (needsConnection(link ? "Making a superset" : "Changing a superset")) return;
+    startNav(async () => {
+      let changes: Awaited<ReturnType<typeof setSessionSuperset>>;
+      try {
+        changes = await setSessionSuperset({ sessionExerciseId: seId, link });
+      } catch {
+        showNotice("Couldn't change the superset. Check your connection and try again.");
+        return;
+      }
+      const byId = new Map(changes.map((c) => [c.id, c.superset]));
+      const next = ref.current.map((e) => (byId.has(e.seId) ? { ...e, superset: byId.get(e.seId) ?? null } : e));
+      ref.current = next;
+      setExercises(next);
+    });
   }
 
   // Sets said in words ("Say it"), each with its own numbers, added as
@@ -872,6 +967,7 @@ export function SessionLogger({
         reps: s.reps,
         rpe: s.rpe,
         isWarmup: s.warmup,
+        kind: null,
       };
       next = next.map((e) =>
         e.seId === s.exerciseId ? { ...e, sets: [...e.sets, set] } : e,
@@ -946,6 +1042,7 @@ export function SessionLogger({
           name: meta.name,
           primaryMuscle: meta.primary_muscle,
           note: null,
+          superset: null,
           sets: [],
         },
       ];
@@ -1131,22 +1228,8 @@ export function SessionLogger({
   // open on screen, else the same rule the watch and Siri follow
   // (next-set.ts): the one being worked until its target's met, then the
   // next unfinished one.
-  const plans: (PlanExercise & { ex: LocalExercise })[] = exercises.map((ex) => ({
-    ex,
-    id: ex.seId,
-    targetSets: targets[ex.seId]?.sets ?? null,
-    sets: ex.sets.map((s, i) => ({
-      n: i + 1,
-      weight: Number(s.weight) || 0,
-      reps: Number(s.reps) || 0,
-      warmup: s.isWarmup,
-    })),
-    last: (lastFor(ex.exerciseId)?.sets ?? []).map((s) => ({
-      weight: toDisplayWeight(s.weight_kg, unit),
-      reps: s.reps,
-    })),
-    target: targetFor(ex),
-  }));
+  const plans = planOf(exercises);
+  const slots = supersetSlots(exercises, (e) => e.superset);
   const current = active ?? exerciseForNextSet(plans, endedHere)?.ex ?? null;
   // "Say it" matches what's said against these, and fills in what isn't.
   const spokenExercises: SpokenExercise[] = plans.map((p) => ({
@@ -1358,8 +1441,15 @@ export function SessionLogger({
         const upcoming = rows.filter(
           ({ ex, i }) => !completed.has(ex.seId) && i !== currentIndex,
         );
-        const addedTag = (seId: string) =>
-          advanceIds.has(seId) ? <Badge variant="muted">Added</Badge> : null;
+        const addedTag = (seId: string) => {
+          const slot = slots[exercises.findIndex((e) => e.seId === seId)];
+          return (
+            <>
+              {slot && <Badge variant="muted">{slotLabel(slot)}</Badge>}
+              {advanceIds.has(seId) && <Badge variant="muted">Added</Badge>}
+            </>
+          );
+        };
 
         return (
           <section className="space-y-3">
@@ -1427,6 +1517,7 @@ export function SessionLogger({
                         .join(", ")}${last.sets.length > 4 ? "…" : ""}`}
                   </p>
                   {ex.note && <p className="mt-1 text-[13px] text-muted">{ex.note}</p>}
+                  {slots[i] && <SupersetLine slot={slots[i]} exercises={exercises} index={i} className="mt-2" />}
                   {(() => {
                     const target = ex.sets.length === 0 ? targetFor(ex) : null;
                     return target ? <TargetLine target={target} unit={unit} className="mt-3" /> : null;
@@ -1579,6 +1670,12 @@ export function SessionLogger({
           exerciseLibrary={exerciseLibrary}
           lastPerformance={lastFor(active.exerciseId) ?? null}
           target={targetFor(active)}
+          superset={(() => {
+            const i = exercises.findIndex((e) => e.seId === active.seId);
+            return { slot: slots[i], index: i, exercises };
+          })()}
+          onLink={(link) => linkSuperset(active.seId, link)}
+          onAddDrop={() => addDropSet(active.seId)}
           unit={unit}
           weightStep={weightStep}
           flashId={flashId}
@@ -1677,6 +1774,9 @@ function ActiveExerciseModal({
   exerciseLibrary,
   lastPerformance,
   target,
+  superset,
+  onLink,
+  onAddDrop,
   unit,
   weightStep,
   flashId,
@@ -1696,6 +1796,11 @@ function ActiveExerciseModal({
   lastPerformance: LastPerformance | null;
   /** Today's target on it (progression.ts). */
   target: Target | null;
+  /** Where it sits among the session's exercises, and its superset if any. */
+  superset: { slot: SupersetSlot | null; index: number; exercises: LocalExercise[] };
+  /** Joins it with the exercise after it (true), or takes it out of its superset. */
+  onLink: (link: boolean) => void;
+  onAddDrop: () => void;
   unit: Unit;
   weightStep: number;
   flashId: string | null;
@@ -1827,11 +1932,15 @@ function ActiveExerciseModal({
             <div className="mb-3 text-[13px] text-muted">{exercise.note}</div>
           )}
 
+          {superset.slot && (
+            <SupersetLine slot={superset.slot} exercises={superset.exercises} index={superset.index} className="mb-3" />
+          )}
+
           <div className="grid grid-cols-1 gap-2">
             {exercise.sets.map((s, i) => (
               <SetRow
                 key={s.id}
-                index={i}
+                label={setLabel(exercise.sets, i)}
                 set={s}
                 unit={unit}
                 weightStep={weightStep}
@@ -1848,21 +1957,84 @@ function ActiveExerciseModal({
                 ? "Log first set"
                 : "Add set"}
             </Button>
+            {hasSets && !exercise.sets[exercise.sets.length - 1].isWarmup && (
+              <Button variant="ghost" size="lg" onClick={onAddDrop} className="w-full">
+                <ArrowDownRight className="size-4" />
+                Add drop set
+              </Button>
+            )}
             {sayIt}
           </div>
 
-          <button
-            onClick={onRemoveExercise}
-            className="mt-5 inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-danger"
-          >
-            <Trash2 className="size-3.5" />
-            Remove from session
-          </button>
+          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+            {superset.slot ? (
+              <button
+                onClick={() => onLink(false)}
+                className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-text"
+              >
+                <Unlink className="size-3.5" />
+                Take out of superset
+              </button>
+            ) : superset.exercises[superset.index + 1] ? (
+              <button
+                onClick={() => onLink(true)}
+                className="inline-flex min-w-0 items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-text"
+              >
+                <Link2 className="size-3.5 shrink-0" />
+                <span className="truncate">Superset with {superset.exercises[superset.index + 1].name}</span>
+              </button>
+            ) : null}
+            <button
+              onClick={onRemoveExercise}
+              className="inline-flex items-center gap-1.5 text-[13px] text-muted transition-colors hover:text-danger"
+            >
+              <Trash2 className="size-3.5" />
+              Remove from session
+            </button>
+          </div>
         </div>
       )}
     </Sheet>
   );
 }
+
+/**
+ * "A1, with Seated Cable Row. No rest in between; rest after the round."
+ * The partners named in order, the rest said once.
+ */
+function SupersetLine({
+  slot,
+  exercises,
+  index,
+  className,
+}: {
+  slot: SupersetSlot;
+  exercises: LocalExercise[];
+  index: number;
+  className?: string;
+}) {
+  const partners = slot.members.filter((m) => m !== index).map((m) => exercises[m]?.name ?? "Exercise");
+  return (
+    <p className={cn("flex items-start gap-1.5 text-[13px] text-muted", className)}>
+      <Link2 className="mt-0.5 size-3.5 shrink-0" />
+      <span className="min-w-0">
+        <span className="text-text">Superset {slotLabel(slot)}</span>, with {partners.join(" and ")}. No rest in between;
+        rest after the round.
+      </span>
+    </p>
+  );
+}
+
+/** A set's name in its exercise: "Set 2", or what kind it is. Plain sets are numbered alone. */
+function setLabel(sets: LocalSet[], i: number): string {
+  const set = sets[i];
+  if (set.isWarmup) return "Warm-up";
+  if (set.kind === "drop") return "Drop set";
+  if (set.kind === "rest_pause") return "Rest-pause";
+  return `Set ${sets.slice(0, i + 1).filter((s) => !s.isWarmup && s.kind == null).length}`;
+}
+
+const NEXT_KIND: Record<string, SetKind> = { plain: "drop", drop: "rest_pause", rest_pause: null };
 
 /** "Today: 82.5 kg × 6, up 2.5 kg": the target and why, an arrow when it's up. */
 function TargetLine({ target, unit, className }: { target: Target; unit: Unit; className?: string }) {
@@ -1879,7 +2051,7 @@ function TargetLine({ target, unit, className }: { target: Target; unit: Unit; c
 }
 
 function SetRow({
-  index,
+  label,
   set,
   unit,
   weightStep,
@@ -1888,7 +2060,8 @@ function SetRow({
   onChange,
   onRemove,
 }: {
-  index: number;
+  /** "Set 2", "Drop set" (setLabel). */
+  label: string;
   set: LocalSet;
   unit: Unit;
   weightStep: number;
@@ -1907,7 +2080,22 @@ function SetRow({
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="flex items-center gap-2 tnum text-[13px] text-muted">
-          {set.isWarmup ? "Warm-up" : `Set ${index + 1}`}
+          {set.isWarmup ? (
+            label
+          ) : (
+            // Tap to change the set's kind: plain, drop, rest-pause.
+            <button
+              type="button"
+              onClick={() => onChange({ kind: NEXT_KIND[set.kind ?? "plain"] })}
+              aria-label={`${label}. Change the set's kind`}
+              className={cn(
+                "-mx-1.5 rounded-full px-1.5 py-0.5 transition-colors active:bg-white/[0.08]",
+                set.kind && "bg-white/[0.07] text-text",
+              )}
+            >
+              {label}
+            </button>
+          )}
           {isPR && (
             <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-black">
               <Zap className="size-2.5" />

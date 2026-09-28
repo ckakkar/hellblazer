@@ -366,9 +366,30 @@ final class WatchModel: ObservableObject {
             return chosen
         }
         guard let i = exercises.lastIndex(where: { !$0.workingSets.isEmpty }) else { return exercises.first }
+        if let members = Self.superset(of: i, in: exercises) {
+            if let next = Self.supersetNext(members, in: exercises) { return exercises[next] }
+            return Self.nextUnfinished(after: members[members.count - 1], in: exercises) ?? exercises[i]
+        }
         let latest = exercises[i]
         guard Self.metTarget(latest) else { return latest }
         return Self.nextUnfinished(after: i, in: exercises) ?? latest
+    }
+
+    /// The indexes of the superset exercise `i` is in: consecutive exercises
+    /// sharing its group, two or more (src/lib/supersets.ts). Nil on its own.
+    private static func superset(of i: Int, in exercises: [Exercise]) -> [Int]? {
+        guard let group = exercises[i].superset else { return nil }
+        var start = i, end = i
+        while start > 0, exercises[start - 1].superset == group { start -= 1 }
+        while end + 1 < exercises.count, exercises[end + 1].superset == group { end += 1 }
+        return end > start ? Array(start...end) : nil
+    }
+
+    /// In a superset, the unfinished exercise with the fewest sets goes next,
+    /// the first on a tie, so they alternate (next-set.ts). Nil once all are done.
+    private static func supersetNext(_ members: [Int], in exercises: [Exercise]) -> Int? {
+        members.filter { !metTarget(exercises[$0]) }
+            .min { exercises[$0].workingSets.count < exercises[$1].workingSets.count }
     }
 
     /// Whether every exercise has had its sets: the workout's done bar the
@@ -458,7 +479,7 @@ final class WatchModel: ObservableObject {
                 Exercise(
                     id: "\(id)-\(item.offset)", name: item.element.name, targetSets: item.element.targetSets,
                     targetReps: item.element.targetReps, restSeconds: item.element.restSeconds, sets: [],
-                    last: item.element.last
+                    last: item.element.last, target: item.element.target, superset: item.element.superset
                 )
             }
         )
@@ -577,9 +598,26 @@ final class WatchModel: ObservableObject {
         pending.append(write)
         savePending()
 
-        // Done with this one: the next unfinished exercise comes up after the rest.
         let exercise = active.exercises[i]
-        if Self.metTarget(exercise), let next = Self.nextUnfinished(after: i, in: active.exercises) {
+        if let members = Self.superset(of: i, in: active.exercises) {
+            let next = Self.supersetNext(members, in: active.exercises)
+            // A superset: straight on to the partner still behind on the
+            // round, no rest; the rest comes after the round.
+            if let next, next != i,
+               active.exercises[next].workingSets.count < exercise.workingSets.count {
+                selectedExerciseId = active.exercises[next].id
+                WKInterfaceDevice.current().play(.directionUp)
+                tellPhone()
+                Task { await flush() }
+                return
+            }
+            if let next {
+                selectedExerciseId = active.exercises[next].id
+            } else {
+                selectedExerciseId = Self.nextUnfinished(after: members[members.count - 1], in: active.exercises)?.id ?? exerciseId
+            }
+        } else if Self.metTarget(exercise), let next = Self.nextUnfinished(after: i, in: active.exercises) {
+            // Done with this one: the next unfinished exercise comes up after the rest.
             selectedExerciseId = next.id
         } else {
             selectedExerciseId = exerciseId
@@ -802,9 +840,10 @@ final class WatchModel: ObservableObject {
     }
 
     /// The next set's numbers, as the logger fills them in: this session's
-    /// last set, else the same set last time.
+    /// last set, else today's target, else the same set last time.
     func plannedNext(_ exercise: Exercise) -> (weight: Double, reps: Int)? {
         if let latest = exercise.sets.max(by: { $0.n < $1.n }) { return (latest.weight, latest.reps) }
+        if let target = exercise.target { return (target.weight, target.reps) }
         let done = exercise.workingSets.count
         let past = done < exercise.last.count ? exercise.last[done] : exercise.last.last
         return past.map { ($0.weight, $0.reps) }

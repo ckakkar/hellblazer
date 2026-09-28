@@ -50,6 +50,8 @@ export type WatchExercise = {
   last: { weight: number; reps: number }[];
   /** Today's target from them (src/lib/progression.ts): the first set's numbers. */
   target: WatchTarget | null;
+  /** Its superset group (src/lib/supersets.ts); null on its own. */
+  superset: number | null;
 };
 
 export type WatchTarget = { weight: number; reps: number };
@@ -60,6 +62,8 @@ export type WatchSet = {
   weight: number;
   reps: number;
   warmup: boolean;
+  /** "drop" or "rest_pause", logged in the app; absent for a plain set. */
+  kind?: string | null;
 };
 
 export type WatchStartOption = {
@@ -84,4 +88,6 @@ export type WatchPlanExercise = {
   last: { weight: number; reps: number }[];
   /** Today's target, as on WatchExercise. */
   target: WatchTarget | null;
+  /** Its superset group, as on WatchExercise. */
+  superset: number | null;
 };

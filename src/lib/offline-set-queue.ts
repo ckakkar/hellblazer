@@ -11,6 +11,8 @@ export type PendingSetWrite = {
   reps: number;
   rpe: number | null;
   isWarmup: boolean;
+  /** A drop or rest-pause set; null (or absent, if queued by an older build) for a plain one. */
+  kind?: "drop" | "rest_pause" | null;
   /** Write stamp from {@link nextStamp}; orders edits to the same set. */
   updatedAt: number;
   /** A queued delete: the set was removed but the server hasn't confirmed it. */

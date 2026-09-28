@@ -456,7 +456,7 @@ describe("starting on the watch with no connection", () => {
     const state = await res.json();
     expect(state.active).toBeNull();
     expect(state.options[0].plan).toEqual([
-      { name: "Bench Press", targetSets: 3, targetReps: "5", restSeconds: 180, last: [], target: null },
+      { name: "Bench Press", targetSets: 3, targetReps: "5", restSeconds: 180, last: [], target: null, superset: null },
     ]);
   });
 });

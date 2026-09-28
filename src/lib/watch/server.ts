@@ -16,6 +16,7 @@ import {
   activitySummary,
   exerciseForNextSet,
   isComplete,
+  restsAfter,
   sameAgain,
 } from "@/lib/watch/next-set";
 import { describeSpokenSets, parseHeard, planSpokenSets } from "@/lib/spoken-sets";
@@ -148,7 +149,7 @@ async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map
   const { data: rows, error } = await db
     .from("template_exercise")
     .select(
-      "template_id, position, exercise_id, target_sets, target_rep_range, rest_seconds, exercise(name, equipment, mechanic, primary_muscle)",
+      "template_id, position, exercise_id, target_sets, target_rep_range, rest_seconds, superset, exercise(name, equipment, mechanic, primary_muscle)",
     )
     .eq("user_id", userId)
     .in("template_id", templateIds)
@@ -165,6 +166,7 @@ async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map
       restSeconds: row.rest_seconds,
       last: past.map(({ weight, reps }) => ({ weight, reps })),
       target: targetOf(past, row.target_rep_range, row.exercise, ctx.unit),
+      superset: row.superset ?? null,
     });
     plans.set(row.template_id, list);
   }
@@ -239,7 +241,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
       const { data, error: rowsError } = await db
         .from("session_exercise")
         .select(
-          "id, exercise_id, position, exercise(name, equipment, mechanic, primary_muscle), set(id, set_number, weight_kg, reps, is_warmup)",
+          "id, exercise_id, position, superset, exercise(name, equipment, mechanic, primary_muscle), set(id, set_number, weight_kg, reps, is_warmup, kind)",
         )
         .eq("session_id", session.id)
         .eq("user_id", userId)
@@ -281,9 +283,11 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
           weight: toDisplayWeight(Number(s.weight_kg), unit),
           reps: s.reps,
           warmup: s.is_warmup,
+          kind: s.kind,
         })),
       last: past.map(({ weight, reps }) => ({ weight, reps })),
       target: targetOf(past, target?.target_rep_range ?? null, row.exercise, unit),
+      superset: row.superset ?? null,
     };
   });
 
@@ -515,6 +519,10 @@ export type VoiceSetReply =
       restSeconds: number | null;
       /** That set was the plan's last. */
       complete: boolean;
+      /** A rest comes next; not when a superset partner is up (restsAfter). */
+      rest: boolean;
+      /** The exercise the next set goes to, when it isn't this one. */
+      nextExercise: string | null;
       /** The workout for the Live Activity (activitySummary). */
       activity: Activity;
     };
@@ -567,16 +575,19 @@ export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<Voi
   };
   const after = { ...workout, exercises: workout.exercises.map((e) => (e.id === exercise.id ? logged : e)) };
   const { complete, activity } = summarize(after, ctx.unit);
+  const next = exerciseForNextSet(after.exercises);
   return {
     status: "logged",
     exercise: exercise.name,
     weight: numbers.weight,
     reps: numbers.reps,
     unit: ctx.unit,
-    setNumber: logged.sets.filter((s) => !s.warmup).length,
+    setNumber: logged.sets.filter((s) => !s.warmup && s.kind !== "drop").length,
     targetSets: exercise.targetSets,
     restSeconds: exercise.restSeconds,
     complete,
+    rest: restsAfter(after.exercises, exercise.id),
+    nextExercise: next && next.id !== exercise.id ? next.name : null,
     activity,
   };
 }
@@ -668,6 +679,8 @@ export type HeardSetsReply =
       restSeconds: number | null;
       /** The last set was a warm-up: no rest for that. */
       warmup: boolean;
+      /** A rest comes next; not when a superset partner is up (restsAfter). */
+      rest: boolean;
       complete: boolean;
       activity: Activity;
     };
@@ -733,6 +746,7 @@ export async function logHeardSets(ctx: WatchContext, body: unknown): Promise<He
     unmatched,
     restSeconds: workout.exercises.find((e) => e.id === last.exerciseId)?.restSeconds ?? null,
     warmup: last.warmup,
+    rest: !last.warmup && restsAfter(after.exercises, last.exerciseId),
     complete,
     activity,
   };

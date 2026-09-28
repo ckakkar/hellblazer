@@ -201,7 +201,9 @@ private struct LoggerPage: View {
         } else {
             label = "Set \(next)"
         }
-        if let past = pastSet {
+        if exercise.sets.isEmpty, let target = exercise.target {
+            label += " · aim \(trim(target.weight))×\(target.reps)"
+        } else if let past = pastSet {
             label += " · last \(trim(past.weight))×\(past.reps)"
         } else if let reps = exercise.targetReps, !reps.isEmpty {
             label += " · \(reps)"
@@ -215,14 +217,17 @@ private struct LoggerPage: View {
         return done < exercise.last.count ? exercise.last[done] : exercise.last.last
     }
 
-    /// Copy-forward: this session's last set, else the same set last time,
-    /// else the bottom of the target rep range.
+    /// Copy-forward: this session's last set, else today's target, else the
+    /// same set last time, else the bottom of the target rep range.
     private func seedIfNeeded() {
         guard seeded != seedKey else { return }
         seeded = seedKey
         if let previous = exercise.sets.max(by: { $0.n < $1.n }) {
             weight = previous.weight
             reps = Double(previous.reps)
+        } else if let target = exercise.target {
+            weight = target.weight
+            reps = Double(target.reps)
         } else if let past = pastSet {
             weight = past.weight
             reps = Double(past.reps)

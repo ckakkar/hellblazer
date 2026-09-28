@@ -82,6 +82,10 @@ enum VoiceSetLogger {
         var restSeconds: Double?
         /// That set finished the plan.
         var complete: Bool?
+        /// A rest comes next; false when a superset partner is up.
+        var rest: Bool?
+        /// The exercise the next set goes to, when it isn't this one.
+        var nextExercise: String?
         var activity: ActivityState?
     }
 
@@ -127,6 +131,8 @@ enum VoiceSetLogger {
         var restSeconds: Double?
         /// The last set was a warm-up: no rest for that.
         var warmup: Bool?
+        /// A rest comes next: not after a warm-up, or before a superset partner.
+        var rest: Bool?
         var complete: Bool?
         var activity: ActivityState?
     }
@@ -204,9 +210,10 @@ enum VoiceSetLogger {
             return "Logged."
         }
         let complete = reply.complete ?? false
-        let rest: Double? = !complete && RestDefaults.auto ? (reply.restSeconds ?? RestDefaults.seconds) : nil
+        let rests = reply.rest ?? true
+        let rest: Double? = !complete && rests && RestDefaults.auto ? (reply.restSeconds ?? RestDefaults.seconds) : nil
         if let activity = reply.activity {
-            catchUp(activity, rest: rest, clearRest: complete)
+            catchUp(activity, rest: rest, clearRest: complete || !rests)
         }
 
         var text = "Logged \(trim(weight)) \(reply.unit ?? "kg") for \(reps) on \(exercise)"
@@ -220,6 +227,9 @@ enum VoiceSetLogger {
         text += "."
         if complete {
             text += " That's every set. Say \u{201C}Finish my workout in Fatty\u{201D} when you're done."
+        } else if !rests, let next = reply.nextExercise {
+            // A superset: no rest before the partner.
+            text += " Straight into \(next)."
         } else if let rest {
             text += " Rest \(spoken(rest))."
         }
@@ -275,7 +285,8 @@ enum VoiceSetLogger {
         }
 
         let complete = reply.complete ?? false
-        let rest: Double? = !complete && !(reply.warmup ?? false) && RestDefaults.auto
+        let rests = reply.rest ?? !(reply.warmup ?? false)
+        let rest: Double? = !complete && rests && RestDefaults.auto
             ? (reply.restSeconds ?? RestDefaults.seconds)
             : nil
         if let activity = reply.activity {

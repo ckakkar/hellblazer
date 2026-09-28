@@ -42,8 +42,19 @@ struct Exercise: Codable, Equatable, Identifiable {
     var sets: [LoggedSet]
     /// The last session's working sets on this movement.
     var last: [PastSet]
+    /// Today's target from them (src/lib/progression.ts): the first set's numbers.
+    var target: Target?
+    /// Its superset group (src/lib/supersets.ts): consecutive exercises
+    /// sharing one are done back to back, resting after the round.
+    var superset: Int?
 
-    var workingSets: [LoggedSet] { sets.filter { !$0.warmup } }
+    /// The sets that count toward the plan: no warm-ups, no drop sets.
+    var workingSets: [LoggedSet] { sets.filter { !$0.warmup && $0.kind != "drop" } }
+}
+
+struct Target: Codable, Equatable {
+    var weight: Double
+    var reps: Int
 }
 
 struct LoggedSet: Codable, Equatable, Identifiable {
@@ -52,6 +63,8 @@ struct LoggedSet: Codable, Equatable, Identifiable {
     var weight: Double
     var reps: Int
     var warmup: Bool
+    /// "drop" or "rest_pause", logged in the app; nil for a plain set.
+    var kind: String?
 }
 
 struct PastSet: Codable, Equatable {
@@ -77,6 +90,8 @@ struct PlanExercise: Codable, Equatable {
     var targetReps: String?
     var restSeconds: Double?
     var last: [PastSet]
+    var target: Target?
+    var superset: Int?
 }
 
 /// A set waiting to reach the server. Kept on the watch until it does, so a

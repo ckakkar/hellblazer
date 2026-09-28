@@ -8,7 +8,9 @@ import {
   Eraser,
   GripVertical,
   Plus,
+  Link2,
   Timer,
+  Unlink,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
+import { slotLabel, supersetSlots } from "@/lib/supersets";
 import { MUSCLE_LABEL } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
 import type { TemplateWithExercises } from "@/lib/data/templates";
@@ -29,6 +32,7 @@ import {
   deleteTemplate,
   moveTemplateExercise,
   removeTemplateExercise,
+  setTemplateSuperset,
   updateTemplateExercise,
 } from "@/lib/actions/templates";
 import { selectAllOnFocus } from "@/lib/utils";
@@ -232,6 +236,7 @@ function TemplateCard({
   const [open, setOpen] = useState(false);
   const [picker, setPicker] = useState(false);
   const rows = template.template_exercise;
+  const slots = supersetSlots(rows, (r) => r.superset);
 
   return (
     <Card>
@@ -287,8 +292,13 @@ function TemplateCard({
               >
                 <GripVertical className="hidden size-4 shrink-0 text-muted/50 sm:block" />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-text">
-                    {row.exercise?.name ?? "Unknown"}
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    {slots[i] && (
+                      <span className="tnum shrink-0 rounded bg-white/[0.08] px-1 text-[11px] font-semibold text-text">
+                        {slotLabel(slots[i])}
+                      </span>
+                    )}
+                    <span className="truncate text-sm text-text">{row.exercise?.name ?? "Unknown"}</span>
                   </div>
                   <div className="truncate text-xs text-muted">
                     {row.exercise
@@ -323,6 +333,24 @@ function TemplateCard({
                       ))}
                     </select>
                   </label>
+                  {/* Supersets: done back to back, resting after the round. */}
+                  {(slots[i] || i < rows.length - 1) && (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() =>
+                        start(async () => {
+                          await setTemplateSuperset({ id: row.id, link: !slots[i] });
+                        })
+                      }
+                      className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted transition-colors hover:text-text disabled:opacity-50"
+                    >
+                      {slots[i] ? <Unlink aria-hidden className="size-3 shrink-0" /> : <Link2 aria-hidden className="size-3 shrink-0" />}
+                      <span className="truncate">
+                        {slots[i] ? "Take out of superset" : `Superset with ${rows[i + 1]?.exercise?.name ?? "the next"}`}
+                      </span>
+                    </button>
+                  )}
                 </div>
 
                 <input

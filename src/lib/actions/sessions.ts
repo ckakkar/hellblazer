@@ -1,6 +1,7 @@
 "use server";
 
 import { z } from "zod";
+import { supersetChanges } from "@/lib/supersets";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -161,6 +162,8 @@ const setSchema = z.object({
   reps: z.number().int().min(0).max(9999),
   rpe: z.number().min(0).max(10).nullable(),
   isWarmup: z.boolean(),
+  /** A drop or rest-pause set; absent from a build before them, which only logs plain ones. */
+  kind: z.enum(["drop", "rest_pause"]).nullable().optional(),
 });
 
 /**
@@ -180,9 +183,54 @@ export async function saveSet(input: z.input<typeof setSchema>) {
     reps: v.reps,
     rpe: v.rpe,
     is_warmup: v.isWarmup,
+    ...(v.kind !== undefined ? { kind: v.kind } : {}),
     is_completed: true,
   });
   if (error) throw error;
+}
+
+/**
+ * Links a session exercise with the one after it in a superset, or takes it
+ * out of its superset (supersets.ts). Like a swap, it becomes the day's
+ * default: the template's exercises at the same places follow.
+ */
+export async function setSessionSuperset(input: { sessionExerciseId: string; link: boolean }) {
+  const v = z.object({ sessionExerciseId: z.string().uuid(), link: z.boolean() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data: se, error: seErr } = await supabase
+    .from("session_exercise")
+    .select("id, session_id")
+    .eq("id", v.sessionExerciseId)
+    .maybeSingle();
+  if (seErr) throw seErr;
+  if (!se) throw new Error("Session exercise not found");
+  const [{ data: rows, error: rowsErr }, { data: sess }] = await Promise.all([
+    supabase
+      .from("session_exercise")
+      .select("id, position, exercise_id, superset")
+      .eq("session_id", se.session_id)
+      .order("position", { ascending: true }),
+    supabase.from("session").select("template_id").eq("id", se.session_id).maybeSingle(),
+  ]);
+  if (rowsErr) throw rowsErr;
+  const list = rows ?? [];
+  const changes = supersetChanges(list, list.findIndex((r) => r.id === se.id), v.link);
+  for (const change of changes) {
+    const { error } = await supabase.from("session_exercise").update({ superset: change.superset }).eq("id", change.id);
+    if (error) throw error;
+    const row = list.find((r) => r.id === change.id);
+    if (sess?.template_id && row) {
+      await supabase
+        .from("template_exercise")
+        .update({ superset: change.superset })
+        .eq("template_id", sess.template_id)
+        .eq("position", row.position)
+        .eq("exercise_id", row.exercise_id);
+    }
+  }
+  revalidatePath(`/log/${se.session_id}`);
+  revalidatePath("/templates");
+  return changes;
 }
 
 export type SessionSet = {
@@ -193,6 +241,7 @@ export type SessionSet = {
   reps: number;
   rpe: number | null;
   isWarmup: boolean;
+  kind: "drop" | "rest_pause" | null;
 };
 
 /**
@@ -207,7 +256,7 @@ export async function getSessionSets(input: {
   const { supabase } = await getAuthedContext();
   const { data, error } = await supabase
     .from("session")
-    .select("finished_at, session_exercise(id, set(id, set_number, weight_kg, reps, rpe, is_warmup))")
+    .select("finished_at, session_exercise(id, set(id, set_number, weight_kg, reps, rpe, is_warmup, kind))")
     .eq("id", sessionId)
     .maybeSingle();
   if (error) throw error;
@@ -221,6 +270,7 @@ export async function getSessionSets(input: {
       reps: s.reps,
       rpe: s.rpe === null ? null : Number(s.rpe),
       isWarmup: s.is_warmup,
+      kind: s.kind === "drop" || s.kind === "rest_pause" ? (s.kind as SessionSet["kind"]) : null,
     })),
   );
   return { finished: data.finished_at !== null, sets };
