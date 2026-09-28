@@ -209,7 +209,8 @@ export async function GET(request: NextRequest) {
     if (week && p.recap_sent_on !== week) {
       try {
         const facts = await gatherRecap(svc, p.user_id, week);
-        const sent = await send({ ...recapMessage(facts), url: "/dashboard", tag: "recap" });
+        // Opens the week as a card to share.
+        const sent = await send({ ...recapMessage(facts), url: `/dashboard?week-card=${week}`, tag: "recap" });
         if (sent > 0) {
           recapped++;
           await svc.from("profile").update({ recap_sent_on: week }).eq("user_id", p.user_id);

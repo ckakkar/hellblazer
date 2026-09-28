@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Loader2, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { shareImage } from "@/lib/share-image";
 
 /**
  * Builds the session's shareable PNG (via /api/share/[id]) and hands it to the
@@ -26,33 +27,7 @@ export function ShareCardButton({
       const res = await fetch(`/api/share/${sessionId}`);
       if (!res.ok) throw new Error("build failed");
       const blob = await res.blob();
-      // The iOS app: straight to the system share sheet (Save Image,
-      // Messages, Instagram). A web view can't share files or download.
-      const { shareNatively } = await import("@/lib/native-plugins");
-      if (await shareNatively(blob, "Fatty workout.png")) return;
-      const file = new File([blob], `hell-blazer-${sessionId}.png`, {
-        type: "image/png",
-      });
-
-      const nav = navigator as Navigator & {
-        canShare?: (data?: ShareData) => boolean;
-      };
-      if (nav.canShare?.({ files: [file] })) {
-        await nav.share({
-          files: [file],
-          title: "Fatty",
-          text: `${title}: my Fatty workout`,
-        });
-      } else {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `hell-blazer-${title || "workout"}.png`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      }
+      await shareImage(blob, "Fatty workout.png", `${title}: my Fatty workout`);
     } catch (e) {
       // A user cancelling the share sheet is not an error.
       if ((e as Error)?.name !== "AbortError") {

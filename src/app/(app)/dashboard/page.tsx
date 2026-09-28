@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ViewTransition } from "react";
 import Link from "next/link";
+import { WeekCardShare } from "@/components/week-card-share";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import { getCurrentWeekSetsPerMuscle } from "@/lib/data/analytics";
 import { getSessionSummaries, hasAnySession } from "@/lib/data/sessions";
@@ -32,7 +33,11 @@ export const dynamic = "force-dynamic";
 /** The furthest back anything here looks: the 52-week heatmap and trend, plus a week. */
 const HISTORY_WEEKS = 53;
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ "week-card"?: string }>;
+}) {
   const today = await getToday();
   const since = format(subWeeks(startOfISOWeek(parseISO(today)), HISTORY_WEEKS), "yyyy-MM-dd");
   const [
@@ -83,6 +88,10 @@ export default async function DashboardPage() {
     });
   const thisWeek = inWeek(weekStart);
   const lastWeek = inWeek(prevWeekStart, weekStart);
+  // The week to share: this one once it has a workout, else the last.
+  const shareWeek = format(thisWeek.length > 0 ? weekStart : prevWeekStart, "yyyy-MM-dd");
+  const weekCard = (await searchParams)["week-card"];
+  const openWeekCard = weekCard && /^\d{4}-\d{2}-\d{2}$/.test(weekCard) ? weekCard : null;
 
   const sum = (rows: typeof summaries, key: "total_volume" | "working_sets") =>
     rows.reduce((n, s) => n + Number(s[key] ?? 0), 0);
@@ -198,8 +207,9 @@ export default async function DashboardPage() {
       <section>
         <SectionLabel
           action={
-            <span className="text-[13px] text-muted">
-              Since {format(weekStart, "EEE d MMM")}
+            <span className="flex items-center gap-3">
+              <span className="text-[13px] text-muted">Since {format(weekStart, "EEE d MMM")}</span>
+              <WeekCardShare week={shareWeek} open={openWeekCard} />
             </span>
           }
         >

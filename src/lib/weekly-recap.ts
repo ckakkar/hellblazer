@@ -38,6 +38,13 @@ export type RecapFacts = {
   weakest: { label: string; sets: number } | null;
 };
 
+/** The recap's facts, and what the weekly share card adds: the week's volume and each new best's weight. */
+export type WeekFacts = RecapFacts & {
+  volumeKg: number;
+  /** Heaviest first. */
+  bests: { name: string; topKg: number }[];
+};
+
 function list(names: string[]): string {
   if (names.length <= 2) return names.join(" and ");
   return `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`;
@@ -65,12 +72,12 @@ export function recapMessage(f: RecapFacts): { title: string; body: string } {
 }
 
 /** The week's facts for one lifter, `weekStart` a Monday (yyyy-MM-dd). */
-export async function gatherRecap(svc: Svc, userId: string, weekStart: string): Promise<RecapFacts> {
+export async function gatherRecap(svc: Svc, userId: string, weekStart: string): Promise<WeekFacts> {
   const weekEnd = format(addDays(parseISO(weekStart), 7), "yyyy-MM-dd");
   const [summaries, program, thisWeek, muscles] = await Promise.all([
     svc
       .from("v_session_summary")
-      .select("working_sets")
+      .select("working_sets, total_volume")
       .eq("user_id", userId)
       .gte("session_date", weekStart)
       .lt("session_date", weekEnd)
@@ -104,7 +111,7 @@ export async function gatherRecap(svc: Svc, userId: string, weekStart: string): 
     const seen = bestThisWeek.get(row.exercise_id);
     if (!seen || top > seen.top) bestThisWeek.set(row.exercise_id, { name: row.exercise_name ?? "a lift", top });
   }
-  const records: string[] = [];
+  const bests: WeekFacts["bests"] = [];
   if (bestThisWeek.size > 0) {
     const { data: before, error } = await svc
       .from("v_exercise_progression")
@@ -120,7 +127,7 @@ export async function gatherRecap(svc: Svc, userId: string, weekStart: string): 
     }
     for (const [id, best] of bestThisWeek) {
       const prior = previous.get(id);
-      if (prior != null && best.top > prior) records.push(best.name);
+      if (prior != null && best.top > prior) bests.push({ name: best.name, topKg: best.top });
     }
   }
 
@@ -134,7 +141,9 @@ export async function gatherRecap(svc: Svc, userId: string, weekStart: string): 
     sessions: rows.length,
     planned: program.data?.program_day?.length || null,
     sets: rows.reduce((n, s) => n + Number(s.working_sets ?? 0), 0),
-    records,
+    records: bests.map((b) => b.name),
     weakest: weakest ?? null,
+    volumeKg: rows.reduce((n, s) => n + Number(s.total_volume ?? 0), 0),
+    bests: [...bests].sort((a, b) => b.topKg - a.topKg),
   };
 }
