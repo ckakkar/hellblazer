@@ -5,6 +5,10 @@ import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, Pencil } from "lucide-react";
 import { getSessionDetail } from "@/lib/data/sessions";
+import { getProfile } from "@/lib/data/profile";
+import { profileAge } from "@/lib/age";
+import { estimatedMaxHr, type TimedSet } from "@/lib/heart-insights";
+import { HeartCard } from "@/components/workout/heart-card";
 import { getUnit } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -25,8 +29,31 @@ export default async function SessionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, unit] = await Promise.all([getSessionDetail(id), getUnit()]);
+  const [session, unit, profile] = await Promise.all([getSessionDetail(id), getUnit(), getProfile()]);
   if (!session) notFound();
+
+  // The heart-rate read (iPhone app only): the workout's span and when each
+  // set was logged. A session left open for hours wasn't that long a
+  // workout, so its logged duration says when it ended.
+  const start = Date.parse(session.created_at);
+  const finished = session.finished_at ? Date.parse(session.finished_at) : null;
+  const end =
+    finished == null
+      ? null
+      : finished - start <= 4 * 3_600_000
+        ? finished
+        : session.duration_min
+          ? start + session.duration_min * 60_000
+          : null;
+  const timedSets: TimedSet[] = session.session_exercise.flatMap((se) =>
+    se.set.map((s) => ({
+      at: Date.parse(s.created_at),
+      key: se.id,
+      exercise: se.exercise?.name ?? "Exercise",
+      warmup: s.is_warmup,
+    })),
+  );
+  const maxHr = estimatedMaxHr(session.date ? profileAge(profile, session.date) : null);
 
   let totalVolume = 0;
   let totalSets = 0;
@@ -99,6 +126,10 @@ export default async function SessionDetailPage({
           </div>
         ))}
       </div>
+
+      {end != null && end > start && (
+        <HeartCard sessionId={session.id} start={start} end={end} sets={timedSets} maxHr={maxHr} />
+      )}
 
       {session.notes && (
         <Card className="mb-4 p-4 text-[15px] leading-[1.5] text-muted">{session.notes}</Card>

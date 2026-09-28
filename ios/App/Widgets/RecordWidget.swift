@@ -8,7 +8,7 @@ struct RecordWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "Record", provider: RecordProvider()) { entry in
             RecordView(entry: entry)
-                .containerBackground(for: .widget) { Brand.background }
+                .containerBackground(for: .widget) { Brand.widgetBackground }
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/progress"))
         }
         .configurationDisplayName("Last PR")
@@ -94,31 +94,28 @@ struct RecordView: View {
     }
 
     private func small(_ record: WidgetSnapshot.Record) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Label("Removal", systemImage: "bolt.fill")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Brand.flame)
+        VStack(alignment: .leading, spacing: 0) {
+            WidgetHeader(title: "Last PR", symbol: "bolt.fill")
             Text(record.name)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Brand.bone)
                 .lineLimit(2)
-                .padding(.top, 4)
+                .padding(.top, 6)
             Spacer(minLength: 4)
             Text(setText(record))
-                .font(.system(size: 24, weight: .black).width(.expanded))
-                .foregroundStyle(Brand.bone)
+                .font(WidgetStyle.figure(24))
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                .minimumScaleFactor(0.6)
             Text("Est. max \(number(record.estimatedMax)) \(entry.unit)")
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Brand.muted)
+                .font(.caption)
+                .foregroundStyle(.secondary)
                 .monospacedDigit()
                 .lineLimit(1)
             Text(ago(record))
-                .font(.caption2)
-                .foregroundStyle(Brand.muted)
+                .font(.caption)
+                .foregroundStyle(.tertiary)
                 .lineLimit(1)
+                .padding(.top, 1)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -142,16 +139,7 @@ struct RecordView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         default:
-            VStack(alignment: .leading, spacing: 6) {
-                Label("Removal", systemImage: "bolt")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Brand.muted)
-                Spacer(minLength: 0)
-                Text(message)
-                    .font(.caption)
-                    .foregroundStyle(Brand.muted)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            WidgetEmpty(title: "Last PR", symbol: "bolt.fill", message: message)
         }
     }
 

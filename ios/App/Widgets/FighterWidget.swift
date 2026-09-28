@@ -2,9 +2,10 @@ import SwiftUI
 import WidgetKit
 
 /// Your rank fighter on the Home Screen: the portrait, the rank, the ladder
-/// and who's next, as the rank card on Home has them. The app keeps the
-/// portrait (FighterArt) and the rank in the snapshot; the rank only moves
-/// when the judge rules, so it redraws when the app says.
+/// and who's next, as the rank card on Home has them. Art-led, like the
+/// Music and Photos widgets: dark in every look. In Clear and Tinted it
+/// shows the see-through portrait (ClearArt), and fades with transparency
+/// rather than a dark overlay, which those looks would turn white.
 struct FighterWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: FighterArt.widgetKind, provider: FighterProvider()) { entry in
@@ -25,6 +26,8 @@ struct FighterEntry: TimelineEntry {
     let known: Bool
     let fighter: WidgetSnapshot.Fighter?
     let portrait: UIImage?
+    /// The see-through copy, for the Clear and Tinted looks.
+    let clearPortrait: UIImage?
 }
 
 struct FighterProvider: TimelineProvider {
@@ -34,7 +37,7 @@ struct FighterProvider: TimelineProvider {
     )
 
     func placeholder(in context: Context) -> FighterEntry {
-        FighterEntry(date: Date(), known: true, fighter: Self.sample, portrait: nil)
+        FighterEntry(date: Date(), known: true, fighter: Self.sample, portrait: nil, clearPortrait: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (FighterEntry) -> Void) {
@@ -53,25 +56,30 @@ struct FighterProvider: TimelineProvider {
             date: Date(),
             known: snapshot != nil,
             fighter: fighter,
-            portrait: fighter.flatMap { FighterArt.load(for: $0.key) }
+            portrait: fighter.flatMap { FighterArt.load(for: $0.key) },
+            clearPortrait: fighter.flatMap { FighterArt.loadClear(for: $0.key) }
         )
     }
 }
 
 struct FighterView: View {
     @Environment(\.widgetFamily) private var family
+    @Environment(\.widgetRenderingMode) private var renderingMode
     let entry: FighterEntry
 
     var body: some View {
-        if let fighter = entry.fighter {
-            switch family {
-            case .accessoryRectangular: rectangular(fighter)
-            case .systemMedium: medium(fighter)
-            default: small(fighter)
+        Group {
+            if let fighter = entry.fighter {
+                switch family {
+                case .accessoryRectangular: rectangular(fighter)
+                case .systemMedium: medium(fighter)
+                default: small(fighter)
+                }
+            } else {
+                unranked
             }
-        } else {
-            unranked
         }
+        .environment(\.colorScheme, .dark)
     }
 
     // MARK: Home Screen
@@ -79,24 +87,24 @@ struct FighterView: View {
     private func small(_ fighter: WidgetSnapshot.Fighter) -> some View {
         ZStack(alignment: .bottomLeading) {
             portrait
-            LinearGradient(
-                colors: [.clear, Brand.background.opacity(0.85), Brand.background],
-                startPoint: UnitPoint(x: 0.5, y: 0.35),
-                endPoint: .bottom
-            )
-            VStack(alignment: .leading, spacing: 3) {
+                .mask(LinearGradient(
+                    stops: [.init(color: .black, location: 0.2), .init(color: .clear, location: 0.78)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                ))
+            VStack(alignment: .leading, spacing: 1) {
                 rankLine(fighter)
                 Text(firstName(fighter))
-                    .font(.system(size: 24, weight: .black).width(.expanded))
-                    .foregroundStyle(Brand.bone)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .minimumScaleFactor(0.7)
                 Text(fighter.epithet)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Brand.muted)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Ladder(rank: fighter.rank, of: fighter.of)
-                    .padding(.top, 4)
+                    .padding(.top, 6)
             }
             .padding(14)
         }
@@ -104,31 +112,31 @@ struct FighterView: View {
 
     private func medium(_ fighter: WidgetSnapshot.Fighter) -> some View {
         HStack(spacing: 0) {
-            ZStack(alignment: .trailing) {
-                portrait
-                LinearGradient(colors: [.clear, Brand.background], startPoint: UnitPoint(x: 0.55, y: 0.5), endPoint: .trailing)
-            }
-            .frame(width: 140)
-            .clipped()
-
-            VStack(alignment: .leading, spacing: 4) {
+            portrait
+                .frame(width: 150)
+                .mask(LinearGradient(
+                    stops: [.init(color: .black, location: 0.55), .init(color: .clear, location: 1)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+            VStack(alignment: .leading, spacing: 2) {
                 rankLine(fighter)
                 Text(fighter.name)
-                    .font(.system(size: 22, weight: .black).width(.expanded))
-                    .foregroundStyle(Brand.bone)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.primary)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.6)
+                    .minimumScaleFactor(0.7)
                 Text(fighter.epithet)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Brand.muted)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
                 Spacer(minLength: 6)
                 Ladder(rank: fighter.rank, of: fighter.of)
-                Text(fighter.next.map { "Next, \($0)" } ?? "Top of the ladder")
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Brand.muted)
+                Text(fighter.next.map { "Next: \($0)" } ?? "Top of the ladder")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
-                    .padding(.top, 2)
+                    .padding(.top, 4)
             }
             .padding(.vertical, 16)
             .padding(.trailing, 16)
@@ -137,28 +145,36 @@ struct FighterView: View {
         }
     }
 
+    /// The portrait for this look: full colour, or the see-through copy in
+    /// Clear and Tinted, where a solid image would come out a white block.
     @ViewBuilder
     private var portrait: some View {
-        if let image = entry.portrait {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        let image = renderingMode == .fullColor ? entry.portrait : entry.clearPortrait
+        if let image {
+            // Laid over an empty frame, so a tall portrait can't make the
+            // widget taller than it is and push the text off the bottom.
+            Color.clear
+                .overlay(alignment: .top) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                }
                 .clipped()
         } else {
             // The portrait's still on its way from the site.
             Image(systemName: "figure.martial.arts")
-                .font(.system(size: 54, weight: .light))
-                .foregroundStyle(Brand.muted.opacity(0.35))
+                .font(.system(size: 56, weight: .light))
+                .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private func rankLine(_ fighter: WidgetSnapshot.Fighter) -> some View {
         Text("Rank \(fighter.rank) of \(fighter.of)")
-            .font(.caption2.weight(.bold))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(Brand.flame)
             .monospacedDigit()
+            .widgetAccentable()
     }
 
     private func firstName(_ fighter: WidgetSnapshot.Fighter) -> String {
@@ -175,7 +191,7 @@ struct FighterView: View {
             Text(fighter.name)
                 .font(.headline)
                 .lineLimit(1)
-            Text(fighter.next.map { "Next, \($0)" } ?? "Top of the ladder")
+            Text(fighter.next.map { "Next: \($0)" } ?? "Top of the ladder")
                 .font(.caption2)
                 .lineLimit(1)
         }
@@ -186,7 +202,7 @@ struct FighterView: View {
 
     @ViewBuilder
     private var unranked: some View {
-        let message = entry.known ? "Log a workout, then ask the judge." : "Open Fatty to meet your fighter."
+        let message = entry.known ? "Log a workout, then ask the judge for your rank." : "Open Fatty to meet your fighter."
         if family == .accessoryRectangular {
             VStack(alignment: .leading, spacing: 1) {
                 Text("Your fighter")
@@ -200,23 +216,18 @@ struct FighterView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         } else {
-            VStack(alignment: .leading, spacing: 4) {
-                Image(systemName: "figure.martial.arts")
-                    .font(.title2)
-                    .foregroundStyle(Brand.muted)
+            VStack(alignment: .leading, spacing: 2) {
+                WidgetHeader(title: "Your Fighter", symbol: "figure.martial.arts")
                 Spacer(minLength: 0)
                 Text("No rank yet")
-                    .font(.system(size: 20, weight: .black).width(.expanded))
-                    .foregroundStyle(Brand.bone)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .font(.title3.weight(.bold))
                 Text(message)
                     .font(.caption)
-                    .foregroundStyle(Brand.muted)
+                    .foregroundStyle(.secondary)
                 Ladder(rank: 0, of: 10)
-                    .padding(.top, 4)
+                    .padding(.top, 6)
             }
-            .padding(14)
+            .padding(16)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
@@ -231,8 +242,9 @@ private struct Ladder: View {
         HStack(spacing: 3) {
             ForEach(1...max(1, of), id: \.self) { step in
                 Capsule()
-                    .fill(step <= rank ? Brand.flame : Brand.bone.opacity(0.16))
+                    .fill(step <= rank ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.primary.opacity(0.2)))
                     .frame(height: 4)
+                    .widgetAccentable(step <= rank)
             }
         }
         .accessibilityElement()

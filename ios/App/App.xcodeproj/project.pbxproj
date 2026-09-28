@@ -35,6 +35,8 @@
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		508F80FC23A458CA74EEA40A /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E764D7B64DC0B30F61736C2 /* Brand.swift */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
+		54EBAB639FDD4370B0BD2BCE /* ClearArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1DD8710C4F26B73C7EC52E /* ClearArt.swift */; };
+		573B5F5AE154DC557566FCD8 /* HeartInsights.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211FBAA74C3E3F239B18566A /* HeartInsights.swift */; };
 		578730E6B66FDE7C7FA58B60 /* LiftTrendWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70DEEB8D3582BC1090E5774D /* LiftTrendWidget.swift */; };
 		5A4DC9A16ACB2321DD05AA40 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8D31F000A346ED243C4DACB /* WatchBridge.swift */; };
 		5ADEC12CAC7A48545224C298 /* StreakWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E0F374E68F456EA67475B44 /* StreakWidget.swift */; };
@@ -47,6 +49,7 @@
 		7314CA5A426DF562348DB92B /* SiriEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F973C12CB48A69B40CC186 /* SiriEntities.swift */; };
 		73765617BFF05CE67DC09241 /* FighterWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC7E15F40484698283C2C7A6 /* FighterWidget.swift */; };
 		76F685228045F02BDC8E6436 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 3E9D4B653A88F850CB8276CD /* PrivacyInfo.xcprivacy */; };
+		7DD36BDF866FA1F71855DF54 /* ClearArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC1DD8710C4F26B73C7EC52E /* ClearArt.swift */; };
 		82498FE415AD2AFEBA1C0F83 /* Brand.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E764D7B64DC0B30F61736C2 /* Brand.swift */; };
 		859195CD7D7DC222FABA079B /* SetLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F894381C814C1CD240E790B /* SetLogging.swift */; };
 		85F02C9358DA7EB2C458E808 /* SpotlightIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A87CFC9D5EEE63BB1297D76 /* SpotlightIndex.swift */; };
@@ -78,6 +81,7 @@
 		E91CADD37762B34D12F5F84C /* HellBlazerNativePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */; };
 		ED6AB91710DC525C89AEBA93 /* HellBlazerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */; };
 		FB4649089CC2CD0BAF084AA5 /* NextBoutWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */; };
+		FCD6928A83CF5609C82B9548 /* WidgetStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95003B2DE0FE9BDEEF78B735 /* WidgetStyle.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -152,6 +156,7 @@
 		1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerWidgets.swift; sourceTree = "<group>"; };
 		1ED6052E03D446458CB5EF95 /* App.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 		1ED73D6C20F18E234E75ACDF /* WatchWidgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = WatchWidgets.entitlements; sourceTree = "<group>"; };
+		211FBAA74C3E3F239B18566A /* HeartInsights.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HeartInsights.swift; sourceTree = "<group>"; };
 		2FAD9762203C412B000D30F8 /* config.xml */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = config.xml; sourceTree = "<group>"; };
 		346DF9A657CA2BB7C1B6814B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
 		3994D398D993B0C2B151C389 /* FattyWatchApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FattyWatchApp.swift; sourceTree = "<group>"; };
@@ -183,6 +188,7 @@
 		7B020AC17F56F31B373E1AF2 /* Widgets.entitlements */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.entitlements; path = Widgets.entitlements; sourceTree = "<group>"; };
 		890B8AFF1B220147D99B8051 /* Info.plist */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		938CA7BBAA4BFB5CA79736B4 /* WatchAPI.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchAPI.swift; sourceTree = "<group>"; };
+		95003B2DE0FE9BDEEF78B735 /* WidgetStyle.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetStyle.swift; sourceTree = "<group>"; };
 		9582B6822FE993A50072D4E8 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		96FAB8D3D73D996DDE5AF894 /* WatchModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WatchModel.swift; sourceTree = "<group>"; };
@@ -190,6 +196,7 @@
 		9E764D7B64DC0B30F61736C2 /* Brand.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = Brand.swift; sourceTree = "<group>"; };
 		A0698C652BA0F0FF3F70E4BD /* WidgetSnapshot.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WidgetSnapshot.swift; sourceTree = "<group>"; };
 		A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AppShortcuts.swift; sourceTree = "<group>"; };
+		AC1DD8710C4F26B73C7EC52E /* ClearArt.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClearArt.swift; sourceTree = "<group>"; };
 		B0BBD971330E9A45A9FDAB40 /* MuscleSetsWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MuscleSetsWidget.swift; sourceTree = "<group>"; };
 		B1F973C12CB48A69B40CC186 /* SiriEntities.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SiriEntities.swift; sourceTree = "<group>"; };
 		B69195054694AB9888856E77 /* FighterArt.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FighterArt.swift; sourceTree = "<group>"; };
@@ -315,6 +322,7 @@
 				BF540DD31053926B1C63F57A /* HealthExtras.swift */,
 				044098D9A2B63DAC78AA02EF /* VoiceSetLogger.swift */,
 				E79B3CF462C1EBB71F248251 /* SetReader.swift */,
+				211FBAA74C3E3F239B18566A /* HeartInsights.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -373,6 +381,7 @@
 				DC7E15F40484698283C2C7A6 /* FighterWidget.swift */,
 				4E0F374E68F456EA67475B44 /* StreakWidget.swift */,
 				66AA69EF842D968EB03BCE5A /* RecordWidget.swift */,
+				95003B2DE0FE9BDEEF78B735 /* WidgetStyle.swift */,
 			);
 			name = Widgets;
 			path = Widgets;
@@ -399,6 +408,7 @@
 				3F894381C814C1CD240E790B /* SetLogging.swift */,
 				167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */,
 				B69195054694AB9888856E77 /* FighterArt.swift */,
+				AC1DD8710C4F26B73C7EC52E /* ClearArt.swift */,
 			);
 			name = Shared;
 			path = Shared;
@@ -590,6 +600,8 @@
 				5ADEC12CAC7A48545224C298 /* StreakWidget.swift in Sources */,
 				A9498E4C82A839FB8B5811F5 /* RecordWidget.swift in Sources */,
 				6FECAECDF4C41DC78A8F8C3E /* FighterArt.swift in Sources */,
+				FCD6928A83CF5609C82B9548 /* WidgetStyle.swift in Sources */,
+				7DD36BDF866FA1F71855DF54 /* ClearArt.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -635,6 +647,8 @@
 				9E9EEA9DA39347856AEADF83 /* RecoveryCache.swift in Sources */,
 				20B23F392D4AACB3B52C2B56 /* SetReader.swift in Sources */,
 				19571656368E975F2D870F93 /* FighterArt.swift in Sources */,
+				573B5F5AE154DC557566FCD8 /* HeartInsights.swift in Sources */,
+				54EBAB639FDD4370B0BD2BCE /* ClearArt.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -707,7 +721,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -734,7 +748,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -761,7 +775,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -787,7 +801,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -922,7 +936,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-weak_framework",
@@ -950,7 +964,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-weak_framework",
@@ -978,7 +992,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1004,7 +1018,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;

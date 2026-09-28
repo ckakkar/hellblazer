@@ -9,7 +9,7 @@ struct NextBoutWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "NextBout", provider: NextBoutProvider()) { entry in
             NextBoutView(entry: entry)
-                .containerBackground(for: .widget) { Brand.background }
+                .containerBackground(for: .widget) { Brand.widgetBackground }
                 // Tapping it starts the next bout: the Log screen.
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/log"))
         }
@@ -85,6 +85,11 @@ private struct Week {
         guard let planned, planned > 0 else { return sessions > 0 ? 1 : 0 }
         return min(1, Double(sessions) / Double(planned))
     }
+
+    /// "3 of 5 this week", "3 this week".
+    var caption: String {
+        planned == nil ? "\(sessions) this week" : "\(sessions) of \(planned!) this week"
+    }
 }
 
 struct NextBoutView: View {
@@ -110,7 +115,7 @@ struct NextBoutView: View {
                     Text(snapshot.nextBout.map { "Next: \($0)" } ?? "No program")
                         .font(.headline)
                         .lineLimit(1)
-                    Text("\(week.sessionsText) sessions · \(week.sets) sets")
+                    Text("\(week.sessionsText) sessions, \(week.sets) sets")
                         .font(.caption)
                         .lineLimit(1)
                 }
@@ -118,19 +123,14 @@ struct NextBoutView: View {
             case .accessoryInline:
                 Label(snapshot.nextBout.map { "Next: \($0)" } ?? "\(week.sessionsText) sessions this week", systemImage: "flame")
             case .systemMedium:
-                HStack(spacing: 16) {
+                HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 0) {
                         NextBoutBlock(snapshot: snapshot)
                         Spacer(minLength: 8)
                         // Starts that day in the app, straight into the logger.
                         if let start = snapshot.startURL {
                             Link(destination: start) {
-                                Label("Start", systemImage: "play.fill")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Brand.bone)
-                                    .padding(.horizontal, 14)
-                                    .padding(.vertical, 7)
-                                    .background(Brand.flame, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                WidgetButtonLabel(title: "Start", symbol: "play.fill")
                             }
                         }
                     }
@@ -140,7 +140,7 @@ struct NextBoutView: View {
             default:
                 VStack(alignment: .leading, spacing: 0) {
                     NextBoutBlock(snapshot: snapshot)
-                    Spacer(minLength: 8)
+                    Spacer(minLength: 6)
                     WeekLine(week: week)
                 }
             }
@@ -154,42 +154,50 @@ private struct NextBoutBlock: View {
     let snapshot: WidgetSnapshot
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Label("Next bout", systemImage: "flame.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Brand.flame)
+        VStack(alignment: .leading, spacing: 3) {
+            WidgetHeader(title: "Next Bout", symbol: "flame.fill")
             Text(snapshot.nextBout ?? "Pick a program")
-                .font(.system(.title3, design: .rounded).weight(.bold))
-                .foregroundStyle(Brand.bone)
+                .font(.headline)
                 .lineLimit(2)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.85)
+                .padding(.top, 2)
             if let program = snapshot.programName {
                 Text(program)
                     .font(.caption)
-                    .foregroundStyle(Brand.muted)
+                    .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
         }
     }
 }
 
-/// Small widget footer: sessions against the plan, as a bar.
+/// Small widget footer: the week so far, a segment per planned workout.
 private struct WeekLine: View {
     let week: Week
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(week.sessionsText)
-                    .font(.system(.headline, design: .rounded))
+                Text("\(week.sessions)")
+                    .font(WidgetStyle.figure(22))
                     .monospacedDigit()
-                    .foregroundStyle(Brand.bone)
-                Text("this week")
+                Text(week.planned.map { "of \($0) this week" } ?? "this week")
                     .font(.caption)
-                    .foregroundStyle(Brand.muted)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
-            ProgressView(value: week.fraction)
-                .tint(Brand.bone)
+            if let planned = week.planned, planned > 0, planned <= 7 {
+                HStack(spacing: 3) {
+                    ForEach(0..<planned, id: \.self) { index in
+                        Capsule()
+                            .fill(index < week.sessions ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(WidgetStyle.track))
+                            .frame(height: 5)
+                            .widgetAccentable(index < week.sessions)
+                    }
+                }
+            } else {
+                CapsuleBar(value: week.fraction, height: 5)
+            }
         }
     }
 }
@@ -201,23 +209,23 @@ private struct WeekRing: View {
     var body: some View {
         VStack(spacing: 6) {
             ZStack {
-                Circle()
-                    .stroke(Brand.surface, lineWidth: 8)
-                Circle()
-                    .trim(from: 0, to: week.fraction)
-                    .stroke(Brand.bone, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Text(week.sessionsText)
-                    .font(.system(.title3, design: .rounded).weight(.bold))
-                    .monospacedDigit()
-                    .foregroundStyle(Brand.bone)
+                ProgressRing(value: week.fraction, lineWidth: 9)
+                VStack(spacing: -2) {
+                    Text(week.sessionsText)
+                        .font(WidgetStyle.figure(20))
+                        .monospacedDigit()
+                    Text("this week")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
             }
-            .frame(width: 72, height: 72)
+            .frame(width: 88, height: 88)
             Text("\(week.sets) sets")
                 .font(.caption)
                 .monospacedDigit()
-                .foregroundStyle(Brand.muted)
+                .foregroundStyle(.secondary)
         }
+        .frame(maxHeight: .infinity)
     }
 }
 
@@ -230,15 +238,18 @@ private struct EmptyWidget: View {
             Image(systemName: "flame")
         case .accessoryInline:
             Label("Open Fatty", systemImage: "flame")
-        default:
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .foregroundStyle(Brand.flame)
-                Text("Open Fatty to see your next bout here.")
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 2) {
+                Label("Fatty", systemImage: "flame")
+                    .font(.caption2.weight(.semibold))
+                    .widgetAccentable()
+                Text("Open Fatty to see your next bout")
                     .font(.caption)
-                    .foregroundStyle(Brand.muted)
+                    .lineLimit(2)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        default:
+            WidgetEmpty(title: "Next Bout", symbol: "flame.fill", message: "Open Fatty to see your next bout here.")
         }
     }
 }

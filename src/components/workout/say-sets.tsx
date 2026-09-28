@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Loader2, Mic, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { canReadSets, nativePlugin } from "@/lib/native-plugins";
+import { hasOnDeviceModel, nativePlugin } from "@/lib/native-plugins";
 import {
   groupByExercise,
   parseHeard,
@@ -67,7 +67,7 @@ export function SaySets({
 
   useEffect(() => {
     let live = true;
-    void canReadSets().then((ok) => {
+    void hasOnDeviceModel().then((ok) => {
       if (live) setReady(ok);
     });
     return () => {

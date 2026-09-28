@@ -62,9 +62,11 @@ export default function PrivacyPage() {
           In the iPhone app, if you turn on Apple Health in Settings, Fatty saves your finished
           workouts, how hard they were (from the RPE you log), and the bodyweight you log to Health.
           If you connect Recovery, Fatty reads your sleep, heart rate variability and resting heart
-          rate, and the workouts your Apple Watch recorded, to show how recovered you are. Those
-          readings are used on your iPhone only: they are never sent to Fatty&apos;s servers or
-          anyone else. Anything involving Health is not used for advertising and not shared with
+          rate, and the workouts your Apple Watch recorded, to show how recovered you are. If you
+          connect heart rate, Fatty reads your Apple Watch&apos;s heart rate during a workout to show
+          how hard it was and how you recovered between sets, and Apple&apos;s on-device model writes
+          a short summary of it. Those readings are used on your iPhone only: they are never sent
+          to Fatty&apos;s servers or anyone else. Anything involving Health is not used for advertising and not shared with
           anyone. You can switch it off in Fatty, or in the Health app under Sharing → Apps → Fatty.
         </p>
       </section>

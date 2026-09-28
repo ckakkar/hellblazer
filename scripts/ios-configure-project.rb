@@ -43,7 +43,7 @@ app_group = group(project, "App")
 %w[
   HellBlazerViewController.swift HellBlazerNativePlugin.swift AppShortcuts.swift
   WatchBridge.swift RestNotificationDelegate.swift SpotlightIndex.swift WidgetRefresher.swift
-  HealthExtras.swift VoiceSetLogger.swift SetReader.swift
+  HealthExtras.swift VoiceSetLogger.swift SetReader.swift HeartInsights.swift
 ].each do |name|
   compile(app, file(app_group, name))
 end
@@ -71,7 +71,7 @@ widgets_group = group(project, "Widgets")
 %w[
   HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift StartWorkoutControl.swift
   MuscleSetsWidget.swift LiftTrendWidget.swift RecoveryWidget.swift FighterWidget.swift StreakWidget.swift
-  RecordWidget.swift
+  RecordWidget.swift WidgetStyle.swift
 ].each do |name|
   compile(widgets, file(widgets_group, name))
 end
@@ -104,7 +104,7 @@ end
 shared_group = group(project, "Shared")
 %w[
   WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift SiriEntities.swift
-  SetLogging.swift RecoveryCache.swift FighterArt.swift
+  SetLogging.swift RecoveryCache.swift FighterArt.swift ClearArt.swift
 ].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)

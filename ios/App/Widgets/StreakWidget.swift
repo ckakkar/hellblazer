@@ -9,7 +9,7 @@ struct StreakWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "Streak", provider: StreakProvider()) { entry in
             StreakView(entry: entry)
-                .containerBackground(for: .widget) { Brand.background }
+                .containerBackground(for: .widget) { Brand.widgetBackground }
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/history"))
         }
         .configurationDisplayName("Streak")
@@ -102,50 +102,46 @@ struct StreakView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             case .systemMedium:
-                HStack(spacing: 14) {
+                HStack(alignment: .top, spacing: 12) {
                     count(weeks, snapshot)
                     Spacer(minLength: 0)
                     TrainingCalendar(days: Set(snapshot.trainingDays ?? []), today: entry.date)
+                        .frame(maxHeight: .infinity)
                 }
             default:
                 count(weeks, snapshot)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
         } else {
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: "flame")
-                    .font(.title3)
-                    .foregroundStyle(Brand.muted)
-                Spacer(minLength: 0)
-                Text("Open Fatty to start your streak.")
-                    .font(.caption)
-                    .foregroundStyle(Brand.muted)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            WidgetEmpty(title: "Streak", symbol: "flame.fill", message: "Open Fatty to start your streak.")
         }
     }
 
     private func count(_ weeks: Int, _ snapshot: WidgetSnapshot) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Image(systemName: weeks > 0 ? "flame.fill" : "flame")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(weeks > 0 ? Brand.flame : Brand.muted)
+            WidgetHeader(title: "Streak", symbol: "flame.fill")
             Spacer(minLength: 4)
-            Text("\(weeks)")
-                .font(.system(size: 46, weight: .black).width(.expanded))
-                .foregroundStyle(Brand.bone)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(weeks)")
+                    .font(WidgetStyle.figure(44))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text(weeks == 1 ? "week" : "weeks")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+            }
+            Text(weeks == 0 ? "Hit your plan to start one" : "in a row on plan")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer(minLength: 6)
+            Text(thisWeek(snapshot))
+                .font(.caption.weight(.medium))
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.5)
-            Text(weeks == 1 ? "week in a row" : "weeks in a row")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Brand.bone)
-                .lineLimit(1)
-            Text(thisWeek(snapshot))
-                .font(.caption2)
-                .foregroundStyle(Brand.muted)
-                .lineLimit(1)
-                .padding(.top, 2)
+            CapsuleBar(value: weekFraction(snapshot), height: 5)
+                .padding(.top, 4)
         }
         .frame(maxHeight: .infinity, alignment: .topLeading)
     }
@@ -154,55 +150,69 @@ struct StreakView: View {
         weeks == 0 ? "No streak yet" : "\(weeks) \(weeks == 1 ? "week" : "weeks") in a row"
     }
 
+    private func done(_ snapshot: WidgetSnapshot) -> Int {
+        snapshot.isFromPastWeek(now: entry.date) ? 0 : snapshot.sessionsThisWeek
+    }
+
+    private func need(_ snapshot: WidgetSnapshot) -> Int? {
+        snapshot.streak?.planned ?? snapshot.sessionsPlanned
+    }
+
     /// "3 of 4 this week", zero once the snapshot's week is over.
     private func thisWeek(_ snapshot: WidgetSnapshot) -> String {
-        let done = snapshot.isFromPastWeek(now: entry.date) ? 0 : snapshot.sessionsThisWeek
-        let need = snapshot.streak?.planned ?? snapshot.sessionsPlanned
-        if let need { return "\(done) of \(need) this week" }
+        let done = done(snapshot)
+        if let need = need(snapshot) { return "\(done) of \(need) this week" }
         return done == 1 ? "1 workout this week" : "\(done) workouts this week"
+    }
+
+    private func weekFraction(_ snapshot: WidgetSnapshot) -> Double {
+        let goal = Double(max(1, need(snapshot) ?? 1))
+        return min(1, Double(done(snapshot)) / goal)
     }
 }
 
 /// Twelve weeks, Monday at the top, this week on the right: a filled square
-/// for each day trained, today ringed.
+/// for each day trained, today ringed. See-through where empty, so it keeps
+/// its shape in the Clear and Tinted looks.
 private struct TrainingCalendar: View {
     let days: Set<String>
     let today: Date
 
     private static let weeks = 12
-    private let cell: CGFloat = 10
-    private let gap: CGFloat = 3
 
     var body: some View {
         let calendar = Calendar(identifier: .iso8601)
         let monday = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
         let todayKey = RecoveryCache.dayKey(today)
-        HStack(spacing: gap) {
-            ForEach(0..<Self.weeks, id: \.self) { column in
-                VStack(spacing: gap) {
-                    ForEach(0..<7, id: \.self) { row in
-                        let offset = (column - (Self.weeks - 1)) * 7 + row
-                        let day = calendar.date(byAdding: .day, value: offset, to: monday) ?? monday
-                        let key = RecoveryCache.dayKey(day)
-                        RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                            .fill(shade(key: key, day: day))
-                            .overlay {
-                                if key == todayKey {
-                                    RoundedRectangle(cornerRadius: 2.5, style: .continuous)
-                                        .strokeBorder(Brand.bone, lineWidth: 1)
+        GeometryReader { geo in
+            let gap: CGFloat = 3
+            let cell = min((geo.size.width - gap * CGFloat(Self.weeks - 1)) / CGFloat(Self.weeks), (geo.size.height - gap * 6) / 7)
+            HStack(spacing: gap) {
+                ForEach(0..<Self.weeks, id: \.self) { column in
+                    VStack(spacing: gap) {
+                        ForEach(0..<7, id: \.self) { row in
+                            let offset = (column - (Self.weeks - 1)) * 7 + row
+                            let day = calendar.date(byAdding: .day, value: offset, to: monday) ?? monday
+                            let key = RecoveryCache.dayKey(day)
+                            let trained = days.contains(key)
+                            RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
+                                .fill(trained ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(day > today ? Color.clear : WidgetStyle.track))
+                                .widgetAccentable(trained)
+                                .overlay {
+                                    if key == todayKey {
+                                        RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
+                                            .strokeBorder(Color.primary, lineWidth: 1.2)
+                                    }
                                 }
-                            }
-                            .frame(width: cell, height: cell)
+                                .frame(width: cell, height: cell)
+                        }
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
         }
+        .aspectRatio(CGFloat(Self.weeks) / 7, contentMode: .fit)
         .accessibilityElement()
         .accessibilityLabel("\(days.count) days trained in the last twelve weeks")
-    }
-
-    private func shade(key: String, day: Date) -> Color {
-        if days.contains(key) { return Brand.bone }
-        return day > today ? .clear : Brand.bone.opacity(0.1)
     }
 }

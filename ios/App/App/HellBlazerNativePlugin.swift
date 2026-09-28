@@ -26,6 +26,8 @@ import AppIntents
 /// - Voice logging (VoiceSetLogger): the rest settings it goes by.
 /// - Sets said in your own words (SetReader), read by Apple's on-device
 ///   model, for the logger's "Say it".
+/// - A finished workout's heart rate from the watch (WorkoutHeartRate), and
+///   its summary written by that model (HeartSummary), for the session page.
 @objc(HellBlazerNativePlugin)
 public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "HellBlazerNativePlugin"
@@ -60,6 +62,9 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "setHealthSync", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setReaderStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "readSets", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "workoutHeartRate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestHeartRate", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "heartSummary", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -475,6 +480,61 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
                 call.reject("Apple's on-device model isn't available", "unavailable")
             } catch {
                 call.reject("Couldn't read that", "failed")
+            }
+        }
+    }
+
+    /// A workout's heart rate from Health: the watch's readings every five
+    /// seconds from `start` to `end` (epoch ms), the resting heart rate
+    /// before it, and whether Health's sheet has heart rate still to ask.
+    @objc func workoutHeartRate(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable(),
+              let startMs = call.getDouble("start"),
+              let endMs = call.getDouble("end"),
+              endMs > startMs, endMs - startMs <= 6 * 3_600_000
+        else {
+            call.resolve(["ask": false, "samples": []])
+            return
+        }
+        let start = Date(timeIntervalSince1970: startMs / 1000)
+        let end = Date(timeIntervalSince1970: endMs / 1000)
+        Task {
+            async let ask = WorkoutHeartRate.shouldRequest(self.healthStore)
+            async let samples = WorkoutHeartRate.readings(from: start, to: end, store: self.healthStore)
+            async let resting = WorkoutHeartRate.resting(before: start, store: self.healthStore)
+            var reply: [String: Any] = ["ask": await ask, "samples": await samples]
+            if let resting = await resting { reply["resting"] = resting }
+            call.resolve(reply)
+        }
+    }
+
+    /// Health's sheet for heart rate (and resting heart rate) alone.
+    @objc func requestHeartRate(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.resolve()
+            return
+        }
+        Task {
+            await WorkoutHeartRate.request(self.healthStore)
+            call.resolve()
+        }
+    }
+
+    /// Two sentences from the heart-rate facts the page worked out, written
+    /// by Apple's on-device model. Rejects "unavailable" or "failed".
+    @objc func heartSummary(_ call: CAPPluginCall) {
+        let facts = (call.getString("facts") ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !facts.isEmpty else {
+            call.reject("No facts to write from", "failed")
+            return
+        }
+        Task {
+            do {
+                call.resolve(["text": try await HeartSummary.write(String(facts.prefix(1500)))])
+            } catch HeartSummary.WriteError.unavailable {
+                call.reject("Apple's on-device model isn't available", "unavailable")
+            } catch {
+                call.reject("Couldn't write a summary", "failed")
             }
         }
     }

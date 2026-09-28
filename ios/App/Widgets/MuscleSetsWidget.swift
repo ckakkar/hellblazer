@@ -1,16 +1,17 @@
 import SwiftUI
 import WidgetKit
 
-/// This week's working sets per muscle, the dashboard's main chart: one bar
-/// per muscle over the shaded 10–20 set band where most growth comes from. A
-/// muscle under the band reads dim, one inside it bright; the lifter's weak
-/// points carry the flame. Medium shows the weak points and the most trained
-/// muscles; large shows them all. Resets to zero when the week rolls over.
+/// This week's working sets per muscle, the dashboard's main chart, laid out
+/// like Screen Time's bars: a row per muscle, its bar on a see-through track
+/// with the 10–20 set range marked, and the count. A bar inside the range
+/// takes the tint; the lifter's weak points carry a dot. Medium shows the
+/// weak points and the most trained muscles; large shows them all. Resets to
+/// zero when the week rolls over.
 struct MuscleSetsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "MuscleSets", provider: NextBoutProvider()) { entry in
             MuscleSetsView(entry: entry)
-                .containerBackground(for: .widget) { Brand.background }
+                .containerBackground(for: .widget) { Brand.widgetBackground }
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/dashboard"))
         }
         .configurationDisplayName("Sets per Muscle")
@@ -31,31 +32,33 @@ struct MuscleSetsView: View {
     var body: some View {
         if let snapshot = entry.snapshot, let muscles = snapshot.muscles, !muscles.isEmpty {
             let rows = visibleRows(muscles, stale: snapshot.isFromPastWeek(now: entry.date))
-            let scale = max(Band.high, rows.map(\.sets).max() ?? 0)
-            VStack(alignment: .leading, spacing: family == .systemLarge ? 9 : 5) {
-                HStack(alignment: .firstTextBaseline) {
-                    Label("Sets this week", systemImage: "flame.fill")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(Brand.flame)
-                    Spacer(minLength: 8)
-                    Text("10–20 target")
-                        .font(.caption2)
-                        .foregroundStyle(Brand.muted)
+            let scale = max(Band.high + 4, rows.map(\.sets).max() ?? 0)
+            let total = rows.reduce(0) { $0 + $1.sets }
+            VStack(alignment: .leading, spacing: 0) {
+                WidgetHeader(title: "Sets this week", symbol: "flame.fill", trailing: "Goal 10–20")
+                if family == .systemLarge {
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
+                        Text(number(total))
+                            .font(WidgetStyle.figure(28))
+                            .monospacedDigit()
+                        Text("working sets")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 2)
+                    .padding(.bottom, 6)
                 }
-                ForEach(rows, id: \.key) { row in
-                    MuscleBar(row: row, scale: scale)
+                VStack(spacing: 0) {
+                    ForEach(rows, id: \.key) { row in
+                        MuscleRow(row: row, scale: scale)
+                            .frame(maxHeight: .infinity)
+                    }
                 }
-                if family == .systemLarge { Spacer(minLength: 0) }
-            }
-        } else {
-            VStack(alignment: .leading, spacing: 6) {
-                Image(systemName: "flame.fill")
-                    .foregroundStyle(Brand.flame)
-                Text("Open Fatty to see this week's sets per muscle here.")
-                    .font(.caption)
-                    .foregroundStyle(Brand.muted)
+                .padding(.top, family == .systemLarge ? 0 : 4)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            WidgetEmpty(title: "Sets this week", symbol: "flame.fill", message: "Open Fatty to see this week's sets per muscle here.")
         }
     }
 
@@ -74,7 +77,11 @@ struct MuscleSetsView: View {
     }
 }
 
-private struct MuscleBar: View {
+private func number(_ value: Double) -> String {
+    value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value)
+}
+
+private struct MuscleRow: View {
     let row: WidgetSnapshot.MuscleSets
     let scale: Double
 
@@ -82,39 +89,47 @@ private struct MuscleBar: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 4) {
-                Circle()
-                    .fill(row.weak ? Brand.flame : Color.clear)
-                    .frame(width: 5, height: 5)
+            HStack(spacing: 5) {
                 Text(row.label)
-                    .font(.caption2)
-                    .foregroundStyle(inBand ? Brand.bone : Brand.muted)
+                    .font(.caption)
+                    .foregroundStyle(inBand ? .primary : .secondary)
                     .lineLimit(1)
+                if row.weak {
+                    Circle()
+                        .fill(Brand.flame)
+                        .frame(width: 5, height: 5)
+                        .widgetAccentable()
+                        .accessibilityLabel("Weak point")
+                }
             }
-            .frame(width: 82, alignment: .leading)
+            .frame(width: 88, alignment: .leading)
 
             GeometryReader { geo in
                 let width = geo.size.width
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Brand.surface)
-                    // The 10–20 band.
-                    Rectangle()
-                        .fill(Brand.bone.opacity(0.1))
-                        .frame(width: width * (Band.high - Band.low) / scale)
-                        .offset(x: width * Band.low / scale)
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(inBand ? Brand.bone : Brand.muted.opacity(0.75))
-                        .frame(width: row.sets > 0 ? max(3, width * min(row.sets, scale) / scale) : 0)
+                    Capsule().fill(WidgetStyle.track)
+                    if row.sets > 0 {
+                        Capsule()
+                            .fill(inBand ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.primary.opacity(0.45)))
+                            .frame(width: max(6, width * min(row.sets, scale) / scale))
+                            .widgetAccentable(inBand)
+                    }
+                    // The goal: a tick at 10 sets and one at 20.
+                    ForEach([Band.low, Band.high], id: \.self) { mark in
+                        Capsule()
+                            .fill(Color.primary.opacity(0.35))
+                            .frame(width: 1.5, height: 10)
+                            .offset(x: width * mark / scale - 0.75)
+                    }
                 }
             }
-            .frame(height: 7)
+            .frame(height: 10)
 
-            Text(row.sets.rounded() == row.sets ? String(Int(row.sets)) : String(format: "%.1f", row.sets))
-                .font(.caption2)
+            Text(number(row.sets))
+                .font(.caption.weight(.medium))
                 .monospacedDigit()
-                .foregroundStyle(inBand ? Brand.bone : Brand.muted)
-                .frame(width: 28, alignment: .trailing)
+                .foregroundStyle(inBand ? .primary : .secondary)
+                .frame(width: 26, alignment: .trailing)
         }
     }
 }

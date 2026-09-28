@@ -209,6 +209,20 @@ export interface HellBlazerNative {
    * code "unavailable" or "failed".
    */
   readSets(options: { text: string; exercises: string[]; unit: "kg" | "lb" }): Promise<{ runs: unknown[] }>;
+  /**
+   * A workout's heart rate from Health: the watch's readings every five
+   * seconds between `start` and `end` (epoch ms), the resting heart rate
+   * before it, and whether Health's sheet has heart rate still to ask.
+   */
+  workoutHeartRate(options: { start: number; end: number }): Promise<{
+    ask: boolean;
+    samples: { t: number; bpm: number }[];
+    resting?: number;
+  }>;
+  /** Health's sheet for heart rate alone. */
+  requestHeartRate(): Promise<void>;
+  /** Two sentences from heart-rate facts, written by Apple's on-device model. */
+  heartSummary(options: { facts: string }): Promise<{ text: string }>;
   addListener<E extends keyof NativeEvents>(
     event: E,
     listener: (data: NativeEvents[E]) => void,
@@ -312,12 +326,13 @@ export async function shareNatively(blob: Blob, fileName: string, text?: string)
 let readerReady: Promise<boolean> | null = null;
 
 /**
- * Whether the logger can offer "Say it": only in the app, on an iPhone that
- * runs Apple's on-device model (15 Pro or newer, iOS 26, Apple Intelligence
- * on). An app build from before it answers no. A yes is kept for the visit;
- * a no is asked again, since the model may have finished downloading.
+ * Whether this iPhone runs Apple's on-device model (15 Pro or newer, iOS 26,
+ * Apple Intelligence on), which "Say it" and the heart-rate read need: only
+ * in the app, and an app build from before them answers no. A yes is kept
+ * for the visit; a no is asked again, since the model may have finished
+ * downloading.
  */
-export function canReadSets(): Promise<boolean> {
+export function hasOnDeviceModel(): Promise<boolean> {
   const plugin = nativePlugin();
   if (!plugin) return Promise.resolve(false);
   if (readerReady) return readerReady;

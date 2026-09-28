@@ -10,7 +10,7 @@ struct RecoveryWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: RecoveryCache.widgetKind, provider: RecoveryProvider()) { entry in
             RecoveryView(entry: entry)
-                .containerBackground(for: .widget) { Brand.background }
+                .containerBackground(for: .widget) { Brand.widgetBackground }
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/dashboard"))
         }
         .configurationDisplayName("Recovery")
@@ -70,20 +70,20 @@ struct RecoveryView: View {
     // MARK: Home Screen
 
     private var small: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("RECOVERY")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(Brand.muted)
+        VStack(alignment: .leading, spacing: 0) {
+            WidgetHeader(title: "Recovery", symbol: "heart.fill")
             if let call = today {
                 Image(systemName: symbol(call.verdict))
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(call.verdict == "ready" ? Brand.flame : Brand.muted)
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(call.verdict == "ready" ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(.secondary))
+                    .widgetAccentable(call.verdict == "ready")
+                    .padding(.top, 8)
                 Text(call.headline)
                     .font(.headline)
-                    .foregroundStyle(Brand.bone)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
+                    .minimumScaleFactor(0.85)
+                    .padding(.top, 2)
+                Spacer(minLength: 4)
                 VStack(alignment: .leading, spacing: 2) {
                     if let sleep = call.sleepMin { reading("Sleep", sleepText(sleep)) }
                     if let hrv = call.hrv { reading("HRV", "\(Int(hrv.rounded())) ms") }
@@ -94,8 +94,8 @@ struct RecoveryView: View {
                 Text(entry.call == nil
                      ? "Connect Apple Health on Fatty's Home to see how recovered you are."
                      : "Open Fatty for today's read.")
-                    .font(.caption)
-                    .foregroundStyle(Brand.muted)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -104,13 +104,12 @@ struct RecoveryView: View {
     private func reading(_ label: String, _ value: String) -> some View {
         HStack(spacing: 4) {
             Text(label)
-                .foregroundStyle(Brand.muted)
+                .foregroundStyle(.secondary)
             Spacer(minLength: 4)
             Text(value)
-                .foregroundStyle(Brand.bone)
                 .monospacedDigit()
         }
-        .font(.caption2.weight(.medium))
+        .font(.caption)
         .lineLimit(1)
     }
 
