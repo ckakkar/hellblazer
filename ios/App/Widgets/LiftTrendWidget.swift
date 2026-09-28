@@ -10,7 +10,7 @@ struct LiftTrendWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: "LiftTrend", intent: SelectLiftIntent.self, provider: LiftTrendProvider()) { entry in
             LiftTrendView(entry: entry)
-                .containerBackground(for: .widget) { Brand.widgetBackground }
+                .fightCard()
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/progress" + (entry.trend.map { "?exercise=\($0.id)" } ?? "")))
         }
         .configurationDisplayName("Lift Trend")
@@ -137,9 +137,9 @@ struct LiftTrendView: View {
                 .font(WidgetStyle.figure(size))
                 .monospacedDigit()
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
             Text(entry.unit)
-                .font(.subheadline)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
         }
     }
@@ -207,6 +207,7 @@ private struct TrendChart: View {
         .chartYAxis(.hidden)
         .chartLegend(.hidden)
         .chartYScale(domain: (low - pad)...(high + pad))
+        .glow(radius: 5)
         .widgetAccentable()
     }
 }

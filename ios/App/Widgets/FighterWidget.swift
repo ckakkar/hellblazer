@@ -10,7 +10,7 @@ struct FighterWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: FighterArt.widgetKind, provider: FighterProvider()) { entry in
             FighterView(entry: entry)
-                .containerBackground(for: .widget) { Brand.background }
+                .fightCard()
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/dashboard"))
         }
         .configurationDisplayName("Your Fighter")
@@ -26,8 +26,8 @@ struct FighterEntry: TimelineEntry {
     let known: Bool
     let fighter: WidgetSnapshot.Fighter?
     let portrait: UIImage?
-    /// The see-through copy, for the Clear and Tinted looks.
-    let clearPortrait: UIImage?
+    /// The fighter in ink, for the Clear and Tinted looks.
+    let ink: UIImage?
 }
 
 struct FighterProvider: TimelineProvider {
@@ -37,7 +37,7 @@ struct FighterProvider: TimelineProvider {
     )
 
     func placeholder(in context: Context) -> FighterEntry {
-        FighterEntry(date: Date(), known: true, fighter: Self.sample, portrait: nil, clearPortrait: nil)
+        FighterEntry(date: Date(), known: true, fighter: Self.sample, portrait: nil, ink: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (FighterEntry) -> Void) {
@@ -57,7 +57,7 @@ struct FighterProvider: TimelineProvider {
             known: snapshot != nil,
             fighter: fighter,
             portrait: fighter.flatMap { FighterArt.load(for: $0.key) },
-            clearPortrait: fighter.flatMap { FighterArt.loadClear(for: $0.key) }
+            ink: fighter.flatMap { FighterArt.loadInk(for: $0.key) }
         )
     }
 }
@@ -95,7 +95,7 @@ struct FighterView: View {
             VStack(alignment: .leading, spacing: 1) {
                 rankLine(fighter)
                 Text(firstName(fighter))
-                    .font(.title3.weight(.bold))
+                    .font(WidgetStyle.title(20))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -122,7 +122,7 @@ struct FighterView: View {
             VStack(alignment: .leading, spacing: 2) {
                 rankLine(fighter)
                 Text(fighter.name)
-                    .font(.title2.weight(.bold))
+                    .font(WidgetStyle.title(22))
                     .foregroundStyle(.primary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.7)
@@ -145,27 +145,45 @@ struct FighterView: View {
         }
     }
 
-    /// The portrait for this look: full colour, or the see-through copy in
+    /// The portrait for this look: full colour, or the fighter in ink in
     /// Clear and Tinted, where a solid image would come out a white block.
+    /// Should the ink be missing there, the portrait greyed, as iOS offers.
     @ViewBuilder
     private var portrait: some View {
-        let image = renderingMode == .fullColor ? entry.portrait : entry.clearPortrait
-        if let image {
-            // Laid over an empty frame, so a tall portrait can't make the
-            // widget taller than it is and push the text off the bottom.
-            Color.clear
-                .overlay(alignment: .top) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                }
-                .clipped()
+        let full = renderingMode == .fullColor
+        if full, let image = entry.portrait {
+            art(Image(uiImage: image).resizable())
+        } else if !full, let ink = entry.ink {
+            art(Image(uiImage: ink).resizable().renderingMode(.template))
+        } else if !full, let image = entry.portrait {
+            art(greyed(Image(uiImage: image).resizable()))
         } else {
             // The portrait's still on its way from the site.
             Image(systemName: "figure.martial.arts")
                 .font(.system(size: 56, weight: .light))
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    /// Laid over an empty frame, so a tall portrait can't make the widget
+    /// taller than it is and push the text off the bottom.
+    private func art<Art: View>(_ image: Art) -> some View {
+        Color.clear
+            .overlay(alignment: .top) {
+                image
+                    .scaledToFill()
+                    .foregroundStyle(Color.white)
+            }
+            .clipped()
+    }
+
+    @ViewBuilder
+    private func greyed(_ image: Image) -> some View {
+        if #available(iOS 18.0, *) {
+            image.widgetAccentedRenderingMode(.desaturated)
+        } else {
+            image
         }
     }
 
@@ -242,8 +260,9 @@ private struct Ladder: View {
         HStack(spacing: 3) {
             ForEach(1...max(1, of), id: \.self) { step in
                 Capsule()
-                    .fill(step <= rank ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.primary.opacity(0.2)))
+                    .fill(step <= rank ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.white.opacity(0.2)))
                     .frame(height: 4)
+                    .glow(step <= rank, radius: 3)
                     .widgetAccentable(step <= rank)
             }
         }

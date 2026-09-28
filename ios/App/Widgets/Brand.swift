@@ -8,10 +8,4 @@ enum Brand {
     static let muted = Color(red: 0x8E / 255, green: 0x8C / 255, blue: 0x88 / 255)
     /// The flame mark's red.
     static let flame = Color(red: 0xDF / 255, green: 0x2D / 255, blue: 0x28 / 255)
-
-    #if os(iOS)
-    /// A widget's background, as Apple's own have it: white in Light, dark
-    /// grey in Dark. Removed by iOS in the Clear and Tinted looks.
-    static let widgetBackground = Color(uiColor: .secondarySystemGroupedBackground)
-    #endif
 }

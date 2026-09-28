@@ -104,7 +104,7 @@ end
 shared_group = group(project, "Shared")
 %w[
   WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift SiriEntities.swift
-  SetLogging.swift RecoveryCache.swift FighterArt.swift ClearArt.swift
+  SetLogging.swift RecoveryCache.swift FighterArt.swift InkArt.swift
 ].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)

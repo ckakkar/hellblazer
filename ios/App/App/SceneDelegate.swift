@@ -35,6 +35,8 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         if let path = IntentRouter.takePending() {
             NativeRouter.shared.open(path: path)
         }
+        // The fighter's portrait and ink for the widgets, if either's missing.
+        FighterArt.update(for: WidgetSnapshot.load()?.fighter)
         if HKHealthStore.isHealthDataAvailable() {
             let store = HKHealthStore()
             WorkoutEffort.retryPending(store: store)

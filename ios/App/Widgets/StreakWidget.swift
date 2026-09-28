@@ -9,7 +9,7 @@ struct StreakWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "Streak", provider: StreakProvider()) { entry in
             StreakView(entry: entry)
-                .containerBackground(for: .widget) { Brand.widgetBackground }
+                .fightCard()
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/history"))
         }
         .configurationDisplayName("Streak")
@@ -21,6 +21,9 @@ struct StreakWidget: Widget {
 struct StreakEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetSnapshot?
+
+    /// The lifter's fighter in ink, for behind the card.
+    var ink: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) } }
 }
 
 struct StreakProvider: TimelineProvider {
@@ -109,8 +112,12 @@ struct StreakView: View {
                         .frame(maxHeight: .infinity)
                 }
             default:
-                count(weeks, snapshot)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                ZStack {
+                    InkBackdrop(ink: entry.ink, strength: 0.4, width: 0.7)
+                        .padding(-16)
+                    count(weeks, snapshot)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
         } else {
             WidgetEmpty(title: "Streak", symbol: "flame.fill", message: "Open Fatty to start your streak.")
@@ -121,18 +128,18 @@ struct StreakView: View {
         VStack(alignment: .leading, spacing: 0) {
             WidgetHeader(title: "Streak", symbol: "flame.fill")
             Spacer(minLength: 4)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text("\(weeks)")
-                    .font(WidgetStyle.figure(44))
+                    .font(WidgetStyle.figure(46))
                     .monospacedDigit()
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text(weeks == 1 ? "week" : "weeks")
-                    .font(.headline)
+                    .font(WidgetStyle.title(15))
                     .foregroundStyle(.secondary)
             }
-            Text(weeks == 0 ? "Hit your plan to start one" : "in a row on plan")
-                .font(.caption)
+            Text(weeks == 0 ? "Hit your plan to start one" : "unbeaten, on plan")
+                .font(.caption.weight(.medium))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
             Spacer(minLength: 6)
@@ -197,6 +204,7 @@ private struct TrainingCalendar: View {
                             let trained = days.contains(key)
                             RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
                                 .fill(trained ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(day > today ? Color.clear : WidgetStyle.track))
+                                .glow(trained, radius: 3)
                                 .widgetAccentable(trained)
                                 .overlay {
                                     if key == todayKey {

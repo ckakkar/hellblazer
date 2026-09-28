@@ -9,7 +9,7 @@ struct NextBoutWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "NextBout", provider: NextBoutProvider()) { entry in
             NextBoutView(entry: entry)
-                .containerBackground(for: .widget) { Brand.widgetBackground }
+                .fightCard()
                 // Tapping it starts the next bout: the Log screen.
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/log"))
         }
@@ -22,6 +22,9 @@ struct NextBoutWidget: Widget {
 struct NextBoutEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetSnapshot?
+
+    /// The lifter's fighter in ink, for behind the card.
+    var ink: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) } }
 }
 
 struct NextBoutProvider: TimelineProvider {
@@ -85,11 +88,6 @@ private struct Week {
         guard let planned, planned > 0 else { return sessions > 0 ? 1 : 0 }
         return min(1, Double(sessions) / Double(planned))
     }
-
-    /// "3 of 5 this week", "3 this week".
-    var caption: String {
-        planned == nil ? "\(sessions) this week" : "\(sessions) of \(planned!) this week"
-    }
 }
 
 struct NextBoutView: View {
@@ -123,25 +121,35 @@ struct NextBoutView: View {
             case .accessoryInline:
                 Label(snapshot.nextBout.map { "Next: \($0)" } ?? "\(week.sessionsText) sessions this week", systemImage: "flame")
             case .systemMedium:
-                HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    InkBackdrop(ink: entry.ink, strength: 0.75, width: 0.5)
+                        .padding(-16)
                     VStack(alignment: .leading, spacing: 0) {
-                        NextBoutBlock(snapshot: snapshot)
-                        Spacer(minLength: 8)
-                        // Starts that day in the app, straight into the logger.
-                        if let start = snapshot.startURL {
-                            Link(destination: start) {
-                                WidgetButtonLabel(title: "Start", symbol: "play.fill")
+                        NextBoutBlock(snapshot: snapshot, titleSize: 22)
+                            .padding(.trailing, 110)
+                        Spacer(minLength: 6)
+                        HStack(alignment: .bottom, spacing: 12) {
+                            WeekLine(week: week)
+                                .frame(maxWidth: 150)
+                            Spacer(minLength: 0)
+                            // Starts that day in the app, straight into the logger.
+                            if let start = snapshot.startURL {
+                                Link(destination: start) {
+                                    WidgetButtonLabel(title: "Start", symbol: "play.fill")
+                                }
                             }
                         }
                     }
-                    Spacer(minLength: 0)
-                    WeekRing(week: week)
                 }
             default:
-                VStack(alignment: .leading, spacing: 0) {
-                    NextBoutBlock(snapshot: snapshot)
-                    Spacer(minLength: 6)
-                    WeekLine(week: week)
+                ZStack {
+                    InkBackdrop(ink: entry.ink, strength: 0.45, width: 0.8)
+                        .padding(-16)
+                    VStack(alignment: .leading, spacing: 0) {
+                        NextBoutBlock(snapshot: snapshot, titleSize: 17)
+                        Spacer(minLength: 6)
+                        WeekLine(week: week)
+                    }
                 }
             }
         } else {
@@ -152,18 +160,19 @@ struct NextBoutView: View {
 
 private struct NextBoutBlock: View {
     let snapshot: WidgetSnapshot
+    let titleSize: CGFloat
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
-            WidgetHeader(title: "Next Bout", symbol: "flame.fill")
+            WidgetHeader(title: "Next bout", symbol: "flame.fill")
             Text(snapshot.nextBout ?? "Pick a program")
-                .font(.headline)
+                .font(WidgetStyle.title(titleSize))
                 .lineLimit(2)
-                .minimumScaleFactor(0.85)
-                .padding(.top, 2)
+                .minimumScaleFactor(0.75)
+                .padding(.top, 3)
             if let program = snapshot.programName {
                 Text(program)
-                    .font(.caption)
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -179,12 +188,13 @@ private struct WeekLine: View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\(week.sessions)")
-                    .font(WidgetStyle.figure(22))
+                    .font(WidgetStyle.figure(24))
                     .monospacedDigit()
                 Text(week.planned.map { "of \($0) this week" } ?? "this week")
-                    .font(.caption)
+                    .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             if let planned = week.planned, planned > 0, planned <= 7 {
                 HStack(spacing: 3) {
@@ -192,6 +202,7 @@ private struct WeekLine: View {
                         Capsule()
                             .fill(index < week.sessions ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(WidgetStyle.track))
                             .frame(height: 5)
+                            .glow(index < week.sessions, radius: 4)
                             .widgetAccentable(index < week.sessions)
                     }
                 }
@@ -199,33 +210,6 @@ private struct WeekLine: View {
                 CapsuleBar(value: week.fraction, height: 5)
             }
         }
-    }
-}
-
-/// Medium widget: sessions as a ring, working sets underneath.
-private struct WeekRing: View {
-    let week: Week
-
-    var body: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                ProgressRing(value: week.fraction, lineWidth: 9)
-                VStack(spacing: -2) {
-                    Text(week.sessionsText)
-                        .font(WidgetStyle.figure(20))
-                        .monospacedDigit()
-                    Text("this week")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 88, height: 88)
-            Text("\(week.sets) sets")
-                .font(.caption)
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxHeight: .infinity)
     }
 }
 

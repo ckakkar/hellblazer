@@ -10,7 +10,7 @@ struct RecoveryWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: RecoveryCache.widgetKind, provider: RecoveryProvider()) { entry in
             RecoveryView(entry: entry)
-                .containerBackground(for: .widget) { Brand.widgetBackground }
+                .fightCard()
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/dashboard"))
         }
         .configurationDisplayName("Recovery")
@@ -74,15 +74,16 @@ struct RecoveryView: View {
             WidgetHeader(title: "Recovery", symbol: "heart.fill")
             if let call = today {
                 Image(systemName: symbol(call.verdict))
-                    .font(.title2.weight(.bold))
+                    .font(.system(size: 26, weight: .black))
                     .foregroundStyle(call.verdict == "ready" ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(.secondary))
+                    .glow(call.verdict == "ready", radius: 8)
                     .widgetAccentable(call.verdict == "ready")
                     .padding(.top, 8)
                 Text(call.headline)
-                    .font(.headline)
+                    .font(WidgetStyle.title(16))
                     .lineLimit(2)
-                    .minimumScaleFactor(0.85)
-                    .padding(.top, 2)
+                    .minimumScaleFactor(0.75)
+                    .padding(.top, 3)
                 Spacer(minLength: 4)
                 VStack(alignment: .leading, spacing: 2) {
                     if let sleep = call.sleepMin { reading("Sleep", sleepText(sleep)) }
@@ -108,6 +109,7 @@ struct RecoveryView: View {
             Spacer(minLength: 4)
             Text(value)
                 .monospacedDigit()
+                .fontWeight(.semibold)
         }
         .font(.caption)
         .lineLimit(1)

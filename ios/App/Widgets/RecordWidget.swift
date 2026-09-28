@@ -8,7 +8,7 @@ struct RecordWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "Record", provider: RecordProvider()) { entry in
             RecordView(entry: entry)
-                .containerBackground(for: .widget) { Brand.widgetBackground }
+                .fightCard()
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/progress"))
         }
         .configurationDisplayName("Last PR")
@@ -23,6 +23,8 @@ struct RecordEntry: TimelineEntry {
     let known: Bool
     let record: WidgetSnapshot.Record?
     let unit: String
+    /// The lifter's fighter in ink, for behind the card.
+    var ink: UIImage?
 }
 
 struct RecordProvider: TimelineProvider {
@@ -58,7 +60,13 @@ struct RecordProvider: TimelineProvider {
 
     private func makeEntry(at date: Date) -> RecordEntry {
         let snapshot = WidgetSnapshot.load()
-        return RecordEntry(date: date, known: snapshot != nil, record: snapshot?.record, unit: snapshot?.unit ?? "kg")
+        return RecordEntry(
+            date: date,
+            known: snapshot != nil,
+            record: snapshot?.record,
+            unit: snapshot?.unit ?? "kg",
+            ink: snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) }
+        )
     }
 }
 
@@ -94,30 +102,40 @@ struct RecordView: View {
     }
 
     private func small(_ record: WidgetSnapshot.Record) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            WidgetHeader(title: "Last PR", symbol: "bolt.fill")
-            Text(record.name)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(2)
-                .padding(.top, 6)
-            Spacer(minLength: 4)
-            Text(setText(record))
-                .font(WidgetStyle.figure(24))
-                .monospacedDigit()
+        ZStack {
+            InkBackdrop(ink: entry.ink, strength: 0.45, width: 0.75)
+                .padding(-16)
+            VStack(alignment: .leading, spacing: 0) {
+                WidgetHeader(title: "Removal", symbol: "bolt.fill", trailing: ago(record))
+                Text(record.name)
+                    .font(.subheadline.weight(.bold))
+                    .lineLimit(2)
+                    .padding(.top, 6)
+                Spacer(minLength: 4)
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    Text(record.weight == 0 ? "BW" : number(record.weight))
+                        .font(WidgetStyle.figure(34))
+                        .monospacedDigit()
+                        .glow(radius: 10)
+                    if record.weight != 0 {
+                        Text(entry.unit)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("× \(record.reps)")
+                        .font(WidgetStyle.title(18))
+                        .monospacedDigit()
+                }
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            Text("Est. max \(number(record.estimatedMax)) \(entry.unit)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .lineLimit(1)
-            Text(ago(record))
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .lineLimit(1)
-                .padding(.top, 1)
+                Text("Est. max \(number(record.estimatedMax)) \(entry.unit)")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     @ViewBuilder

@@ -11,7 +11,7 @@ struct MuscleSetsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "MuscleSets", provider: NextBoutProvider()) { entry in
             MuscleSetsView(entry: entry)
-                .containerBackground(for: .widget) { Brand.widgetBackground }
+                .fightCard()
                 .widgetURL(URL(string: "https://hellblazer.vercel.app/dashboard"))
         }
         .configurationDisplayName("Sets per Muscle")
@@ -42,7 +42,7 @@ struct MuscleSetsView: View {
                             .font(WidgetStyle.figure(28))
                             .monospacedDigit()
                         Text("working sets")
-                            .font(.subheadline)
+                            .font(WidgetStyle.title(14))
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 2)
@@ -110,14 +110,15 @@ private struct MuscleRow: View {
                     Capsule().fill(WidgetStyle.track)
                     if row.sets > 0 {
                         Capsule()
-                            .fill(inBand ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.primary.opacity(0.45)))
+                            .fill(inBand ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.white.opacity(0.5)))
                             .frame(width: max(6, width * min(row.sets, scale) / scale))
+                            .glow(inBand, radius: 4)
                             .widgetAccentable(inBand)
                     }
                     // The goal: a tick at 10 sets and one at 20.
                     ForEach([Band.low, Band.high], id: \.self) { mark in
                         Capsule()
-                            .fill(Color.primary.opacity(0.35))
+                            .fill(Color.white.opacity(0.4))
                             .frame(width: 1.5, height: 10)
                             .offset(x: width * mark / scale - 0.75)
                     }
