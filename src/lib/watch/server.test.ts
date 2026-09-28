@@ -159,6 +159,8 @@ const {
   logVoiceSet,
   undoVoiceSet,
   finishVoiceWorkout,
+  logHeardSets,
+  spokenWorkout,
   watchState,
 } = await import("./server");
 
@@ -370,6 +372,57 @@ describe("logging by voice on the phone", () => {
   it("is the phone's to use, not the watch's", async () => {
     const res = await handleWatch(signedIn(), (ctx) => logVoiceSet(ctx, {}), "phone");
     expect(res.status).toBe(401);
+  });
+
+  describe("in the lifter's own words", () => {
+    const heard = async (body: unknown) =>
+      (await handleWatch(phone(), (ctx) => logHeardSets(ctx, body), "phone")).json();
+
+    it("names the workout's exercises for the phone's model", async () => {
+      const res = await handleWatch(phone(), spokenWorkout, "phone");
+      expect(await res.json()).toEqual({ status: "ok", unit: "kg", exercises: ["Bench Press", "Row"] });
+    });
+
+    it("logs what was heard, effort and all, numbered after the sets already in", async () => {
+      const reply = await heard({
+        heard: [
+          { exercise: "rows", sets: 2, reps: 8, weight: 60, unit: null, rpe: null, warmup: false },
+          { exercise: null, sets: 1, reps: 8, weight: 60, unit: null, rpe: 9, warmup: false },
+          { exercise: "bench", sets: 1, reps: null, weight: 85, unit: null, rpe: null, warmup: false },
+        ],
+      });
+      expect(reply).toMatchObject({
+        status: "logged",
+        count: 4,
+        said: "3 sets of 8 at 60 kg on Row, the last at RPE 9; 1 set of 5 at 85 kg on Bench Press",
+        unmatched: [],
+        warmup: false,
+        activity: { sessionId: LIVE, sets: 5 },
+      });
+      const rows = tables.set.filter((row) => row.session_exercise_id === ROW);
+      expect(rows.map((row) => [row.set_number, row.weight_kg, row.reps, row.rpe, row.user_id])).toEqual([
+        [1, 60, 8, null, A],
+        [2, 60, 8, null, A],
+        [3, 60, 8, 9, A],
+      ]);
+      expect(tables.set.filter((row) => row.session_exercise_id === BENCH).map((row) => row.set_number)).toEqual([
+        1, 2,
+      ]);
+    });
+
+    it("says what it couldn't find, and logs nothing when that's all there was", async () => {
+      expect(
+        await heard({
+          heard: [{ exercise: "leg press", sets: 3, reps: 10, weight: 200, unit: null, rpe: null, warmup: false }],
+        }),
+      ).toEqual({ status: "nothing", unmatched: ["leg press"] });
+      expect(tables.set.filter((row) => row.user_id === A)).toHaveLength(1);
+    });
+
+    it("says so when no workout's going", async () => {
+      tables.session.find((row) => row.id === LIVE)!.finished_at = new Date().toISOString();
+      expect(await heard({ heard: [] })).toEqual({ status: "no-workout" });
+    });
   });
 });
 

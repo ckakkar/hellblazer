@@ -22,6 +22,12 @@ enum SetLogging {
         guard let handler else { return "Open Fatty once, then try again." }
         return await handler(request)
     }
+
+    /// Sets said in the lifter's own words ("3 sets of 8 at 80 on incline"),
+    /// read by Apple's on-device model (App/SetReader.swift), logged, and
+    /// what Siri says back. `canRead` is false where that model doesn't run.
+    static var spokenHandler: ((String) async -> String)?
+    static var canRead: () -> Bool = { false }
 }
 
 /// "Same again": the next set of the workout in progress, with the numbers
@@ -72,24 +78,42 @@ struct LogShownSetIntent: LiveActivityIntent {
     }
 }
 
-/// "Log a set": Siri asks for the weight and reps.
+/// "Log a set". Where Apple's on-device model runs (an iPhone 15 Pro or
+/// newer, Apple Intelligence on), Siri asks what you did and you say it
+/// your way: "3 sets of 8 at 80 on incline, last one was a grinder".
+/// Elsewhere, or with the numbers given (the Shortcuts app), it asks for
+/// the weight and the reps.
 struct LogSetIntent: LiveActivityIntent {
     static let title: LocalizedStringResource = "Log a Set"
     static let description = IntentDescription(
-        "Logs a set with the weight and reps you give, on the exercise you're doing, in the unit you use in Fatty."
+        "Logs the sets you say, on the exercises you name, in the unit you use in Fatty."
     )
 
-    @Parameter(title: "Weight", requestValueDialog: "What weight?")
-    var weight: Double
+    @Parameter(title: "Weight")
+    var weight: Double?
 
-    @Parameter(title: "Reps", requestValueDialog: "How many reps?")
-    var reps: Int
+    @Parameter(title: "Reps")
+    var reps: Int?
+
+    @Parameter(title: "What You Did")
+    var said: String?
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Log \(\.$weight) for \(\.$reps) reps")
+        Summary("Log \(\.$weight) for \(\.$reps) reps") {
+            \.$said
+        }
     }
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
+        if weight == nil, reps == nil, SetLogging.canRead(), let spoken = SetLogging.spokenHandler {
+            guard let said, !said.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw $said.needsValueError("What did you do?")
+            }
+            let reply = await spoken(said)
+            return .result(dialog: "\(reply)")
+        }
+        guard let weight else { throw $weight.needsValueError("What weight?") }
+        guard let reps else { throw $reps.needsValueError("How many reps?") }
         guard weight >= 0, weight < 10000, reps >= 1, reps < 1000 else {
             return .result(dialog: "That doesn't sound like a set. Try again with the weight and reps.")
         }

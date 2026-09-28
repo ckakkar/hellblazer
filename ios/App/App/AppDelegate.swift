@@ -12,6 +12,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // "Same again" and "Log a set" (Siri, the Action button, Control
         // Center) run here, often with the app in the background.
         SetLogging.handler = { await VoiceSetLogger.log($0) }
+        // "Log a set" in your own words, where Apple's on-device model runs.
+        SetLogging.canRead = { SetReader.available }
+        SetLogging.spokenHandler = { await VoiceSetLogger.logSpoken($0) }
         // Before returning: the "Rest's up" alert's +30s and the watch can
         // both launch the app in the background.
         RestAlert.registerCategory()

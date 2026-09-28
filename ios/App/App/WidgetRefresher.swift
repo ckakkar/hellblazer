@@ -42,6 +42,8 @@ enum WidgetRefresher {
     static func apply(_ data: Data, _ snapshot: WidgetSnapshot) {
         WidgetSnapshot.save(data)
         WidgetCenter.shared.reloadAllTimelines()
+        // The Fighter widget's portrait, when the rank names a new fighter.
+        FighterArt.update(for: snapshot.fighter)
         HellBlazerShortcuts.updateAppShortcutParameters()
         SpotlightIndex.update(from: snapshot)
     }

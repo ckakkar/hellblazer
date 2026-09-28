@@ -43,7 +43,7 @@ app_group = group(project, "App")
 %w[
   HellBlazerViewController.swift HellBlazerNativePlugin.swift AppShortcuts.swift
   WatchBridge.swift RestNotificationDelegate.swift SpotlightIndex.swift WidgetRefresher.swift
-  HealthExtras.swift VoiceSetLogger.swift
+  HealthExtras.swift VoiceSetLogger.swift SetReader.swift
 ].each do |name|
   compile(app, file(app_group, name))
 end
@@ -53,6 +53,11 @@ bundle(app, file(app_group, "PrivacyInfo.xcprivacy"))
 app.build_configurations.each do |config|
   config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "App/App.entitlements"
   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = DEPLOYMENT
+  # Apple's on-device model (SetReader.swift) is iOS 26 only: linked weakly
+  # so the app still opens on iOS 17 and 18, where it just isn't offered.
+  flags = Array(config.build_settings["OTHER_LDFLAGS"] || ["$(inherited)"])
+  flags += ["-weak_framework", "FoundationModels"] unless flags.include?("FoundationModels")
+  config.build_settings["OTHER_LDFLAGS"] = flags
 end
 project.build_configurations.each do |config|
   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = DEPLOYMENT
@@ -65,7 +70,8 @@ widgets = project.targets.find { |t| t.name == "Widgets" } ||
 widgets_group = group(project, "Widgets")
 %w[
   HellBlazerWidgets.swift Brand.swift WorkoutLiveActivity.swift NextBoutWidget.swift StartWorkoutControl.swift
-  MuscleSetsWidget.swift LiftTrendWidget.swift RecoveryWidget.swift
+  MuscleSetsWidget.swift LiftTrendWidget.swift RecoveryWidget.swift FighterWidget.swift StreakWidget.swift
+  RecordWidget.swift
 ].each do |name|
   compile(widgets, file(widgets_group, name))
 end
@@ -98,7 +104,7 @@ end
 shared_group = group(project, "Shared")
 %w[
   WorkoutActivityAttributes.swift WidgetSnapshot.swift RestControl.swift OpenAppIntents.swift SiriEntities.swift
-  SetLogging.swift RecoveryCache.swift
+  SetLogging.swift RecoveryCache.swift FighterArt.swift
 ].each do |name|
   ref = file(shared_group, name)
   compile(app, ref)

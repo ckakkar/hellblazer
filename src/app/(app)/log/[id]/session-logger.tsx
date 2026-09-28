@@ -8,6 +8,7 @@ import {
   useState,
   useSyncExternalStore,
   useTransition,
+  type ReactNode,
 } from "react";
 import { format, parseISO } from "date-fns";
 import { unstable_rethrow, useRouter } from "next/navigation";
@@ -41,6 +42,7 @@ import { TitleField } from "@/components/ui/title-field";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { CountUp } from "@/components/reactbits/count-up";
 import { RestTimerBar, RestTimerCard, useRestTimer, type RestTimerControls } from "@/components/workout/rest-timer";
+import { SaySets } from "@/components/workout/say-sets";
 import { VictoryScreen } from "@/components/workout/victory-screen";
 import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
@@ -50,7 +52,8 @@ import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
 import { useKeepAwake } from "@/lib/keep-awake";
-import { exerciseForNextSet, nextSetLabel, type PlanExercise } from "@/lib/watch/next-set";
+import { exerciseForNextSet, nextSetLabel, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
+import type { SpokenExercise, SpokenSet } from "@/lib/spoken-sets";
 import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
   fromDisplayWeight,
@@ -829,6 +832,40 @@ export function SessionLogger({
     else haptic("tap");
   }
 
+  // Sets said in words ("Say it"), each with its own numbers, added as
+  // "+ set" adds one; then the one rest, after the last of them.
+  function logSpokenSets(spoken: SpokenSet[]) {
+    let next = ref.current;
+    const added: { seId: string; set: LocalSet }[] = [];
+    for (const s of spoken) {
+      if (!next.some((e) => e.seId === s.exerciseId)) continue;
+      const set: LocalSet = {
+        id: crypto.randomUUID(),
+        weight: s.weight,
+        reps: s.reps,
+        rpe: s.rpe,
+        isWarmup: s.warmup,
+      };
+      next = next.map((e) =>
+        e.seId === s.exerciseId ? { ...e, sets: [...e.sets, set] } : e,
+      );
+      added.push({ seId: s.exerciseId, set });
+    }
+    const last = added[added.length - 1];
+    if (!last) return;
+    ref.current = next;
+    setExercises(next);
+    for (const { seId, set } of added) {
+      const ex = next.find((e) => e.seId === seId);
+      if (!ex) continue;
+      void persist(seId, set, ex.sets.findIndex((x) => x.id === set.id) + 1);
+      checkPR(ex.exerciseId, ex.name, set);
+    }
+    setFlashId(last.set.id);
+    if (!isEditing && rest.auto && !last.set.isWarmup) rest.start(targets[last.seId]?.rest ?? undefined);
+    else haptic("tap");
+  }
+
   function removeSet(seId: string, setId: string) {
     deletedHere.current.add(setId);
     // Cancel any debounced save still queued for the row being deleted, so it
@@ -1083,6 +1120,13 @@ export function SessionLogger({
     })),
   }));
   const current = active ?? exerciseForNextSet(plans, endedHere)?.ex ?? null;
+  // "Say it" matches what's said against these, and fills in what isn't.
+  const spokenExercises: SpokenExercise[] = plans.map((p) => ({
+    id: p.id,
+    name: p.ex.name,
+    same: sameAgain(p),
+  }));
+  const spokenCurrent = current?.seId ?? null;
   // The set "+ set" would add to it (copy-forward), for the Lock Screen's
   // Log Set button to log as shown.
   const nextSet = (() => {
@@ -1381,6 +1425,16 @@ export function SessionLogger({
               </div>
             )}
 
+            {/* Sets in the lifter's own words, on iPhones that can read them. */}
+            {exercises.length > 0 && (
+              <SaySets
+                exercises={spokenExercises}
+                current={spokenCurrent}
+                unit={unit}
+                onLog={logSpokenSets}
+              />
+            )}
+
             {/* Bonus work for this session only; the program is untouched. */}
             <button
               onClick={() => setPicker(true)}
@@ -1503,6 +1557,15 @@ export function SessionLogger({
           onSwap={(newId) => swap(active.seId, newId)}
           onRemoveExercise={() => removeExercise(active.seId)}
           rest={isEditing ? null : rest}
+          sayIt={
+            <SaySets
+              inSheet
+              exercises={spokenExercises}
+              current={active.seId}
+              unit={unit}
+              onLog={logSpokenSets}
+            />
+          }
         />
       )}
 
@@ -1591,6 +1654,7 @@ function ActiveExerciseModal({
   onSwap,
   onRemoveExercise,
   rest,
+  sayIt,
 }: {
   exercise: LocalExercise;
   exerciseLibrary: Exercise[];
@@ -1608,6 +1672,8 @@ function ActiveExerciseModal({
   onRemoveExercise: () => void;
   /** Live sessions only: the rest countdown, kept in view above End. */
   rest: RestTimerControls | null;
+  /** "Say it", on iPhones that can read sets said in words. */
+  sayIt?: ReactNode;
 }) {
   const [swapping, setSwapping] = useState(false);
   const [q, setQ] = useState("");
@@ -1744,6 +1810,7 @@ function ActiveExerciseModal({
                 ? "Log first set"
                 : "Add set"}
             </Button>
+            {sayIt}
           </div>
 
           <button

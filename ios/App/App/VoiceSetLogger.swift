@@ -109,6 +109,28 @@ enum VoiceSetLogger {
         var effort: Double?
     }
 
+    private struct SpokenWorkout: Decodable {
+        /// "ok" or "no-workout".
+        var status: String
+        var unit: String?
+        var exercises: [String]?
+    }
+
+    private struct HeardReply: Decodable {
+        /// "logged", "nothing" or "no-workout".
+        var status: String
+        var count: Int?
+        /// "3 sets of 8 at 80 kg on Incline Dumbbell Press, the last at RPE 9".
+        var said: String?
+        /// Exercises said that aren't in the workout.
+        var unmatched: [String]?
+        var restSeconds: Double?
+        /// The last set was a warm-up: no rest for that.
+        var warmup: Bool?
+        var complete: Bool?
+        var activity: ActivityState?
+    }
+
     private enum CallError: Error {
         case unlinked, refused, offline
         var spoken: String {
@@ -125,6 +147,15 @@ enum VoiceSetLogger {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        return await send(request)
+    }
+
+    private static func get<Reply: Decodable>(_ path: String) async -> Result<Reply, CallError> {
+        guard let request = WidgetRefresher.deviceRequest(path) else { return .failure(.unlinked) }
+        return await send(request)
+    }
+
+    private static func send<Reply: Decodable>(_ request: URLRequest) async -> Result<Reply, CallError> {
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
             let status = (response as? HTTPURLResponse)?.statusCode ?? 0
@@ -193,6 +224,81 @@ enum VoiceSetLogger {
             text += " Rest \(spoken(rest))."
         }
         return text
+    }
+
+    // MARK: In your own words
+
+    /// "Log a set" where the phone's on-device model runs: what the lifter
+    /// said, read here against the workout's exercises (SetReader), then
+    /// matched, filled in and saved by the server (logHeardSets).
+    static func logSpoken(_ words: String) async -> String {
+        let workout: SpokenWorkout
+        let fetched: Result<SpokenWorkout, CallError> = await get("/api/device/set")
+        switch fetched {
+        case .failure(let failure): return failure.spoken
+        case .success(let value): workout = value
+        }
+        guard workout.status == "ok" else {
+            return "You don't have a workout going. Start one in Fatty first."
+        }
+
+        let runs: [[String: Any]]
+        do {
+            runs = try await SetReader.read(
+                String(words.prefix(500)),
+                exercises: workout.exercises ?? [],
+                unit: workout.unit ?? "kg"
+            )
+        } catch {
+            return "Fatty couldn't make that out. Try something like \u{201C}3 sets of 8 at 80 on bench\u{201D}."
+        }
+
+        let reply: HeardReply
+        let result: Result<HeardReply, CallError> = await post("/api/device/set", ["heard": runs])
+        switch result {
+        case .failure(let failure): return failure.spoken
+        case .success(let value): reply = value
+        }
+
+        let missing = reply.unmatched ?? []
+        switch reply.status {
+        case "logged":
+            break
+        case "no-workout":
+            return "You don't have a workout going. Start one in Fatty first."
+        case "nothing":
+            if !missing.isEmpty { return "\(notInWorkout(missing)), so nothing was logged." }
+            return "Fatty couldn't tell the reps from that, so nothing was logged. "
+                + "Try something like \u{201C}3 sets of 8 at 80\u{201D}."
+        default:
+            return CallError.refused.spoken
+        }
+
+        let complete = reply.complete ?? false
+        let rest: Double? = !complete && !(reply.warmup ?? false) && RestDefaults.auto
+            ? (reply.restSeconds ?? RestDefaults.seconds)
+            : nil
+        if let activity = reply.activity {
+            catchUp(activity, rest: rest, clearRest: complete)
+        }
+
+        var text = "Logged \(reply.said ?? "\(reply.count ?? 0) sets")."
+        if !missing.isEmpty { text += " \(notInWorkout(missing)), so I left that out." }
+        if complete {
+            text += " That's every set. Say \u{201C}Finish my workout in Fatty\u{201D} when you're done."
+        } else if let rest {
+            text += " Rest \(spoken(rest))."
+        }
+        return text
+    }
+
+    /// "“Leg press” isn't in this workout", "“Leg press” and “lunges” aren't…".
+    private static func notInWorkout(_ words: [String]) -> String {
+        let quoted = words.map { "\u{201C}\($0)\u{201D}" }
+        let list = quoted.count > 1
+            ? quoted.dropLast().joined(separator: ", ") + " and " + (quoted.last ?? "")
+            : (quoted.first ?? "")
+        return list + (quoted.count > 1 ? " aren't" : " isn't") + " in this workout"
     }
 
     // MARK: Undo

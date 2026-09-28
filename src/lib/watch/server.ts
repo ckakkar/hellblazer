@@ -18,6 +18,7 @@ import {
   isComplete,
   sameAgain,
 } from "@/lib/watch/next-set";
+import { describeSpokenSets, parseHeard, planSpokenSets } from "@/lib/spoken-sets";
 import type {
   WatchExercise,
   WatchPlanExercise,
@@ -596,6 +597,108 @@ export async function undoVoiceSet(ctx: WatchContext): Promise<VoiceUndoReply> {
     reps: set.reps,
     unit: ctx.unit,
     activity: summarize(after, ctx.unit).activity,
+  };
+}
+
+export type SpokenWorkoutReply =
+  | { status: "no-workout" }
+  | {
+      status: "ok";
+      unit: Unit;
+      /** The workout's exercises, for the on-device model to pick from. */
+      exercises: string[];
+    };
+
+/** What "Log a set" in your own words reads against: the workout's exercise names. */
+export async function spokenWorkout(ctx: WatchContext): Promise<SpokenWorkoutReply> {
+  const workout = await activeWorkout(ctx);
+  if (!workout || workout.exercises.length === 0) return { status: "no-workout" };
+  return { status: "ok", unit: ctx.unit, exercises: workout.exercises.map((e) => e.name) };
+}
+
+const heardSchema = z.object({ heard: z.array(z.unknown()).max(12) });
+
+export type HeardSetsReply =
+  | { status: "no-workout" }
+  /** Nothing in it could be logged; `unmatched` says what wasn't in the workout. */
+  | { status: "nothing"; unmatched: string[] }
+  | {
+      status: "logged";
+      count: number;
+      /** "3 sets of 8 at 80 kg on Incline Dumbbell Press, the last at RPE 9". */
+      said: string;
+      unmatched: string[];
+      /** The rest after the last set (its exercise's template), or null for the lifter's usual. */
+      restSeconds: number | null;
+      /** The last set was a warm-up: no rest for that. */
+      warmup: boolean;
+      complete: boolean;
+      activity: Activity;
+    };
+
+/**
+ * Sets said to Siri in the lifter's own words, as the iPhone's on-device
+ * model heard them (VoiceSetLogger.logSpoken): matched to the workout and
+ * filled in by the same rules as the logger's "Say it" (spoken-sets.ts),
+ * then saved with their effort and warm-ups.
+ */
+export async function logHeardSets(ctx: WatchContext, body: unknown): Promise<HeardSetsReply> {
+  const groups = parseHeard(heardSchema.parse(body ?? {}).heard);
+  const workout = await activeWorkout(ctx);
+  if (!workout || workout.exercises.length === 0) return { status: "no-workout" };
+
+  const current = exerciseForNextSet(workout.exercises);
+  const { sets, unmatched } = planSpokenSets(
+    groups,
+    workout.exercises.map((e) => ({ id: e.id, name: e.name, same: sameAgain(e) })),
+    { unit: ctx.unit, current: current?.id ?? null },
+  );
+  if (sets.length === 0) return { status: "nothing", unmatched };
+
+  // Session exercise ids come from the lifter's own workout above.
+  const numbers = new Map(workout.exercises.map((e) => [e.id, Math.max(0, ...e.sets.map((s) => s.n))]));
+  const rows = sets.map((s) => {
+    const n = (numbers.get(s.exerciseId) ?? 0) + 1;
+    numbers.set(s.exerciseId, n);
+    return {
+      id: crypto.randomUUID(),
+      user_id: ctx.userId,
+      session_exercise_id: s.exerciseId,
+      set_number: n,
+      weight_kg: fromDisplayWeight(s.weight, ctx.unit),
+      reps: s.reps,
+      rpe: s.rpe,
+      is_warmup: s.warmup,
+      is_completed: true,
+    };
+  });
+  const { error } = await ctx.db.from("set").insert(rows);
+  if (error) throw error;
+
+  const after = {
+    ...workout,
+    exercises: workout.exercises.map((e) => ({
+      ...e,
+      sets: [
+        ...e.sets,
+        ...rows
+          .map((r, i) => ({ r, s: sets[i] }))
+          .filter(({ r }) => r.session_exercise_id === e.id)
+          .map(({ r, s }) => ({ id: r.id, n: r.set_number, weight: s.weight, reps: s.reps, warmup: s.warmup })),
+      ],
+    })),
+  };
+  const { complete, activity } = summarize(after, ctx.unit);
+  const last = sets[sets.length - 1];
+  return {
+    status: "logged",
+    count: sets.length,
+    said: describeSpokenSets(sets, new Map(workout.exercises.map((e) => [e.id, e.name])), ctx.unit),
+    unmatched,
+    restSeconds: workout.exercises.find((e) => e.id === last.exerciseId)?.restSeconds ?? null,
+    warmup: last.warmup,
+    complete,
+    activity,
   };
 }
 

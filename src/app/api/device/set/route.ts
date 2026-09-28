@@ -1,4 +1,4 @@
-import { handleWatch, logVoiceSet } from "@/lib/watch/server";
+import { handleWatch, logHeardSets, logVoiceSet, spokenWorkout } from "@/lib/watch/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,8 +13,18 @@ export const dynamic = "force-dynamic";
  *   POST { weight, reps }   a set with these numbers (display unit)
  *   POST { weight, reps, sessionExerciseId }
  *                           the set the Lock Screen showed, on its exercise
+ *   POST { heard }          sets said in the lifter's own words, as the
+ *                           phone's on-device model heard them (spoken-sets.ts)
+ *   GET                     the workout's exercise names, for that model
  */
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => ({}));
+  if (body && typeof body === "object" && "heard" in body) {
+    return handleWatch(request, (ctx) => logHeardSets(ctx, body), "phone");
+  }
   return handleWatch(request, (ctx) => logVoiceSet(ctx, body), "phone");
+}
+
+export async function GET(request: Request) {
+  return handleWatch(request, (ctx) => spokenWorkout(ctx), "phone");
 }

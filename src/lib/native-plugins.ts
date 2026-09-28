@@ -1,5 +1,6 @@
 import { isNativeApp } from "@/lib/native";
 import type { NextSet } from "@/lib/watch/next-set";
+import type { LatestRecord } from "@/lib/widget-moments";
 
 export type HealthAccess = "authorized" | "denied" | "notDetermined";
 export type HealthStatus =
@@ -27,6 +28,25 @@ export type WidgetSnapshot = {
   muscles?: { key: string; label: string; sets: number; weak: boolean }[];
   /** Estimated-max history (display unit) for the Lift Trend widget. */
   trends?: { id: string; name: string; points: { date: string; e1rm: number }[] }[];
+  /** The lifter's rank fighter, for the Fighter widget; null when unranked. */
+  fighter?: {
+    key: string;
+    name: string;
+    epithet: string;
+    rank: number;
+    /** Ranks on the ladder. */
+    of: number;
+    /** The next rank's fighter, or null at the top. */
+    next: string | null;
+    /** The portrait's path on the site, e.g. "/art/fighters/julius.webp". */
+    image: string;
+  } | null;
+  /** Weeks in a row with the plan hit, and the plan (workouts a week; null: one). */
+  streak?: { weeks: number; planned: number | null };
+  /** Days trained in the last 12 weeks (yyyy-MM-dd), for the Streak widget's calendar. */
+  trainingDays?: string[];
+  /** The latest new best estimated max, for the Last PR widget. */
+  record?: LatestRecord | null;
 };
 
 /**
@@ -109,6 +129,13 @@ export type RecoveryDay = {
   rhr?: number;
 };
 
+/**
+ * Whether Apple's on-device model can read sets here: "available", or why
+ * not: an iPhone before the 15 Pro ("ineligible"), Apple Intelligence off,
+ * the model still downloading, or iOS before 26 ("unsupported").
+ */
+export type SetReaderStatus = "available" | "ineligible" | "off" | "downloading" | "unsupported" | "unavailable";
+
 /** What the plugin's events carry. */
 export type NativeEvents = {
   /** A RestCommand is waiting (see takeRestCommand). */
@@ -174,6 +201,14 @@ export interface HellBlazerNative {
   donateWorkoutStart(options: { sessionId: string; templateId: string; label: string }): Promise<void>;
   /** Whether finished workouts go to Apple Health, for one finished by voice. */
   setHealthSync(options: { on: boolean }): Promise<void>;
+  /** Whether this iPhone can read sets said in words (Apple's on-device model). */
+  setReaderStatus(): Promise<{ status: SetReaderStatus }>;
+  /**
+   * Sets typed or dictated in the lifter's words, as the on-device model
+   * reads them (spoken-sets.ts parseHeard makes them safe). Rejects with
+   * code "unavailable" or "failed".
+   */
+  readSets(options: { text: string; exercises: string[]; unit: "kg" | "lb" }): Promise<{ runs: unknown[] }>;
   addListener<E extends keyof NativeEvents>(
     event: E,
     listener: (data: NativeEvents[E]) => void,
@@ -272,4 +307,27 @@ export async function shareNatively(blob: Blob, fileName: string, text?: string)
   const { api } = await plugin;
   await api.share({ fileName, data: await blobToBase64(blob), text });
   return true;
+}
+
+let readerReady: Promise<boolean> | null = null;
+
+/**
+ * Whether the logger can offer "Say it": only in the app, on an iPhone that
+ * runs Apple's on-device model (15 Pro or newer, iOS 26, Apple Intelligence
+ * on). An app build from before it answers no. A yes is kept for the visit;
+ * a no is asked again, since the model may have finished downloading.
+ */
+export function canReadSets(): Promise<boolean> {
+  const plugin = nativePlugin();
+  if (!plugin) return Promise.resolve(false);
+  if (readerReady) return readerReady;
+  const asking = plugin
+    .then(({ api }) => api.setReaderStatus())
+    .then(({ status }) => status === "available")
+    .catch(() => false);
+  readerReady = asking;
+  void asking.then((ok) => {
+    if (!ok) readerReady = null;
+  });
+  return asking;
 }

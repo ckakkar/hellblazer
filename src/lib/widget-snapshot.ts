@@ -1,4 +1,4 @@
-import { format, parseISO, startOfISOWeek } from "date-fns";
+import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 import { getProgramProgress, PROGRAM_SELECT, type ProgramWithDays } from "@/lib/data/programs";
@@ -6,6 +6,8 @@ import { dateInTimeZone } from "@/lib/local-date";
 import { CHART_HIDDEN_MUSCLES, isWeakPoint, MUSCLE_CHART_ORDER, MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import type { WidgetSnapshot } from "@/lib/native-plugins";
 import { toDisplayWeight, type Unit } from "@/lib/units";
+import { getTier, MAX_RANK, TIERS } from "@/lib/tiers";
+import { latestRecord, trainingDays, weekStreak } from "@/lib/widget-moments";
 
 /** The most-trained lifts Siri, Spotlight and the Lift Trend widget know about. */
 const MAX_LIFTS = 40;
@@ -32,12 +34,15 @@ export async function buildWidgetSnapshot(
   const today = dateInTimeZone(new Date(), timeZone);
   const weekStart = format(startOfISOWeek(parseISO(today)), "yyyy-MM-dd");
 
-  const [week, program, muscles, stats, trendRows] = await Promise.all([
+  // A year of workouts: this week's numbers, and the streak and calendar.
+  const yearStart = format(subWeeks(parseISO(weekStart), 52), "yyyy-MM-dd");
+
+  const [year, program, muscles, stats, trendRows, profile] = await Promise.all([
     db
       .from("v_session_summary")
-      .select("working_sets")
+      .select("session_date, working_sets")
       .eq("user_id", userId)
-      .gte("session_date", weekStart)
+      .gte("session_date", yearStart)
       .then(({ data, error }) => {
         if (error) throw error;
         return data ?? [];
@@ -72,7 +77,19 @@ export async function buildWidgetSnapshot(
         if (error) throw error;
         return data ?? [];
       }),
+    db
+      .from("profile")
+      .select("tier")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data;
+      }),
   ]);
+  const dates = year.map((s) => s.session_date).filter((d): d is string => Boolean(d));
+  const week = year.filter((s) => (s.session_date ?? "") >= weekStart);
+  const tier = getTier(profile?.tier);
 
   const progress = program ? await getProgramProgress(program, { supabase: db, timeZone }) : null;
   const nextTemplate = progress && !progress.isCompleted ? progress.nextDay?.workout_template : null;
@@ -114,6 +131,18 @@ export async function buildWidgetSnapshot(
     .slice(0, MAX_LIFTS);
   const liftOrder = new Map(lifts.map((l, i) => [l.exercise_id, i]));
 
+  const trendList = [...trends.values()].sort(
+    (a, b) => (liftOrder.get(a.id) ?? Infinity) - (liftOrder.get(b.id) ?? Infinity),
+  );
+  const liftList = lifts.map((s) => ({
+    id: s.exercise_id,
+    name: s.exercise_name,
+    bestWeight: toDisplayWeight(Number(s.best_weight_kg), unit),
+    bestReps: Number(s.best_reps),
+    estimatedMax: Math.round(toDisplayWeight(Number(s.best_est_1rm), unit)),
+  }));
+  const sessionsLogged = new Map(lifts.map((s) => [s.exercise_id, Number(s.sessions_logged)]));
+
   return {
     nextBout: nextTemplate ? nextTemplate.day_label || nextTemplate.name : null,
     nextTemplateId: nextTemplate?.id ?? null,
@@ -124,13 +153,7 @@ export async function buildWidgetSnapshot(
     weekStart,
     unit,
     workouts,
-    lifts: lifts.map((s) => ({
-        id: s.exercise_id,
-        name: s.exercise_name,
-        bestWeight: toDisplayWeight(Number(s.best_weight_kg), unit),
-        bestReps: Number(s.best_reps),
-        estimatedMax: Math.round(toDisplayWeight(Number(s.best_est_1rm), unit)),
-      })),
+    lifts: liftList,
     muscles: MUSCLE_CHART_ORDER.filter((m) => !CHART_HIDDEN_MUSCLES.has(m)).map((m: Muscle) => ({
       key: m,
       label: MUSCLE_LABEL[m],
@@ -138,8 +161,23 @@ export async function buildWidgetSnapshot(
       weak: isWeakPoint(m),
     })),
     // Most-trained first: the Lift Trend widget shows the first until one's picked.
-    trends: [...trends.values()].sort(
-      (a, b) => (liftOrder.get(a.id) ?? Infinity) - (liftOrder.get(b.id) ?? Infinity),
+    trends: trendList,
+    fighter: tier
+      ? {
+          key: tier.key,
+          name: tier.name,
+          epithet: tier.epithet,
+          rank: tier.rank,
+          of: MAX_RANK,
+          next: TIERS.find((t) => t.rank === tier.rank + 1)?.name ?? null,
+          image: `/art/fighters/${tier.key}.webp`,
+        }
+      : null,
+    streak: { weeks: weekStreak(dates, today, progress?.daysPerWeek ?? null), planned: progress?.daysPerWeek ?? null },
+    trainingDays: trainingDays(dates, today),
+    record: latestRecord(
+      liftList.map((l) => ({ ...l, sessions: sessionsLogged.get(l.id) ?? 0 })),
+      trendList,
     ),
   };
 }

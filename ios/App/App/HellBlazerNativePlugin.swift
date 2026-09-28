@@ -24,6 +24,8 @@ import AppIntents
 /// - Web view chrome: lifting the launch screen, the edge swipe back, and
 ///   keeping the screen on during a workout.
 /// - Voice logging (VoiceSetLogger): the rest settings it goes by.
+/// - Sets said in your own words (SetReader), read by Apple's on-device
+///   model, for the logger's "Say it".
 @objc(HellBlazerNativePlugin)
 public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     public let identifier = "HellBlazerNativePlugin"
@@ -56,6 +58,8 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "takeRemovedSets", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "donateWorkoutStart", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setHealthSync", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setReaderStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "readSets", returnType: CAPPluginReturnPromise),
     ]
 
     private var observers: [NSObjectProtocol] = []
@@ -442,6 +446,39 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         call.resolve(["setIds": RemovedSets.take(sessionId: sessionId)])
     }
 
+    /// Whether this iPhone can read sets said in words: "available", or why
+    /// not (SetReader.status). The logger only offers "Say it" when it can.
+    @objc func setReaderStatus(_ call: CAPPluginCall) {
+        call.resolve(["status": SetReader.status])
+    }
+
+    /// The runs of sets in what the lifter typed or dictated, as Apple's
+    /// on-device model reads them; the page matches and fills them in
+    /// (src/lib/spoken-sets.ts). Rejects "unavailable" or "failed".
+    @objc func readSets(_ call: CAPPluginCall) {
+        let text = (call.getString("text") ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else {
+            call.reject("Nothing to read", "failed")
+            return
+        }
+        let exercises = ((call.options["exercises"] as? [Any]) ?? []).compactMap { $0 as? String }
+        let unit = call.getString("unit") == "lb" ? "lb" : "kg"
+        Task {
+            do {
+                let runs = try await SetReader.read(
+                    String(text.prefix(500)),
+                    exercises: Array(exercises.prefix(40)),
+                    unit: unit
+                )
+                call.resolve(["runs": runs])
+            } catch SetReader.ReadError.unavailable {
+                call.reject("Apple's on-device model isn't available", "unavailable")
+            } catch {
+                call.reject("Couldn't read that", "failed")
+            }
+        }
+    }
+
     /// Whether the lifter saves workouts to Health (the Settings switch), for
     /// a workout finished by voice.
     @objc func setHealthSync(_ call: CAPPluginCall) {
@@ -461,7 +498,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             return
         }
         UserDefaults.standard.set(sessionId, forKey: "siri.donatedSession")
-        var intent = StartWorkoutDayIntent()
+        let intent = StartWorkoutDayIntent()
         intent.workout = WorkoutDayEntity(id: templateId, label: label)
         let donation = intent
         Task {

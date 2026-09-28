@@ -28,6 +28,44 @@ struct WidgetSnapshot: Codable {
     var muscles: [MuscleSets]?
     /// Estimated-max history per lift, most trained first.
     var trends: [Trend]?
+    /// The lifter's rank fighter, for the Fighter widget; nil when unranked.
+    var fighter: Fighter?
+    /// Weeks in a row with the plan hit, for the Streak widget.
+    var streak: Streak?
+    /// Days trained in the last 12 weeks (yyyy-MM-dd), for its calendar.
+    var trainingDays: [String]?
+    /// The latest new best estimated max, for the Last PR widget.
+    var record: Record?
+
+    struct Fighter: Codable {
+        var key: String
+        var name: String
+        /// "The Monster".
+        var epithet: String
+        var rank: Int
+        /// Ranks on the ladder.
+        var of: Int
+        /// The next rank's fighter; nil at the top.
+        var next: String?
+        /// The portrait's path on the site ("/art/fighters/julius.webp").
+        var image: String
+    }
+
+    struct Streak: Codable {
+        var weeks: Int
+        /// Workouts a week the plan asks for; nil without a program (one).
+        var planned: Int?
+    }
+
+    struct Record: Codable {
+        var name: String
+        /// The set behind it, display unit.
+        var weight: Double
+        var reps: Int
+        var estimatedMax: Double
+        /// yyyy-MM-dd.
+        var date: String
+    }
 
     struct Workout: Codable {
         var templateId: String
@@ -100,5 +138,16 @@ struct WidgetSnapshot: Codable {
     func isFromPastWeek(now: Date = Date()) -> Bool {
         guard let end = weekEnd() else { return false }
         return now >= end
+    }
+
+    /// The streak as of `date`. Once the snapshot's week is over, it holds
+    /// through the next week only if that one was hit; after that, nothing
+    /// says the weeks since were, until the app looks again.
+    func streakWeeks(at date: Date = Date()) -> Int {
+        guard let streak else { return 0 }
+        guard let end = weekEnd(), date >= end else { return streak.weeks }
+        let hit = sessionsThisWeek >= max(1, streak.planned ?? 1)
+        let nextEnd = end.addingTimeInterval(7 * 86_400)
+        return hit && date < nextEnd ? streak.weeks : 0
     }
 }
