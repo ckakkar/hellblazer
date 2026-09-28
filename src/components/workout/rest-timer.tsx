@@ -55,7 +55,8 @@ export type RestTimerControls = {
   /** Start a rest by itself each time a set is logged. */
   auto: boolean;
   /** A fresh rest of the default length, from now. */
-  start: () => void;
+  /** Starts a rest: `seconds` for this exercise's own length, else the default. */
+  start: (seconds?: number) => void;
   /** Pause, resume, or start. */
   toggle: () => void;
   /** Running or paused: moves this rest. Idle: changes the default. */
@@ -145,10 +146,14 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
     return () => window.clearTimeout(id);
   }, [endsAt, halt]);
 
-  const start = useCallback(() => {
-    run(Date.now() + duration * 1000, duration);
-    haptic("tap");
-  }, [duration, run]);
+  const start = useCallback(
+    (seconds?: number) => {
+      const length = seconds ?? duration;
+      run(Date.now() + length * 1000, length);
+      haptic("tap");
+    },
+    [duration, run],
+  );
 
   const toggle = useCallback(() => {
     if (endsAt !== null) {
@@ -409,7 +414,7 @@ export function RestTimerBar({ timer }: { timer: RestTimerControls }) {
             </button>
           </>
         ) : (
-          <button type="button" onClick={timer.start} className={pill}>
+          <button type="button" onClick={() => timer.start()} className={pill}>
             <Play className="mr-1 size-3 fill-current" />
             {finished ? "Again" : "Start"}
           </button>

@@ -50,6 +50,7 @@ import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
 import { useKeepAwake } from "@/lib/keep-awake";
+import { exerciseForNextSet, nextSetLabel, type PlanExercise } from "@/lib/watch/next-set";
 import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
   fromDisplayWeight,
@@ -63,6 +64,7 @@ import type {
   ExercisePR,
   LastPerformance,
   SessionDetail,
+  SessionTarget,
 } from "@/lib/data/sessions";
 import {
   getQueuedSets,
@@ -153,6 +155,7 @@ export function SessionLogger({
   session,
   exerciseLibrary,
   lastPerformances,
+  targets,
   exercisePRs,
   unit,
   fighter,
@@ -160,6 +163,8 @@ export function SessionLogger({
   session: SessionDetail;
   exerciseLibrary: Exercise[];
   lastPerformances: Record<string, LastPerformance>;
+  /** The template's sets and rest per session exercise (by seId). */
+  targets: Record<string, SessionTarget>;
   exercisePRs: Record<string, ExercisePR>;
   unit: Unit;
   /** The lifter's rank fighter, who stars in the finish screen. */
@@ -235,6 +240,11 @@ export function SessionLogger({
       })),
     })),
   );
+
+  // Exercises the lifter ended by hand, short of their target or not: the
+  // Lock Screen moves on from these (unlike `completed`, which also marks
+  // everything already started when a session is reopened).
+  const [endedHere, setEndedHere] = useState<Set<string>>(new Set());
 
   // Exercises are done in order. An exercise counts as "done" once it's been
   // ended; any exercise that already had logged sets (a resumed session) starts
@@ -582,6 +592,46 @@ export function SessionLogger({
     };
   }, [isEditing, router, session.id, unit]);
 
+  // Sets taken back outside the page ("Undo my last set" to Siri): gone here
+  // too, the same as a delete from this page. The app keeps them until taken.
+  const dropRemoved = useRef<(ids: string[]) => void>(() => {});
+  useEffect(() => {
+    dropRemoved.current = (ids) => {
+      for (const id of ids) {
+        const ex = ref.current.find((e) => e.sets.some((s) => s.id === id));
+        if (ex) removeSet(ex.seId, id);
+      }
+    };
+  });
+  useEffect(() => {
+    if (!isNativeApp() || isEditing) return;
+    const take = () =>
+      withNative(async (api) => {
+        const { setIds } = await api.takeRemovedSets({ sessionId: session.id });
+        if (setIds?.length) dropRemoved.current(setIds);
+      });
+    const onVisible = () => {
+      if (document.visibilityState === "visible") take();
+    };
+    take();
+    document.addEventListener("visibilitychange", onVisible);
+    const off = onNative("setsRemoved", take);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      off();
+    };
+  }, [isEditing, session.id]);
+
+  // A workout day just started: Siri learns the routine, and offers the
+  // day on the Lock Screen around when it's usually trained.
+  useEffect(() => {
+    if (isEditing || !session.template_id || Date.now() - startedAt > 10 * 60_000) return;
+    const templateId = session.template_id;
+    withNative((api) =>
+      api.donateWorkoutStart({ sessionId: session.id, templateId, label: session.title ?? "Workout" }),
+    );
+  }, [isEditing, session.id, session.template_id, session.title, startedAt]);
+
   // Coming back from a dead connection is the common case (a gym basement),
   // so retry automatically rather than making them find the button.
   useEffect(() => {
@@ -774,7 +824,8 @@ export function SessionLogger({
     setFlashId(seed.id);
     void persist(seId, seed, nextNumber);
     // A set just landed: that's when the rest starts, as in any gym app.
-    if (!isEditing && rest.auto) rest.start();
+    // The template's rest for this exercise, else the lifter's usual.
+    if (!isEditing && rest.auto) rest.start(targets[seId]?.rest ?? undefined);
     else haptic("tap");
   }
 
@@ -920,6 +971,7 @@ export function SessionLogger({
 
   function endExercise(seId: string) {
     setCompleted((prev) => new Set(prev).add(seId));
+    setEndedHere((prev) => new Set(prev).add(seId));
     setActiveSeId(null);
   }
 
@@ -1011,7 +1063,37 @@ export function SessionLogger({
   const currentIndex = exercises.findIndex((e) => !completed.has(e.seId));
   const active = exercises.find((e) => e.seId === activeSeId) ?? null;
   const doneCount = exercises.filter((e) => completed.has(e.seId)).length;
-  const current = active ?? (currentIndex >= 0 ? exercises[currentIndex] : null);
+  // What's up next, for the Lock Screen and the rest alert: the exercise
+  // open on screen, else the same rule the watch and Siri follow
+  // (next-set.ts): the one being worked until its target's met, then the
+  // next unfinished one.
+  const plans: (PlanExercise & { ex: LocalExercise })[] = exercises.map((ex) => ({
+    ex,
+    id: ex.seId,
+    targetSets: targets[ex.seId]?.sets ?? null,
+    sets: ex.sets.map((s, i) => ({
+      n: i + 1,
+      weight: Number(s.weight) || 0,
+      reps: Number(s.reps) || 0,
+      warmup: s.isWarmup,
+    })),
+    last: (lastFor(ex.exerciseId)?.sets ?? []).map((s) => ({
+      weight: toDisplayWeight(s.weight_kg, unit),
+      reps: s.reps,
+    })),
+  }));
+  const current = active ?? exerciseForNextSet(plans, endedHere)?.ex ?? null;
+  // The set "+ set" would add to it (copy-forward), for the Lock Screen's
+  // Log Set button to log as shown.
+  const nextSet = (() => {
+    if (!current || isEditing) return undefined;
+    const prev = current.sets[current.sets.length - 1];
+    const past = lastFor(current.exerciseId)?.sets[current.sets.length];
+    const weight = prev ? prev.weight : past ? toDisplayWeight(past.weight_kg, unit) : null;
+    const reps = prev ? prev.reps : (past?.reps ?? null);
+    if (weight == null || reps == null || reps < 1) return undefined;
+    return { sessionExerciseId: current.seId, weight, reps, label: nextSetLabel(weight, reps, unit) };
+  })();
 
   // Declared after the queue it labels its alert with; functions above that
   // use it only run on events, after this render.
@@ -1037,6 +1119,7 @@ export function SessionLogger({
     volume: `${Math.round(totalForce).toLocaleString("en-US")} ${unit}`,
     restEndsAt: rest.endsAt ?? undefined,
     restTotal: rest.endsAt !== null ? rest.total : undefined,
+    next: nextSet,
   } satisfies WorkoutActivityState);
   const activityEnded = finishing || victory !== null;
   useEffect(() => {

@@ -11,6 +11,8 @@ export const dynamic = "force-dynamic";
  *
  *   POST {}                 the next set, same numbers as the last
  *   POST { weight, reps }   a set with these numbers (display unit)
+ *   POST { weight, reps, sessionExerciseId }
+ *                           the set the Lock Screen showed, on its exercise
  */
 export async function POST(request: Request) {
   const body: unknown = await request.json().catch(() => ({}));

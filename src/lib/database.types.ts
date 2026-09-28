@@ -130,6 +130,7 @@ export type Database = {
           onboarded_at: string | null
           pending_tier: string | null
           pending_tier_rationale: string | null
+          recap_sent_on: string | null
           reminder_hour: number | null
           sex: string | null
           tier: string | null
@@ -137,6 +138,7 @@ export type Database = {
           tier_rationale: string | null
           user_id: string
           username: string | null
+          weekly_recap: boolean
         }
         Insert: {
           birth_date?: string | null
@@ -148,6 +150,7 @@ export type Database = {
           onboarded_at?: string | null
           pending_tier?: string | null
           pending_tier_rationale?: string | null
+          recap_sent_on?: string | null
           reminder_hour?: number | null
           sex?: string | null
           tier?: string | null
@@ -155,6 +158,7 @@ export type Database = {
           tier_rationale?: string | null
           user_id: string
           username?: string | null
+          weekly_recap?: boolean
         }
         Update: {
           birth_date?: string | null
@@ -166,6 +170,7 @@ export type Database = {
           onboarded_at?: string | null
           pending_tier?: string | null
           pending_tier_rationale?: string | null
+          recap_sent_on?: string | null
           reminder_hour?: number | null
           sex?: string | null
           tier?: string | null
@@ -173,6 +178,7 @@ export type Database = {
           tier_rationale?: string | null
           user_id?: string
           username?: string | null
+          weekly_recap?: boolean
         }
         Relationships: []
       }
@@ -488,6 +494,7 @@ export type Database = {
           id: string
           note: string | null
           position: number
+          rest_seconds: number | null
           target_rep_range: string | null
           target_sets: number | null
           template_id: string
@@ -498,6 +505,7 @@ export type Database = {
           id?: string
           note?: string | null
           position?: number
+          rest_seconds?: number | null
           target_rep_range?: string | null
           target_sets?: number | null
           template_id: string
@@ -508,6 +516,7 @@ export type Database = {
           id?: string
           note?: string | null
           position?: number
+          rest_seconds?: number | null
           target_rep_range?: string | null
           target_sets?: number | null
           template_id?: string

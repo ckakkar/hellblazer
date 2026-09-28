@@ -43,7 +43,12 @@
 	<string>Fatty saves your finished workouts, how hard they were, and your bodyweight to Apple Health.</string>
 	<key>UIBackgroundModes</key>
 	<array>
+		<string>fetch</string>
 		<string>remote-notification</string>
+	</array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.kkrwhofrags.hellblazer.recovery</string>
 	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>

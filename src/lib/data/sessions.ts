@@ -112,6 +112,38 @@ export async function getSessionDetail(
   return detail;
 }
 
+/** What the template asks of each of the session's exercises. */
+export type SessionTarget = {
+  /** Working sets planned; null without a target. */
+  sets: number | null;
+  /** Seconds to rest after each set; null for the lifter's usual. */
+  rest: number | null;
+};
+
+/**
+ * The template's targets and rests for a session's exercises, keyed by
+ * session_exercise id. Matched by position, which a swap keeps; an
+ * exercise added mid-session has none.
+ */
+export async function getSessionTargets(
+  session: SessionDetail,
+): Promise<Record<string, SessionTarget>> {
+  if (!session.template_id) return {};
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("template_exercise")
+    .select("position, target_sets, rest_seconds")
+    .eq("template_id", session.template_id);
+  if (error) throw error;
+  const byPosition = new Map((data ?? []).map((t) => [t.position, t]));
+  const targets: Record<string, SessionTarget> = {};
+  for (const se of session.session_exercise) {
+    const t = byPosition.get(se.position);
+    if (t) targets[se.id] = { sets: t.target_sets, rest: t.rest_seconds };
+  }
+  return targets;
+}
+
 export type LastPerformance = {
   session_date: string;
   sets: { set_number: number; weight_kg: number; reps: number }[];

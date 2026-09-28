@@ -25,6 +25,41 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
 
     /// The heart rate the iPhone last heard, and when.
     private var sentHeartRate: (bpm: Int, at: Date)?
+    /// The last minute's readings, for a rest's peak.
+    private var recentHeartRates: [(at: Date, bpm: Double)] = []
+    /// Health's latest resting heart rate, looked up when recording starts.
+    private(set) var restingHeartRate: Double?
+
+    /// The highest reading in the last `seconds`: the set just done.
+    func peakHeartRate(within seconds: TimeInterval = 30) -> Double? {
+        let since = Date().addingTimeInterval(-seconds)
+        return recentHeartRates.filter { $0.at >= since }.map { $0.bpm }.max()
+    }
+
+    /// A workout started offline got its server id: Health's copy and the
+    /// phone go by that one now.
+    @MainActor
+    func retag(_ id: String) {
+        guard let builder, sessionId != id else { return }
+        sessionId = id
+        builder.addMetadata([HKMetadataKeyExternalUUID: id]) { _, _ in }
+        PhoneLink.shared.sendGuaranteed(["workoutStarted": id])
+    }
+
+    /// The newest resting heart rate from the last two weeks.
+    private func loadRestingHeartRate() async {
+        let descriptor = HKSampleQueryDescriptor(
+            predicates: [.quantitySample(
+                type: HKQuantityType(.restingHeartRate),
+                predicate: HKQuery.predicateForSamples(withStart: Date().addingTimeInterval(-14 * 86_400), end: Date())
+            )],
+            sortDescriptors: [SortDescriptor(\.endDate, order: .reverse)],
+            limit: 1
+        )
+        let bpm = HKUnit.count().unitDivided(by: .minute())
+        let value = try? await descriptor.result(for: store).first?.quantity.doubleValue(for: bpm)
+        await MainActor.run { self.restingHeartRate = value }
+    }
 
     /// Time recorded so far, pauses excluded; nil when not recording.
     func elapsed(at date: Date) -> TimeInterval? {
@@ -41,7 +76,9 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
     private func authorize() async -> Bool {
         guard HKHealthStore.isHealthDataAvailable() else { return false }
         let share: Set<HKSampleType> = [HKObjectType.workoutType(), HKQuantityType(.activeEnergyBurned)]
-        let read: Set<HKObjectType> = [HKQuantityType(.heartRate), HKQuantityType(.activeEnergyBurned)]
+        let read: Set<HKObjectType> = [
+            HKQuantityType(.heartRate), HKQuantityType(.activeEnergyBurned), HKQuantityType(.restingHeartRate),
+        ]
         do {
             try await store.requestAuthorization(toShare: share, read: read)
         } catch {
@@ -75,6 +112,7 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
             let start = recent ? min(workout.startDate, Date()) : Date()
             session.startActivity(with: start)
             try await builder.beginCollection(at: start)
+            Task { await loadRestingHeartRate() }
             try? await builder.addMetadata([
                 HKMetadataKeyExternalUUID: workout.id,
                 HKMetadataKeyIndoorWorkout: true,
@@ -129,6 +167,7 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
         sessionId = nil
         paused = false
         sentHeartRate = nil
+        recentHeartRates = []
     }
 
     /// Live heart rate for the iPhone's Lock Screen and logger: on a change,
@@ -173,6 +212,9 @@ final class WorkoutRecorder: NSObject, ObservableObject, HKWorkoutSessionDelegat
         DispatchQueue.main.async {
             if let bpm {
                 self.heartRate = bpm
+                let now = Date()
+                self.recentHeartRates.append((now, bpm))
+                self.recentHeartRates.removeAll { now.timeIntervalSince($0.at) > 60 }
                 self.sendHeartRate(bpm)
             }
             if let kcal { self.calories = kcal }

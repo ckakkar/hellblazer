@@ -82,6 +82,67 @@ struct LiftBestIntent: AppIntent {
     }
 }
 
+// MARK: The workout, hands-free
+
+/// "Finish my workout in Fatty": finishes the one in progress, saves it to
+/// Apple Health, and says how it went.
+struct FinishWorkoutIntent: AppIntent {
+    static let title: LocalizedStringResource = "Finish Workout"
+    static let description = IntentDescription("Finishes the workout in progress and saves it.")
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let reply = await VoiceSetLogger.finish()
+        return .result(dialog: "\(reply)")
+    }
+}
+
+/// "Undo my last set in Fatty": for when Siri heard 150, not 105.
+struct UndoLastSetIntent: AppIntent {
+    static let title: LocalizedStringResource = "Undo Last Set"
+    static let description = IntentDescription("Takes back the last set of the workout in progress.")
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        let reply = await VoiceSetLogger.undo()
+        return .result(dialog: "\(reply)")
+    }
+}
+
+// MARK: Your week
+
+/// "How's my week in Fatty?": workouts against the plan, sets, the weak
+/// point furthest under its 10 sets, and what's next. From the snapshot the
+/// app keeps (it's refreshed after every finished workout).
+struct WeekSummaryIntent: AppIntent {
+    static let title: LocalizedStringResource = "How's My Week"
+    static let description = IntentDescription("Tells you this week's workouts and sets, your weakest muscle, and what's next.")
+
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        guard let snapshot = WidgetSnapshot.load() else {
+            return .result(dialog: "Open Fatty once, and I'll be able to tell you about your week.")
+        }
+        let fresh = !snapshot.isFromPastWeek()
+        let sessions = fresh ? snapshot.sessionsThisWeek : 0
+        let sets = fresh ? snapshot.setsThisWeek : 0
+
+        var parts: [String] = []
+        let workouts = "\(sessions) \(sessions == 1 ? "workout" : "workouts")"
+        if let planned = snapshot.sessionsPlanned {
+            parts.append("This week: \(sessions) of \(planned) workouts, \(sets) \(sets == 1 ? "set" : "sets").")
+        } else {
+            parts.append("This week: \(workouts), \(sets) \(sets == 1 ? "set" : "sets").")
+        }
+        if fresh, sessions > 0,
+           let weakest = snapshot.muscles?.filter({ $0.weak && $0.sets < 10 }).min(by: { $0.sets < $1.sets }) {
+            let count = Int(weakest.sets.rounded())
+            parts.append("\(weakest.label) is lowest at \(count) \(count == 1 ? "set" : "sets").")
+        }
+        if let next = snapshot.nextBout {
+            parts.append("Next up: \(next).")
+        }
+        return .result(dialog: "\(parts.joined(separator: " "))")
+    }
+}
+
 struct HellBlazerShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(
@@ -112,6 +173,34 @@ struct HellBlazerShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Log a Set",
             systemImageName: "plus.circle"
+        )
+        AppShortcut(
+            intent: UndoLastSetIntent(),
+            phrases: [
+                "Undo my last set in \(.applicationName)",
+                "Take back my last set in \(.applicationName)",
+            ],
+            shortTitle: "Undo Last Set",
+            systemImageName: "arrow.uturn.backward"
+        )
+        AppShortcut(
+            intent: FinishWorkoutIntent(),
+            phrases: [
+                "Finish my workout in \(.applicationName)",
+                "End my workout in \(.applicationName)",
+            ],
+            shortTitle: "Finish Workout",
+            systemImageName: "flag.checkered"
+        )
+        AppShortcut(
+            intent: WeekSummaryIntent(),
+            phrases: [
+                "How's my week in \(.applicationName)",
+                "How is my week going in \(.applicationName)",
+                "What's my next workout in \(.applicationName)",
+            ],
+            shortTitle: "My Week",
+            systemImageName: "calendar"
         )
         AppShortcut(
             intent: StartWorkoutDayIntent(),

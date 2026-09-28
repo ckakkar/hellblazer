@@ -7,6 +7,7 @@ struct HellBlazerWidgets: WidgetBundle {
         NextBoutWidget()
         MuscleSetsWidget()
         LiftTrendWidget()
+        RecoveryWidget()
         WorkoutLiveActivity()
         if #available(iOSApplicationExtension 18.0, *) {
             StartWorkoutControl()

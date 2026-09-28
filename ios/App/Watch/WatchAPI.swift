@@ -37,6 +37,8 @@ struct Exercise: Codable, Equatable, Identifiable {
     var name: String
     var targetSets: Int?
     var targetReps: String?
+    /// Seconds to rest after its sets (its template's); nil: the usual rest.
+    var restSeconds: Double?
     var sets: [LoggedSet]
     /// The last session's working sets on this movement.
     var last: [PastSet]
@@ -62,8 +64,19 @@ struct StartOption: Codable, Equatable, Identifiable {
     var programDayId: String?
     var label: String
     var exercises: Int
+    /// The day's exercises, so it can start with no connection (sent while
+    /// no workout's on, and kept with the rest of the state).
+    var plan: [PlanExercise]?
 
     var id: String { templateId }
+}
+
+struct PlanExercise: Codable, Equatable {
+    var name: String
+    var targetSets: Int?
+    var targetReps: String?
+    var restSeconds: Double?
+    var last: [PastSet]
 }
 
 /// A set waiting to reach the server. Kept on the watch until it does, so a

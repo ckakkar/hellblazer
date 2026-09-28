@@ -1,4 +1,5 @@
 import { isNativeApp } from "@/lib/native";
+import type { NextSet } from "@/lib/watch/next-set";
 
 export type HealthAccess = "authorized" | "denied" | "notDetermined";
 export type HealthStatus =
@@ -46,6 +47,8 @@ export type WorkoutActivityState = {
   restEndsAt?: number;
   /** Seconds. */
   restTotal?: number;
+  /** The set the Lock Screen's Log Set button logs, as it shows it. */
+  next?: NextSet;
 };
 
 /**
@@ -85,6 +88,8 @@ export type WatchSettings = {
   /** The accent's hex, e.g. "#df2d28". */
   accent: string;
   restSeconds: number;
+  /** Tap when the heart rate's back down during a rest (on by default). */
+  hrRest?: boolean;
   timeZone: string;
 };
 
@@ -110,6 +115,8 @@ export type NativeEvents = {
   restCommand: Record<string, never>;
   /** Something outside the page (the watch, a set said to Siri) logged or finished. */
   watchChanged: Record<string, never>;
+  /** Sets were taken back outside the page ("Undo my last set"): see takeRemovedSets. */
+  setsRemoved: Record<string, never>;
   /** The Apple Watch's latest heart rate, every 5-15 seconds while it records. */
   heartRate: { bpm: number; sessionId: string };
 };
@@ -161,6 +168,12 @@ export interface HellBlazerNative {
   recoveryStatus(): Promise<{ available: boolean; shouldRequest: boolean }>;
   /** Four weeks of sleep, HRV and resting heart rate, oldest first. */
   recoveryData(): Promise<{ days: RecoveryDay[] }>;
+  /** Sets taken back outside the page for this session, handed over once. */
+  takeRemovedSets(options: { sessionId: string }): Promise<{ setIds: string[] }>;
+  /** Tells Siri a workout day was started, so it can suggest it next time. */
+  donateWorkoutStart(options: { sessionId: string; templateId: string; label: string }): Promise<void>;
+  /** Whether finished workouts go to Apple Health, for one finished by voice. */
+  setHealthSync(options: { on: boolean }): Promise<void>;
   addListener<E extends keyof NativeEvents>(
     event: E,
     listener: (data: NativeEvents[E]) => void,

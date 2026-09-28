@@ -46,6 +46,7 @@
 		859195CD7D7DC222FABA079B /* SetLogging.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F894381C814C1CD240E790B /* SetLogging.swift */; };
 		85F02C9358DA7EB2C458E808 /* SpotlightIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A87CFC9D5EEE63BB1297D76 /* SpotlightIndex.swift */; };
 		863BE3ADF8E61DC2CB6E81BB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE961C272C929C4D2FE7F294 /* Assets.xcassets */; };
+		878649B3F382437413846CEB /* RecoveryWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 175224FE7E20308CF65E694F /* RecoveryWidget.swift */; };
 		8B9646296EE199EBD789F4F4 /* VoiceSetLogger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 044098D9A2B63DAC78AA02EF /* VoiceSetLogger.swift */; };
 		8DC284F879436D0A89A12B5D /* FattyWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3994D398D993B0C2B151C389 /* FattyWatchApp.swift */; };
 		8ECE7034DA39468FAB641943 /* Keychain.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9484A68A11DA3D83F1F06DE /* Keychain.swift */; };
@@ -53,9 +54,11 @@
 		9582B6832FE993A70072D4E8 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9582B6822FE993A50072D4E8 /* SceneDelegate.swift */; };
 		981D0BC681AF9472E2C51795 /* StartWorkoutControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 103E74048CAD88C8C6468C01 /* StartWorkoutControl.swift */; };
 		9B12E6AF9378E92AE41B49E8 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9632B13BCA779AEFE286F5 /* WorkoutActivityAttributes.swift */; };
+		9E9EEA9DA39347856AEADF83 /* RecoveryCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */; };
 		A25CA3DD2421571E3CBBE81A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4ABA843C8C93CE0627249E2A /* Foundation.framework */; };
 		A70AC4541676B4CC4BA8376E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D256DB474CD275086B6EB5D6 /* PrivacyInfo.xcprivacy */; };
 		A933D75D5AF6E25C04167511 /* HealthExtras.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF540DD31053926B1C63F57A /* HealthExtras.swift */; };
+		AF1254B6E30D88FC51603DBD /* RecoveryCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */; };
 		B021219EFE8184E526DE70FA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */; };
 		B0B57A5761E290E4B7E582AE /* Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F62D210AC400F563573F4E41 /* Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0910D6C708A3DCD4DC12D0C /* WatchAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938CA7BBAA4BFB5CA79736B4 /* WatchAPI.swift */; };
@@ -136,6 +139,8 @@
 		0AA7C4240F60FBA6BFDFA48C /* Widgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Widgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0ED6AC668BD4926FE78263EC /* WorkoutView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = WorkoutView.swift; sourceTree = "<group>"; };
 		103E74048CAD88C8C6468C01 /* StartWorkoutControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StartWorkoutControl.swift; sourceTree = "<group>"; };
+		167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecoveryCache.swift; sourceTree = "<group>"; };
+		175224FE7E20308CF65E694F /* RecoveryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecoveryWidget.swift; sourceTree = "<group>"; };
 		1A7962EF1115AA0BB0C36256 /* RestControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestControl.swift; sourceTree = "<group>"; };
 		1AD6781B48AC595131C550BD /* FattyComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FattyComplication.swift; sourceTree = "<group>"; };
 		1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerWidgets.swift; sourceTree = "<group>"; };
@@ -352,6 +357,7 @@
 				103E74048CAD88C8C6468C01 /* StartWorkoutControl.swift */,
 				B0BBD971330E9A45A9FDAB40 /* MuscleSetsWidget.swift */,
 				70DEEB8D3582BC1090E5774D /* LiftTrendWidget.swift */,
+				175224FE7E20308CF65E694F /* RecoveryWidget.swift */,
 			);
 			name = Widgets;
 			path = Widgets;
@@ -376,6 +382,7 @@
 				F9484A68A11DA3D83F1F06DE /* Keychain.swift */,
 				B1F973C12CB48A69B40CC186 /* SiriEntities.swift */,
 				3F894381C814C1CD240E790B /* SetLogging.swift */,
+				167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */,
 			);
 			name = Shared;
 			path = Shared;
@@ -561,6 +568,8 @@
 				578730E6B66FDE7C7FA58B60 /* LiftTrendWidget.swift in Sources */,
 				D9591F682BE6B66865C14C90 /* SiriEntities.swift in Sources */,
 				859195CD7D7DC222FABA079B /* SetLogging.swift in Sources */,
+				878649B3F382437413846CEB /* RecoveryWidget.swift in Sources */,
+				AF1254B6E30D88FC51603DBD /* RecoveryCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -603,6 +612,7 @@
 				A933D75D5AF6E25C04167511 /* HealthExtras.swift in Sources */,
 				8B9646296EE199EBD789F4F4 /* VoiceSetLogger.swift in Sources */,
 				2A29ACBB408FE1FC93BA708A /* SetLogging.swift in Sources */,
+				9E9EEA9DA39347856AEADF83 /* RecoveryCache.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -675,7 +685,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -702,7 +712,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -729,7 +739,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -755,7 +765,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -890,7 +900,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" \"-DDEBUG\"";
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -913,7 +923,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "";
@@ -936,7 +946,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -962,7 +972,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;

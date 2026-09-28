@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import { linkPhone, linkWatch } from "@/lib/actions/watch";
-import { withNative } from "@/lib/native-plugins";
+import { healthSyncOn, withNative } from "@/lib/native-plugins";
 import { savedRestAuto, savedRestSeconds } from "@/lib/rest-timer";
+import { hrRestOn } from "@/lib/watch-prefs";
 import type { Unit } from "@/lib/units";
 
 /**
@@ -24,8 +25,10 @@ export function DeviceSync({ userId, unit, accent }: { userId: string; unit: Uni
       const phoneToken = phone.linkedUserId === userId ? undefined : (await linkPhone()).token;
       await api.phoneSync({ token: phoneToken, userId, unit, timeZone });
     });
-    // For sets said to Siri while no workout page is awake to start the rest.
+    // For sets said to Siri while no workout page is awake to start the rest,
+    // and a workout finished by voice, which the app saves to Health itself.
     withNative((api) => api.setRestDefaults({ seconds: savedRestSeconds(), auto: savedRestAuto() }));
+    withNative((api) => api.setHealthSync({ on: healthSyncOn() }));
     withNative(async (api) => {
       const watch = await api.watchStatus();
       if (!watch.paired || watch.disabled) return;
@@ -36,6 +39,7 @@ export function DeviceSync({ userId, unit, accent }: { userId: string; unit: Uni
         unit,
         accent,
         restSeconds: savedRestSeconds(),
+        hrRest: hrRestOn(),
         timeZone,
       });
     });

@@ -27,6 +27,32 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var restTotal: Double?
         /// Beats per minute from the Apple Watch, while it's recording.
         var heartRate: Int? = nil
+        /// The set the Log Set button logs, as it shows it. Nil when there's
+        /// nothing to copy (a first-ever exercise) or every set's done.
+        var next: NextSet? = nil
+    }
+
+    /// The next set, in the lifter's unit (src/lib/watch/next-set.ts).
+    struct NextSet: Codable, Hashable {
+        var sessionExerciseId: String
+        var weight: Double
+        var reps: Int
+        /// "80 kg × 5".
+        var label: String
+
+        /// From the page's or the watch's JSON-ish dictionary.
+        init?(_ raw: Any?) {
+            guard let raw = raw as? [String: Any],
+                  let id = raw["sessionExerciseId"] as? String,
+                  let weight = (raw["weight"] as? NSNumber)?.doubleValue,
+                  let reps = (raw["reps"] as? NSNumber)?.intValue,
+                  let label = raw["label"] as? String
+            else { return nil }
+            sessionExerciseId = id
+            self.weight = weight
+            self.reps = reps
+            self.label = label
+        }
     }
 
     /// The session's id: tapping the activity opens /log/<id>.

@@ -4,6 +4,7 @@ import {
   getSessionDetail,
   getLastPerformances,
   getExercisePRs,
+  getSessionTargets,
 } from "@/lib/data/sessions";
 import { getExercises } from "@/lib/data/exercises";
 import { getUnit } from "@/lib/settings";
@@ -33,13 +34,17 @@ export default async function LoggerPage({
   const exerciseIds = [
     ...new Set(session.session_exercise.map((se) => se.exercise_id)),
   ];
-  const lastPerformances = await getLastPerformances(exerciseIds, id);
+  const [lastPerformances, targets] = await Promise.all([
+    getLastPerformances(exerciseIds, id),
+    getSessionTargets(session),
+  ]);
 
   return (
     <SessionLogger
       session={session}
       exerciseLibrary={exerciseLibrary}
       lastPerformances={lastPerformances}
+      targets={targets}
       exercisePRs={exercisePRs}
       unit={unit}
       fighter={getTier(profile?.tier)?.key ?? "ohma"}

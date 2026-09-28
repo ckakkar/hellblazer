@@ -20,6 +20,7 @@ import {
 } from "@/lib/watch/next-set";
 import type {
   WatchExercise,
+  WatchPlanExercise,
   WatchStartOption,
   WatchState,
   WatchWeek,
@@ -116,14 +117,73 @@ export async function handleWatch(
   }
 }
 
-/** Everything the watch shows: the workout in progress and what it can start. */
+/**
+ * Everything the watch shows: the workout in progress and what it can
+ * start. With none on, each day it can start carries its plan, so it can
+ * start one with no connection.
+ */
 export async function watchState(ctx: WatchContext): Promise<WatchState> {
   const [active, { planned, ...start }, week] = await Promise.all([
     activeWorkout(ctx),
     startOptions(ctx),
     thisWeek(ctx),
   ]);
+  if (!active) {
+    const plans = await startPlans(ctx, start.options.map((o) => o.templateId));
+    const withPlan = (o: WatchStartOption) => ({ ...o, plan: plans.get(o.templateId) ?? [] });
+    start.options = start.options.map(withPlan);
+    if (start.next) start.next = withPlan(start.next);
+  }
   return { unit: ctx.unit, active, ...start, week: { ...week, planned } };
+}
+
+/** Each template's exercises in order, with targets, rest and last time's sets. */
+async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map<string, WatchPlanExercise[]>> {
+  const plans = new Map<string, WatchPlanExercise[]>();
+  if (templateIds.length === 0) return plans;
+  const { db, userId } = ctx;
+  const { data: rows, error } = await db
+    .from("template_exercise")
+    .select("template_id, position, exercise_id, target_sets, target_rep_range, rest_seconds, exercise(name)")
+    .eq("user_id", userId)
+    .in("template_id", templateIds)
+    .order("position", { ascending: true });
+  if (error) throw error;
+  const last = await lastPerformances(ctx, [...new Set((rows ?? []).map((r) => r.exercise_id))], null);
+  for (const row of [...(rows ?? [])].sort((a, b) => a.position - b.position)) {
+    const list = plans.get(row.template_id) ?? [];
+    list.push({
+      name: row.exercise?.name ?? "Exercise",
+      targetSets: row.target_sets,
+      targetReps: row.target_rep_range,
+      restSeconds: row.rest_seconds,
+      last: last.get(row.exercise_id) ?? [],
+    });
+    plans.set(row.template_id, list);
+  }
+  return plans;
+}
+
+/** The previous session's working sets per movement (display unit), for copy-forward. */
+async function lastPerformances(
+  ctx: WatchContext,
+  exerciseIds: string[],
+  excludeSession: string | null,
+): Promise<Map<string, { weight: number; reps: number }[]>> {
+  const last = new Map<string, { weight: number; reps: number }[]>();
+  if (exerciseIds.length === 0) return last;
+  const { data, error } = await ctx.db.rpc("watch_last_performances", {
+    p_user: ctx.userId,
+    p_exercise_ids: exerciseIds,
+    ...(excludeSession ? { p_exclude_session: excludeSession } : {}),
+  });
+  if (error) throw error;
+  for (const row of data ?? []) {
+    const list = last.get(row.exercise_id) ?? [];
+    list.push({ weight: toDisplayWeight(Number(row.weight_kg), ctx.unit), reps: row.reps });
+    last.set(row.exercise_id, list);
+  }
+  return last;
 }
 
 /** Sessions and working sets since Monday, in the lifter's calendar. */
@@ -176,7 +236,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
       if (!session.template_id) return [];
       const { data, error: targetError } = await db
         .from("template_exercise")
-        .select("position, target_sets, target_rep_range")
+        .select("position, target_sets, target_rep_range, rest_seconds")
         .eq("template_id", session.template_id)
         .eq("user_id", userId);
       if (targetError) throw targetError;
@@ -185,21 +245,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
   ]);
 
   // The previous session's working sets per movement, for copy-forward.
-  const exerciseIds = [...new Set(rows.map((r) => r.exercise_id))];
-  const last = new Map<string, { weight: number; reps: number }[]>();
-  if (exerciseIds.length > 0) {
-    const { data, error: lastError } = await db.rpc("watch_last_performances", {
-      p_user: userId,
-      p_exercise_ids: exerciseIds,
-      p_exclude_session: session.id,
-    });
-    if (lastError) throw lastError;
-    for (const row of data ?? []) {
-      const list = last.get(row.exercise_id) ?? [];
-      list.push({ weight: toDisplayWeight(Number(row.weight_kg), unit), reps: row.reps });
-      last.set(row.exercise_id, list);
-    }
-  }
+  const last = await lastPerformances(ctx, [...new Set(rows.map((r) => r.exercise_id))], session.id);
 
   // Targets come from the template, matched by position as swaps keep it.
   const byPosition = new Map(targets.map((t) => [t.position, t]));
@@ -210,6 +256,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
       name: row.exercise?.name ?? "Exercise",
       targetSets: target?.target_sets ?? null,
       targetReps: target?.target_rep_range ?? null,
+      restSeconds: target?.rest_seconds ?? null,
       sets: [...row.set]
         .sort((a, b) => a.set_number - b.set_number)
         .map((s) => ({
@@ -407,8 +454,12 @@ const voiceSetSchema = z
   .object({
     weight: z.number().min(0).max(9999).optional(),
     reps: z.number().int().min(1).max(999).optional(),
+    /** The Lock Screen's Log Set names the exercise it showed. */
+    sessionExerciseId: z.string().uuid().optional(),
   })
   .refine((v) => (v.weight === undefined) === (v.reps === undefined));
+
+type Activity = ReturnType<typeof activitySummary>;
 
 export type VoiceSetReply =
   | { status: "no-workout" }
@@ -423,18 +474,28 @@ export type VoiceSetReply =
       /** Its place among the exercise's working sets, 1-based. */
       setNumber: number;
       targetSets: number | null;
+      /** The rest after it (the template's), or null for the lifter's usual. */
+      restSeconds: number | null;
       /** That set was the plan's last. */
       complete: boolean;
       /** The workout for the Live Activity (activitySummary). */
-      activity: ReturnType<typeof activitySummary>;
+      activity: Activity;
     };
+
+/** The workout for the Live Activity, as it stands. */
+function summarize(workout: WatchWorkout, unit: Unit): { complete: boolean; activity: Activity } {
+  const complete = isComplete(workout.exercises);
+  const current = exerciseForNextSet(workout.exercises);
+  return { complete, activity: activitySummary(workout, current, complete, unit) };
+}
 
 /**
  * A set logged from the iPhone without the page (ios/App/App/
- * VoiceSetLogger.swift): Siri, the Action button, the Control Center button.
- * With no numbers it's "same again". The exercise and the numbers follow
- * the watch's rules (next-set.ts); the set is saved as the watch saves one,
- * and the page picks it up when it next looks.
+ * VoiceSetLogger.swift): Siri, the Action button, Control Center, and the
+ * Live Activity's Log Set. With no numbers it's "same again". The exercise
+ * follows the shared rules (next-set.ts) unless the Lock Screen named the
+ * one it showed; the set is saved as the watch saves one, and the page
+ * picks it up when it next looks.
  */
 export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<VoiceSetReply> {
   const v = voiceSetSchema.parse(body ?? {});
@@ -446,21 +507,9 @@ export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<Voi
   // so rather than add one. Numbers said out loud are an extra set.
   if (repeat && isComplete(workout.exercises)) return { status: "all-done" };
 
-  const { data: latest, error } = await ctx.db
-    .from("set")
-    .select("session_exercise_id")
-    .eq("user_id", ctx.userId)
-    .eq("is_warmup", false)
-    .in(
-      "session_exercise_id",
-      workout.exercises.map((e) => e.id),
-    )
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (error) throw error;
-
-  const exercise = exerciseForNextSet(workout.exercises, latest?.session_exercise_id ?? null);
+  const exercise = v.sessionExerciseId
+    ? (workout.exercises.find((e) => e.id === v.sessionExerciseId) ?? null)
+    : exerciseForNextSet(workout.exercises);
   if (!exercise) return { status: "no-workout" };
   const numbers = repeat ? sameAgain(exercise) : { weight: v.weight!, reps: v.reps! };
   if (!numbers) return { status: "no-numbers", exercise: exercise.name };
@@ -479,9 +528,8 @@ export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<Voi
     ...exercise,
     sets: [...exercise.sets, { id, n: setNumber, weight: numbers.weight, reps: numbers.reps, warmup: false }],
   };
-  const exercises = workout.exercises.map((e) => (e.id === exercise.id ? logged : e));
-  const complete = isComplete(exercises);
-  const next = complete ? logged : exerciseForNextSet(exercises, logged.id);
+  const after = { ...workout, exercises: workout.exercises.map((e) => (e.id === exercise.id ? logged : e)) };
+  const { complete, activity } = summarize(after, ctx.unit);
   return {
     status: "logged",
     exercise: exercise.name,
@@ -490,7 +538,120 @@ export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<Voi
     unit: ctx.unit,
     setNumber: logged.sets.filter((s) => !s.warmup).length,
     targetSets: exercise.targetSets,
+    restSeconds: exercise.restSeconds,
     complete,
-    activity: activitySummary({ ...workout, exercises }, next, complete, ctx.unit),
+    activity,
+  };
+}
+
+export type VoiceUndoReply =
+  | { status: "no-workout" }
+  | { status: "nothing" }
+  | {
+      status: "undone";
+      /** The set taken back, for the page to drop too. */
+      setId: string;
+      sessionId: string;
+      exercise: string;
+      weight: number;
+      reps: number;
+      unit: Unit;
+      activity: Activity;
+    };
+
+/** "Undo my last set": takes back the working set logged most recently. */
+export async function undoVoiceSet(ctx: WatchContext): Promise<VoiceUndoReply> {
+  const workout = await activeWorkout(ctx);
+  if (!workout) return { status: "no-workout" };
+  const { data: latest, error } = await ctx.db
+    .from("set")
+    .select("id, session_exercise_id")
+    .eq("user_id", ctx.userId)
+    .eq("is_warmup", false)
+    .in(
+      "session_exercise_id",
+      workout.exercises.map((e) => e.id),
+    )
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  const exercise = workout.exercises.find((e) => e.id === latest?.session_exercise_id);
+  const set = exercise?.sets.find((s) => s.id === latest?.id);
+  if (!latest || !exercise || !set) return { status: "nothing" };
+
+  await deleteWatchSet(ctx, { id: set.id });
+  const after = {
+    ...workout,
+    exercises: workout.exercises.map((e) =>
+      e.id === exercise.id ? { ...e, sets: e.sets.filter((s) => s.id !== set.id) } : e,
+    ),
+  };
+  return {
+    status: "undone",
+    setId: set.id,
+    sessionId: workout.id,
+    exercise: exercise.name,
+    weight: set.weight,
+    reps: set.reps,
+    unit: ctx.unit,
+    activity: summarize(after, ctx.unit).activity,
+  };
+}
+
+export type VoiceFinishReply =
+  | { status: "no-workout" }
+  | {
+      status: "finished";
+      sessionId: string;
+      title: string;
+      /** Epoch ms. */
+      startedAt: number;
+      durationMin: number;
+      sets: number;
+      /** Formatted in the lifter's unit, "7,420 kg". */
+      volume: string;
+      /** The session's average RPE (1-10), for Apple Health's effort; null without any. */
+      effort: number | null;
+    };
+
+/**
+ * "Finish my workout": finishes the session in progress as the watch does,
+ * timed from its start. The phone then saves it to Apple Health.
+ */
+export async function finishVoiceWorkout(ctx: WatchContext): Promise<VoiceFinishReply> {
+  const workout = await activeWorkout(ctx);
+  if (!workout) return { status: "no-workout" };
+  const minutes = Math.round((Date.now() - workout.startedAt) / 60_000);
+  const durationMin = Math.min(360, Math.max(1, minutes));
+
+  const { data: rated, error } = await ctx.db
+    .from("set")
+    .select("rpe")
+    .eq("user_id", ctx.userId)
+    .eq("is_warmup", false)
+    .in(
+      "session_exercise_id",
+      workout.exercises.map((e) => e.id),
+    )
+    .not("rpe", "is", null);
+  if (error) throw error;
+  const rpes = (rated ?? []).map((r) => Number(r.rpe)).filter((n) => Number.isFinite(n));
+  const effort = rpes.length
+    ? Math.min(10, Math.max(1, Math.round(rpes.reduce((a, b) => a + b, 0) / rpes.length)))
+    : null;
+
+  await finishWatchWorkout(ctx, { sessionId: workout.id, durationMin });
+  const sets = workout.exercises.flatMap((e) => e.sets.filter((s) => !s.warmup));
+  const volume = sets.reduce((n, s) => n + s.weight * s.reps, 0);
+  return {
+    status: "finished",
+    sessionId: workout.id,
+    title: workout.title,
+    startedAt: workout.startedAt,
+    durationMin,
+    sets: sets.length,
+    volume: `${Math.round(volume).toLocaleString("en-US")} ${ctx.unit}`,
+    effort,
   };
 }

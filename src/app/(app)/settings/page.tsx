@@ -27,6 +27,7 @@ import { DangerZone } from "./danger-zone";
 import { AppleHealthSettings } from "./apple-health";
 import { AppleWatchSettings } from "./apple-watch";
 import { KeepAwakeRow } from "./keep-awake-row";
+import { WeeklyRecapRow } from "./weekly-recap-row";
 import { SignOutButton } from "./sign-out-button";
 import { ExportButton } from "./export-button";
 import { SignInMethods, type SignInMethod } from "./sign-in-methods";
@@ -160,7 +161,7 @@ export default async function ProfilePage({
 
         <SettingsGroup
           label="Notifications"
-          caption="A daily push reminder when your programmed workout is due."
+          caption="A reminder on days your programmed workout is due, and a recap of your week on Sunday."
         >
           <SettingsRow label="Daily reminder">
             <NotificationsManager
@@ -168,6 +169,7 @@ export default async function ProfilePage({
               vapidPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
             />
           </SettingsRow>
+          <WeeklyRecapRow initial={notifications.weeklyRecap} />
         </SettingsGroup>
 
         <AppleHealthSettings />

@@ -7,8 +7,10 @@ import WidgetKit
 /// countdown while you rest. The clock and countdown are drawn by the system
 /// from dates, so they need no updates from the app; when a rest runs out the
 /// activity goes stale and reads "Rest's up" until the app says otherwise.
-/// While resting, +30s and Skip work without opening the app (RestControl).
-/// With the Apple Watch recording, its heart rate sits under the clock.
+/// While resting, +30s and Skip work without opening the app (RestControl);
+/// otherwise Log Set logs the next set it shows ("next 80 kg × 5"), also
+/// without opening it. With the Apple Watch recording, its heart rate sits
+/// under the clock.
 /// Tapping anywhere else opens the session.
 struct WorkoutLiveActivity: Widget {
     var body: some WidgetConfiguration {
@@ -117,6 +119,16 @@ private struct MainClock: View {
     }
 }
 
+/// "2 sets done · next 80 kg × 5": how far along, and what Log Set logs.
+private func detailLine(_ state: WorkoutActivityAttributes.ContentState) -> String? {
+    switch (state.detail, state.next) {
+    case let (detail?, next?): return "\(detail) · next \(next.label)"
+    case let (nil, next?): return "Next \(next.label)"
+    case let (detail?, nil): return detail
+    default: return nil
+    }
+}
+
 /// The watch's heart rate: a red heart, as in Apple's Workout app.
 private struct HeartRateLabel: View {
     let bpm: Int
@@ -153,7 +165,8 @@ private struct RestBar: View {
     }
 }
 
-/// "12 sets, 4,210 kg". While resting, the rest's buttons sit beside it.
+/// "12 sets, 4,210 kg". Beside it, the rest's buttons while resting, else
+/// Log Set.
 private struct Totals: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
 
@@ -166,17 +179,50 @@ private struct Totals: View {
             Spacer(minLength: 8)
             if context.state.hasRest {
                 RestButtons(context: context)
+            } else if let next = context.state.next {
+                LogSetButton(context: context, next: next)
             }
         }
     }
 }
 
-/// +30s and Skip ("Done" once the rest is over). They run in the app's
-/// process without opening it; the page catches up when it's next open.
+/// Logs exactly the set shown ("next 80 kg × 5") and starts the rest, in the
+/// app's process without opening it (LogShownSetIntent).
+private struct LogSetButton: View {
+    let context: ActivityViewContext<WorkoutActivityAttributes>
+    let next: WorkoutActivityAttributes.NextSet
+
+    var body: some View {
+        Button(intent: LogShownSetIntent(sessionId: context.attributes.sessionId, set: next)) {
+            Label("Log Set", systemImage: "checkmark")
+                .labelStyle(.titleAndIcon)
+                .foregroundStyle(Brand.bone)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(Brand.flame, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .font(.subheadline.weight(.semibold))
+        .fixedSize()
+        .accessibilityLabel("Log \(next.label)")
+    }
+}
+
+/// +30s and Skip; once the rest is over, Log Set (or "Done" with nothing
+/// to log). They run in the app's process without opening it; the page
+/// catches up when it's next open.
 private struct RestButtons: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
 
     var body: some View {
+        if phase(context) == .restOver, let next = context.state.next {
+            LogSetButton(context: context, next: next)
+        } else {
+            buttons
+        }
+    }
+
+    private var buttons: some View {
         HStack(spacing: 6) {
             Button(intent: ExtendRestIntent(sessionId: context.attributes.sessionId)) {
                 Label("30s", systemImage: "plus")
@@ -219,8 +265,9 @@ private struct LockScreenView: View {
                         .font(.headline)
                         .foregroundStyle(Brand.bone)
                         .lineLimit(1)
-                    if let detail = context.state.detail, !context.state.hasRest {
-                        Text(detail)
+                    if !context.state.hasRest || phase(context) == .restOver,
+                       let line = detailLine(context.state) {
+                        Text(line)
                             .font(.subheadline)
                             .foregroundStyle(Brand.muted)
                             .lineLimit(1)
