@@ -3,7 +3,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * The route loader: a competition bar being loaded, the way it's done on a
- * platform.
+ * platform, drawn in ink, the widgets' language: the bar in faint bone
+ * lines, the plates in the accent's ink, each glowing as it seats.
  *
  * Deliberately a server component with zero client JS. `loading.tsx` is the
  * first thing the App Router streams for a navigation, so this has to paint
@@ -16,10 +17,8 @@ import { cn } from "@/lib/utils";
  * static bar is SVG; the plates, collars and readout digits are divs over it.
  *
  * What makes it read as real:
- * - IWF competition bumpers: red 25s, blue 20s, yellow 15s, a red 2.5 change
- *   plate, chrome collars with levers, drawn to competition proportions
- *   (a 28 mm shaft, 50 mm sleeves, 450 mm plates) and lit like rubber and
- *   chrome rather than flat colour;
+ * - competition proportions (a 28 mm shaft, 50 mm sleeves, 450 mm plates,
+ *   25/20/15/2.5 a side and collars with levers), in outline;
  * - plates come in from beyond the frame, are pushed along the sleeve, and
  *   stop hard against the stack with a small rubber rebound;
  * - each collar slides on and then its lever snaps shut; stripping opens
@@ -39,15 +38,16 @@ type Part = {
   x: number;
   w: number;
   h: number;
-  finish: "red" | "blue" | "yellow" | "chrome";
+  /** Plates in the accent's ink; the collar in steel. */
+  ink: "plate" | "steel";
 };
 
 const LEFT: Part[] = [
-  { part: "p1", x: 82, w: 13, h: 100, finish: "red" }, // 25 kg
-  { part: "p2", x: 70, w: 11, h: 100, finish: "blue" }, // 20 kg
-  { part: "p3", x: 60, w: 9, h: 100, finish: "yellow" }, // 15 kg
-  { part: "p4", x: 54.5, w: 4.5, h: 46, finish: "red" }, // 2.5 kg change plate
-  { part: "clip", x: 43.5, w: 10, h: 24, finish: "chrome" }, // collar, 2.5 kg
+  { part: "p1", x: 82, w: 13, h: 100, ink: "plate" }, // 25 kg
+  { part: "p2", x: 70, w: 11, h: 100, ink: "plate" }, // 20 kg
+  { part: "p3", x: 60, w: 9, h: 100, ink: "plate" }, // 15 kg
+  { part: "p4", x: 54.5, w: 4.5, h: 46, ink: "plate" }, // 2.5 kg change plate
+  { part: "clip", x: 43.5, w: 10, h: 24, ink: "steel" }, // collar, 2.5 kg
 ];
 
 const CY = 60;
@@ -58,11 +58,9 @@ function Side({ mirrored }: { mirrored?: boolean }) {
       {LEFT.map((p) => (
         <div
           key={p.part}
-          className={`hb-bar-part hb-bar-${p.part} hb-bar-${p.finish}`}
+          className={`hb-bar-part hb-bar-${p.part} hb-bar-${p.ink}`}
           style={{ "--x": p.x, "--y": CY - p.h / 2, "--w": p.w, "--h": p.h } as CSSProperties}
         >
-          {/* The steel hub insert, standing just proud of each face */}
-          {p.h === 100 && <div className="hb-bar-hub" />}
           {/* The collar's clamp lever */}
           {p.part === "clip" && <div className="hb-bar-lever" />}
         </div>
@@ -103,33 +101,15 @@ export function PlateLoader({
         )}
       >
         <div aria-hidden className="hb-bar relative aspect-[440/120] w-full max-w-[25rem]">
-          <svg viewBox="0 0 440 120" className="absolute inset-0 size-full overflow-visible">
-            <defs>
-              {/* Chrome: a bright band where the light catches the top, a
-                  dark reflected band under it, a little bounce at the foot */}
-              <linearGradient id="hb-bar-chrome" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#5d5d61" />
-                <stop offset="20%" stopColor="#efeee9" />
-                <stop offset="42%" stopColor="#a4a29d" />
-                <stop offset="68%" stopColor="#434347" />
-                <stop offset="100%" stopColor="#8b8985" />
-              </linearGradient>
-              {/* The shaft is satin, not polished: softer than the sleeves */}
-              <linearGradient id="hb-bar-satin" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#6f6e6b" />
-                <stop offset="38%" stopColor="#bebcb7" />
-                <stop offset="100%" stopColor="#4c4c50" />
-              </linearGradient>
-              <pattern id="hb-bar-knurl" width="2" height="2" patternUnits="userSpaceOnUse">
-                <path d="M0 2L2 0M0 0L2 2" stroke="#000" strokeWidth="0.45" />
-              </pattern>
-            </defs>
-
-            {/* Shaft, 28 mm: grip knurl either side, centre knurl between */}
-            <rect x="104" y={CY - 3} width="232" height="6" rx="3" fill="url(#hb-bar-satin)" />
-            <rect x="124" y={CY - 3} width="72" height="6" fill="url(#hb-bar-knurl)" opacity="0.55" />
-            <rect x="244" y={CY - 3} width="72" height="6" fill="url(#hb-bar-knurl)" opacity="0.55" />
-            <rect x="210" y={CY - 3} width="20" height="6" fill="url(#hb-bar-knurl)" opacity="0.4" />
+          <svg
+            viewBox="0 0 440 120"
+            className="hb-bar-ink absolute inset-0 size-full overflow-visible"
+            fill="none"
+            strokeLinejoin="round"
+          >
+            {/* Shaft, 28 mm, with the centre knurl marked */}
+            <rect x="104" y={CY - 3} width="232" height="6" rx="3" />
+            <path d={`M210 ${CY - 3}v6M230 ${CY - 3}v6`} opacity="0.5" />
 
             {/* Sleeves, 50 mm, with their shoulders and end caps */}
             {[
@@ -137,17 +117,9 @@ export function PlateLoader({
               { sleeve: 345, shoulder: 336, cap: 420 },
             ].map((s) => (
               <g key={s.sleeve}>
-                <rect x={s.sleeve} y={CY - 5.5} width="75" height="11" rx="1.5" fill="url(#hb-bar-chrome)" />
-                <rect x={s.shoulder} y={CY - 9} width="9" height="18" rx="2" fill="url(#hb-bar-chrome)" />
-                <rect
-                  x={s.shoulder === 95 ? 95 : 344}
-                  y={CY - 9}
-                  width="1"
-                  height="18"
-                  fill="#000"
-                  opacity="0.35"
-                />
-                <rect x={s.cap} y={CY - 6} width="3" height="12" rx="1.2" fill="#56565a" />
+                <rect x={s.sleeve} y={CY - 5.5} width="75" height="11" rx="1.5" />
+                <rect x={s.shoulder} y={CY - 9} width="9" height="18" rx="2" />
+                <rect x={s.cap} y={CY - 6} width="3" height="12" rx="1.2" />
               </g>
             ))}
           </svg>

@@ -577,7 +577,7 @@ button,
 
 /* ── Loading: the bar ─────────────────────────────────────────────────────
    Every route loader is a competition bar being loaded (PlateLoader), the
-   way it's done on a platform: plates arrive from beyond the frame, are
+   way it's done on a platform, drawn in ink like the widgets: plates arrive from beyond the frame, are
    pushed along the sleeve and stop hard against the stack with a small
    rubber rebound; each collar slides on and its lever snaps shut; the
    readout ticks over as each pair lands. It holds, the levers open, the
@@ -620,46 +620,134 @@ button,
   animation-iteration-count: infinite;
   animation-fill-mode: both;
 }
-/* The plate's body is its ::after, so it paints over the hub: edge-on, a
-   hub shows only as the sliver of steel standing proud of each face. The
-   face turned toward the middle of the bar catches light, the outer one
-   falls into shadow, so each plate reads as a solid disc seen edge-on. */
+/* Ink, as the widgets are drawn: each plate an outline in the accent with
+   a breath of it inside (its ::after), and a glow (its ::before) that lights
+   as the plate seats against the stack and settles low (hb-bar-glow-*).
+   The collars are steel: bone lines, no glow. */
 .hb-bar-part::after {
   content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow:
-    inset calc(-1 * var(--u)) 0 0 rgb(255 255 255 / 0.16),
-    inset var(--u) 0 0 rgb(0 0 0 / 0.35);
+  border: 1.5px solid rgb(var(--accent-rgb));
+  /* Solid, so the plate sits in front of the sleeve rather than showing it. */
+  background: color-mix(in srgb, rgb(var(--accent-rgb)) 9%, var(--color-bg));
 }
-.hb-bar-red::after {
-  background: linear-gradient(#5a0e13, #e65a62 13%, #c1222c 32%, #c1222c 60%, #63101a);
+.hb-bar-part::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 calc(12 * var(--u)) var(--u) rgb(var(--accent-rgb) / 0.6);
+  /* At rest (reduced motion): the loaded bar, faintly lit. */
+  opacity: 0.3;
+  animation-duration: 3600ms;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-fill-mode: both;
 }
-.hb-bar-blue::after {
-  background: linear-gradient(#0b1f45, #5588dc 13%, #2152a6 32%, #2152a6 60%, #0e2553);
+.hb-bar-p1::before {
+  animation-name: hb-bar-glow-p1;
 }
-.hb-bar-yellow::after {
-  background: linear-gradient(#654807, #f5cf66 13%, #d3a01e 32%, #d3a01e 60%, #735309);
+.hb-bar-p2::before {
+  animation-name: hb-bar-glow-p2;
 }
-.hb-bar-chrome::after,
-.hb-bar-hub {
-  background: linear-gradient(#5d5d61, #efeee9 20%, #a4a29d 42%, #434347 68%, #8b8985);
+.hb-bar-p3::before {
+  animation-name: hb-bar-glow-p3;
 }
-.hb-bar-chrome {
+.hb-bar-p4::before {
+  animation-name: hb-bar-glow-p4;
+}
+.hb-bar-steel {
   border-radius: calc(2 * var(--u));
+}
+.hb-bar-steel::after {
+  border-color: rgb(244 242 238 / 0.75);
+  background: color-mix(in srgb, rgb(244 242 238) 7%, var(--color-bg));
+}
+.hb-bar-steel::before {
+  display: none;
 }
 .hb-bar-p4 {
   border-radius: calc(1.5 * var(--u));
 }
-.hb-bar-hub {
-  position: absolute;
-  left: calc(-1 * var(--u));
-  right: calc(-1 * var(--u));
-  top: calc(50% - 8 * var(--u));
-  height: calc(16 * var(--u));
-  border-radius: calc(1.5 * var(--u));
-  box-shadow: inset 0 calc(-0.6 * var(--u)) 0 rgb(0 0 0 / 0.3);
+/* The bar itself, in faint bone lines. */
+.hb-bar-ink {
+  stroke: rgb(244 242 238 / 0.45);
+}
+.hb-bar-ink * {
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+/* Each plate's glow, timed to when it seats (hb-bar-p*: 15%, 22.8%, 30%,
+   35%) and to when it's stripped (85%, 82.8%, 80.6%, 78.3%). */
+@keyframes hb-bar-glow-p1 {
+  0%,
+  14% {
+    opacity: 0;
+  }
+  15.5% {
+    opacity: 1;
+  }
+  27%,
+  85% {
+    opacity: 0.3;
+  }
+  88%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-glow-p2 {
+  0%,
+  21.8% {
+    opacity: 0;
+  }
+  23.3% {
+    opacity: 1;
+  }
+  35%,
+  82.8% {
+    opacity: 0.3;
+  }
+  86%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-glow-p3 {
+  0%,
+  29% {
+    opacity: 0;
+  }
+  30.5% {
+    opacity: 1;
+  }
+  42%,
+  80.6% {
+    opacity: 0.3;
+  }
+  84%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes hb-bar-glow-p4 {
+  0%,
+  34% {
+    opacity: 0;
+  }
+  35.5% {
+    opacity: 1;
+  }
+  46%,
+  78.3% {
+    opacity: 0.3;
+  }
+  82%,
+  100% {
+    opacity: 0;
+  }
 }
 /* The collar's lever, hinged on top of the collar: standing up while the
    collar is open, folded flat along it once it clamps. */
@@ -670,8 +758,7 @@ button,
   width: calc(2.4 * var(--u));
   height: calc(8.5 * var(--u));
   border-radius: calc(1.2 * var(--u));
-  background: linear-gradient(to right, #3c3c41, #19191c);
-  box-shadow: inset calc(0.5 * var(--u)) 0 0 rgb(255 255 255 / 0.14);
+  background: rgb(244 242 238 / 0.75);
   transform-origin: 50% calc(100% - 1.2 * var(--u));
   transform: rotate(-78deg);
   animation: hb-bar-lever 3600ms linear infinite both;
@@ -1271,6 +1358,7 @@ button,
 @media (prefers-reduced-motion: reduce) {
   .hb-bar-loader,
   .hb-bar-part,
+  .hb-bar-part::before,
   .hb-bar-lever,
   .hb-bar-d,
   .hb-bar-readout,
