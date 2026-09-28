@@ -71,6 +71,7 @@
 		B021219EFE8184E526DE70FA /* AppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2837B7ECD30702F1A5EA08B /* AppShortcuts.swift */; };
 		B0B57A5761E290E4B7E582AE /* Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = F62D210AC400F563573F4E41 /* Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C0910D6C708A3DCD4DC12D0C /* WatchAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938CA7BBAA4BFB5CA79736B4 /* WatchAPI.swift */; };
+		C69543B3D1E93B9EB47D91E9 /* ClearArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DAD1D82C30A96EE889DE50 /* ClearArt.swift */; };
 		CB3EAE71F2A473EFC7C3EBDE /* WorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ED6AC668BD4926FE78263EC /* WorkoutView.swift */; };
 		CDA4FF4A1EEF1B19964E4AD2 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6517DA958AF534B93FBF8D94 /* RootView.swift */; };
 		D7595755F8A990CF6BDB3DBB /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4FBDA18709D59FBB38210C0 /* WorkoutLiveActivity.swift */; };
@@ -80,6 +81,7 @@
 		E032D3DB9D99BB1FF3E0495E /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 346DF9A657CA2BB7C1B6814B /* Foundation.framework */; };
 		E91CADD37762B34D12F5F84C /* HellBlazerNativePlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54AF69C243167ECF038011CA /* HellBlazerNativePlugin.swift */; };
 		ED6AB91710DC525C89AEBA93 /* HellBlazerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5724C9C27D2BB8D590B96ED0 /* HellBlazerViewController.swift */; };
+		F2C49BC5A351A5F3FB5BDD8B /* ClearArt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17DAD1D82C30A96EE889DE50 /* ClearArt.swift */; };
 		FB4649089CC2CD0BAF084AA5 /* NextBoutWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0BCE5CCA325F70D9DB0EDEF /* NextBoutWidget.swift */; };
 		FCD6928A83CF5609C82B9548 /* WidgetStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95003B2DE0FE9BDEEF78B735 /* WidgetStyle.swift */; };
 /* End PBXBuildFile section */
@@ -151,6 +153,7 @@
 		103E74048CAD88C8C6468C01 /* StartWorkoutControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = StartWorkoutControl.swift; sourceTree = "<group>"; };
 		167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecoveryCache.swift; sourceTree = "<group>"; };
 		175224FE7E20308CF65E694F /* RecoveryWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecoveryWidget.swift; sourceTree = "<group>"; };
+		17DAD1D82C30A96EE889DE50 /* ClearArt.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ClearArt.swift; sourceTree = "<group>"; };
 		1A7962EF1115AA0BB0C36256 /* RestControl.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RestControl.swift; sourceTree = "<group>"; };
 		1AD6781B48AC595131C550BD /* FattyComplication.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FattyComplication.swift; sourceTree = "<group>"; };
 		1BD166C70D966F0D677F4FBD /* HellBlazerWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HellBlazerWidgets.swift; sourceTree = "<group>"; };
@@ -409,6 +412,7 @@
 				167E0CCE2BDC9437F4751FE8 /* RecoveryCache.swift */,
 				B69195054694AB9888856E77 /* FighterArt.swift */,
 				CC9BA4E847882EF5A7169F3A /* InkArt.swift */,
+				17DAD1D82C30A96EE889DE50 /* ClearArt.swift */,
 			);
 			name = Shared;
 			path = Shared;
@@ -602,6 +606,7 @@
 				6FECAECDF4C41DC78A8F8C3E /* FighterArt.swift in Sources */,
 				FCD6928A83CF5609C82B9548 /* WidgetStyle.swift in Sources */,
 				340E1812C7156A095A14EDAD /* InkArt.swift in Sources */,
+				F2C49BC5A351A5F3FB5BDD8B /* ClearArt.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -649,6 +654,7 @@
 				19571656368E975F2D870F93 /* FighterArt.swift in Sources */,
 				573B5F5AE154DC557566FCD8 /* HeartInsights.swift in Sources */,
 				1BF5BDAF6B7E35B05FEE2B66 /* InkArt.swift in Sources */,
+				C69543B3D1E93B9EB47D91E9 /* ClearArt.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -721,7 +727,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -748,7 +754,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -775,7 +781,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -801,7 +807,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -936,7 +942,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-weak_framework",
@@ -964,7 +970,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-weak_framework",
@@ -992,7 +998,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -1018,7 +1024,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kkrwhofrags.hellblazer.watchkitapp.widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;

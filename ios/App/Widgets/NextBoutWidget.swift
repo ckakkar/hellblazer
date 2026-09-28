@@ -23,8 +23,9 @@ struct NextBoutEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetSnapshot?
 
-    /// The lifter's fighter in ink, for behind the card.
+    /// The lifter's fighter, for behind the card: in ink, and see-through.
     var ink: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) } }
+    var clear: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadClear(for: $0.key) } }
 }
 
 struct NextBoutProvider: TimelineProvider {
@@ -122,7 +123,7 @@ struct NextBoutView: View {
                 Label(snapshot.nextBout.map { "Next: \($0)" } ?? "\(week.sessionsText) sessions this week", systemImage: "flame")
             case .systemMedium:
                 ZStack {
-                    InkBackdrop(ink: entry.ink, strength: 0.75, width: 0.5)
+                    InkBackdrop(ink: entry.ink, clear: entry.clear, strength: 0.75, width: 0.5)
                         .padding(-16)
                     VStack(alignment: .leading, spacing: 0) {
                         NextBoutBlock(snapshot: snapshot, titleSize: 22)
@@ -143,7 +144,7 @@ struct NextBoutView: View {
                 }
             default:
                 ZStack {
-                    InkBackdrop(ink: entry.ink, strength: 0.45, width: 0.8)
+                    InkBackdrop(ink: entry.ink, clear: entry.clear, strength: 0.45, width: 0.8)
                         .padding(-16)
                     VStack(alignment: .leading, spacing: 0) {
                         NextBoutBlock(snapshot: snapshot, titleSize: 17)

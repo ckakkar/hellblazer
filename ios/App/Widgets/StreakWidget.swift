@@ -22,8 +22,9 @@ struct StreakEntry: TimelineEntry {
     let date: Date
     let snapshot: WidgetSnapshot?
 
-    /// The lifter's fighter in ink, for behind the card.
+    /// The lifter's fighter, for behind the card: in ink, and see-through.
     var ink: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) } }
+    var clear: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadClear(for: $0.key) } }
 }
 
 struct StreakProvider: TimelineProvider {
@@ -113,7 +114,7 @@ struct StreakView: View {
                 }
             default:
                 ZStack {
-                    InkBackdrop(ink: entry.ink, strength: 0.4, width: 0.7)
+                    InkBackdrop(ink: entry.ink, clear: entry.clear, strength: 0.4, width: 0.7)
                         .padding(-16)
                     count(weeks, snapshot)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -23,8 +23,9 @@ struct RecordEntry: TimelineEntry {
     let known: Bool
     let record: WidgetSnapshot.Record?
     let unit: String
-    /// The lifter's fighter in ink, for behind the card.
+    /// The lifter's fighter, for behind the card: in ink, and see-through.
     var ink: UIImage?
+    var clear: UIImage?
 }
 
 struct RecordProvider: TimelineProvider {
@@ -65,7 +66,8 @@ struct RecordProvider: TimelineProvider {
             known: snapshot != nil,
             record: snapshot?.record,
             unit: snapshot?.unit ?? "kg",
-            ink: snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) }
+            ink: snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) },
+            clear: snapshot?.fighter.flatMap { FighterArt.loadClear(for: $0.key) }
         )
     }
 }
@@ -103,7 +105,7 @@ struct RecordView: View {
 
     private func small(_ record: WidgetSnapshot.Record) -> some View {
         ZStack {
-            InkBackdrop(ink: entry.ink, strength: 0.45, width: 0.75)
+            InkBackdrop(ink: entry.ink, clear: entry.clear, strength: 0.45, width: 0.75)
                 .padding(-16)
             VStack(alignment: .leading, spacing: 0) {
                 WidgetHeader(title: "Removal", symbol: "bolt.fill", trailing: ago(record))

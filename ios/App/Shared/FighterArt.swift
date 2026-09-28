@@ -1,15 +1,16 @@
 import UIKit
 import WidgetKit
 
-/// The rank fighter's portrait, for the Fighter widget, and the same fighter
-/// in ink (InkArt), for the Clear and Tinted looks and behind the other
-/// widgets. A widget can't fetch, so the app keeps both in the App Group:
-/// the portrait fetched from the site when the snapshot names a fighter not
-/// kept yet (WidgetRefresher.apply, and each time the app comes to the
-/// front), the ink made from the kept portrait whenever it's missing, by the
-/// app or by a widget, whichever needs it first. The two are saved on their
-/// own, so one failing never costs the other. Small, because a widget
-/// refuses big images.
+/// The rank fighter's portrait, for the Fighter widget, and two copies made
+/// from it: the fighter in red ink (InkArt), behind the other widgets in full
+/// colour, and see-through (ClearArt), for the Clear and Tinted looks. A
+/// widget can't fetch, so the app keeps all three in the App Group: the
+/// portrait fetched from the site when the snapshot names a fighter not kept
+/// yet (WidgetRefresher.apply, and each time the app comes to the front),
+/// the copies made from the kept portrait whenever one's missing, by the app
+/// or by a widget, whichever needs it first. Each is saved on its own, so
+/// one failing never costs the others. Small, because a widget refuses big
+/// images.
 enum FighterArt {
     static let widgetKind = "Fighter"
     private static let keyKey = "fighter-art-key"
@@ -24,6 +25,18 @@ enum FighterArt {
 
     private static var portraitURL: URL? { fileURL("fighter.png") }
     private static var inkURL: URL? { fileURL("fighter-ink.png") }
+    private static var clearURL: URL? { fileURL("fighter-clear.png") }
+
+    /// A copy made from the portrait: its file, and how it's made.
+    private enum Copy: CaseIterable {
+        case ink, clear
+
+        var url: URL? { self == .ink ? FighterArt.inkURL : FighterArt.clearURL }
+
+        func make(_ portrait: CGImage) -> CGImage? {
+            self == .ink ? InkArt.make(from: portrait) : ClearArt.make(from: portrait)
+        }
+    }
 
     private static var defaults: UserDefaults? { UserDefaults(suiteName: WidgetSnapshot.appGroup) }
 
@@ -37,36 +50,44 @@ enum FighterArt {
         return UIImage(contentsOfFile: url.path)
     }
 
-    /// The fighter in ink, white lines on nothing, when it's this fighter's:
-    /// made from the kept portrait on the spot if it isn't there yet.
-    static func loadInk(for key: String) -> UIImage? {
-        guard isKept(key), let url = inkURL else { return nil }
-        return UIImage(contentsOfFile: url.path) ?? makeInk()
+    /// The fighter in ink, white lines on nothing, when it's this fighter's.
+    static func loadInk(for key: String) -> UIImage? { load(.ink, for: key) }
+
+    /// The see-through portrait, when it's this fighter's.
+    static func loadClear(for key: String) -> UIImage? { load(.clear, for: key) }
+
+    /// A copy, made from the kept portrait on the spot if it isn't there yet.
+    private static func load(_ copy: Copy, for key: String) -> UIImage? {
+        guard isKept(key), let url = copy.url else { return nil }
+        return UIImage(contentsOfFile: url.path) ?? make(copy)
     }
 
-    /// Traces the kept portrait into ink and keeps it.
+    /// Makes a copy from the kept portrait and keeps it.
     @discardableResult
-    private static func makeInk() -> UIImage? {
-        guard let portraitURL, let inkURL,
+    private static func make(_ copy: Copy) -> UIImage? {
+        guard let portraitURL, let url = copy.url,
               let portrait = UIImage(contentsOfFile: portraitURL.path)?.cgImage,
-              let traced = InkArt.make(from: portrait)
+              let made = copy.make(portrait)
         else { return nil }
-        let ink = UIImage(cgImage: traced)
-        if let png = ink.pngData() {
-            try? png.write(to: inkURL, options: .atomic)
+        let image = UIImage(cgImage: made)
+        if let png = image.pngData() {
+            try? png.write(to: url, options: .atomic)
         }
-        return ink
+        return image
     }
 
-    /// Makes sure the fighter's portrait and ink are kept (the app only):
-    /// the ink from the portrait already here when only it is missing, both
-    /// from the site when the fighter isn't the one kept.
+    /// Makes sure the fighter's portrait and its copies are kept (the app
+    /// only): a missing copy from the portrait already here, everything from
+    /// the site when the fighter isn't the one kept.
     static func update(for fighter: WidgetSnapshot.Fighter?) {
-        guard let fighter, let portraitURL, let inkURL else { return }
+        guard let fighter, let portraitURL else { return }
         let files = FileManager.default
         if isKept(fighter.key) && files.fileExists(atPath: portraitURL.path) {
-            if !files.fileExists(atPath: inkURL.path), makeInk() != nil {
-                // The ink is behind the other widgets too.
+            let missing = Copy.allCases.filter { copy in
+                copy.url.map { !files.fileExists(atPath: $0.path) } ?? false
+            }
+            // The copies are behind the other widgets too.
+            if !missing.isEmpty, missing.map({ make($0) != nil }).contains(true) {
                 WidgetCenter.shared.reloadAllTimelines()
             }
             return
@@ -79,10 +100,12 @@ enum FighterArt {
                   let png = shrink(image).pngData(),
                   (try? png.write(to: portraitURL, options: .atomic)) != nil
             else { return }
-            // The last fighter's ink isn't this one's.
-            try? files.removeItem(at: inkURL)
+            // The last fighter's copies aren't this one's.
+            for copy in Copy.allCases {
+                if let url = copy.url { try? files.removeItem(at: url) }
+            }
             defaults?.set(fighter.key, forKey: keyKey)
-            makeInk()
+            for copy in Copy.allCases { make(copy) }
             WidgetCenter.shared.reloadAllTimelines()
         }.resume()
     }

@@ -70,24 +70,27 @@ private struct Glow: ViewModifier {
     }
 }
 
-/// The lifter's fighter in ink, behind a widget's content: red lines on the
-/// black in full colour, glass in Clear and Tinted. Anchored to the trailing
-/// edge and faded out towards the text.
+/// The lifter's fighter behind a widget's content: sketched in red ink in
+/// full colour, and in Clear and Tinted the see-through portrait (ClearArt),
+/// which iOS turns to glass. Anchored to the trailing edge and faded out
+/// towards the text.
 struct InkBackdrop: View {
     @Environment(\.widgetRenderingMode) private var renderingMode
     let ink: UIImage?
+    var clear: UIImage?
     var strength: Double = 0.55
     /// How much of the widget's width it takes, from the trailing edge.
     var width: CGFloat = 0.62
 
     var body: some View {
-        if let ink {
+        let full = renderingMode == .fullColor
+        if let art = full ? ink : (clear ?? ink) {
             GeometryReader { geo in
-                Image(uiImage: ink)
+                Image(uiImage: art)
                     .resizable()
                     .renderingMode(.template)
                     .scaledToFill()
-                    .foregroundStyle(renderingMode == .fullColor ? Brand.flame : Color.white)
+                    .foregroundStyle(full ? Brand.flame : Color.white)
                     .frame(width: geo.size.width * width, height: geo.size.height, alignment: .top)
                     .clipped()
                     .mask(LinearGradient(
@@ -95,7 +98,7 @@ struct InkBackdrop: View {
                         startPoint: .leading,
                         endPoint: .trailing
                     ))
-                    .opacity(renderingMode == .fullColor ? strength : strength * 0.6)
+                    .opacity(full ? strength : strength * 0.5)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
             }
             .allowsHitTesting(false)

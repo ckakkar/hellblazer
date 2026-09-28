@@ -26,7 +26,9 @@ struct FighterEntry: TimelineEntry {
     let known: Bool
     let fighter: WidgetSnapshot.Fighter?
     let portrait: UIImage?
-    /// The fighter in ink, for the Clear and Tinted looks.
+    /// The see-through portrait, for the Clear and Tinted looks, and the
+    /// fighter in ink should that be missing.
+    let clear: UIImage?
     let ink: UIImage?
 }
 
@@ -37,7 +39,7 @@ struct FighterProvider: TimelineProvider {
     )
 
     func placeholder(in context: Context) -> FighterEntry {
-        FighterEntry(date: Date(), known: true, fighter: Self.sample, portrait: nil, ink: nil)
+        FighterEntry(date: Date(), known: true, fighter: Self.sample, portrait: nil, clear: nil, ink: nil)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (FighterEntry) -> Void) {
@@ -57,6 +59,7 @@ struct FighterProvider: TimelineProvider {
             known: snapshot != nil,
             fighter: fighter,
             portrait: fighter.flatMap { FighterArt.load(for: $0.key) },
+            clear: fighter.flatMap { FighterArt.loadClear(for: $0.key) },
             ink: fighter.flatMap { FighterArt.loadInk(for: $0.key) }
         )
     }
@@ -145,16 +148,16 @@ struct FighterView: View {
         }
     }
 
-    /// The portrait for this look: full colour, or the fighter in ink in
-    /// Clear and Tinted, where a solid image would come out a white block.
-    /// Should the ink be missing there, the portrait greyed, as iOS offers.
+    /// The portrait for this look: full colour, or see-through in Clear and
+    /// Tinted, where a solid image would come out a white block. Should that
+    /// be missing there, the ink, else the portrait greyed, as iOS offers.
     @ViewBuilder
     private var portrait: some View {
         let full = renderingMode == .fullColor
         if full, let image = entry.portrait {
             art(Image(uiImage: image).resizable())
-        } else if !full, let ink = entry.ink {
-            art(Image(uiImage: ink).resizable().renderingMode(.template))
+        } else if !full, let see = entry.clear ?? entry.ink {
+            art(Image(uiImage: see).resizable().renderingMode(.template))
         } else if !full, let image = entry.portrait {
             art(greyed(Image(uiImage: image).resizable()))
         } else {
