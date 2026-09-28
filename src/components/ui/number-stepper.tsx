@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { Minus, Plus } from "lucide-react";
-import { cn, selectAllOnFocus } from "@/lib/utils";
+import { cn, fitFigure, selectAllOnFocus } from "@/lib/utils";
 import { haptic } from "@/lib/haptics";
 
 interface NumberStepperProps {
@@ -22,6 +22,11 @@ interface NumberStepperProps {
 /**
  * Big-tap-target numeric control for mid-workout logging: increment buttons
  * flank a directly-editable numeric field. Optimised for one-handed mobile use.
+ *
+ * Two to a row on a 320pt phone leaves each about 128px, so a narrow one
+ * gives its buttons less width (never less height), and the figure shrinks
+ * to fit ("132.5" as well as "80") but never under 16px, where iOS would
+ * zoom in on the field when it's tapped.
  */
 export function NumberStepper({
   value,
@@ -48,10 +53,14 @@ export function NumberStepper({
     onChange(clamp(round((value ?? 0) + dir * step)));
   };
 
+  const figure = fitFigure(value == null || Number.isNaN(value) ? placeholder : String(value), "22px", suffix ? "2rem" : "0px");
+  const button =
+    "flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-white/[0.06] @max-[11rem]:w-9";
+
   return (
     <div
       className={cn(
-        "flex h-14 items-stretch overflow-hidden rounded-2xl bg-surface-2",
+        "@container flex h-14 items-stretch overflow-hidden rounded-2xl bg-surface-2",
         className,
       )}
     >
@@ -59,11 +68,11 @@ export function NumberStepper({
         type="button"
         aria-label={`decrease ${ariaLabel ?? ""}`}
         onClick={() => bump(-1)}
-        className="flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-white/[0.06]"
+        className={button}
       >
         <Minus className="size-4" />
       </button>
-      <div className="relative flex min-w-0 flex-1 items-center">
+      <div className="@container relative flex min-w-0 flex-1 items-center">
         <input
           inputMode="decimal"
           type="number"
@@ -78,7 +87,11 @@ export function NumberStepper({
             const n = Number(v);
             if (!Number.isNaN(n)) onChange(n);
           }}
-          className="font-display h-full w-full min-w-0 bg-transparent text-center text-[22px] text-text focus:outline-none"
+          style={{
+            ...figure,
+            fontSize: "max(16px, min(var(--fit-max), calc((100cqw - var(--fit-reserve)) / var(--fit-em))))",
+          }}
+          className="font-display h-full w-full min-w-0 bg-transparent text-center text-text focus:outline-none"
         />
         {suffix && (
           <span className="pointer-events-none absolute right-2 text-[13px] text-muted">
@@ -90,7 +103,7 @@ export function NumberStepper({
         type="button"
         aria-label={`increase ${ariaLabel ?? ""}`}
         onClick={() => bump(1)}
-        className="flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-white/[0.06]"
+        className={button}
       >
         <Plus className="size-4" />
       </button>
