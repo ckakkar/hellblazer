@@ -23,6 +23,7 @@ function ex(id: string, targetSets: number | null, done: number, last: [number, 
       warmup: false,
     })),
     last: last.map(([weight, reps]) => ({ weight, reps })),
+    target: null,
   };
 }
 
@@ -82,6 +83,12 @@ describe("same again", () => {
 
   it("has nothing to repeat on a first-ever exercise", () => {
     expect(sameAgain(ex("a", 3, 0))).toBeNull();
+  });
+
+  it("starts a fresh exercise at today's target, then repeats the set before", () => {
+    const fresh = { ...ex("a", 3, 0, [[80, 8], [80, 8]]), target: { weight: 82.5, reps: 6 } };
+    expect(sameAgain(fresh)).toEqual({ weight: 82.5, reps: 6 });
+    expect(sameAgain({ ...ex("a", 3, 1), target: { weight: 82.5, reps: 6 } })).toEqual({ weight: 60, reps: 5 });
   });
 });
 

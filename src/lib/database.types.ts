@@ -717,6 +717,7 @@ export type Database = {
         Returns: {
           exercise_id: string
           reps: number
+          rpe: number
           session_date: string
           set_number: number
           weight_kg: number
@@ -795,6 +796,7 @@ export type Database = {
         Returns: {
           exercise_id: string
           reps: number
+          rpe: number
           set_number: number
           weight_kg: number
         }[]

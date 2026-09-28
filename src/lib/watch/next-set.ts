@@ -17,6 +17,8 @@ export type PlanExercise = {
   sets: { n: number; weight: number; reps: number; warmup: boolean }[];
   /** The last session's working sets on this movement. */
   last: { weight: number; reps: number }[];
+  /** Today's target from those (progression.ts), for the first set. */
+  target?: { weight: number; reps: number } | null;
 };
 
 const working = (e: PlanExercise) => e.sets.filter((s) => !s.warmup);
@@ -74,9 +76,10 @@ export function exerciseForNextSet<E extends PlanExercise>(
 }
 
 /**
- * "Same again": this session's last working set on the exercise, else the
- * same set last time (else last time's final one), the way the logger
- * fills in a new set. Null when there's nothing to copy.
+ * "Same again": this session's last working set on the exercise, else
+ * today's target (progression.ts), else the same set last time (else last
+ * time's final one), the way the logger fills in a new set. Null when
+ * there's nothing to go on.
  */
 export function sameAgain(e: PlanExercise): { weight: number; reps: number } | null {
   const done = working(e);
@@ -84,6 +87,7 @@ export function sameAgain(e: PlanExercise): { weight: number; reps: number } | n
     const latest = done.reduce((a, b) => (b.n > a.n ? b : a));
     return { weight: latest.weight, reps: latest.reps };
   }
+  if (e.target) return { weight: e.target.weight, reps: e.target.reps };
   const past = e.last[done.length] ?? e.last.at(-1) ?? null;
   return past ? { weight: past.weight, reps: past.reps } : null;
 }

@@ -14,8 +14,10 @@ import { format, parseISO } from "date-fns";
 import { unstable_rethrow, useRouter } from "next/navigation";
 import {
   ArrowRight,
+  ArrowUpRight,
   Check,
   CloudOff,
+  Equal,
   Flame,
   Heart,
   Loader2,
@@ -53,6 +55,7 @@ import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
 import { useKeepAwake } from "@/lib/keep-awake";
 import { exerciseForNextSet, nextSetLabel, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
+import { nextTarget, targetLabel, targetReason, type Target } from "@/lib/progression";
 import type { SpokenExercise, SpokenSet } from "@/lib/spoken-sets";
 import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
@@ -225,6 +228,26 @@ export function SessionLogger({
   );
   const lastFor = (exerciseId: string): LastPerformance | undefined =>
     addedLast[exerciseId] ?? lastPerformances[exerciseId];
+  const liftById = useMemo(() => new Map(exerciseLibrary.map((e) => [e.id, e])), [exerciseLibrary]);
+  // Today's target on a lift (progression.ts): last time's sets against the
+  // template's rep range. The first set starts there.
+  const targetFor = (ex: { seId: string; exerciseId: string }): Target | null => {
+    const lift = liftById.get(ex.exerciseId);
+    return nextTarget({
+      last: (lastFor(ex.exerciseId)?.sets ?? []).map((s) => ({
+        weight: toDisplayWeight(s.weight_kg, unit),
+        reps: s.reps,
+        rpe: s.rpe,
+      })),
+      range: targets[ex.seId]?.reps ?? null,
+      lift: {
+        equipment: lift?.equipment ?? null,
+        mechanic: lift?.mechanic ?? null,
+        primaryMuscle: lift?.primary_muscle ?? null,
+      },
+      unit,
+    });
+  };
   const hype = pickHype(session.id);
 
   const [exercises, setExercises] = useState<LocalExercise[]>(() =>
@@ -804,14 +827,18 @@ export function SessionLogger({
     if (!ex) return;
     const prev = ex.sets[ex.sets.length - 1];
     const last = lastFor(ex.exerciseId)?.sets[ex.sets.length];
+    // The first set starts at today's target; the rest copy the one before.
+    const target = prev ? null : targetFor(ex);
     const seed: LocalSet = {
       id: crypto.randomUUID(),
       weight: prev
         ? prev.weight
-        : last
-          ? toDisplayWeight(last.weight_kg, unit)
-          : null,
-      reps: prev ? prev.reps : (last?.reps ?? null),
+        : target
+          ? target.weight
+          : last
+            ? toDisplayWeight(last.weight_kg, unit)
+            : null,
+      reps: prev ? prev.reps : target ? target.reps : (last?.reps ?? null),
       rpe: null,
       isWarmup: false,
     };
@@ -1118,6 +1145,7 @@ export function SessionLogger({
       weight: toDisplayWeight(s.weight_kg, unit),
       reps: s.reps,
     })),
+    target: targetFor(ex),
   }));
   const current = active ?? exerciseForNextSet(plans, endedHere)?.ex ?? null;
   // "Say it" matches what's said against these, and fills in what isn't.
@@ -1133,8 +1161,9 @@ export function SessionLogger({
     if (!current || isEditing) return undefined;
     const prev = current.sets[current.sets.length - 1];
     const past = lastFor(current.exerciseId)?.sets[current.sets.length];
-    const weight = prev ? prev.weight : past ? toDisplayWeight(past.weight_kg, unit) : null;
-    const reps = prev ? prev.reps : (past?.reps ?? null);
+    const target = prev ? null : targetFor(current);
+    const weight = prev ? prev.weight : target ? target.weight : past ? toDisplayWeight(past.weight_kg, unit) : null;
+    const reps = prev ? prev.reps : target ? target.reps : (past?.reps ?? null);
     if (weight == null || reps == null || reps < 1) return undefined;
     return { sessionExerciseId: current.seId, weight, reps, label: nextSetLabel(weight, reps, unit) };
   })();
@@ -1398,6 +1427,10 @@ export function SessionLogger({
                         .join(", ")}${last.sets.length > 4 ? "…" : ""}`}
                   </p>
                   {ex.note && <p className="mt-1 text-[13px] text-muted">{ex.note}</p>}
+                  {(() => {
+                    const target = ex.sets.length === 0 ? targetFor(ex) : null;
+                    return target ? <TargetLine target={target} unit={unit} className="mt-3" /> : null;
+                  })()}
                   <Button variant="accent" size="lg" className="mt-4 w-full" onClick={() => setActiveSeId(ex.seId)}>
                     <Play className="size-4" />
                     {ex.sets.length > 0 ? "Continue exercise" : "Start exercise"}
@@ -1545,6 +1578,7 @@ export function SessionLogger({
           exercise={active}
           exerciseLibrary={exerciseLibrary}
           lastPerformance={lastFor(active.exerciseId) ?? null}
+          target={targetFor(active)}
           unit={unit}
           weightStep={weightStep}
           flashId={flashId}
@@ -1642,6 +1676,7 @@ function ActiveExerciseModal({
   exercise,
   exerciseLibrary,
   lastPerformance,
+  target,
   unit,
   weightStep,
   flashId,
@@ -1659,6 +1694,8 @@ function ActiveExerciseModal({
   exercise: LocalExercise;
   exerciseLibrary: Exercise[];
   lastPerformance: LastPerformance | null;
+  /** Today's target on it (progression.ts). */
+  target: Target | null;
   unit: Unit;
   weightStep: number;
   flashId: string | null;
@@ -1783,6 +1820,7 @@ function ActiveExerciseModal({
                     `${trimNum(toDisplayWeight(s.weight_kg, unit))}${unit}×${s.reps}`,
                 )
                 .join(", ")}
+              {target && <TargetLine target={target} unit={unit} className="mt-1.5" />}
             </div>
           )}
           {exercise.note && (
@@ -1823,6 +1861,20 @@ function ActiveExerciseModal({
         </div>
       )}
     </Sheet>
+  );
+}
+
+/** "Today: 82.5 kg × 6, up 2.5 kg": the target and why, an arrow when it's up. */
+function TargetLine({ target, unit, className }: { target: Target; unit: Unit; className?: string }) {
+  const Icon = target.change === "up" ? ArrowUpRight : target.change === "hold" ? Equal : Plus;
+  return (
+    <p className={cn("tnum flex items-center gap-1.5 text-[13px]", className)}>
+      <Icon className={cn("size-3.5 shrink-0", target.change === "up" ? "text-accent" : "text-muted")} />
+      <span className="min-w-0 truncate">
+        <span className="text-text">Today: {targetLabel(target, unit)}</span>
+        <span className="text-muted">, {targetReason(target, unit)}</span>
+      </span>
+    </p>
   );
 }
 

@@ -48,7 +48,11 @@ export type WatchExercise = {
   sets: WatchSet[];
   /** The last session's working sets on this movement, for copy-forward. */
   last: { weight: number; reps: number }[];
+  /** Today's target from them (src/lib/progression.ts): the first set's numbers. */
+  target: WatchTarget | null;
 };
+
+export type WatchTarget = { weight: number; reps: number };
 
 export type WatchSet = {
   id: string;
@@ -78,4 +82,6 @@ export type WatchPlanExercise = {
   targetReps: string | null;
   restSeconds: number | null;
   last: { weight: number; reps: number }[];
+  /** Today's target, as on WatchExercise. */
+  target: WatchTarget | null;
 };

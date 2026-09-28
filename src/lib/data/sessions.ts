@@ -118,6 +118,8 @@ export type SessionTarget = {
   sets: number | null;
   /** Seconds to rest after each set; null for the lifter's usual. */
   rest: number | null;
+  /** The rep range, as the template writes it ("6-8"); null without one. */
+  reps: string | null;
 };
 
 /**
@@ -132,21 +134,21 @@ export async function getSessionTargets(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("template_exercise")
-    .select("position, target_sets, rest_seconds")
+    .select("position, target_sets, rest_seconds, target_rep_range")
     .eq("template_id", session.template_id);
   if (error) throw error;
   const byPosition = new Map((data ?? []).map((t) => [t.position, t]));
   const targets: Record<string, SessionTarget> = {};
   for (const se of session.session_exercise) {
     const t = byPosition.get(se.position);
-    if (t) targets[se.id] = { sets: t.target_sets, rest: t.rest_seconds };
+    if (t) targets[se.id] = { sets: t.target_sets, rest: t.rest_seconds, reps: t.target_rep_range };
   }
   return targets;
 }
 
 export type LastPerformance = {
   session_date: string;
-  sets: { set_number: number; weight_kg: number; reps: number }[];
+  sets: { set_number: number; weight_kg: number; reps: number; rpe: number | null }[];
 };
 
 export type ExercisePR = { bestWeightKg: number; bestEst1rm: number };
@@ -201,6 +203,7 @@ export async function getLastPerformances(
       set_number: row.set_number,
       weight_kg: Number(row.weight_kg),
       reps: row.reps,
+      rpe: row.rpe == null ? null : Number(row.rpe),
     });
   }
   return result;
