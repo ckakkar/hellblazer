@@ -43,3 +43,10 @@ next-env.d.ts
 # Apple private keys (App Store Connect API, APNs). Never commit these.
 *.p8
 AuthKey_*
+
+# Launch video: local music (copyrighted) and the brag output (renders, composition)
+/*.mp3
+/*.m4a
+/*.wav
+/*.aac
+brag-output*/
