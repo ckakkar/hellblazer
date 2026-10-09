@@ -18,6 +18,10 @@ struct ComplicationData: Codable, Equatable {
     var activeTitle: String?
     /// When it started, epoch ms.
     var activeStartedAt: Double?
+    /// Working sets logged in it so far, and how many its plan has (nil
+    /// without targets). Absent from data saved before 2.4: decodes as nil.
+    var activeSets: Int? = nil
+    var activePlanned: Int? = nil
 
     static let accessGroup = "Z5ZY342DVK.com.kkrwhofrags.hellblazer.shared"
     private static let service = "com.kkrwhofrags.hellblazer.complication"

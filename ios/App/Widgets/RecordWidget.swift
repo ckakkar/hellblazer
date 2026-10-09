@@ -26,6 +26,21 @@ struct RecordEntry: TimelineEntry {
     /// The lifter's fighter, for behind the card: in ink, and see-through.
     var ink: UIImage?
     var clear: UIImage?
+
+    /// A record set today or yesterday rises in the Smart Stack; an old one waits.
+    var relevance: TimelineEntryRelevance? {
+        guard let day = record?.date, let set = Self.day.date(from: day) else { return nil }
+        let age = date.timeIntervalSince(set)
+        return age < 2 * 86_400 ? TimelineEntryRelevance(score: 60, duration: 2 * 86_400 - age) : nil
+    }
+
+    private static let day: DateFormatter = {
+        let parser = DateFormatter()
+        parser.calendar = Calendar(identifier: .gregorian)
+        parser.locale = Locale(identifier: "en_US_POSIX")
+        parser.dateFormat = "yyyy-MM-dd"
+        return parser
+    }()
 }
 
 struct RecordProvider: TimelineProvider {
@@ -118,6 +133,7 @@ struct RecordView: View {
                     Text(record.weight == 0 ? "BW" : number(record.weight))
                         .font(WidgetStyle.figure(34))
                         .monospacedDigit()
+                        .contentTransition(.numericText(value: record.weight))
                         .glow(radius: 10)
                     if record.weight != 0 {
                         Text(entry.unit)

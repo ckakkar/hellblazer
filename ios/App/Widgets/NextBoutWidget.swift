@@ -191,6 +191,7 @@ private struct WeekLine: View {
                 Text("\(week.sessions)")
                     .font(WidgetStyle.figure(24))
                     .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(week.sessions)))
                 Text(week.planned.map { "of \($0) this week" } ?? "this week")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)

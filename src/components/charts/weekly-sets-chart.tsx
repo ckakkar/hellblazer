@@ -1,6 +1,7 @@
 import { CHART_HIDDEN_MUSCLES, MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { cn } from "@/lib/utils";
 import { ChartEmpty } from "./chart-kit";
+import { WeekGrowth } from "./week-growth";
 
 type Row = { muscle: Muscle; sets: number };
 
@@ -15,7 +16,14 @@ const HIGH = 20;
  * is visible without reading numbers. Reads on a phone without rotated
  * labels, and needs no chart library.
  */
-export function WeeklySetsChart({ data }: { data: Row[] }) {
+export function WeeklySetsChart({
+  data,
+  latest = null,
+}: {
+  data: Row[];
+  /** The latest finished workout and what it added per muscle: those bars grow by it, once. */
+  latest?: { sessionId: string; sets: Partial<Record<Muscle, number>> } | null;
+}) {
   const rows = data
     .filter((d) => !CHART_HIDDEN_MUSCLES.has(d.muscle))
     .map((d) => ({
@@ -33,10 +41,13 @@ export function WeeklySetsChart({ data }: { data: Row[] }) {
   const pct = (n: number) => `${(n / scale) * 100}%`;
 
   return (
-    <div className="px-3 pb-3 pt-1">
+    <WeekGrowth sessionId={latest?.sessionId ?? null} className="px-3 pb-3 pt-1">
       <ul className="space-y-2.5">
         {rows.map((r) => {
           const inRange = r.sets >= LOW;
+          const added = latest?.sets[r.muscle] ?? 0;
+          // Where the bar stood before the workout, as a share of where it is now.
+          const grow = added > 0 && r.sets > 0 ? Math.max(0, r.sets - added) / r.sets : undefined;
           return (
             <li key={r.muscle} className="grid grid-cols-[5.5rem_1fr_2.25rem] items-center gap-3">
               <span className={cn("truncate text-[13px]", inRange ? "text-text" : "text-muted")}>
@@ -54,6 +65,7 @@ export function WeeklySetsChart({ data }: { data: Row[] }) {
                     inRange ? "bg-text/85" : "bg-white/30",
                   )}
                   style={{ width: r.sets > 0 ? `max(3%, ${pct(r.sets)})` : "0%" }}
+                  data-grow={grow}
                 />
               </span>
               <span className={cn("tnum text-right text-[13px]", inRange ? "text-text" : "text-muted")}>
@@ -74,6 +86,6 @@ export function WeeklySetsChart({ data }: { data: Row[] }) {
           </span>
         </span>
       </div>
-    </div>
+    </WeekGrowth>
   );
 }

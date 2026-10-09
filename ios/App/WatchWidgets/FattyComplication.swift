@@ -27,6 +27,17 @@ struct FattyComplication: Widget {
 struct ComplicationEntry: TimelineEntry {
     let date: Date
     let data: ComplicationData?
+
+    /// How far up the Smart Stack it rises: to the top through a workout,
+    /// partway while the week's plan still has days to go, else it waits.
+    var relevance: TimelineEntryRelevance? {
+        guard let data = data?.asOf(date) else { return nil }
+        if data.activeTitle != nil { return TimelineEntryRelevance(score: 100, duration: 3 * 3600) }
+        if let planned = data.planned, data.sessions < planned, data.nextLabel != nil {
+            return TimelineEntryRelevance(score: 30)
+        }
+        return TimelineEntryRelevance(score: 5)
+    }
 }
 
 struct ComplicationProvider: TimelineProvider {
@@ -101,7 +112,16 @@ struct ComplicationView: View {
 
     @ViewBuilder
     private func circular(_ data: ComplicationData?) -> some View {
-        if let data, data.activeTitle != nil {
+        if let data, data.activeTitle != nil, let planned = data.activePlanned, planned > 0 {
+            // Through a workout: the sets against the plan, filling.
+            Gauge(value: Double(min(data.activeSets ?? 0, planned)), in: 0...Double(planned)) {
+                Image(systemName: "figure.strengthtraining.traditional")
+            } currentValueLabel: {
+                Text("\(data.activeSets ?? 0)")
+            }
+            .gaugeStyle(.accessoryCircularCapacity)
+            .widgetAccentable()
+        } else if let data, data.activeTitle != nil {
             ZStack {
                 AccessoryWidgetBackground()
                 Image(systemName: "figure.strengthtraining.traditional")
@@ -136,20 +156,46 @@ struct ComplicationView: View {
                 Text(title)
                     .font(.system(.headline, design: .rounded))
                     .lineLimit(1)
-                if let start = data.activeStartDate {
-                    Text(start, style: .timer)
-                        .font(.system(.body, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(.yellow)
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    if let start = data.activeStartDate {
+                        Text(start, style: .timer)
+                            .font(.system(.body, design: .rounded).weight(.semibold))
+                            .monospacedDigit()
+                            .foregroundStyle(.yellow)
+                    }
+                    if let sets = data.activeSets {
+                        Text(data.activePlanned.map { "\(sets)/\($0) sets" } ?? "\(sets) \(sets == 1 ? "set" : "sets")")
+                            .font(.system(.footnote, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
             } else if let data {
                 Text(data.nextLabel.map { "Next: \($0)" } ?? "No program")
                     .font(.system(.headline, design: .rounded))
                     .lineLimit(1)
-                Text(weekLine(data))
-                    .font(.system(.footnote, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if let planned = data.planned, planned > 0, planned <= 7 {
+                    // The week as the iPhone widget draws it: a segment a day.
+                    HStack(spacing: 6) {
+                        HStack(spacing: 2) {
+                            ForEach(0..<planned, id: \.self) { i in
+                                Capsule()
+                                    .fill(i < data.sessions ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(.white.opacity(0.2)))
+                                    .frame(height: 4)
+                                    .widgetAccentable(i < data.sessions)
+                            }
+                        }
+                        Text("\(data.sessions)/\(planned)")
+                            .font(.system(.footnote, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Text(weekLine(data))
+                        .font(.system(.footnote, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             } else {
                 Text("Open Fatty to set up")
                     .font(.system(.footnote, design: .rounded))

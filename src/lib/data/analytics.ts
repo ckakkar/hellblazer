@@ -44,6 +44,40 @@ export async function getCurrentWeekSetsPerMuscle(): Promise<MuscleSets[]> {
   }));
 }
 
+/**
+ * What the latest workout finished this week added to each muscle's weekly
+ * sets, counted as the weekly view counts them (1 to the primary muscle, 0.5
+ * to each secondary). The dashboard grows the bars by this much, once.
+ */
+export async function getLatestWorkoutSets(): Promise<{
+  sessionId: string;
+  sets: Partial<Record<Muscle, number>>;
+} | null> {
+  const supabase = await createClient();
+  const { data: session, error } = await supabase
+    .from("session")
+    .select("id")
+    .gte("date", isoWeekKey(await lifterNow()))
+    .not("finished_at", "is", null)
+    .order("finished_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!session) return null;
+
+  const { data: rows, error: setsError } = await supabase
+    .from("v_working_set")
+    .select("primary_muscle, secondary_muscles")
+    .eq("session_id", session.id);
+  if (setsError) throw setsError;
+  const sets: Partial<Record<Muscle, number>> = {};
+  for (const row of rows ?? []) {
+    if (row.primary_muscle) sets[row.primary_muscle] = (sets[row.primary_muscle] ?? 0) + 1;
+    for (const m of row.secondary_muscles ?? []) sets[m] = (sets[m] ?? 0) + 0.5;
+  }
+  return { sessionId: session.id, sets };
+}
+
 export type MuscleBalanceRow = { muscle: Muscle; sets: number; volume: number };
 
 /**

@@ -1479,6 +1479,31 @@ button,
   }
 }
 
+/* A set just logged: it rises out of the button that logged it, while the
+   button glides down to make room (useGlide). */
+.hb-set-in {
+  animation: hb-set-in 380ms var(--ease-out) both;
+}
+@keyframes hb-set-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.97);
+  }
+}
+/* A superset just made: the link closes and the line settles in. */
+.hb-link-in {
+  animation: hb-landed 420ms var(--ease-out);
+}
+.hb-link-in > svg {
+  animation: hb-link-snap 480ms var(--ease-out) both;
+}
+@keyframes hb-link-snap {
+  from {
+    opacity: 0;
+    transform: rotate(-70deg) scale(0.4);
+  }
+}
+
 /* A value that just changed (a set landing, a PR): one brief lift of the
    figure, then stillness. */
 .hb-landed {

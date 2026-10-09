@@ -187,7 +187,12 @@ final class WatchModel: ObservableObject {
             planned: state.week?.planned,
             sets: state.week?.sets ?? 0,
             activeTitle: state.active?.title,
-            activeStartedAt: state.active?.startedAt
+            activeStartedAt: state.active?.startedAt,
+            activeSets: state.active.map { $0.exercises.reduce(0) { $0 + $1.workingSets.count } },
+            activePlanned: state.active.flatMap { active in
+                let targets = active.exercises.compactMap(\.targetSets)
+                return targets.isEmpty ? nil : targets.reduce(0, +)
+            }
         )
         if data != lastComplicationData {
             data.save()
@@ -196,6 +201,7 @@ final class WatchModel: ObservableObject {
         let key = [
             data.nextLabel ?? "", data.weekStart, String(data.sessions), String(data.planned ?? -1),
             data.activeTitle ?? "", data.activeTitle == nil ? String(data.sets) : "",
+            String(data.activeSets ?? -1), String(data.activePlanned ?? -1),
         ].joined(separator: "|")
         guard key != complicationKey else { return }
         complicationKey = key
@@ -373,6 +379,28 @@ final class WatchModel: ObservableObject {
         let latest = exercises[i]
         guard Self.metTarget(latest) else { return latest }
         return Self.nextUnfinished(after: i, in: exercises) ?? latest
+    }
+
+    /// "A1", "A2", then "B1" for the next superset: where the exercise sits in
+    /// its superset, as programs write it (supersets.ts slotLabel). Nil on its own.
+    func supersetLabel(_ id: String) -> String? {
+        guard let exercises = state?.active?.exercises,
+              let i = exercises.firstIndex(where: { $0.id == id }),
+              let members = Self.superset(of: i, in: exercises),
+              let first = members.first
+        else { return nil }
+        var letter = 0
+        var j = 0
+        while j < first {
+            if let group = Self.superset(of: j, in: exercises), let end = group.last {
+                letter += 1
+                j = end + 1
+            } else {
+                j += 1
+            }
+        }
+        let name = Character(UnicodeScalar(UInt8(65 + letter % 26)))
+        return "\(name)\(i - first + 1)"
     }
 
     /// The indexes of the superset exercise `i` is in: consecutive exercises
@@ -597,6 +625,7 @@ final class WatchModel: ObservableObject {
         state?.active = active
         pending.append(write)
         savePending()
+        updateComplications()
 
         let exercise = active.exercises[i]
         if let members = Self.superset(of: i, in: active.exercises) {

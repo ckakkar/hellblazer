@@ -41,6 +41,7 @@ struct MuscleSetsView: View {
                         Text(number(total))
                             .font(WidgetStyle.figure(28))
                             .monospacedDigit()
+                            .contentTransition(.numericText(value: total))
                         Text("working sets")
                             .font(WidgetStyle.title(14))
                             .foregroundStyle(.secondary)

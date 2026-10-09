@@ -212,6 +212,9 @@ struct FighterView: View {
             Text(fighter.name)
                 .font(.headline)
                 .lineLimit(1)
+            // The ladder, as on the Home Screen widget.
+            Ladder(rank: fighter.rank, of: fighter.of)
+                .padding(.vertical, 2)
             Text(fighter.next.map { "Next: \($0)" } ?? "Top of the ladder")
                 .font(.caption2)
                 .lineLimit(1)

@@ -3,7 +3,7 @@ import { ViewTransition } from "react";
 import Link from "next/link";
 import { WeekCardShare } from "@/components/week-card-share";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
-import { getCurrentWeekSetsPerMuscle } from "@/lib/data/analytics";
+import { getCurrentWeekSetsPerMuscle, getLatestWorkoutSets } from "@/lib/data/analytics";
 import { getSessionSummaries, hasAnySession } from "@/lib/data/sessions";
 import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
 import { getProfile } from "@/lib/data/profile";
@@ -42,6 +42,7 @@ export default async function DashboardPage({
   const since = format(subWeeks(startOfISOWeek(parseISO(today)), HISTORY_WEEKS), "yyyy-MM-dd");
   const [
     weeklySets,
+    latestWorkout,
     summaries,
     anySession,
     activeProgress,
@@ -50,6 +51,7 @@ export default async function DashboardPage({
     unit,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
+    getLatestWorkoutSets(),
     // Only the window the page draws: the read stays the same size however
     // long someone has been logging.
     getSessionSummaries({ since }),
@@ -254,7 +256,7 @@ export default async function DashboardPage({
           <ConsistencyHeatmap summaries={summaries} today={today} />
         </ChartCard>
         <ChartCard title="Sets per muscle" subtitle="This week so far. The band is 10-20 sets, where most growth happens">
-          <WeeklySetsChart data={weeklySets} />
+          <WeeklySetsChart data={weeklySets} latest={latestWorkout} />
         </ChartCard>
         <VolumeTrendCard daily={dailyVolume} unit={unit} today={today} />
       </section>

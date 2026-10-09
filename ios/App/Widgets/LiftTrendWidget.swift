@@ -136,6 +136,7 @@ struct LiftTrendView: View {
             Text(number(value))
                 .font(WidgetStyle.figure(size))
                 .monospacedDigit()
+                .contentTransition(.numericText(value: value))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             Text(entry.unit)

@@ -19,10 +19,16 @@ struct WorkoutView: View {
             Group {
                 if let rest = model.rest {
                     RestPage(rest: rest)
+                        .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 } else if model.isComplete(workout) && !model.keepGoing {
                     DonePage(workout: workout)
+                        .transition(.opacity.combined(with: .scale(scale: 0.94)))
                 } else if let exercise = model.currentExercise() {
+                    // A new exercise (a superset's partner, the next one up)
+                    // slides in, so the switch is seen, not just read.
                     LoggerPage(workout: workout, exercise: exercise)
+                        .id(exercise.id)
+                        .transition(.push(from: .trailing))
                 } else {
                     Text("No exercises yet. Add some in Fatty on your iPhone.")
                         .font(.footnote)
@@ -30,6 +36,7 @@ struct WorkoutView: View {
                         .multilineTextAlignment(.center)
                 }
             }
+            .animation(.snappy(duration: 0.32), value: logPageKey)
             .tag(Page.log)
             MetricsPage(workout: workout)
                 .tag(Page.metrics)
@@ -37,6 +44,27 @@ struct WorkoutView: View {
                 .tag(Page.media)
         }
         .tabViewStyle(.page)
+    }
+
+    /// What the logging page is showing: rest, the finish, or which exercise.
+    private var logPageKey: String {
+        if model.rest != nil { return "rest" }
+        if model.isComplete(workout) && !model.keepGoing { return "done" }
+        return model.currentExercise()?.id ?? ""
+    }
+}
+
+extension View {
+    /// The button a double tap (finger and thumb, twice) presses, on watches
+    /// that have it (watchOS 11 on Series 9, Ultra 2 and later): Log Set, or
+    /// Skip while resting, with a bar in both hands.
+    @ViewBuilder
+    func doubleTapAction() -> some View {
+        if #available(watchOS 11.0, *) {
+            handGestureShortcut(.primaryAction)
+        } else {
+            self
+        }
     }
 }
 
@@ -109,10 +137,21 @@ private struct LoggerPage: View {
                 picking = true
             } label: {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(exercise.name)
-                        .font(.system(.headline, design: .rounded))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
+                    HStack(spacing: 5) {
+                        // Its place in a superset, as the iPhone shows it.
+                        if let slot = model.supersetLabel(exercise.id) {
+                            Text(slot)
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(model.accent)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(model.accent.opacity(0.22), in: Capsule())
+                        }
+                        Text(exercise.name)
+                            .font(.system(.headline, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
                     Text(setLabel)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -141,6 +180,7 @@ private struct LoggerPage: View {
             .buttonStyle(.borderedProminent)
             .tint(model.accent)
             .disabled(reps < 1)
+            .doubleTapAction()
         }
         .onAppear(perform: seedIfNeeded)
         .onChange(of: seedKey) { _, _ in seedIfNeeded() }
@@ -161,11 +201,14 @@ private struct LoggerPage: View {
         by step: Double
     ) -> some View {
         VStack(spacing: 0) {
+            // The figure rolls to each value the crown turns it to.
             Text(text)
                 .font(.system(size: 26, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+                .contentTransition(.numericText(value: value.wrappedValue))
+                .animation(.snappy(duration: 0.2), value: value.wrappedValue)
             Text(unit.uppercased())
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(.secondary)
@@ -413,6 +456,7 @@ private struct RestPage: View {
                     HStack(spacing: 6) {
                         restButton("+30s") { model.extendRest(by: 30) }
                         restButton("Skip") { model.skipRest() }
+                            .doubleTapAction()
                     }
                 }
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .top)

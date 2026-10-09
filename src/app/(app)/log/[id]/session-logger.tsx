@@ -40,6 +40,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NumberStepper } from "@/components/ui/number-stepper";
 import { Badge } from "@/components/ui/badge";
+import { useGlide } from "@/components/ui/use-glide";
 import { Sheet } from "@/components/ui/sheet";
 import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
@@ -191,11 +192,25 @@ export function SessionLogger({
   const [finishing, setFinishing] = useState(false);
   const [picker, setPicker] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
+  // A superset just made from the sheet: its line snaps in, once.
+  const [linkedId, setLinkedId] = useState<string | null>(null);
   const [victory, setVictory] = useState<string | null>(null);
   const [activeSeId, setActiveSeId] = useState<string | null>(null);
   const [duration, setDuration] = useState<number | null>(
     session.duration_min ?? null,
   );
+  // The landing and link animations play once; reopening a sheet doesn't replay them.
+  useEffect(() => {
+    if (!flashId) return;
+    const t = setTimeout(() => setFlashId(null), 700);
+    return () => clearTimeout(t);
+  }, [flashId]);
+  useEffect(() => {
+    if (!linkedId) return;
+    const t = setTimeout(() => setLinkedId(null), 900);
+    return () => clearTimeout(t);
+  }, [linkedId]);
+
   // Live workout clock: ticks from when the session was started (created_at).
   const startedAt = new Date(session.created_at).getTime();
   const [elapsed, setElapsed] = useState(0);
@@ -951,6 +966,10 @@ export function SessionLogger({
       const next = ref.current.map((e) => (byId.has(e.seId) ? { ...e, superset: byId.get(e.seId) ?? null } : e));
       ref.current = next;
       setExercises(next);
+      if (link) {
+        setLinkedId(seId);
+        haptic("tap");
+      }
     });
   }
 
@@ -1675,6 +1694,7 @@ export function SessionLogger({
             return { slot: slots[i], index: i, exercises };
           })()}
           onLink={(link) => linkSuperset(active.seId, link)}
+          linkedNow={linkedId === active.seId}
           onAddDrop={() => addDropSet(active.seId)}
           unit={unit}
           weightStep={weightStep}
@@ -1776,6 +1796,7 @@ function ActiveExerciseModal({
   target,
   superset,
   onLink,
+  linkedNow,
   onAddDrop,
   unit,
   weightStep,
@@ -1800,6 +1821,8 @@ function ActiveExerciseModal({
   superset: { slot: SupersetSlot | null; index: number; exercises: LocalExercise[] };
   /** Joins it with the exercise after it (true), or takes it out of its superset. */
   onLink: (link: boolean) => void;
+  /** The superset was made a moment ago: its line snaps in. */
+  linkedNow?: boolean;
   onAddDrop: () => void;
   unit: Unit;
   weightStep: number;
@@ -1820,6 +1843,11 @@ function ActiveExerciseModal({
   const [swapping, setSwapping] = useState(false);
   const [q, setQ] = useState("");
   const hasSets = exercise.sets.length > 0;
+  // A set landing pushes what's under it down: it glides there, not jumps.
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const linksRef = useRef<HTMLDivElement>(null);
+  useGlide(actionsRef, exercise.sets.length);
+  useGlide(linksRef, `${exercise.sets.length}:${superset.slot ? 1 : 0}`);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -1933,7 +1961,12 @@ function ActiveExerciseModal({
           )}
 
           {superset.slot && (
-            <SupersetLine slot={superset.slot} exercises={superset.exercises} index={superset.index} className="mb-3" />
+            <SupersetLine
+              slot={superset.slot}
+              exercises={superset.exercises}
+              index={superset.index}
+              className={cn("mb-3", linkedNow && "hb-link-in")}
+            />
           )}
 
           <div className="grid grid-cols-1 gap-2">
@@ -1951,22 +1984,24 @@ function ActiveExerciseModal({
               />
             ))}
 
-            <Button variant="secondary" size="lg" onClick={onAddSet} className="mt-1 w-full">
-              <Plus className="size-4" />
-              {exercise.sets.length === 0
-                ? "Log first set"
-                : "Add set"}
-            </Button>
-            {hasSets && !exercise.sets[exercise.sets.length - 1].isWarmup && (
-              <Button variant="ghost" size="lg" onClick={onAddDrop} className="w-full">
-                <ArrowDownRight className="size-4" />
-                Add drop set
+            <div ref={actionsRef} className="grid grid-cols-1 gap-2">
+              <Button variant="secondary" size="lg" onClick={onAddSet} className="mt-1 w-full">
+                <Plus className="size-4" />
+                {exercise.sets.length === 0
+                  ? "Log first set"
+                  : "Add set"}
               </Button>
-            )}
-            {sayIt}
+              {hasSets && !exercise.sets[exercise.sets.length - 1].isWarmup && (
+                <Button variant="ghost" size="lg" onClick={onAddDrop} className="w-full">
+                  <ArrowDownRight className="size-4" />
+                  Add drop set
+                </Button>
+              )}
+              {sayIt}
+            </div>
           </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
+          <div ref={linksRef} className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">
             {superset.slot ? (
               <button
                 onClick={() => onLink(false)}
@@ -2075,7 +2110,7 @@ function SetRow({
       className={cn(
         "rounded-2xl p-3",
         set.isWarmup ? "bg-warn/[0.07]" : isPR ? "bg-accent/[0.09]" : "bg-white/[0.04]",
-        flash && "hb-landed",
+        flash && "hb-set-in",
       )}
     >
       <div className="mb-2 flex items-center justify-between">

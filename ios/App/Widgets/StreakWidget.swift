@@ -25,6 +25,17 @@ struct StreakEntry: TimelineEntry {
     /// The lifter's fighter, for behind the card: in ink, and see-through.
     var ink: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadInk(for: $0.key) } }
     var clear: UIImage? { snapshot?.fighter.flatMap { FighterArt.loadClear(for: $0.key) } }
+
+    /// A streak on the line rises in the Smart Stack: the week's last days
+    /// with the plan not yet met. Otherwise it waits its turn.
+    var relevance: TimelineEntryRelevance? {
+        guard let snapshot, let planned = snapshot.sessionsPlanned, planned > 0,
+              snapshot.sessionsThisWeek < planned,
+              let weekday = Calendar(identifier: .iso8601).dateComponents([.weekday], from: date).weekday
+        else { return nil }
+        // Friday, Saturday, Sunday (Sunday is 1).
+        return weekday == 1 || weekday >= 6 ? TimelineEntryRelevance(score: 50) : nil
+    }
 }
 
 struct StreakProvider: TimelineProvider {
@@ -133,6 +144,7 @@ struct StreakView: View {
                 Text("\(weeks)")
                     .font(WidgetStyle.figure(46))
                     .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(weeks)))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                 Text(weeks == 1 ? "week" : "weeks")
