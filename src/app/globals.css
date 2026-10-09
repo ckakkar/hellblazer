@@ -194,31 +194,29 @@ label {
 }
 
 /* Top bar: clear while the page sits at the top, frosting only once content
-   scrolls underneath it. Scroll-driven, so it costs no JavaScript. */
-.hb-topbar {
-  background-color: rgb(0 0 0 / 0);
-  box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 0);
+   scrolls underneath it. Scroll-driven, so it costs no JavaScript. The frost
+   is a fixed layer that only fades in: animating the blur itself would
+   repaint the backdrop on every frame of the first scroll. */
+.hb-topbar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-color: rgb(0 0 0 / 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 0.08);
 }
 @supports (animation-timeline: scroll()) {
-  .hb-topbar {
+  .hb-topbar::before {
     animation: hb-topbar linear both;
     animation-timeline: scroll(root);
     animation-range: 0 56px;
   }
 }
-@supports not (animation-timeline: scroll()) {
-  .hb-topbar {
-    background-color: rgb(0 0 0 / 0.78);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-  }
-}
 @keyframes hb-topbar {
-  to {
-    background-color: rgb(0 0 0 / 0.72);
-    -webkit-backdrop-filter: blur(24px) saturate(180%);
-    backdrop-filter: blur(24px) saturate(180%);
-    box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 0.08);
+  from {
+    opacity: 0;
   }
 }
 
@@ -1629,10 +1627,7 @@ html[data-ua-nav]::view-transition-new(*) {
     animation: none !important;
   }
   /* Scroll-driven chrome isn't motion; keep the top bar legible. */
-  .hb-topbar {
+  .hb-topbar::before {
     animation: none;
-    background-color: rgb(0 0 0 / 0.78);
-    -webkit-backdrop-filter: blur(24px);
-    backdrop-filter: blur(24px);
   }
 }

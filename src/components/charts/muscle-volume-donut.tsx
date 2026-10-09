@@ -38,6 +38,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
+              isAnimationActive={false}
               data={slices}
               dataKey="volume"
               nameKey="label"

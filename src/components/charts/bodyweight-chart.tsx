@@ -70,6 +70,7 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
           }
         />
         <Area
+          isAnimationActive={false}
           type="monotone"
           dataKey="weight"
           stroke="var(--color-text)"

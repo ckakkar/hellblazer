@@ -78,8 +78,11 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
         </div>
       ) : (
         <>
+          {/* Prefetched in full: mid-workout, this is the way back to the
+              logger from every other tab, so it opens at once. */}
           <Link
             href={`/log/${session.id}`}
+            prefetch
             transitionTypes={["nav-forward"]}
             className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-[14px] font-semibold text-black active:opacity-80 max-[359px]:w-11 max-[359px]:justify-center max-[359px]:px-0"
           >

@@ -35,6 +35,7 @@ export function MuscleBalanceRadar({ data }: { data: Row[] }) {
           tick={{ fill: "var(--color-muted)", fontSize: 10 }}
         />
         <Radar
+          isAnimationActive={false}
           dataKey="sets"
           stroke="var(--color-text)"
           strokeWidth={2}

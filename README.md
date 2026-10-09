@@ -157,8 +157,9 @@ Log a workout, then ask to be judged. The judge (DeepSeek) weighs your real numb
 - **Auth checks are local.** The proxy verifies the session JWT against the project's ES256 public key (`getClaims()`), instead of calling the Auth server on every navigation.
 - **Heavy reads are aggregated in Postgres** (views and RPCs), so there's no pulling every set to the client and no row-cap truncation.
 - **Light where it counts.** The dashboard ships no charting library; its bars are HTML. Sheets and the menu are CSS, so no animation library loads on shared routes. Recharts loads only on Progress and Settings.
-- **Smooth under load.** Animations are compositor-driven (transform and opacity), so they stay smooth while the next page hydrates.
-- **Instant back-and-forth.** The client router cache reuses recently visited pages (`staleTimes`), so switching tabs doesn't refetch.
+- **Smooth under load.** Animations are compositor-driven (transform and opacity), so they stay smooth while the next page hydrates. The top bar's frost fades in as a layer rather than animating its blur, and charts draw without Recharts' JavaScript entrance animations.
+- **Tabs open instantly.** The tab bar (and the desktop sidebar) prefetches each destination's whole page, and keeps those copies fresh while the app is in front (`nav/warm-tabs.ts`), so a tab shows real content on tap instead of the loader. So does the Resume button during a workout. The client router cache also reuses recently visited pages (`staleTimes`).
+- **120 Hz on ProMotion iPhones.** The iOS app opts into high frame rates (`CADisableMinimumFrameDurationOnPhone`).
 
 ## The analytics engine
 

@@ -8,6 +8,9 @@ import { cn } from "@/lib/utils";
 import { signOutOfApp } from "@/lib/sign-out";
 import { NAV_SECTIONS, SETTINGS_ITEM, BOTTOM_NAV, type NavItem } from "./nav-items";
 import { MenuOverlay, type NavIdentity } from "./menu-overlay";
+import { useWarmTabs } from "./warm-tabs";
+
+const TAB_HREFS = BOTTOM_NAV.map((item) => item.href);
 
 /** The compact title the mobile top bar shows once the large one scrolls off. */
 const TITLES: [prefix: string, title: string][] = [
@@ -69,6 +72,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
+      prefetch
       className={cn(
         "relative flex items-center gap-3 rounded-xl px-3 py-2 text-[14px] font-medium transition-colors",
         active ? "text-text" : "text-muted hover:text-text",
@@ -96,6 +100,7 @@ export function AppNav({
 }) {
   const isActive = useActive();
   const pathname = usePathname();
+  useWarmTabs(TAB_HREFS);
 
   return (
     <>
@@ -155,6 +160,7 @@ export function AppNav({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 aria-label={item.label}
                 className="flex items-center justify-center"
               >
@@ -168,6 +174,7 @@ export function AppNav({
             <Link
               key={item.href}
               href={item.href}
+              prefetch
               onClick={(e) => scrollToTopIfHere(e, item.href, pathname)}
               aria-current={active ? "page" : undefined}
               className={cn(

@@ -86,6 +86,7 @@ export function MuscleTrendChart({
           }}
         />
         <Bar
+          isAnimationActive={false}
           yAxisId="sets"
           dataKey="sets"
           radius={[3, 3, 0, 0]}
@@ -94,6 +95,7 @@ export function MuscleTrendChart({
           maxBarSize={30}
         />
         <Line
+          isAnimationActive={false}
           yAxisId="vol"
           type="monotone"
           dataKey="volume"

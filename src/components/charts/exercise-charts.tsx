@@ -80,6 +80,7 @@ export function OneRepMaxChart({
           }
         />
         <Area
+          isAnimationActive={false}
           type="monotone"
           dataKey="est1rm"
           stroke="var(--color-text)"
@@ -139,6 +140,7 @@ export function VolumeBarsChart({
           }
         />
         <Bar
+          isAnimationActive={false}
           dataKey="volume"
           radius={[3, 3, 0, 0]}
           fill="var(--color-chart-2)"
