@@ -1,4 +1,6 @@
+import "server-only";
 import webpush from "web-push";
+import { isPushEndpoint } from "@/lib/push-endpoint";
 
 export type PushPayload = {
   title: string;
@@ -36,6 +38,9 @@ export async function sendPush(
   payload: PushPayload,
 ): Promise<{ ok: boolean; gone: boolean }> {
   if (!pushConfigured()) return { ok: false, gone: false };
+  // Never POST anywhere but a push service; a stored endpoint that isn't one
+  // is dropped like a dead subscription.
+  if (!isPushEndpoint(sub.endpoint)) return { ok: false, gone: true };
   try {
     await webpush.sendNotification(
       { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },

@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   addDays,
@@ -80,23 +81,27 @@ async function workoutDue(
     svc
       .from("session")
       .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
       .eq("program_id", program.id)
       .gte("date", weekStart)
       .lt("date", windowEnd),
     svc
       .from("program_skip")
       .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
       .eq("program_id", program.id)
       .gte("date", weekStart)
       .lt("date", windowEnd),
     svc
       .from("session")
       .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
       .eq("program_id", program.id)
       .eq("date", today),
     svc
       .from("program_skip")
       .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
       .eq("program_id", program.id)
       .eq("date", today),
   ]);
@@ -111,12 +116,19 @@ async function workoutDue(
   return { programName: program.name, nextName };
 }
 
+/** A constant-time comparison, so response timing can't spell out the secret. */
+function sameSecret(given: string | null, expected: string): boolean {
+  const a = Buffer.from(given ?? "");
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function GET(request: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ skipped: "CRON_SECRET not set" });
   }
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!sameSecret(request.headers.get("authorization"), `Bearer ${secret}`)) {
     return new NextResponse("Unauthorized", { status: 401 });
   }
 

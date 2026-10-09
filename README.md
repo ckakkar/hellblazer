@@ -297,9 +297,12 @@ Unit, accent and timezone preferences are cookies, read on the server so the fir
 - **Deleting an account deletes everything.** Every table cascades from `auth.users`, and Sign in with Apple access is revoked first, as App Store rules require.
 - **Parents and children share an owner.** Every reference between a lifter's rows names (id, user_id), so knowing another lifter's ids isn't enough to attach anything to their data; a trigger does the same for custom exercises.
 - **The watch has its own credential.** The iPhone app mints a random token for the watch (`linkWatch`); only its SHA-256 is stored, and signing out or turning the watch off in Settings revokes it. The watch API (`src/lib/watch/server.ts`) runs with the service role, so every query in it is scoped to the token's lifter, and tests hold it to that.
-- **No secrets in the browser.** Only the Supabase URL and anon key reach the client. The service-role key, VAPID and Apple private keys, DeepSeek key and cron secret stay on the server.
+- **No secrets in the browser.** Only the Supabase URL and anon key reach the client. The service-role key, VAPID and Apple private keys, DeepSeek key and cron secret stay on the server, and the modules that hold them import `server-only`, so pulling one into a page fails the build.
+- **The server only calls out to push services.** A browser's push subscription is a URL the server later POSTs to; only the real push services' hosts are accepted (`lib/push-endpoint.ts`), so it can't be aimed anywhere else.
+- **The judge reads data, not instructions.** Names a lifter typed reach the model inside the training data; the prompt tells it to ignore anything in them that reads like an instruction, and the rank ratchet and server-side tier check hold either way.
+- **Exports are spreadsheet-safe.** Text in the CSV that would start a formula (`=`, `+`, `-`, `@`) is written as plain text.
 - **No keys in the repo.** It's public: `.p8` files are git-ignored, iOS signing material lives in GitHub secrets, and server keys live in Vercel.
-- **Headers.** Every response carries `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY` and a restrictive `Permissions-Policy`.
+- **Headers.** Every response carries `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, a restrictive `Permissions-Policy`, and a `Content-Security-Policy` limiting `base-uri`, `object-src`, `frame-ancestors` and `form-action`; Vercel adds HSTS. The cron checks its secret in constant time.
 
 ## PWA, offline and notifications
 

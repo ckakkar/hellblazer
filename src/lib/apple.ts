@@ -1,3 +1,4 @@
+import "server-only";
 import { createPrivateKey, sign } from "node:crypto";
 
 // Server-only: signs with the Apple private key. Never import from client code.

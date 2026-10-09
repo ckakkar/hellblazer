@@ -6,10 +6,20 @@ export const dynamic = "force-dynamic";
 
 const EXPORT_PAGE = 1000;
 
-/** RFC-4180 CSV cell: quote when it contains a comma, quote or newline. */
+/** RFC-4180 CSV cell: quote when it contains a comma, quote or line break. */
 function cell(v: unknown): string {
   const s = v == null ? "" : String(v);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/**
+ * A cell of free text the lifter typed (a session title, an exercise name).
+ * Spreadsheets run a cell that starts with = + - @ (or a tab or CR) as a
+ * formula, so those get a leading apostrophe, which shows as plain text.
+ */
+function text(v: string | null | undefined): string {
+  const s = v ?? "";
+  return cell(/^[=+\-@\t\r]/.test(s) ? `'${s}` : s);
 }
 
 type ExportRow = {
@@ -82,8 +92,8 @@ export async function GET() {
     lines.push(
       [
         cell(sess?.date),
-        cell(sess?.title),
-        cell(ex?.name),
+        text(sess?.title),
+        text(ex?.name),
         cell(ex?.primary_muscle),
         cell(r.set_number),
         cell(working ? "working" : "warmup"),

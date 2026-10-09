@@ -1,3 +1,4 @@
+import "server-only";
 import { connect } from "node:http2";
 import { APP_BUNDLE_ID, appleKey, signAppleJwt } from "@/lib/apple";
 import type { PushPayload } from "@/lib/push";

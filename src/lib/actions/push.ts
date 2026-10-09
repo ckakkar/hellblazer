@@ -4,6 +4,7 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
 import { pushConfigured, sendPush } from "@/lib/push";
+import { isPushEndpoint } from "@/lib/push-endpoint";
 import { apnsConfigured, sendApns } from "@/lib/apns";
 
 /** Store (or refresh) this browser's push subscription for the user. */
@@ -16,7 +17,8 @@ export async function savePushSubscription(input: {
 }) {
   const v = z
     .object({
-      endpoint: z.string().url().max(1000),
+      // A real push service only: the server POSTs to this URL later.
+      endpoint: z.string().url().max(1000).refine(isPushEndpoint, "Not a push service"),
       p256dh: z.string().min(1).max(500),
       auth: z.string().min(1).max(500),
       timezone: z.string().max(64).nullable().optional(),

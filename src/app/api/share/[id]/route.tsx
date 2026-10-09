@@ -25,6 +25,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+    return new Response("Not found", { status: 404 });
+  }
   const [session, profile, unit, accentKey, cardFonts] = await Promise.all([
     getSessionDetail(id),
     getProfile(),
