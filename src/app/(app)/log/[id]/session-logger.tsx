@@ -54,6 +54,7 @@ import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
 import { cn, fitFigure, selectAllOnFocus } from "@/lib/utils";
 import { pickHype, randomVictory } from "@/lib/hype";
+import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
@@ -1333,18 +1334,13 @@ export function SessionLogger({
               )}
             </span>
           )}
-          <input
-            type="date"
+          <SessionDate
             defaultValue={session.date}
-            aria-label="Session date"
-            onBlur={(e) =>
-              e.target.value &&
-              updateSessionMeta({
-                sessionId: session.id,
-                date: e.target.value,
-              }).catch(() => showNotice("Couldn't save the session date."))
+            onCommit={(date) =>
+              updateSessionMeta({ sessionId: session.id, date }).catch(() =>
+                showNotice("Couldn't save the session date."),
+              )
             }
-            className="tnum rounded-lg bg-transparent px-1 py-0.5 text-right text-[13px] text-muted [color-scheme:dark] focus:outline-none focus:ring-2 focus:ring-text/25"
           />
         </div>
         <TitleField
@@ -1414,7 +1410,6 @@ export function SessionLogger({
           </div>
         </div>
         <p className="mt-3 px-1 text-[13px] text-muted">{hype}</p>
-        {!isEditing && <RestTimerCard timer={rest} />}
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (
@@ -1548,6 +1543,11 @@ export function SessionLogger({
                 </div>
               );
             })()}
+
+            {/* Under the exercise you're on, not above it: on a small phone the
+                card above pushed Start exercise below the fold. Mid-set, the
+                countdown is in the exercise sheet too. */}
+            {!isEditing && <RestTimerCard timer={rest} />}
 
             {upcoming.length > 0 && (
               <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
@@ -1878,7 +1878,14 @@ function ActiveExerciseModal({
         ) : (
           <>
             {rest && <RestTimerBar timer={rest} />}
-            <Button size="lg" className="w-full" onClick={onEnd}>
+            {/* Until the first set is in, logging it is the main action and
+                skipping is the quiet one. */}
+            <Button
+              size="lg"
+              variant={hasSets ? "primary" : "secondary"}
+              className="w-full"
+              onClick={onEnd}
+            >
               <Check className="size-4" />
               {hasSets ? "End exercise" : "Skip exercise"}
               <ArrowRight className="size-4" />
@@ -1985,7 +1992,12 @@ function ActiveExerciseModal({
             ))}
 
             <div ref={actionsRef} className="grid grid-cols-1 gap-2">
-              <Button variant="secondary" size="lg" onClick={onAddSet} className="mt-1 w-full">
+              <Button
+                variant={hasSets ? "secondary" : "primary"}
+                size="lg"
+                onClick={onAddSet}
+                className="mt-1 w-full"
+              >
                 <Plus className="size-4" />
                 {exercise.sets.length === 0
                   ? "Log first set"

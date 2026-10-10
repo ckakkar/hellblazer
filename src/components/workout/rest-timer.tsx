@@ -286,7 +286,7 @@ export function RestTimerCard({ timer }: { timer: RestTimerControls }) {
     <section
       aria-label="Rest timer"
       className={cn(
-        "relative mt-3 overflow-hidden rounded-2xl",
+        "relative overflow-hidden rounded-2xl",
         finished ? "bg-accent/[0.12]" : "bg-surface",
       )}
     >
