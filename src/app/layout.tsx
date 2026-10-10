@@ -18,13 +18,26 @@ const archivo = Archivo({
   display: "swap",
 });
 
+const DESCRIPTION =
+  "Train like a Kengan fighter. Programs, savage-fast set logging, and power analytics that climb with every rep.";
+
 export const metadata: Metadata = {
+  // Absolute URLs for the link preview (WhatsApp, iMessage, X), whichever
+  // deployment served the page. The card itself is app/opengraph-image.jpg.
+  metadataBase: new URL("https://hellblazer.vercel.app"),
   title: {
     default: "Fatty: Strength Log",
     template: "%s · Fatty",
   },
-  description:
-    "Train like a Kengan fighter. Programs, savage-fast set logging, and power analytics that climb with every rep.",
+  description: DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "Fatty",
+    title: "Fatty: Earn your rank.",
+    description: DESCRIPTION,
+    url: "/",
+  },
+  twitter: { card: "summary_large_image" },
   appleWebApp: {
     capable: true,
     title: "Fatty",

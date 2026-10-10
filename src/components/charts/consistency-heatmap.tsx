@@ -9,6 +9,7 @@ import {
   subWeeks,
 } from "date-fns";
 import type { SessionSummary } from "@/lib/data/sessions";
+import { cn } from "@/lib/utils";
 
 // Render a full trailing year; mobile reveals the recent 6 months, desktop the
 // whole 52 weeks (responsive via CSS, since this is a server component).
@@ -102,15 +103,28 @@ export function ConsistencyHeatmap({
   const monthsDesktop = monthGroups(weeks);
   const weekdayLabels = ["Mon", "", "Wed", "", "Fri", "", ""];
 
-  const monthCell = (g: { label: string; span: number }, i: number) => (
-    <div
-      key={i}
-      style={{ gridColumn: `span ${g.span}` }}
-      className="overflow-hidden text-[10px] font-medium text-muted"
-    >
-      {g.span >= 2 ? g.label : ""}
-    </div>
-  );
+  // A label needs two columns, except the current month's: it has only one
+  // until its second Monday, and leaving it blank made the newest weeks read
+  // as last month's. That one hangs left over the month before instead.
+  const monthCell = (
+    g: { label: string; span: number },
+    i: number,
+    all: { label: string; span: number }[],
+  ) => {
+    const current = i === all.length - 1 && g.span < 2;
+    return (
+      <div
+        key={i}
+        style={{ gridColumn: `span ${g.span}` }}
+        className={cn(
+          "text-[10px] font-medium text-muted",
+          current ? "flex justify-end whitespace-nowrap" : "overflow-hidden",
+        )}
+      >
+        {g.span >= 2 || current ? g.label : ""}
+      </div>
+    );
+  };
 
   return (
     <div className="w-full">
