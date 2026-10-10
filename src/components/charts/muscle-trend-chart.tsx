@@ -31,7 +31,7 @@ export function MuscleTrendChart({
   accent?: boolean;
 }) {
   const chartData = data.map((p) => ({
-    week: format(parseISO(p.week), "MMM d"),
+    week: format(parseISO(p.week), "d MMM"),
     sets: Math.round(p.sets * 10) / 10,
     volume: Math.round(unit === "lb" ? kgToLb(p.volume) : p.volume),
   }));

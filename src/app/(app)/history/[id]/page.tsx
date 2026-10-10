@@ -87,7 +87,7 @@ export default async function SessionDetailPage({
             <span>{session.title ?? "Session"}</span>
           </ViewTransition>
         }
-        subtitle={session.date ? format(parseISO(session.date), "EEEE, MMM d, yyyy") : undefined}
+        subtitle={session.date ? format(parseISO(session.date), "EEEE d MMMM yyyy") : undefined}
         action={
           <div className="flex flex-wrap items-center gap-2">
           <ShareCardButton

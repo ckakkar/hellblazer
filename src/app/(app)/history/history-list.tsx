@@ -181,10 +181,18 @@ export function HistoryList({
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="tnum text-[15px] text-text">
-                      {formatVolume(Number(s.total_volume ?? 0), unit)}
-                    </p>
-                    <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                    {/* A workout just opened has nothing to total yet: "0 kg, 0 sets"
+                        read like a failed load. */}
+                    {!s.finished_at && !Number(s.working_sets) ? (
+                      <p className="text-[13px] text-muted">No sets yet</p>
+                    ) : (
+                      <>
+                        <p className="tnum text-[15px] text-text">
+                          {formatVolume(Number(s.total_volume ?? 0), unit)}
+                        </p>
+                        <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                      </>
+                    )}
                   </div>
                 </Link>
                 </SwipeRow>

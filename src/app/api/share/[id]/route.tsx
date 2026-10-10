@@ -66,7 +66,7 @@ export async function GET(
     Number.isInteger(n) ? String(n) : String(Math.round(n * 10) / 10);
   const displayVolume = Math.round(unit === "lb" ? kgToLb(volumeKg) : volumeKg);
   const dateStr = session.date
-    ? format(parseISO(session.date), "MMM d, yyyy")
+    ? format(parseISO(session.date), "d MMM yyyy")
     : "";
   const d = session.duration_min;
   const durationStr = d

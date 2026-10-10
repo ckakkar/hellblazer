@@ -11,6 +11,7 @@ import {
   YAxis,
 } from "recharts";
 import { toDisplayWeight, trimNum, type Unit } from "@/lib/units";
+import { roundTicks } from "@/lib/axis-ticks";
 import { AXIS_TICK, GRID_STROKE, TooltipBox, axisWidthFor } from "./chart-kit";
 
 type Log = { date: string; weight_kg: number };
@@ -20,7 +21,7 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
   const data = [...logs]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((l) => ({
-      date: format(parseISO(l.date), "MMM d"),
+      date: format(parseISO(l.date), "d MMM"),
       weight: Math.round(toDisplayWeight(l.weight_kg, unit) * 10) / 10,
     }));
 
@@ -29,10 +30,8 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
   // The gutter is sized to the widest tick it has to hold. A fixed 40px axis
   // pulled 8px further left by a negative margin clipped the leading digit off
   // lb bodyweights, which run to four digits and a decimal ("230.5").
-  const yWidth = axisWidthFor(
-    data.map((d) => d.weight),
-    (v) => trimNum(v),
-  );
+  const axis = roundTicks(data.map((d) => d.weight));
+  const yWidth = axisWidthFor(axis.ticks, (v) => trimNum(v));
 
   return (
     <ResponsiveContainer width="100%" height={200}>
@@ -56,7 +55,8 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
           tickLine={false}
           axisLine={false}
           width={yWidth}
-          domain={["dataMin - 1", "dataMax + 1"]}
+          domain={axis.domain}
+          ticks={axis.ticks}
           tickFormatter={(v) => `${trimNum(Number(v))}`}
         />
         <Tooltip

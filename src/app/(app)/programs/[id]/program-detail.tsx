@@ -29,6 +29,7 @@ import { DayPreview } from "@/components/program/day-preview";
 import { cn } from "@/lib/utils";
 import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
+import type { ActiveSession } from "@/lib/data/sessions";
 import type { Exercise } from "@/lib/data/exercises";
 import {
   addProgramDay,
@@ -45,11 +46,13 @@ const DURATIONS = [4, 6, 8, 12, 16];
 export function ProgramDetail({
   program,
   progress,
+  activeSession,
   templates,
   exercises,
 }: {
   program: ProgramWithDays;
   progress: ProgramProgress;
+  activeSession: ActiveSession | null;
   templates: TemplateWithExercises[];
   exercises: Exercise[];
 }) {
@@ -103,7 +106,7 @@ export function ProgramDetail({
         }
       />
 
-      <ProgramProgressCard progress={progress} />
+      <ProgramProgressCard progress={progress} activeSession={activeSession} />
 
       {/* Day-to-day controls: pause the block, or roll back the last advance */}
       {program.start_date && !progress.isCompleted && (

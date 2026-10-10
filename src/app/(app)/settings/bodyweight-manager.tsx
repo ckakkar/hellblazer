@@ -17,6 +17,9 @@ import type { BodyweightLog } from "@/lib/data/bodyweight";
 import { selectAllOnFocus } from "@/lib/utils";
 import { healthSyncOn, withNative } from "@/lib/native-plugins";
 
+/** Entries listed before "Show all": the chart above already shows the trend. */
+const RECENT = 5;
+
 export function BodyweightManager({
   logs,
   unit,
@@ -31,6 +34,8 @@ export function BodyweightManager({
   const [pending, start] = useTransition();
   const [date, setDate] = useState(today);
   const [weight, setWeight] = useState("");
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? logs : logs.slice(0, RECENT);
 
   function submit() {
     const w = Number(weight);
@@ -83,7 +88,7 @@ export function BodyweightManager({
 
       {logs.length > 0 && (
         <ul className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-surface-2/60">
-          {logs.map((l) => (
+          {shown.map((l) => (
             // `justify-between` with no gap and nothing to stop either side
             // wrapping put the date hard against the weight at 360px and broke
             // both onto two lines at 320px. The date now truncates, the reading
@@ -110,6 +115,16 @@ export function BodyweightManager({
             </li>
           ))}
         </ul>
+      )}
+      {logs.length > RECENT && (
+        <button
+          type="button"
+          onClick={() => setShowAll((v) => !v)}
+          aria-expanded={showAll}
+          className="mt-1 inline-flex h-10 items-center px-1 text-[13px] text-muted transition-colors hover:text-text"
+        >
+          {showAll ? "Show fewer" : `Show all ${logs.length}`}
+        </button>
       )}
     </div>
   );

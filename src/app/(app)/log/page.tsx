@@ -19,9 +19,10 @@ export default async function LogPage({
 }: {
   searchParams: Promise<{ start?: string }>;
 }) {
-  const [templates, activeProgress, { start }] = await Promise.all([
+  const [templates, activeProgress, activeSession, { start }] = await Promise.all([
     getTemplates(),
     getActiveProgramProgress(),
+    getActiveSession(),
     searchParams,
   ]);
 
@@ -87,9 +88,8 @@ export default async function LogPage({
   // that day at once. Only a day offered here counts, and a workout already
   // in progress wins: that's where they land instead.
   const autoStart = start ? (options.find((o) => o.id === start) ?? null) : null;
-  if (autoStart) {
-    const active = await getActiveSession();
-    if (active) redirect(`/log/${active.id}`);
+  if (autoStart && activeSession && !activeSession.stale) {
+    redirect(`/log/${activeSession.id}`);
   }
 
   // Only promise a week when the block is actually accruing one. A paused,
@@ -111,6 +111,7 @@ export default async function LogPage({
         <div className="mb-10">
           <ProgramProgressCard
             progress={activeProgress}
+            activeSession={activeSession}
             href={`/programs/${activeProgress.program.id}`}
           />
         </div>

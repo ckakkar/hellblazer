@@ -35,7 +35,7 @@ export function OneRepMaxChart({
   unit: Unit;
 }) {
   const chartData = data.map((p) => ({
-    date: format(parseISO(p.date), "MMM d"),
+    date: format(parseISO(p.date), "d MMM"),
     est1rm: conv(p.est1rm, unit),
   }));
   if (chartData.length === 0)
@@ -102,7 +102,7 @@ export function VolumeBarsChart({
   unit: Unit;
 }) {
   const chartData = data.map((p) => ({
-    date: format(parseISO(p.date), "MMM d"),
+    date: format(parseISO(p.date), "d MMM"),
     volume: Math.round(unit === "lb" ? kgToLb(p.volume) : p.volume),
   }));
   if (chartData.length === 0)

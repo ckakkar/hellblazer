@@ -4,7 +4,7 @@ import Link from "next/link";
 import { WeekCardShare } from "@/components/week-card-share";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import { getCurrentWeekSetsPerMuscle, getLatestWorkoutSets } from "@/lib/data/analytics";
-import { getSessionSummaries, hasAnySession } from "@/lib/data/sessions";
+import { getActiveSession, getSessionSummaries, hasAnySession } from "@/lib/data/sessions";
 import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
 import { getProfile } from "@/lib/data/profile";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
@@ -49,6 +49,7 @@ export default async function DashboardPage({
     programs,
     profile,
     unit,
+    activeSession,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
     getLatestWorkoutSets(),
@@ -60,6 +61,7 @@ export default async function DashboardPage({
     getPrograms(),
     getProfile(),
     getUnit(),
+    getActiveSession(),
   ]);
   const tier = getTier(profile?.tier);
 
@@ -111,7 +113,7 @@ export default async function DashboardPage({
     pct === null || pct === 0 ? "flat" : pct > 0 ? "gain" : "loss";
 
   const deltaLabel = (pct: number | null) =>
-    pct === null ? "first week" : pct === 0 ? "level" : `${Math.abs(pct)}%`;
+    pct === null ? "first week" : pct === 0 ? "no change" : `${Math.abs(pct)}%`;
 
   const volumeMove = move(volumeThisWeek, volumeLastWeek);
   const setsMove = move(workingSetsThisWeek, workingSetsLastWeek);
@@ -156,10 +158,18 @@ export default async function DashboardPage({
     },
     {
       label: "Sessions",
-      value: sessionTarget ? `${thisWeek.length}/${sessionTarget}` : String(thisWeek.length),
+      // Capped at the target: a sixth session in a five-day week reads as
+      // "5/5, 1 extra", not "6/5".
+      value: sessionTarget
+        ? `${Math.min(thisWeek.length, sessionTarget)}/${sessionTarget}`
+        : String(thisWeek.length),
       delta: sessionTarget ? (
         <Delta tone={sessionsTone}>
-          {thisWeek.length >= sessionTarget ? "on pace" : `${sessionTarget - thisWeek.length} to go`}
+          {thisWeek.length > sessionTarget
+            ? `${thisWeek.length - sessionTarget} extra`
+            : thisWeek.length === sessionTarget
+              ? "on pace"
+              : `${sessionTarget - thisWeek.length} to go`}
         </Delta>
       ) : undefined,
     },
@@ -177,6 +187,7 @@ export default async function DashboardPage({
         {isNewUser ? null : activeProgress ? (
           <ProgramProgressCard
             progress={activeProgress}
+            activeSession={activeSession}
             href={`/programs/${activeProgress.program.id}`}
             className="hb-overlap relative z-10 -mt-14 md:mt-3 lg:mt-0"
           />
@@ -302,10 +313,18 @@ export default async function DashboardPage({
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="tnum text-[15px] text-text">
-                    {formatVolume(Number(s.total_volume ?? 0), unit)}
-                  </p>
-                  <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                  {/* A workout just opened has nothing to total yet: "0 kg, 0 sets"
+                      read like a failed load. */}
+                  {!s.finished_at && !Number(s.working_sets) ? (
+                    <p className="text-[13px] text-muted">No sets yet</p>
+                  ) : (
+                    <>
+                      <p className="tnum text-[15px] text-text">
+                        {formatVolume(Number(s.total_volume ?? 0), unit)}
+                      </p>
+                      <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                    </>
+                  )}
                 </div>
               </Link>
             ))}

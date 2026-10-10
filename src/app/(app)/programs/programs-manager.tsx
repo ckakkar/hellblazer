@@ -20,6 +20,7 @@ import { cn, selectAllOnFocus } from "@/lib/utils";
 import { format } from "date-fns";
 import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
+import type { ActiveSession } from "@/lib/data/sessions";
 import type { Preset } from "@/lib/presets";
 import {
   createProgram,
@@ -33,11 +34,13 @@ export function ProgramsManager({
   programs,
   templates,
   activeProgress,
+  activeSession,
   presets,
 }: {
   programs: ProgramWithDays[];
   templates: TemplateWithExercises[];
   activeProgress: ProgramProgress | null;
+  activeSession: ActiveSession | null;
   presets: Preset[];
 }) {
   const [pending, start] = useTransition();
@@ -66,7 +69,11 @@ export function ProgramsManager({
 
       {activeProgress && (
         <div className="mb-10">
-          <ProgramProgressCard progress={activeProgress} href={`/programs/${activeProgress.program.id}`} />
+          <ProgramProgressCard
+            progress={activeProgress}
+            activeSession={activeSession}
+            href={`/programs/${activeProgress.program.id}`}
+          />
         </div>
       )}
 

@@ -1,7 +1,9 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import type { Exercise } from "@/lib/data/exercises";
 import { getExerciseStats } from "@/lib/data/exercise-stats";
+import { STALE_CLOCK_MS } from "@/lib/workout-clock";
 
 export type Session = Database["public"]["Tables"]["session"]["Row"];
 export type SessionExercise =
@@ -26,10 +28,18 @@ export type ActiveSession = {
   startedAt: string;
   workingSets: number;
   exerciseCount: number;
+  /** Left open past {@link STALE_CLOCK_MS}: a session someone forgot to finish,
+   *  not a workout under way. It doesn't block starting another (the watch
+   *  draws the same line). */
+  stale: boolean;
 };
 
-/** The most recent unfinished session, if any, powers the resume banner. */
-export async function getActiveSession(): Promise<ActiveSession | null> {
+/**
+ * The most recent unfinished session, if any: the resume banner, and the
+ * program card's "In progress" state. Cached per request, so the layout and
+ * the page share one lookup.
+ */
+export const getActiveSession = cache(async function getActiveSession(): Promise<ActiveSession | null> {
   const supabase = await createClient();
   const { data: sess, error } = await supabase
     .from("session")
@@ -53,8 +63,9 @@ export async function getActiveSession(): Promise<ActiveSession | null> {
     startedAt: sess.created_at,
     workingSets: Number(summary?.working_sets ?? 0),
     exerciseCount: Number(summary?.exercise_count ?? 0),
+    stale: Date.now() - Date.parse(sess.created_at) > STALE_CLOCK_MS,
   };
-}
+});
 
 /**
  * Per-session rollups for history + dashboard, most recent first. `since`

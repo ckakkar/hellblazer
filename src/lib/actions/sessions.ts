@@ -6,7 +6,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getAuthedContext } from "@/lib/auth";
-import { getLastPerformances, type LastPerformance } from "@/lib/data/sessions";
+import {
+  getActiveSession,
+  getLastPerformances,
+  type LastPerformance,
+} from "@/lib/data/sessions";
 import { refreshWidgets, widgetDevices } from "@/lib/widget-push";
 import type { TablesUpdate } from "@/lib/database.types";
 
@@ -32,6 +36,13 @@ export async function startSession(input: {
     })
     .parse(input);
   const { supabase } = await getAuthedContext();
+
+  // One workout at a time. A workout already under way wins, as it does on the
+  // watch and for Siri's /log?start=: starting another would leave that one
+  // open behind the new one, never finished. Discard it from the resume banner
+  // to start fresh. A session left open for hours doesn't count.
+  const live = await getActiveSession();
+  if (live && !live.stale) redirect(`/log/${live.id}`);
 
   // A session advances the program ONLY when it was started from an explicit
   // program day. Freeform work and bare templates stay off-plan by design: we

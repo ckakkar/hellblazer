@@ -137,14 +137,14 @@ export function ConsistencyHeatmap({
               return cell.future ? (
                 <div
                   key={cell.key}
-                  title={`${format(cell.date, "EEE, MMM d")}, upcoming`}
+                  title={`${format(cell.date, "EEE d MMM")}, upcoming`}
                   className={`aspect-square rounded-[3px] opacity-40 ${hide}`}
                   style={{ backgroundColor: LEVELS[0] }}
                 />
               ) : (
                 <div
                   key={cell.key}
-                  title={`${format(cell.date, "EEE, MMM d")}: ${
+                  title={`${format(cell.date, "EEE d MMM")}: ${
                     cell.sets > 0 ? `${Math.round(cell.sets)} sets` : "rest"
                   }`}
                   className={`aspect-square rounded-[3px] ${

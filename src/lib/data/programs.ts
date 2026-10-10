@@ -157,8 +157,10 @@ export async function getProgramProgress(
 
   const doneThisWeek = sessionsThisWeek + skipsThisWeek;
   const weekComplete = daysPerWeek > 0 && doneThisWeek >= daysPerWeek;
+  // A finished week always leads into next week's first day. Without the
+  // check, an extra session this week (6 of 5) pointed at day 2.
   const nextDay =
-    daysPerWeek > 0 ? days[doneThisWeek % daysPerWeek] ?? days[0] : null;
+    daysPerWeek > 0 ? (weekComplete ? days[0] : days[doneThisWeek]) ?? days[0] : null;
 
   // The most recent advance (for the "Roll back a day" control): whichever of
   // the latest logged session or latest skip happened last. Uses rows already
