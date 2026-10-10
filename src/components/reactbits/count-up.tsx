@@ -150,5 +150,3 @@ export function CountUp({
     </span>
   );
 }
-
-export default CountUp;

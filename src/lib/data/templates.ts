@@ -30,20 +30,3 @@ export async function getTemplates(): Promise<TemplateWithExercises[]> {
   if (error) throw error;
   return (data ?? []) as TemplateWithExercises[];
 }
-
-export async function getTemplate(
-  id: string,
-): Promise<TemplateWithExercises | null> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("workout_template")
-    .select(TEMPLATE_SELECT)
-    .eq("id", id)
-    .order("position", {
-      ascending: true,
-      referencedTable: "template_exercise",
-    })
-    .maybeSingle();
-  if (error) throw error;
-  return (data as TemplateWithExercises | null) ?? null;
-}

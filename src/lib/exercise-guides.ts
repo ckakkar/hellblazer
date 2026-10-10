@@ -315,6 +315,3 @@ const BY_NORMALIZED_NAME = new Map(
 export function getExerciseGuide(name: string): string | null {
   return BY_NORMALIZED_NAME.get(normalize(name)) ?? null;
 }
-
-/** How many movements carry a guide. */
-export const GUIDE_COUNT = BY_NORMALIZED_NAME.size;

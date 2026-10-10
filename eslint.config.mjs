@@ -15,6 +15,8 @@ const eslintConfig = defineConfig([
     // Native iOS shell: generated Xcode project plus copied bridge scripts.
     "ios/**",
     "app-shell/**",
+    // Local, git-ignored launch-video project (vendored minified GSAP).
+    "brag-output*/**",
   ]),
 ]);
 

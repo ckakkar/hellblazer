@@ -20,10 +20,6 @@ export const VICTORY_LINES = [
   "DOMINATED",
 ];
 
-export function randomHype(): string {
-  return HYPE_LINES[Math.floor(Math.random() * HYPE_LINES.length)];
-}
-
 /** Deterministic pick from a seed (e.g. session id): stable across SSR/CSR. */
 export function pickHype(seed: string): string {
   let h = 0;

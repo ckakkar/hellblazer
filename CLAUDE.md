@@ -1,6 +1,6 @@
 # CLAUDE.md: Workout Tracker Build Spec
 
-You are building a production workout-tracking web app. This file is the source of truth. Build the entire thing: schema, auth, RLS, data layer, UI, charts. Work in vertical slices (schema → types → data hooks → screen), and after each slice, run typecheck + lint before moving on. Don't scaffold placeholder screens: every screen listed here should be functional against real Supabase data before you call the build done.
+This began as the build spec for a production workout-tracking web app, and that build is done: the app is Fatty, live at hellblazer.vercel.app, with an iOS and Apple Watch app on top. The stack, non-negotiables, data model, design system and guardrails below are still the source of truth. Everything shipped since the first build (programs, the rank ladder and judge, King of the Hill, the native app) is described in `README.md`. Work in vertical slices (schema → types → data hooks → screen), and run typecheck + lint after each slice. Don't scaffold placeholder screens: everything works against real Supabase data.
 
 ## Stack (already initialized: do not re-scaffold)
 - Next.js (App Router, TypeScript, `src/` dir): already created
@@ -96,46 +96,39 @@ Create Postgres **views or RPC functions** for the heavy aggregations (weekly se
 
 ---
 
-## Design System: Dark Cyberpunk, Minimal
+## Design System: Black Glass
 
-Not neon-vomit. Restrained, high-craft, deep charcoal base with a single electric accent. Think "engineered instrument panel," not "gamer RGB."
+The current look (v3, September 2026). It replaced the original teal "dark cyberpunk" spec. Everyday screens stay quiet; the Kengan theme is spent on a few moments.
 
-### Tokens (define as CSS variables in `globals.css`, map into Tailwind theme)
+### Tokens (`src/app/globals.css`, mapped into Tailwind's `@theme`)
 ```
---bg:            #0A0B0D   /* near-black base */
---surface:       #101216   /* cards */
---surface-2:     #16191F   /* elevated / hover */
---border:        #1F242C
---text:          #E6E9EF
---text-muted:    #8B93A1
---accent:        #00E5C7   /* electric teal, primary accent, single hue */
---accent-dim:    #0B8F80
---accent-glow:   rgba(0,229,199,0.14)  /* for subtle glows only */
---danger:        #FF4D6D
---warn:          #FFB020
---chart-1:       #00E5C7
---chart-2:       #6C8BFF
---chart-3:       #B980FF
---chart-4:       #FF6FB5
+--color-bg:         #000000   /* true black: merges with OLED and the status bar */
+--color-surface:    #121214   /* graphite cards and grouped lists */
+--color-surface-2:  #1c1c1f   /* one step up: hover, sheets */
+--color-border:     #28282c
+--color-text:       #f4f2ee   /* bone */
+--color-muted:      #8e8c88
+--color-accent:     rgb(var(--accent-rgb))   /* crimson 223 45 40 by default; Settings re-skins it */
+--color-danger:     #ef5350
+--color-warn:       #f2a93b
+--color-chart-1..4: accent, #a8a6a1, #6b6a67, #3d3d40
 ```
 ### Rules
-- **One accent hue.** Teal. Use blue/violet/pink only inside charts to differentiate series. UI chrome stays monochrome + teal.
-- **Glow, sparingly.** A faint `box-shadow` in `--accent-glow` on primary buttons and active nav only. Never on text blocks.
-- **Type:** UI in Geist or Inter (variable). Numbers/data in a monospace (Geist Mono / JetBrains Mono), weights, reps, 1RM all tabular-nums. This is the cyberpunk-instrument feel: mono data, clean sans labels.
-- **Borders over shadows** for separation, 1px `--border`, subtle. Elevation via `--surface-2`, not big drop shadows.
-- **Radius:** consistent `rounded-lg` (10-12px). No pill buttons except tags.
-- **Spacing:** generous. Let cards breathe. 8pt grid.
-- **Motion:** Framer Motion optional but keep it subtle, 150-200ms ease-out on mount/hover, no bouncy springs. Respect `prefers-reduced-motion`.
-- **Charts (recharts):** dark bg, `--border` gridlines at low opacity, accent-colored series, mono tick labels, tooltips on `--surface-2` with 1px border. No chart legends where a single series is obvious. Keep them clean and data-dense.
-- **Mobile-first for `/log`.** It's the mid-workout screen: thumb-reachable, large inputs, minimal chrome. Everything else can be desktop-comfortable but must not break on mobile.
+- **Accent only for what's live:** the session in progress, starting a workout or the Log action, a broken PR, the rank ladder. History and heatmaps stay bone. Every accent use goes through `--accent-rgb`, so the selectable palettes (`src/lib/accents.ts`) keep working.
+- **Type:** Archivo only, variable on width. `.font-display` (width 125, tabular figures) carries titles and every important number. No mono, no uppercase UI copy, no tracked eyebrow labels. Uppercase plus `skewX(-8deg)` is reserved for poster words (victory, Removal, the verdict name).
+- **Structure:** iOS-style large titles (`PageHeader`), grouped lists on `bg-surface` with hairline dividers, cards without borders or shadows. The primary button is bone; the `accent` variant is only for the one "start something" action.
+- **Theme in moments, not everywhere:** the home hero, the victory screen, the PR "Removal" banner, the judge's verdict, the King of the Hill podium. Don't scatter decoration across the workhorse screens.
+- **Motion:** transform and opacity, 150-250ms ease-out, nothing looping, no always-on animation frames, no tap or cursor effects. Motion shows what happened. Respect `prefers-reduced-motion`. Recharts animations stay off.
+- **Charts (recharts):** dark ground, faint gridlines, no legend for a single series, tooltips on `surface-2`.
+- **Mobile first, Pro Max primary:** design for 430-440pt; 375pt (SE) and 320pt must not break. `/log` is the mid-workout screen: thumb-reachable, big targets, minimal chrome.
 
 ### Component conventions
-- Build a tiny primitives layer: `Button`, `Card`, `Input`, `NumberStepper` (for weight/reps, increment buttons flanking a numeric input, big tap targets), `Select`, `StatCard`, `ChartCard`. Use `cva` for variants. Don't pull in a heavy component library. Keep it hand-built and lean to preserve the aesthetic.
-- Navigation: persistent left sidebar on desktop (icon + label, lucide icons), bottom tab bar on mobile.
+- Hand-built primitives in `src/components/ui` (`Button`, `Card`, `Input`, `NumberStepper`, `Select`, `Sheet`, `PageHeader`, `ChartCard`, `Tape`, `SettingsGroup`, and so on) with `cva` variants. No heavy component library.
+- Navigation: a left sidebar on desktop; a floating glass tab bar and a full-page menu on phones.
 
 ---
 
-## Build Order (follow this)
+## Build Order (the original build, done)
 1. Env + Supabase server/client setup (`@supabase/ssr`), middleware session refresh, Google OAuth flow, `/` login + auth-gating on `/app/*`.
 2. Full schema migration via MCP: enum, all tables, FKs, indexes on `user_id` + common query columns (`session.date`, `set.session_exercise_id`).
 3. RLS policies on every table. Verify by attempting a cross-user read (should return zero rows).

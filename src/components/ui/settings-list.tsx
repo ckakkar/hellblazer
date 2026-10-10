@@ -98,12 +98,3 @@ export function SettingsRow({
     </div>
   );
 }
-
-/** A row whose content is a value read-out rather than a control. */
-export function SettingsValue({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="tnum text-[15px] text-muted">
-      {children}
-    </span>
-  );
-}

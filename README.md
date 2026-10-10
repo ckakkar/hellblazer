@@ -522,7 +522,7 @@ public/     sw.js, offline.html, splash/, art/fighters/
 supabase/   migrations/ (the whole schema), seed.sql (exercise library),
             tests/ (pgTAP), config.toml (the local stack)
 scripts/    generate-splash.mjs, generate-ios-assets.mjs, ios-signing-setup.mjs,
-            ios-configure-project.rb, sql/
+            ios-configure-project.rb, testflight-notes.mjs
 ios/        App/App (plugin, router, intents, watch bridge), App/Widgets (widget,
             Live Activity, control), App/Shared, App/Watch (the watch app),
             fastlane/ (signing and TestFlight lane)
