@@ -11,6 +11,7 @@ import { getTier } from "@/lib/tiers";
 import { NativeBridge } from "@/components/native/native-bridge";
 import { PullToRefresh } from "@/components/native/pull-to-refresh";
 import { WorkoutActivitySync } from "@/components/native/workout-activity-sync";
+import { LiveWorkoutSync } from "@/components/live-workout-sync";
 import { DeviceSync } from "@/components/native/device-sync";
 import { getAccent, getUnit } from "@/lib/settings";
 import { accentSwatch } from "@/lib/accents";
@@ -82,6 +83,9 @@ async function ResumeBannerSlot() {
   return (
     <>
       <WorkoutActivitySync activeSessionId={activeSession?.id ?? null} />
+      <LiveWorkoutSync
+        sessionId={activeSession && !activeSession.stale ? activeSession.id : null}
+      />
       {activeSession && <ResumeBanner session={activeSession} />}
     </>
   );

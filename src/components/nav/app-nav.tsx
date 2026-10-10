@@ -3,12 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Ellipsis, Flame, LogOut, Plus } from "lucide-react";
+import { ChevronLeft, Ellipsis, Flame, LogOut, Play, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { signOutOfApp } from "@/lib/sign-out";
 import { NAV_SECTIONS, SETTINGS_ITEM, BOTTOM_NAV, type NavItem } from "./nav-items";
 import { MenuOverlay, type NavIdentity } from "./menu-overlay";
 import { useWarmTabs } from "./warm-tabs";
+import { useLiveWorkout } from "@/lib/live-workout";
 
 const TAB_HREFS = BOTTOM_NAV.map((item) => item.href);
 
@@ -101,11 +102,18 @@ export function AppNav({
   const isActive = useActive();
   const pathname = usePathname();
   useWarmTabs(TAB_HREFS);
+  // While a workout is under way, every "start one" control resumes it.
+  const live = useLiveWorkout();
+  const resume = (item: NavItem): NavItem =>
+    live && item.href === "/log"
+      ? { ...item, href: `/log/${live}`, label: "Resume workout", icon: Play }
+      : item;
 
   return (
     <>
       {/* Desktop sidebar */}
       <aside
+        aria-label="Sidebar"
         className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-bg px-3 py-6 md:flex"
         style={{ viewTransitionName: "hb-sidebar" }}
       >
@@ -116,12 +124,12 @@ export function AppNav({
           {NAV_SECTIONS.map((section, i) => (
             <div key={i} className="flex flex-col gap-0.5">
               {section.title && (
-                <div className="px-3 pb-1.5 text-[12px] font-medium text-muted/70">
+                <div className="px-3 pb-1.5 text-[12px] font-medium text-muted">
                   {section.title}
                 </div>
               )}
               {section.items.map((item) => (
-                <SidebarLink key={item.href} item={item} active={isActive(item.href)} />
+                <SidebarLink key={item.href} item={resume(item)} active={isActive(item.href)} />
               ))}
             </div>
           ))}
@@ -129,7 +137,7 @@ export function AppNav({
         <div className="mt-auto flex flex-col gap-0.5">
           <SidebarLink item={SETTINGS_ITEM} active={isActive(SETTINGS_ITEM.href)} />
           {userEmail && (
-            <p className="truncate px-3 pb-1 pt-2 text-[12px] text-muted/70" title={userEmail}>
+            <p className="truncate px-3 pb-1 pt-2 text-[12px] text-muted" title={userEmail}>
               {userEmail}
             </p>
           )}
@@ -156,16 +164,21 @@ export function AppNav({
           const active = isActive(item.href);
           const isLog = item.href === "/log";
           if (isLog) {
+            const target = resume(item);
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={target.href}
                 prefetch
-                aria-label={item.label}
+                aria-label={target.label}
                 className="flex items-center justify-center"
               >
                 <span className="hb-glow flex size-11 items-center justify-center rounded-full bg-accent text-black">
-                  <Plus className="size-5" strokeWidth={2.5} />
+                  {live ? (
+                    <Play className="size-5 fill-current" strokeWidth={2.5} />
+                  ) : (
+                    <Plus className="size-5" strokeWidth={2.5} />
+                  )}
                 </span>
               </Link>
             );

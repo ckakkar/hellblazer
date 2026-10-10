@@ -3,13 +3,14 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Flame, LogOut, Plus, Trophy, X } from "lucide-react";
+import { ChevronRight, Flame, LogOut, Play, Plus, Trophy, X } from "lucide-react";
 import { FighterArt } from "@/components/tier/fighter-art";
 import { Portal } from "@/components/ui/portal";
 import { useModal, usePresence } from "@/components/ui/use-modal";
 import { signOutOfApp } from "@/lib/sign-out";
 import { MAX_RANK, type TierKey } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
+import { useLiveWorkout } from "@/lib/live-workout";
 import { BOTTOM_NAV, SECONDARY_NAV } from "./nav-items";
 
 /** Matches the `.hb-menu` exit transition in globals.css. */
@@ -53,6 +54,7 @@ export function MenuOverlay({
   useModal(open, panelRef, onClose);
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const live = useLiveWorkout();
 
   if (!mounted) return null;
   const tiles = SECONDARY_NAV.filter((i) => i.href !== "/leaderboard");
@@ -207,13 +209,17 @@ export function MenuOverlay({
           </div>
 
           <Link
-            href="/log"
+            href={live ? `/log/${live}` : "/log"}
             onClick={onClose}
             className="hb-hero-rise hb-glow mt-1 flex h-14 items-center justify-center gap-2 rounded-2xl bg-accent text-[16px] font-semibold text-black"
             style={rise(8)}
           >
-            <Plus className="size-5" strokeWidth={2.5} />
-            Start a workout
+            {live ? (
+              <Play className="size-5 fill-current" strokeWidth={2.5} />
+            ) : (
+              <Plus className="size-5" strokeWidth={2.5} />
+            )}
+            {live ? "Resume workout" : "Start a workout"}
           </Link>
 
           <div
