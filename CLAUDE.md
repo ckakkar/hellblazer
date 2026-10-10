@@ -109,12 +109,13 @@ The current look (v3, September 2026). It replaced the original teal "dark cyber
 --color-text:       #f4f2ee   /* bone */
 --color-muted:      #8e8c88
 --color-accent:     rgb(var(--accent-rgb))   /* crimson 223 45 40 by default; Settings re-skins it */
+--color-accent-ink: the accent lifted toward white  /* small accent text: clears 4.5:1 */
 --color-danger:     #ef5350
 --color-warn:       #f2a93b
 --color-chart-1..4: accent, #a8a6a1, #6b6a67, #3d3d40
 ```
 ### Rules
-- **Accent only for what's live:** the session in progress, starting a workout or the Log action, a broken PR, the rank ladder. History and heatmaps stay bone. Every accent use goes through `--accent-rgb`, so the selectable palettes (`src/lib/accents.ts`) keep working.
+- **Accent only for what's live:** the session in progress, starting a workout or the Log action, a broken PR, the rank ladder. History and heatmaps stay bone. Every accent use goes through `--accent-rgb`, so the selectable palettes (`src/lib/accents.ts`) keep working. Accent text below display size is `text-accent-ink`; icons, fills and display words use `text-accent`. Dim text is `text-muted`, never a tint of it (those fail contrast).
 - **Type:** Archivo only, variable on width. `.font-display` (width 125, tabular figures) carries titles and every important number. No mono, no uppercase UI copy, no tracked eyebrow labels. Uppercase plus `skewX(-8deg)` is reserved for poster words (victory, Removal, the verdict name).
 - **Structure:** iOS-style large titles (`PageHeader`), grouped lists on `bg-surface` with hairline dividers, cards without borders or shadows. The primary button is bone; the `accent` variant is only for the one "start something" action.
 - **Theme in moments, not everywhere:** the home hero, the victory screen, the PR "Removal" banner, the judge's verdict, the King of the Hill podium. Don't scatter decoration across the workhorse screens.
