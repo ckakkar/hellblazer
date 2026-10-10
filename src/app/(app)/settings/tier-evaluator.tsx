@@ -142,7 +142,7 @@ export function TierEvaluator({
         </Button>
         <p className="mt-2 text-[13px] leading-5 text-muted">{gateCopy}</p>
         {gate.canRun && (
-          <p className="tnum mt-1 text-[13px] text-muted/70">
+          <p className="tnum mt-1 text-[13px] text-muted">
             {gate.newWorkouts > 0
               ? `${gate.newWorkouts} new ${gate.newWorkouts === 1 ? "workout" : "workouts"} to judge. `
               : ""}

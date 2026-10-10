@@ -71,6 +71,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
         <Select
           value={muscle}
           onChange={(e) => setMuscle(e.target.value)}
+          aria-label="Filter by muscle"
           className="sm:w-52"
         >
           <option value="all">All muscles</option>
@@ -87,7 +88,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
           <section key={g.muscle}>
             <h2 className="mb-2 flex items-center justify-between px-4 text-[13px] font-medium text-muted">
               <span>{MUSCLE_LABEL[g.muscle]}</span>
-              <span className="tnum text-muted/60">{g.items.length}</span>
+              <span className="tnum text-muted">{g.items.length}</span>
             </h2>
             <Card className="divide-y divide-white/[0.06] overflow-hidden">
               {g.items.map((e) => (

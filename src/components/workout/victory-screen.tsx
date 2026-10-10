@@ -62,7 +62,7 @@ export function VictoryScreen({
             </p>
           </div>
           {records > 0 && (
-            <p className="hb-victory-rise mt-4 text-[15px] font-medium text-accent" style={{ animationDelay: "420ms" }}>
+            <p className="hb-victory-rise mt-4 text-[15px] font-medium text-accent-ink" style={{ animationDelay: "420ms" }}>
               {records === 1 ? "1 record broken" : `${records} records broken`}
             </p>
           )}

@@ -23,7 +23,7 @@ export function Delta({
     <span
       className={cn(
         "tnum inline-flex items-center gap-0.5 text-[13px] font-medium",
-        tone === "gain" ? "text-accent" : "text-muted",
+        tone === "gain" ? "text-accent-ink" : "text-muted",
         className,
       )}
     >

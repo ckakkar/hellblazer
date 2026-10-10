@@ -135,7 +135,7 @@ export function SessionStarter({
                         <ol className="divide-y divide-white/[0.05] rounded-xl bg-surface-2/60">
                           {t.exercises.map((ex, i) => (
                             <li key={i} className="flex items-center gap-3 px-3.5 py-2.5">
-                              <span className="tnum w-4 shrink-0 text-right text-[13px] text-muted/70">
+                              <span className="tnum w-4 shrink-0 text-right text-[13px] text-muted">
                                 {i + 1}
                               </span>
                               <span className="min-w-0 flex-1 truncate text-[14px] text-text">

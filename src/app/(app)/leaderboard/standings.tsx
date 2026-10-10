@@ -59,7 +59,7 @@ export function Standings({
                       imageClassName="object-[center_14%]"
                     />
                   ) : (
-                    <span className="font-display absolute inset-0 flex items-center justify-center text-[2.5rem] text-muted/60">
+                    <span className="font-display absolute inset-0 flex items-center justify-center text-[2.5rem] text-muted">
                       {e.username.slice(0, 1).toUpperCase()}
                     </span>
                   )}
@@ -107,7 +107,7 @@ export function Standings({
                   mine && "bg-white/[0.06]",
                 )}
               >
-                <span className="tnum flex w-6 shrink-0 justify-end text-[13px] text-muted/70">
+                <span className="tnum flex w-6 shrink-0 justify-end text-[13px] text-muted">
                   {i === 0 ? (
                     <Crown className="size-4 text-text" aria-label="First" />
                   ) : (

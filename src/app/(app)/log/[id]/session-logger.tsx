@@ -1322,7 +1322,7 @@ export function SessionLogger({
           {isEditing ? (
             <span className="text-[13px] font-medium text-muted">Editing</span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent">
+            <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-accent-ink">
               <span className="size-1.5 rounded-full bg-accent" />
               Live
               {heartRate !== null && (
@@ -1343,6 +1343,7 @@ export function SessionLogger({
             }
           />
         </div>
+        <h1 className="sr-only">{title}</h1>
         <TitleField
           defaultValue={session.title ?? "Session"}
           label="Session title"
@@ -1398,7 +1399,7 @@ export function SessionLogger({
             <p className="mt-1.5 flex h-[1.625rem] items-end whitespace-nowrap leading-none">
               {clockLive || duration ? (
                 <span
-                  className={cn("font-display hb-fit", clockLive ? "text-accent" : "text-text")}
+                  className={cn("font-display hb-fit", clockLive ? "text-accent-ink" : "text-text")}
                   style={fitFigure(timeLabel, STAT_SIZE)}
                 >
                   {timeLabel}
@@ -1556,7 +1557,7 @@ export function SessionLogger({
                     <Lock className="size-3.5 shrink-0 text-muted/60" />
                     <span className="min-w-0 flex-1 truncate text-[15px] text-muted">{ex.name}</span>
                     {addedTag(ex.seId)}
-                    <span className="tnum shrink-0 text-[13px] text-muted/60">{i + 1}</span>
+                    <span className="tnum shrink-0 text-[13px] text-muted">{i + 1}</span>
                   </div>
                 ))}
               </div>

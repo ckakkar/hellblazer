@@ -41,7 +41,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
               key={t.key}
               className={cn("flex items-center gap-3 px-3 py-2.5", isYou && "bg-white/[0.06]")}
             >
-              <span className="tnum w-5 shrink-0 text-right text-[13px] text-muted/70">{t.rank}</span>
+              <span className="tnum w-5 shrink-0 text-right text-[13px] text-muted">{t.rank}</span>
               <FighterArt
                 fighterKey={t.key}
                 variant="thumbnail"
@@ -59,7 +59,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
                 >
                   {t.name}
                 </span>
-                <span className="block truncate text-[13px] text-muted/80">{t.epithet}</span>
+                <span className="block truncate text-[13px] text-muted">{t.epithet}</span>
               </span>
               {isYou && (
                 <span className="shrink-0 rounded-full bg-text px-2 py-0.5 text-[11px] font-semibold text-bg">

@@ -263,7 +263,7 @@ function CreateProgramSheet({
         <div className="grid grid-cols-1 gap-2">
           <span className="text-[13px] font-medium text-muted">
             Weekly schedule{" "}
-            <span className="text-muted/60">
+            <span className="font-normal text-muted">
               Tap templates in order ({selected.length} selected)
             </span>
           </span>

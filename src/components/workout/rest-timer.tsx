@@ -386,7 +386,7 @@ export function RestTimerBar({ timer }: { timer: RestTimerControls }) {
         <TimerReset className={cn("size-4 shrink-0", finished || running ? "text-accent" : "text-muted")} />
         <span className="flex min-w-0 flex-1 items-baseline gap-1 text-[14px] text-muted" aria-live="polite">
           {finished ? (
-            <span className="truncate font-medium text-accent">Rest&apos;s over. Go</span>
+            <span className="truncate font-medium text-accent-ink">Rest&apos;s over. Go</span>
           ) : (
             <>
               {/* The word gives way before the clock does: on a 320pt phone

@@ -48,7 +48,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
         <div className="tnum truncate text-[13px] text-muted">
           {elapsed ? (
             <>
-              <span className="text-accent">{elapsed}</span>, {session.workingSets}{" "}
+              <span className="text-accent-ink">{elapsed}</span>, {session.workingSets}{" "}
               {session.workingSets === 1 ? "set" : "sets"} logged
             </>
           ) : (

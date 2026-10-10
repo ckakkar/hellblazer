@@ -53,6 +53,7 @@ export function ProgressControls({
         <Select
           value={selectedExercise ?? ""}
           onChange={(e) => go({ exercise: e.target.value })}
+          aria-label="Exercise"
           className="sm:w-64"
           disabled={exercises.length === 0}
         >
@@ -67,6 +68,7 @@ export function ProgressControls({
         <Select
           value={selectedMuscle}
           onChange={(e) => go({ muscle: e.target.value })}
+          aria-label="Muscle"
           className="sm:w-64"
         >
           {MUSCLE_CHART_ORDER.map((m) => (

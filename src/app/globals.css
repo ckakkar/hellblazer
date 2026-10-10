@@ -16,6 +16,11 @@
   --color-muted: #8e8c88;
   --color-accent: rgb(var(--accent-rgb));
   --color-accent-dim: rgb(var(--accent-dim-rgb));
+  /* The accent for small text. Crimson itself reads 4.0:1 on a surface, under
+     the 4.5:1 that 13px copy needs; lifted a step toward white it clears it,
+     on the badge tint too. Icons, fills and display-size words keep the pure
+     accent. */
+  --color-accent-ink: color-mix(in oklab, rgb(var(--accent-rgb)) 86%, white);
   --color-danger: #ef5350;
   --color-warn: #f2a93b;
 

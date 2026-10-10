@@ -29,7 +29,7 @@ export function OneRepMaxBoard({ rows, unit }: { rows: Exercise1RM[]; unit: Unit
                 className="absolute inset-y-0 left-0 bg-white/[0.035]"
                 style={{ width: `${pct}%` }}
               />
-              <span className="tnum relative w-5 shrink-0 text-right text-[13px] text-muted/70">
+              <span className="tnum relative w-5 shrink-0 text-right text-[13px] text-muted">
                 {i + 1}
               </span>
               <span className="relative min-w-0 flex-1">

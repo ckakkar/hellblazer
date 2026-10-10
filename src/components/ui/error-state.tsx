@@ -42,7 +42,7 @@ export function ErrorState({
           Dashboard
         </Link>
       </div>
-      {digest && <p className="tnum mt-8 text-[13px] text-muted/70">Reference {digest}</p>}
+      {digest && <p className="tnum mt-8 text-[13px] text-muted">Reference {digest}</p>}
     </div>
   );
 }

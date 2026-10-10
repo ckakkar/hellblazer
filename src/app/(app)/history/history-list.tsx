@@ -142,7 +142,12 @@ export function HistoryList({
           placeholder="Search by title or date"
           className="flex-1"
         />
-        <Select value={templateId} onChange={(e) => setTemplateId(e.target.value)} className="sm:w-56">
+        <Select
+          value={templateId}
+          onChange={(e) => setTemplateId(e.target.value)}
+          aria-label="Filter by template"
+          className="sm:w-56"
+        >
           <option value="all">All templates</option>
           <option value="freeform">Freeform only</option>
           {templates.map((t) => (
