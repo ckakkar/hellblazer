@@ -7,13 +7,14 @@ import { Loader2, Play, X } from "lucide-react";
 import { discardSession } from "@/lib/actions/sessions";
 import type { ActiveSession } from "@/lib/data/sessions";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
+import { cn } from "@/lib/utils";
 
 /**
  * The workout's running clock, ticking once a second. Null until mounted (the
  * server and the phone would disagree on the time), and for a session left
  * open so long it isn't a workout any more.
  */
-function useElapsed(startedAt: string): string | null {
+export function useElapsed(startedAt: string): string | null {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     const tick = () => setNow(Date.now());
@@ -39,7 +40,14 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
     start(async () => void (await discardSession({ id: session.id })));
 
   return (
-    <div className="hb-resume mb-6 flex items-center gap-3 rounded-2xl max-[359px]:gap-2.5 bg-surface py-3 pl-4 pr-2">
+    <div
+      className={cn(
+        "hb-resume mb-6 flex items-center gap-3 rounded-2xl max-[359px]:gap-2.5 bg-surface py-3 pl-4 pr-2",
+        // From `md` the sidebar carries a workout under way; the banner is left
+        // for one forgotten for hours, which the sidebar doesn't show.
+        !session.stale && "md:hidden",
+      )}
+    >
       <span className="size-2 shrink-0 rounded-full bg-accent" aria-hidden />
       <div className="min-w-0 flex-1">
         <div className="truncate text-[15px] font-medium text-text">

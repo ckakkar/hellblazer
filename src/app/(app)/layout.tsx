@@ -66,7 +66,7 @@ export default async function AppLayout({
         }}
       />
       <div className="md:pl-60">
-        <main className="hb-ptr-content mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-12 md:pb-16 lg:px-10">
+        <main className="hb-ptr-content mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-10 md:pb-16 lg:max-w-[80rem] lg:px-12">
           {/* Streamed so its lookup never blocks the page content. */}
           <Suspense fallback={null}>
             <ResumeBannerSlot />
@@ -83,9 +83,7 @@ async function ResumeBannerSlot() {
   return (
     <>
       <WorkoutActivitySync activeSessionId={activeSession?.id ?? null} />
-      <LiveWorkoutSync
-        sessionId={activeSession && !activeSession.stale ? activeSession.id : null}
-      />
+      <LiveWorkoutSync session={activeSession && !activeSession.stale ? activeSession : null} />
       {activeSession && <ResumeBanner session={activeSession} />}
     </>
   );

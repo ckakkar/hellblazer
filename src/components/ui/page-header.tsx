@@ -22,18 +22,18 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between",
+        "mb-8 flex flex-col gap-4 sm:mb-10 sm:flex-row sm:items-end sm:justify-between lg:mb-12",
         className,
       )}
     >
       <div className="min-w-0 max-w-2xl">
         {/* A long one-word name (a template called "Upper/Lower/Arms") breaks
             rather than running off a narrow phone. */}
-        <h1 className="font-display text-[2.125rem] leading-[1.05] text-text [overflow-wrap:anywhere] sm:text-[2.75rem]">
+        <h1 className="font-display text-[2.125rem] leading-[1.05] text-text [overflow-wrap:anywhere] sm:text-[2.75rem] lg:text-[4rem] lg:leading-[0.95]">
           {title}
         </h1>
         {subtitle && (
-          <p className="mt-2 max-w-xl text-[15px] leading-6 text-muted">
+          <p className="mt-2 max-w-xl text-[15px] leading-6 text-muted lg:mt-3 lg:text-[17px] lg:leading-7">
             {subtitle}
           </p>
         )}
@@ -42,7 +42,7 @@ export function PageHeader({
         <div className="flex shrink-0 items-center gap-4">
           {stat && (
             <p className="text-[13px] text-muted">
-              <span className="font-display mr-1.5 text-[17px] text-text">
+              <span className="font-display mr-1.5 text-[17px] text-text lg:text-[1.75rem]">
                 {stat.value}
               </span>
               {stat.label}
