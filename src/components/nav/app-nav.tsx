@@ -72,11 +72,15 @@ function ActiveHighlight() {
   );
 }
 
+/* Desktop links prefetch only the page's shell (Next's default), not the
+   whole page the phone's tab bar keeps warm: a click shows the bar loader at
+   once and the page streams in behind it. Whole-page prefetches skipped the
+   loader, and a lapsed one left the old page up with nothing to say a click
+   had landed. */
 function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
       href={item.href}
-      prefetch
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] font-medium tracking-[-0.01em] transition-colors",
@@ -102,7 +106,6 @@ function SidebarWorkout() {
     return (
       <Link
         href="/log"
-        prefetch
         aria-current={pathname === "/log" ? "page" : undefined}
         className={cn(buttonVariants({ variant: "accent", size: "lg" }), "hb-glow w-full")}
       >
@@ -161,7 +164,6 @@ function SidebarYou({ identity, active }: { identity: NavIdentity; active: boole
   return (
     <Link
       href="/settings"
-      prefetch
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex items-center gap-3 rounded-xl p-2 transition-colors",
