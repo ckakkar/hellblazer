@@ -74,9 +74,8 @@ function ActiveHighlight() {
 
 /* Desktop links prefetch only the page's shell (Next's default), not the
    whole page the phone's tab bar keeps warm: a click shows the bar loader at
-   once and the page streams in behind it. Whole-page prefetches skipped the
-   loader, and a lapsed one left the old page up with nothing to say a click
-   had landed. */
+   once and the page streams in behind it. With whole pages prefetched, the
+   sidebar swapped pages with no loader at all. */
 function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
   return (
     <Link
