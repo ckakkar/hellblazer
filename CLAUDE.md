@@ -116,16 +116,17 @@ The current look (v3, September 2026). It replaced the original teal "dark cyber
 ```
 ### Rules
 - **Accent only for what's live:** the session in progress, starting a workout or the Log action, a broken PR, the rank ladder. History and heatmaps stay bone. Every accent use goes through `--accent-rgb`, so the selectable palettes (`src/lib/accents.ts`) keep working. Accent text below display size is `text-accent-ink`; icons, fills and display words use `text-accent`. Dim text is `text-muted`, never a tint of it (those fail contrast).
-- **Type:** Archivo only, variable on width. `.font-display` (width 125, tabular figures) carries titles and every important number. No mono, no uppercase UI copy, no tracked eyebrow labels. Uppercase plus `skewX(-8deg)` is reserved for poster words (victory, Removal, the verdict name).
+- **Type:** Archivo only, variable on width. `.font-display` (width 125, tabular figures) carries titles and every important number. No mono, no uppercase UI copy, no tracked eyebrow labels. Uppercase plus `skewX(-8deg)` is reserved for poster words (victory, Removal, the verdict name). `lg:font-display` does not give the wide cut (it's Tailwind's font-family utility); use `.hb-display-lg` for a heading that turns into display type only on a desktop.
 - **Structure:** iOS-style large titles (`PageHeader`), grouped lists on `bg-surface` with hairline dividers, cards without borders or shadows. The primary button is bone; the `accent` variant is only for the one "start something" action.
 - **Theme in moments, not everywhere:** the home hero, the victory screen, the PR "Removal" banner, the judge's verdict, the King of the Hill podium. Don't scatter decoration across the workhorse screens.
 - **Motion:** transform and opacity, 150-250ms ease-out, nothing looping, no always-on animation frames, no tap or cursor effects. Motion shows what happened. Respect `prefers-reduced-motion`. Recharts animations stay off.
 - **Charts (recharts):** dark ground, faint gridlines, no legend for a single series, tooltips on `surface-2`.
 - **Mobile first, Pro Max primary:** design for 430-440pt; 375pt (SE) and 320pt must not break. `/log` is the mid-workout screen: thumb-reachable, big targets, minimal chrome.
+- **Desktop (`lg`, 1024+) is its own composition, not the phone column stretched.** Content runs to 80rem. The home hero is a poster on the page itself (no card; the portrait masked into the black, the name up to 8rem) with the next-workout card overlapping its lower right. Headline figures leave their boxes for the page at scoreboard size. A page with a detail and a list that picks it sets them side by side (Progress, Log, Programs), and History reads as a month-by-month timeline. Not every block gets a card: a card means a list, a control group or a chart frame. Every desktop rule sits behind `lg:`, so phones never change for desktop work.
 
 ### Component conventions
 - Hand-built primitives in `src/components/ui` (`Button`, `Card`, `Input`, `NumberStepper`, `Select`, `Sheet`, `PageHeader`, `ChartCard`, `Tape`, `SettingsGroup`, and so on) with `cva` variants. No heavy component library.
-- Navigation: a left sidebar on desktop; a floating glass tab bar and a full-page menu on phones.
+- Navigation: a left sidebar from `md` (brand, the start-workout button, the destinations, the lifter's own card at the foot); a floating glass tab bar and a full-page menu on phones. The sidebar's start button becomes the workout under way (title, running clock, Resume), so from `md` there is no resume banner except for a session left open for hours.
 
 ---
 

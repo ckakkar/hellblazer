@@ -19,15 +19,17 @@ export function LandingFighterRoster() {
 
   return (
     <section aria-labelledby="ladder-title" className="py-10">
-      <div className="mb-4 flex items-baseline justify-between gap-3 px-5 sm:px-8 lg:px-14 xl:px-20">
-        <h2 id="ladder-title" className="text-[22px] font-semibold tracking-[-0.02em] text-text">
+      <div className="mb-4 flex items-baseline justify-between gap-3 px-5 sm:px-8 lg:mb-8 lg:px-14 xl:px-20">
+        <h2 id="ladder-title" className="text-[22px] font-semibold tracking-[-0.02em] text-text hb-display-lg lg:text-[2.5rem]">
           The ladder
         </h2>
         <span className="text-[13px] text-muted">Ten fighters, weakest at the bottom</span>
       </div>
-      <ol className="flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:scroll-px-8 sm:px-8 lg:scroll-px-14 lg:px-14 xl:px-20">
+      {/* Swiped through on a phone; on a desktop the whole ladder is on the
+          wall at once, two rows of five, strongest first. */}
+      <ol className="flex snap-x snap-mandatory scroll-px-5 gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:scroll-px-8 sm:px-8 lg:grid lg:grid-cols-5 lg:gap-x-4 lg:gap-y-8 lg:overflow-visible lg:px-14 xl:px-20">
         {BILL.map((t) => (
-          <li key={t.key} className="w-[42%] shrink-0 snap-start sm:w-[30%] lg:w-[17%]">
+          <li key={t.key} className="w-[42%] shrink-0 snap-start sm:w-[30%] lg:w-auto">
             <button
               type="button"
               onClick={() => setOpenKey(t.key)}

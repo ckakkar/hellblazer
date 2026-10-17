@@ -9,8 +9,10 @@ import { FighterArt } from "@/components/tier/fighter-art";
  */
 export function LandingArenaHero({ error, deleted }: { error?: string; deleted?: boolean }) {
   return (
-    <section className="relative lg:grid lg:min-h-dvh lg:grid-cols-2 lg:items-center">
-      <div className="relative h-[62dvh] min-h-[26rem] overflow-hidden lg:order-2 lg:h-dvh">
+    // On a desktop the portrait takes the right of the screen and the
+    // headline runs out over its faded edge, poster-style.
+    <section className="relative lg:grid lg:min-h-dvh lg:grid-cols-12 lg:items-center">
+      <div className="hb-landing-art relative h-[62dvh] min-h-[26rem] overflow-hidden lg:col-[6/-1] lg:row-start-1 lg:h-dvh">
         <FighterArt
           fighterKey="kuroki"
           variant="hero"
@@ -25,19 +27,19 @@ export function LandingArenaHero({ error, deleted }: { error?: string; deleted?:
         </header>
       </div>
 
-      <div className="relative -mt-28 px-5 pb-10 sm:px-8 lg:mt-0 lg:px-14 lg:py-16 xl:px-20">
+      <div className="relative -mt-28 px-5 pb-10 sm:px-8 lg:z-10 lg:col-[1/9] lg:row-start-1 lg:mt-0 lg:px-14 lg:py-16 xl:px-20">
         <div className="mb-10 hidden items-center gap-2 lg:flex">
           <Flame className="size-5 text-accent" strokeWidth={2.25} />
           <span className="text-[15px] font-semibold tracking-[-0.02em] text-text">Fatty</span>
         </div>
-        <h1 className="font-display text-[3.25rem] leading-[0.95] text-text sm:text-7xl">
+        <h1 className="font-display text-[3.25rem] leading-[0.95] text-text sm:text-7xl lg:text-[clamp(5.5rem,7.4vw,8.75rem)] lg:leading-[0.86]">
           Earn your rank.
         </h1>
-        <p className="mt-4 max-w-md text-[17px] leading-[1.45] text-muted">
+        <p className="mt-4 max-w-md text-[17px] leading-[1.45] text-muted lg:mt-6 lg:text-[19px]">
           A strength log with a ten-fighter ladder. Log every set, and the judge
           decides where you stand.
         </p>
-        <div className="mt-8 max-w-sm">
+        <div className="mt-8 max-w-sm lg:mt-10">
           {deleted && (
             <p className="mb-3 rounded-xl bg-surface px-4 py-3 text-[14px] text-text">
               Your account and everything in it has been deleted.

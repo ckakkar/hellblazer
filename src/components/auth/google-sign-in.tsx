@@ -64,7 +64,9 @@ export function GoogleSignIn({ next = "/dashboard" }: { next?: string }) {
       variant="secondary"
       onClick={signIn}
       disabled={loading}
-      className="w-full sm:w-auto"
+      // The landing's one action: bone on a desktop, where it sits under a
+      // poster-size headline and a graphite button got lost.
+      className="w-full sm:w-auto lg:bg-text lg:text-bg lg:hover:bg-white"
     >
       {loading ? (
         <Loader2 className="size-5 animate-spin" />
