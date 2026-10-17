@@ -132,10 +132,12 @@ export function HistoryList({
     if (last?.key === key) last.rows.push(s);
     else months.push({ key, label, rows: [s] });
   }
+  const monthVolume = (rows: SessionSummary[]) =>
+    rows.reduce((n, s) => n + Number(s.total_volume ?? 0), 0);
 
   return (
     <div>
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row">
+      <div className="mb-8 flex flex-col gap-2 sm:flex-row lg:ml-[16rem]">
         <SearchField
           value={q}
           onValueChange={setQ}
@@ -159,9 +161,25 @@ export function HistoryList({
       </div>
 
       <div className="space-y-8">
-        {months.map((m) => (
-          <section key={m.key}>
-            <h2 className="mb-2 px-4 text-[13px] font-medium text-muted">{m.label}</h2>
+        {months.map((m) => {
+          const [month, year] = m.key === "undated" ? [m.label, ""] : m.label.split(" ");
+          return (
+          // On a desktop each month is a chapter: its name and totals hold
+          // the left margin while its sessions scroll past beside them.
+          <section key={m.key} className="lg:grid lg:grid-cols-[14rem_minmax(0,1fr)] lg:gap-8">
+            <div className="lg:sticky lg:top-10 lg:self-start lg:pt-2">
+              <h2 className="mb-2 px-4 text-[13px] font-medium text-muted lg:mb-0 lg:px-0">
+                <span className="hb-display-lg lg:block lg:text-[2rem] lg:leading-none lg:text-text">
+                  {month}
+                </span>{" "}
+                {year && <span className="lg:mt-1.5 lg:block lg:text-[15px]">{year}</span>}
+              </h2>
+              <p className="tnum mt-4 hidden text-[13px] leading-5 text-muted lg:block">
+                {m.rows.length} {m.rows.length === 1 ? "session" : "sessions"}
+                <br />
+                {formatVolume(monthVolume(m.rows), unit)} lifted
+              </p>
+            </div>
             <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
               {m.rows.map((s) => (
                 <SwipeRow key={s.session_id} onAction={() => remove(s)}>
@@ -204,7 +222,8 @@ export function HistoryList({
               ))}
             </div>
           </section>
-        ))}
+          );
+        })}
         {filtered.length === 0 && (
           <p className="py-8 text-center text-[15px] text-muted">No sessions match your filters.</p>
         )}

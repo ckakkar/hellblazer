@@ -103,44 +103,50 @@ export default async function LogPage({
       ? `Counts toward week ${activeProgress.currentWeek}`
       : null;
 
+  const showCard = Boolean(activeProgress && hasProgramNext);
+
   return (
-    <div className="mx-auto max-w-4xl">
+    <div className={showCard ? "mx-auto max-w-4xl lg:max-w-none" : "mx-auto max-w-4xl"}>
       <PageHeader title="Log" subtitle="Start your next programmed day, or pick any other." />
 
-      {activeProgress && hasProgramNext && (
-        <div className="mb-10">
-          <ProgramProgressCard
-            progress={activeProgress}
-            activeSession={activeSession}
-            href={`/programs/${activeProgress.program.id}`}
-          />
-        </div>
-      )}
+      {/* On a desktop, what's next stays in view on the left while the rest
+          of the week is picked from on the right. */}
+      <div className={showCard ? "lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-start lg:gap-8" : undefined}>
+        {activeProgress && hasProgramNext && (
+          <div className="mb-10 lg:sticky lg:top-10 lg:mb-0">
+            <ProgramProgressCard
+              progress={activeProgress}
+              activeSession={activeSession}
+              href={`/programs/${activeProgress.program.id}`}
+            />
+          </div>
+        )}
 
-      {options.length === 0 && !activeProgress ? (
-        <div className="grid grid-cols-1 gap-4">
-          <SessionStarter templates={[]} hasActiveProgram={false} countsLabel={null} />
-          <EmptyState
-            icon={<CalendarRange className="size-6" />}
-            title="No program or templates yet"
-            body="Build a split on Templates (or load the starter split) to train from a plan."
-            action={
-              <Link href="/programs">
-                <Button variant="secondary">Go to Programs</Button>
-              </Link>
+        {options.length === 0 && !activeProgress ? (
+          <div className="grid grid-cols-1 gap-4">
+            <SessionStarter templates={[]} hasActiveProgram={false} countsLabel={null} />
+            <EmptyState
+              icon={<CalendarRange className="size-6" />}
+              title="No program or templates yet"
+              body="Build a split on Templates (or load the starter split) to train from a plan."
+              action={
+                <Link href="/programs">
+                  <Button variant="secondary">Go to Programs</Button>
+                </Link>
+              }
+            />
+          </div>
+        ) : (
+          <SessionStarter
+            templates={options}
+            hasActiveProgram={Boolean(activeProgress)}
+            countsLabel={countsLabel}
+            autoStart={
+              autoStart ? { templateId: autoStart.id, programDayId: autoStart.programDayId } : null
             }
           />
-        </div>
-      ) : (
-        <SessionStarter
-          templates={options}
-          hasActiveProgram={Boolean(activeProgress)}
-          countsLabel={countsLabel}
-          autoStart={
-            autoStart ? { templateId: autoStart.id, programDayId: autoStart.programDayId } : null
-          }
-        />
-      )}
+        )}
+      </div>
     </div>
   );
 }

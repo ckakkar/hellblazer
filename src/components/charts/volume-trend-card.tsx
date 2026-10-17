@@ -157,9 +157,11 @@ export function VolumeTrendCard({
       {empty ? (
         <ChartEmpty message="No volume logged in this window yet." />
       ) : (
-        <div className="px-4 pb-4 pt-5">
+        // Beside the taller sets-per-muscle card on a desktop, the plot grows
+        // to the card's height instead of leaving a gap under it.
+        <div className="px-4 pb-4 pt-5 lg:flex lg:flex-1 lg:flex-col">
           <div
-            className="relative h-[200px]"
+            className="relative h-[200px] lg:h-auto lg:min-h-[200px] lg:flex-1"
             role="img"
             aria-label={`${meta.sub}. Highest ${Math.max(...points.map((p) => p.volume)).toLocaleString()} ${unit}.`}
           >

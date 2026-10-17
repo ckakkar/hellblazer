@@ -76,56 +76,80 @@ export default async function ProgressPage({
         selectedMuscle={selectedMuscle}
       />
 
-      {tab === "exercise" ? (
-        loggedExercises.length === 0 || !selectedExercise ? (
-          <EmptyState
-            icon={<TrendingUp className="size-6" />}
-            title="No logged exercises yet"
-            body="Log some working sets and your 1RM and volume trends will appear here."
-          />
-        ) : (
-          <div className="grid grid-cols-1 gap-10">
-          <LiftsOverview unit={unit} />
-          <ExerciseTab
-            exerciseId={selectedExercise}
-            exerciseName={
-              loggedExercises.find((e) => e.exercise_id === selectedExercise)
-                ?.exercise_name ?? "This lift"
-            }
-            unit={unit}
-          />
-          </div>
-        )
-      ) : (
-        <MuscleTab muscle={selectedMuscle} unit={unit} />
-      )}
-
-      {oneRepMaxes.length > 0 && (
-        <div className="mt-10">
-          <SectionLabel action={<span className="text-[13px] text-muted">Best estimated 1RM</span>}>
-            All lifts
-          </SectionLabel>
-          <OneRepMaxBoard rows={oneRepMaxes} unit={unit} />
+      {tab === "exercise" && loggedExercises.length > 0 && selectedExercise && (
+        <div className="mb-10">
+          <LiftTrendsSection unit={unit} />
         </div>
       )}
 
-      <div className="mt-10">
-        <LadderStanding tierKey={profile?.tier ?? null} />
+      {/* On a desktop the page splits: the open lift (or muscle) on the left,
+          the latest records and the ladder beside it, and every lift below in
+          two columns. On a phone the right column dissolves back into the
+          single stack, in the order it always had. */}
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:items-start lg:gap-x-8 lg:gap-y-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
+        <div className="min-w-0">
+          {tab === "exercise" ? (
+            loggedExercises.length === 0 || !selectedExercise ? (
+              <EmptyState
+                icon={<TrendingUp className="size-6" />}
+                title="No logged exercises yet"
+                body="Log some working sets and your 1RM and volume trends will appear here."
+              />
+            ) : (
+              <ExerciseTab
+                exerciseId={selectedExercise}
+                exerciseName={
+                  loggedExercises.find((e) => e.exercise_id === selectedExercise)
+                    ?.exercise_name ?? "This lift"
+                }
+                unit={unit}
+              />
+            )
+          ) : (
+            <MuscleTab muscle={selectedMuscle} unit={unit} />
+          )}
+        </div>
+
+        <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
+          {tab === "exercise" && loggedExercises.length > 0 && selectedExercise && (
+            <div className="-order-1 min-w-0 lg:order-none">
+              <RecentRecordsSection unit={unit} />
+            </div>
+          )}
+          <div className="order-1 min-w-0 lg:order-none">
+            <LadderStanding tierKey={profile?.tier ?? null} />
+          </div>
+        </aside>
+
+        {oneRepMaxes.length > 0 && (
+          <div className="min-w-0 lg:col-span-2">
+            <SectionLabel action={<span className="text-[13px] text-muted">Best estimated 1RM</span>}>
+              All lifts
+            </SectionLabel>
+            <OneRepMaxBoard
+              rows={oneRepMaxes}
+              unit={unit}
+              selected={tab === "exercise" ? selectedExercise : undefined}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/** The lifts at a glance: top lifts' 12-week lines, then recent records. */
-async function LiftsOverview({ unit }: { unit: "kg" | "lb" }) {
-  const [lifts, records] = await Promise.all([getTopLiftTrends(4, 12), getRecentRecords(5)]);
-  if (lifts.length === 0 && records.length === 0) return null;
-  return (
-    <div className="grid grid-cols-1 gap-10">
-      <LiftTrends lifts={lifts} unit={unit} />
-      <RecentRecords records={records} unit={unit} />
-    </div>
-  );
+/** The top lifts' 12-week lines. */
+async function LiftTrendsSection({ unit }: { unit: "kg" | "lb" }) {
+  const lifts = await getTopLiftTrends(4, 12);
+  if (lifts.length === 0) return null;
+  return <LiftTrends lifts={lifts} unit={unit} />;
+}
+
+/** The latest records broken. */
+async function RecentRecordsSection({ unit }: { unit: "kg" | "lb" }) {
+  const records = await getRecentRecords(5);
+  if (records.length === 0) return null;
+  return <RecentRecords records={records} unit={unit} />;
 }
 
 async function ExerciseTab({

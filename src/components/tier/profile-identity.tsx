@@ -29,7 +29,7 @@ export function ProfileIdentity({
   return (
     <header className={className}>
       <div className="hb-hero-bleed hb-bleed-grow relative isolate h-48 overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] md:h-44">
-        <div className="hb-hero-art hb-bleed-art absolute inset-0 -z-10 md:left-auto md:w-[58%]">
+        <div className="hb-hero-art hb-bleed-art hb-banner-fade absolute inset-0 -z-10 md:left-auto md:w-[58%]">
           <FighterArt
             fighterKey={tier?.key ?? "ohma"}
             variant="hero"
@@ -58,7 +58,7 @@ export function ProfileIdentity({
         initial={initial}
         className="relative -mt-11 ml-1 size-[5.5rem] text-[2rem] ring-4 ring-bg"
       />
-      <h1 className="hb-hero-rise font-display mt-3 truncate px-1 text-[2rem] leading-tight text-text sm:text-[2.5rem]">
+      <h1 className="hb-hero-rise font-display mt-3 truncate px-1 text-[2rem] leading-tight text-text sm:text-[2.5rem] lg:text-[4rem] lg:leading-[1.05]">
         {shown}
       </h1>
       <p className="hb-hero-rise mt-1 flex min-w-0 items-center gap-2 px-1 text-[15px] text-muted" style={{ animationDelay: "60ms" }}>

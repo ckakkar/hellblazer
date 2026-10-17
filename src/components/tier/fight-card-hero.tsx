@@ -29,12 +29,12 @@ export function FightCardHero({
   return (
     <section
       className={cn(
-        "hb-hero-bleed relative isolate flex h-[clamp(22rem,57svh,34rem)] flex-col justify-end overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] md:h-auto md:min-h-[21rem] md:bg-surface md:[--hb-fade:var(--color-surface)]",
+        "hb-hero-bleed hb-poster relative isolate flex h-[clamp(22rem,57svh,34rem)] flex-col justify-end overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] [--hero-name:clamp(2.75rem,13.5vw,3.75rem)] md:h-auto md:min-h-[21rem] md:bg-surface md:[--hb-fade:var(--color-surface)] md:[--hero-name:4rem] lg:min-h-[clamp(30rem,62svh,36rem)] lg:rounded-none lg:bg-transparent lg:[--hb-fade:var(--color-bg)] lg:[--hero-name:8rem]",
         className,
       )}
     >
       {/* The portrait, lit in the lifter's accent from above */}
-      <div className="hb-hero-parallax hb-bleed-art absolute inset-0 -z-10 md:inset-y-0 md:left-auto md:right-0 md:w-[58%]">
+      <div className="hb-hero-parallax hb-bleed-art absolute inset-0 -z-10 md:inset-y-0 md:left-auto md:right-0 md:w-[58%] lg:w-[68%]">
         <div className="hb-hero-art absolute inset-0">
           <FighterArt
             fighterKey={tier?.key ?? "ohma"}
@@ -42,7 +42,7 @@ export function FightCardHero({
             priority
             fade="bottom"
             className="absolute inset-0"
-            imageClassName="object-[62%_12%] md:object-[center_18%]"
+            imageClassName="object-[62%_12%] md:object-[center_18%] lg:object-[center_14%]"
           />
           <div
             aria-hidden
@@ -64,7 +64,7 @@ export function FightCardHero({
         />
         <div
           aria-hidden
-          className="absolute inset-0 hidden md:block"
+          className="absolute inset-0 hidden md:block lg:hidden"
           style={{
             background:
               "linear-gradient(to right, var(--color-surface) 0%, var(--color-surface) 6%, transparent 60%), linear-gradient(to top, var(--color-surface) 0%, transparent 35%), linear-gradient(to bottom, var(--color-surface) 0%, transparent 18%)",
@@ -72,7 +72,7 @@ export function FightCardHero({
         />
       </div>
 
-      <div className="@container relative px-5 pb-20 md:px-7 md:pb-7 md:pt-7">
+      <div className="@container relative px-5 pb-20 md:px-7 md:pb-7 md:pt-7 lg:w-[58%] lg:px-0 lg:pb-10">
         <p className="hb-hero-rise flex items-center gap-2 text-[13px] font-medium text-text/80">
           {tier ? (
             <>
@@ -87,12 +87,13 @@ export function FightCardHero({
         </p>
         <h1
           className={cn(
-            "hb-hero-rise hb-hero-name font-display hb-fit mt-3 leading-[0.9] md:max-w-[8ch] md:text-[4rem]",
+            "hb-hero-rise hb-hero-name font-display hb-fit mt-3 leading-[0.9] md:max-w-[8ch] lg:mt-4 lg:max-w-none lg:leading-[0.86]",
             tier ? "text-text" : "text-text/70",
           )}
-          // Sized so the widest word fits the card: "Wongsawat" at full size
-          // runs off a 375pt phone.
-          style={{ animationDelay: "80ms", ...fitFigure([first, ...rest], "clamp(2.75rem, 13.5vw, 3.75rem)") }}
+          // Sized so the widest word fits: "Wongsawat" at full size runs off
+          // a 375pt phone. The ceiling grows with the screen (--hero-name):
+          // on a desktop the name is the poster.
+          style={{ animationDelay: "80ms", ...fitFigure([first, ...rest], "var(--hero-name)") }}
         >
           {first}
           {rest.length > 0 && (
@@ -102,11 +103,11 @@ export function FightCardHero({
             </>
           )}
         </h1>
-        <p className="hb-hero-rise mt-3 text-[15px] text-text/70" style={{ animationDelay: "140ms" }}>
+        <p className="hb-hero-rise mt-3 text-[15px] text-text/70 lg:mt-4 lg:text-[19px]" style={{ animationDelay: "140ms" }}>
           {tier ? tier.epithet : "Log a workout, then ask the judge."}
         </p>
 
-        <div className="mt-6 md:max-w-[50%]">
+        <div className="mt-6 md:max-w-[50%] lg:mt-8 lg:max-w-[26rem]">
           <div className="flex gap-1" role="img" aria-label={`Rank ${rank} of ${MAX_RANK}`}>
             {TIERS.map((t, i) => (
               <span

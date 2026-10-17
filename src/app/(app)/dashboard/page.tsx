@@ -179,20 +179,21 @@ export default async function DashboardPage({
   return (
     <div className="space-y-10">
       <WidgetSync />
-      {/* The hero, and the next workout overlapping its foot on a phone: one
-          screen that says who you are and what to do next, with Start in
-          thumb reach. Side by side from `lg`. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] lg:gap-3">
-        <FightCardHero tier={tier} />
+      {/* The hero, and the next workout overlapping its foot: one screen that
+          says who you are and what to do next. On a phone Start lands in
+          thumb reach; on a desktop the card sits over the poster's lower
+          right, where the portrait has faded out. */}
+      <div className="grid grid-cols-1 lg:grid-cols-12">
+        <FightCardHero tier={tier} className="lg:col-[1/-1] lg:row-start-1" />
         {isNewUser ? null : activeProgress ? (
           <ProgramProgressCard
             progress={activeProgress}
             activeSession={activeSession}
             href={`/programs/${activeProgress.program.id}`}
-            className="hb-overlap relative z-10 -mt-14 md:mt-3 lg:mt-0"
+            className="hb-overlap relative z-10 -mt-14 md:mt-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:mb-10 lg:mt-0 lg:self-end"
           />
         ) : (
-          <section className="hb-overlap relative z-10 -mt-14 flex flex-col justify-between gap-5 rounded-3xl bg-surface p-5 sm:p-6 md:mt-3 lg:mt-0">
+          <section className="hb-overlap relative z-10 -mt-14 flex flex-col justify-between gap-5 rounded-3xl bg-surface p-5 sm:p-6 md:mt-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:mb-10 lg:mt-0 lg:self-end">
             <div>
               <h2 className="text-[1.375rem] font-semibold tracking-[-0.02em] text-text">
                 Nothing programmed
@@ -230,14 +231,16 @@ export default async function DashboardPage({
         </SectionLabel>
         {/* Volume gets the wider column, and the figures shrink to fit, so
             "12.5k kg" still fits a 320pt phone. */}
-        <div className="grid grid-cols-[1.3fr_1fr_1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
+        {/* On a desktop the figures come out of the box and onto the page at
+            scoreboard size, ruled off like a tale of the tape. */}
+        <div className="grid grid-cols-[1.3fr_1fr_1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4 lg:rounded-none lg:border-y lg:border-white/[0.08] lg:bg-transparent lg:py-7">
           {stats.map((st) => (
             <div
               key={st.label}
-              className="@container min-w-0 px-3 [--stat-max:1.625rem] min-[400px]:px-4 sm:[--stat-max:2rem]"
+              className="@container min-w-0 px-3 [--stat-max:1.625rem] min-[400px]:px-4 sm:[--stat-max:2rem] lg:px-8 lg:[--stat-max:4.5rem] lg:first:pl-1"
             >
-              <p className="truncate text-[13px] text-muted">{st.label}</p>
-              <p className="mt-1.5 flex h-[1.625rem] items-end leading-none sm:h-8">
+              <p className="truncate text-[13px] text-muted lg:text-[15px]">{st.label}</p>
+              <p className="mt-1.5 flex h-[1.625rem] items-end leading-none sm:h-8 lg:mt-3 lg:h-[4.5rem]">
                 <span className="whitespace-nowrap">
                   <span
                     className="font-display hb-fit text-text"
@@ -245,10 +248,10 @@ export default async function DashboardPage({
                   >
                     {st.value}
                   </span>
-                  {st.unit && <span className="ml-1 text-[13px] text-muted">{st.unit}</span>}
+                  {st.unit && <span className="ml-1 text-[13px] text-muted lg:ml-2 lg:text-[17px]">{st.unit}</span>}
                 </span>
               </p>
-              {st.delta && <div className="mt-1.5">{st.delta}</div>}
+              {st.delta && <div className="mt-1.5 lg:mt-3">{st.delta}</div>}
             </div>
           ))}
         </div>
@@ -257,12 +260,13 @@ export default async function DashboardPage({
       {/* iPhone app only, and only once Health has something to say. */}
       <RecoveryCard />
 
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-4">
         <ChartCard
           title="Consistency"
           subtitle="Working sets per day"
-          className="lg:col-span-2"
-          bodyClassName="p-5 pt-4"
+          className="lg:col-span-2 lg:bg-transparent"
+          headerClassName="lg:px-1"
+          bodyClassName="p-5 pt-4 lg:px-1 lg:pb-6"
         >
           <ConsistencyHeatmap summaries={summaries} today={today} />
         </ChartCard>
@@ -290,13 +294,15 @@ export default async function DashboardPage({
             Nothing logged yet. Your first session starts the record.
           </p>
         ) : (
-          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+          // Two columns on a desktop, ruled by the gaps, so a row's name and
+          // its totals sit close enough to read together.
+          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface lg:grid lg:grid-cols-2 lg:gap-px lg:divide-y-0 lg:bg-white/[0.06]">
             {recent.map((s) => (
               <Link
                 key={s.session_id}
                 href={s.finished_at ? `/history/${s.session_id}` : `/log/${s.session_id}`}
                 transitionTypes={["nav-forward"]}
-                className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+                className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05] lg:bg-surface lg:px-5 lg:py-4 lg:hover:bg-[#161618]"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

@@ -67,81 +67,85 @@ export function ProgramsManager({
         }
       />
 
-      {activeProgress && (
-        <div className="mb-10">
-          <ProgramProgressCard
-            progress={activeProgress}
-            activeSession={activeSession}
-            href={`/programs/${activeProgress.program.id}`}
-          />
-        </div>
-      )}
+      {/* On a desktop the running program and the list of them sit side by
+          side, so the card isn't stretched into one long red bar. */}
+      <div className={cn(activeProgress && "lg:mb-12 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-start lg:gap-8")}>
+        {activeProgress && (
+          <div className="mb-10 lg:mb-0">
+            <ProgramProgressCard
+              progress={activeProgress}
+              activeSession={activeSession}
+              href={`/programs/${activeProgress.program.id}`}
+            />
+          </div>
+        )}
 
-      {programs.length === 0 ? (
-        <div className="mb-10">
-          <EmptyState
-            icon={<CalendarRange className="size-6" />}
-            title="No programs yet"
-            body="Load a starter program below, or build your own from templates."
-          />
-        </div>
-      ) : (
-        <section className="mb-10">
-          <SectionLabel>Your programs</SectionLabel>
-          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
-            {programs.map((p) => (
-              <div key={p.id} className="flex items-center gap-2 pl-4 pr-2">
-                <Link
-                  href={`/programs/${p.id}`}
-                  transitionTypes={["nav-forward"]}
-                  className="min-w-0 flex-1 py-3.5"
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="truncate text-[15px] font-medium text-text">{p.name}</span>
-                    {p.is_active && <Badge>Active</Badge>}
-                  </span>
-                  <span className="tnum mt-0.5 block truncate text-[13px] text-muted">
-                    {p.duration_weeks} weeks, {p.program_day.length} days a week
-                    {p.start_date ? `, from ${format(new Date(p.start_date + "T00:00:00"), "d MMM")}` : ""}
-                  </span>
-                </Link>
-                {!p.is_active && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
+        {programs.length === 0 ? (
+          <div className={cn("mb-10", activeProgress && "lg:mb-0")}>
+            <EmptyState
+              icon={<CalendarRange className="size-6" />}
+              title="No programs yet"
+              body="Load a starter program below, or build your own from templates."
+            />
+          </div>
+        ) : (
+          <section className={cn("mb-10", activeProgress && "lg:mb-0")}>
+            <SectionLabel>Your programs</SectionLabel>
+            <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+              {programs.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 pl-4 pr-2">
+                  <Link
+                    href={`/programs/${p.id}`}
+                    transitionTypes={["nav-forward"]}
+                    className="min-w-0 flex-1 py-3.5"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="truncate text-[15px] font-medium text-text">{p.name}</span>
+                      {p.is_active && <Badge>Active</Badge>}
+                    </span>
+                    <span className="tnum mt-0.5 block truncate text-[13px] text-muted">
+                      {p.duration_weeks} weeks, {p.program_day.length} days a week
+                      {p.start_date ? `, from ${format(new Date(p.start_date + "T00:00:00"), "d MMM")}` : ""}
+                    </span>
+                  </Link>
+                  {!p.is_active && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() =>
+                        start(async () => {
+                          await setActiveProgram({ id: p.id, active: true });
+                        })
+                      }
+                    >
+                      Make active
+                    </Button>
+                  )}
+                  <ConfirmIconButton
+                    label="Delete program"
+                    confirmLabel="Tap again to delete program"
                     disabled={pending}
-                    onClick={() =>
+                    onConfirm={() =>
                       start(async () => {
-                        await setActiveProgram({ id: p.id, active: true });
+                        await deleteProgram({ id: p.id });
                       })
                     }
+                  />
+                  <Link
+                    href={`/programs/${p.id}`}
+                    transitionTypes={["nav-forward"]}
+                    aria-label={`Open ${p.name}`}
+                    className="flex size-8 items-center justify-center"
                   >
-                    Make active
-                  </Button>
-                )}
-                <ConfirmIconButton
-                  label="Delete program"
-                  confirmLabel="Tap again to delete program"
-                  disabled={pending}
-                  onConfirm={() =>
-                    start(async () => {
-                      await deleteProgram({ id: p.id });
-                    })
-                  }
-                />
-                <Link
-                  href={`/programs/${p.id}`}
-                  transitionTypes={["nav-forward"]}
-                  aria-label={`Open ${p.name}`}
-                  className="flex size-8 items-center justify-center"
-                >
-                  <ChevronRight className="size-4 text-muted/70" />
-                </Link>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+                    <ChevronRight className="size-4 text-muted/70" />
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
 
       <PresetCarousel presets={presets} />
 
