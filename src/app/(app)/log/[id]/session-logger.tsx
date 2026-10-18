@@ -88,6 +88,7 @@ import {
 import {
   addSessionExercise,
   deleteSet,
+  discardSession,
   finishSession,
   getSessionSets,
   removeSessionExercise,
@@ -191,6 +192,9 @@ export function SessionLogger({
   const [, startNav] = useTransition();
   const router = useRouter();
   const [finishing, setFinishing] = useState(false);
+  // Throwing the workout away: asked once, then gone.
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const [picker, setPicker] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
   // A superset just made from the sheet: its line snaps in, once.
@@ -1194,6 +1198,12 @@ export function SessionLogger({
       setConfirmFinish(true);
       return false;
     }
+    // Nothing logged means nothing to finish: it would land in History as an
+    // empty bout. A mistaken start is discarded instead.
+    if (!isEditing && !exercises.some((e) => e.sets.length > 0)) {
+      showNotice("Nothing's logged yet. Log a set to finish, or discard the workout.");
+      return false;
+    }
     if (needsConnection("Finishing the session")) return false;
     setConfirmFinish(false);
     setFinishing(true);
@@ -1223,6 +1233,23 @@ export function SessionLogger({
       });
     }, 1700);
     return true;
+  }
+
+  /** Abandon the workout: the session and every set in it are deleted. */
+  function discard() {
+    if (needsConnection("Discarding the workout")) return;
+    setDiscarding(true);
+    rest.skip();
+    startNav(async () => {
+      try {
+        await discardSession({ id: session.id });
+        router.replace("/dashboard");
+      } catch {
+        setDiscarding(false);
+        setConfirmDiscard(false);
+        showNotice("Couldn't discard the workout. Try again in a moment.");
+      }
+    });
   }
 
   const totalSets = exercises.reduce(
@@ -1297,7 +1324,7 @@ export function SessionLogger({
     restTotal: rest.endsAt !== null ? rest.total : undefined,
     next: nextSet,
   } satisfies WorkoutActivityState);
-  const activityEnded = finishing || victory !== null;
+  const activityEnded = finishing || discarding || victory !== null;
   useEffect(() => {
     if (isEditing) return;
     if (activityEnded || Date.now() - startedAt > STALE_CLOCK_MS) {
@@ -1674,6 +1701,38 @@ export function SessionLogger({
         )}
       </section>
 
+      {/* The way out of a workout started by mistake. Quiet, below the
+          finish, and asked twice: it deletes everything logged here. */}
+      {!isEditing && (
+        <div className="mt-3 flex min-h-11 justify-center">
+          {confirmDiscard ? (
+            <div className="flex w-full items-center gap-2 rounded-2xl bg-surface py-2 pl-4 pr-2">
+              <p className="min-w-0 flex-1 text-[13px] leading-5 text-text">
+                {totalSets > 0
+                  ? `Discard this workout and its ${totalSets} ${totalSets === 1 ? "set" : "sets"}?`
+                  : "Discard this workout?"}
+              </p>
+              <Button variant="ghost" onClick={() => setConfirmDiscard(false)} disabled={discarding}>
+                Keep
+              </Button>
+              <Button variant="danger" onClick={discard} disabled={discarding}>
+                {discarding && <Loader2 className="size-4 animate-spin" />}
+                Discard
+              </Button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDiscard(true)}
+              disabled={finishing}
+              className="h-11 rounded-xl px-4 text-[14px] text-muted transition-colors hover:text-danger disabled:opacity-40"
+            >
+              Discard workout
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Add-exercise picker (appends to the queue) */}
       <ExercisePicker
         open={picker}
@@ -1887,7 +1946,7 @@ function ActiveExerciseModal({
               className="w-full"
               onClick={onEnd}
             >
-              <Check className="size-4" />
+              {hasSets && <Check className="size-4" />}
               {hasSets ? "End exercise" : "Skip exercise"}
               <ArrowRight className="size-4" />
             </Button>
