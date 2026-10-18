@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Play, X } from "lucide-react";
 import { discardSession } from "@/lib/actions/sessions";
 import type { ActiveSession } from "@/lib/data/sessions";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/use-action";
 
 /**
  * The workout's running clock, ticking once a second. Null until mounted (the
@@ -27,9 +28,21 @@ export function useElapsed(startedAt: string): string | null {
   return ms >= 0 && ms <= STALE_CLOCK_MS ? formatElapsed(ms) : null;
 }
 
+/** The running clock as text, in the accent ink; nothing until it's mounted. */
+export function WorkoutClock({ startedAt, prefix }: { startedAt: string; prefix?: string }) {
+  const elapsed = useElapsed(startedAt);
+  if (!elapsed) return null;
+  return (
+    <>
+      {prefix}
+      <span className="text-accent-ink">{elapsed}</span>
+    </>
+  );
+}
+
 export function ResumeBanner({ session }: { session: ActiveSession }) {
   const pathname = usePathname();
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("discard the workout");
   const [confirming, setConfirming] = useState(false);
   const elapsed = useElapsed(session.startedAt);
 
@@ -44,7 +57,9 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
       className={cn(
         "hb-resume mb-6 flex items-center gap-3 rounded-2xl max-[359px]:gap-2.5 bg-surface py-3 pl-4 pr-2",
         // From `md` the sidebar carries a workout under way; the banner is left
-        // for one forgotten for hours, which the sidebar doesn't show.
+        // for one forgotten for hours, which the sidebar doesn't show. On a
+        // phone it also steps aside for a program card showing the workout
+        // (`data-live-card`, in globals.css).
         !session.stale && "md:hidden",
       )}
     >

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { CheckCircle2, Pause, Play } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { WorkoutClock } from "@/components/resume-banner";
 import type { ProgramProgress } from "@/lib/data/programs";
 import type { ActiveSession } from "@/lib/data/sessions";
 import { StartWorkoutButton } from "./start-workout-button";
@@ -81,7 +82,12 @@ export function ProgramProgressCard({
         : `Week ${currentWeek} of ${totalWeeks}`;
 
   return (
-    <section className={cn("rounded-3xl bg-surface p-5 sm:p-6", className)}>
+    // `data-live-card` tells the phone's resume banner this page already
+    // shows the workout under way (globals.css hides the banner).
+    <section
+      data-live-card={live && !isCompleted && !isPaused ? "" : undefined}
+      className={cn("rounded-3xl bg-surface p-5 sm:p-6", className)}
+    >
       <div className="flex items-center justify-between gap-3 text-[13px]">
         {href ? (
           <Link
@@ -112,7 +118,10 @@ export function ProgramProgressCard({
         </div>
       ) : live ? (
         <>
-          <p className="mt-5 text-[13px] text-muted">In progress</p>
+          <p className="tnum mt-5 text-[13px] text-muted">
+            In progress
+            <WorkoutClock startedAt={live.startedAt} prefix=", " />
+          </p>
           <h2 className="mt-0.5 text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-text">
             {live.title ?? "Workout"}
           </h2>
@@ -123,11 +132,16 @@ export function ProgramProgressCard({
 
           {week}
 
-          <Link href={`/log/${live.id}`} transitionTypes={["nav-forward"]} className="mt-5 block">
-            <Button variant="accent" size="lg" className="hb-glow w-full">
-              <Play className="size-4" />
-              Resume
-            </Button>
+          {/* Prefetched in full, like the banner's: on a phone this replaces
+              the banner as the way back to the logger. */}
+          <Link
+            href={`/log/${live.id}`}
+            prefetch
+            transitionTypes={["nav-forward"]}
+            className={cn(buttonVariants({ variant: "accent", size: "lg" }), "hb-glow mt-5 w-full")}
+          >
+            <Play className="size-4" />
+            Resume
           </Link>
         </>
       ) : nextDay?.template_id ? (
