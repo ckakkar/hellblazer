@@ -6,6 +6,7 @@ import { BootSplash } from "@/components/boot-splash";
 import { TimezoneSync } from "@/components/timezone-sync";
 import { NativeShell } from "@/components/native/native-shell";
 import { getAccent, getTimeZone } from "@/lib/settings";
+import { NoticeToast } from "@/components/notice-toast";
 
 /* One family, two widths. Archivo is variable on width as well as weight, so
    the expanded cut that carries titles and numbers (a broadcast-scoreboard
@@ -95,6 +96,8 @@ export default async function RootLayout({
             up; a browser tab never sees it. */}
         <BootSplash />
         {children}
+        {/* What an action that didn't go through says (useAction). */}
+        <NoticeToast />
       </body>
     </html>
   );

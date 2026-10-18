@@ -1,20 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import type { Unit } from "@/lib/units";
 import { setUnit } from "@/lib/actions/settings";
+import { useAction } from "@/lib/use-action";
 
 export function UnitToggle({ current }: { current: Unit }) {
   const [unit, setLocal] = useState<Unit>(current);
-  const [, start] = useTransition();
+  const [, start] = useAction("change units");
 
   function choose(u: Unit) {
     if (u === unit) return;
     setLocal(u);
-    start(async () => {
-      await setUnit({ unit: u });
-    });
+    start(
+      async () => {
+        await setUnit({ unit: u });
+      },
+      () => setLocal(unit),
+    );
   }
 
   return (

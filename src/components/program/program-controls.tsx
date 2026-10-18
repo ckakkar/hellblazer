@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Loader2, Pause, Play, Undo2 } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
@@ -8,6 +8,7 @@ import {
   resumeProgram,
   rollbackLastDay,
 } from "@/lib/actions/programs";
+import { useAction } from "@/lib/use-action";
 
 /** Pause freezes the week counter; resume shifts the block forward to catch up. */
 export function PauseResumeButton({
@@ -23,7 +24,7 @@ export function PauseResumeButton({
   size?: ButtonProps["size"];
   className?: string;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("update the program");
   return (
     <Button
       variant={isPaused ? "secondary" : variant}
@@ -67,7 +68,7 @@ export function RollbackButton({
   lastAdvance: { kind: "skip" | "session"; label: string };
   className?: string;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("undo the last day");
   const [confirm, setConfirm] = useState(false);
   const destructive = lastAdvance.kind === "session";
 

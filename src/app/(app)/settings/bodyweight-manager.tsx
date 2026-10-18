@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { logBodyweight, deleteBodyweight } from "@/lib/actions/bodyweight";
 import type { BodyweightLog } from "@/lib/data/bodyweight";
 import { selectAllOnFocus } from "@/lib/utils";
 import { healthSyncOn, withNative } from "@/lib/native-plugins";
+import { useAction } from "@/lib/use-action";
 
 /** Entries listed before "Show all": the chart above already shows the trend. */
 const RECENT = 5;
@@ -31,7 +32,7 @@ export function BodyweightManager({
    *  both sides of hydration. */
   today: string;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("save the change");
   const [date, setDate] = useState(today);
   const [weight, setWeight] = useState("");
   const [showAll, setShowAll] = useState(false);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   CalendarRange,
@@ -27,6 +27,7 @@ import {
   deleteProgram,
   setActiveProgram,
 } from "@/lib/actions/programs";
+import { useAction } from "@/lib/use-action";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -43,7 +44,7 @@ export function ProgramsManager({
   activeSession: ActiveSession | null;
   presets: Preset[];
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("save the change");
   const [creating, setCreating] = useState(false);
 
   return (
@@ -167,7 +168,7 @@ function CreateProgramSheet({
   onClose: () => void;
   templates: TemplateWithExercises[];
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("create the program");
   const [name, setName] = useState("");
   const [weeks, setWeeks] = useState(8);
   const [startDate, setStartDate] = useState(format(new Date(), "yyyy-MM-dd"));

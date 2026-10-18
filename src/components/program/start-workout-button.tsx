@@ -1,10 +1,10 @@
 "use client";
 
-import { useTransition } from "react";
 import { Loader2, Play } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
 import { todayLocalISO } from "@/lib/local-date";
+import { useAction } from "@/lib/use-action";
 
 export function StartWorkoutButton({
   programDayId,
@@ -24,7 +24,7 @@ export function StartWorkoutButton({
   size?: ButtonProps["size"];
   className?: string;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("start the workout");
   return (
     <Button
       variant={variant}

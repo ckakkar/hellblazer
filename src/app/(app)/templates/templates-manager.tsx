@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -37,6 +37,7 @@ import {
 } from "@/lib/actions/templates";
 import { selectAllOnFocus } from "@/lib/utils";
 import { formatRestClock, REST_CHOICES } from "@/lib/rest-timer";
+import { useAction } from "@/lib/use-action";
 
 export function TemplatesManager({
   templates,
@@ -51,7 +52,7 @@ export function TemplatesManager({
   activeTemplateIds: string[];
   activeProgramName: string | null;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("save the change");
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
   const [showOthers, setShowOthers] = useState(false);

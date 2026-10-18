@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,7 @@ import {
   createCustomExercise,
   deleteCustomExercise,
 } from "@/lib/actions/exercises";
+import { useAction } from "@/lib/use-action";
 
 export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
   const [q, setQ] = useState("");
@@ -34,7 +35,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
   // One how-to open at a time, held here rather than per row so opening a
   // movement in one muscle group closes whatever was open in another.
   const [openId, setOpenId] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("delete the exercise");
 
   const groups = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -228,7 +229,7 @@ function CreateExerciseSheet({
   open: boolean;
   onClose: () => void;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("save the exercise");
   const [name, setName] = useState("");
   const [primary, setPrimary] = useState<Muscle>("chest");
   const [secondary, setSecondary] = useState<Set<Muscle>>(new Set());

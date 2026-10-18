@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/page-header";
 import { FighterArt } from "@/components/tier/fighter-art";
 import { loadPreset } from "@/lib/actions/templates";
 import type { Preset } from "@/lib/presets";
+import { useAction } from "@/lib/use-action";
 
 /**
  * Starter programs: a row you swipe through on a phone, a grid from `sm` up.
@@ -19,7 +20,7 @@ export function PresetCarousel({
   presets: Preset[];
   title?: string;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("load the program");
   const [loadingId, setLoadingId] = useState<string | null>(null);
   if (presets.length === 0) return null;
 

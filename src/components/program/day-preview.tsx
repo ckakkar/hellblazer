@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Repeat2, Search } from "lucide-react";
 import { Sheet } from "@/components/ui/sheet";
@@ -11,6 +11,7 @@ import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { swapTemplateExercise } from "@/lib/actions/templates";
 import type { Exercise } from "@/lib/data/exercises";
 import type { TemplateWithExercises } from "@/lib/data/templates";
+import { useAction } from "@/lib/use-action";
 
 type Row = {
   id: string;
@@ -53,7 +54,7 @@ export function DayPreview({
   );
   const [swapRowId, setSwapRowId] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [, start] = useTransition();
+  const [, start] = useAction("swap the exercise");
 
   const swapRow = rows.find((r) => r.id === swapRowId) ?? null;
 

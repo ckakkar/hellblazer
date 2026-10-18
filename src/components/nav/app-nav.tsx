@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronLeft, Ellipsis, Flame, Play, Plus, X } from "lucide-react";
@@ -14,6 +14,7 @@ import { NAV_SECTIONS, BOTTOM_NAV, type NavItem } from "./nav-items";
 import { MenuOverlay, type NavIdentity } from "./menu-overlay";
 import { useWarmTabs } from "./warm-tabs";
 import { useLiveSession, useLiveWorkout, type LiveWorkout } from "@/lib/live-workout";
+import { useAction } from "@/lib/use-action";
 
 const TAB_HREFS = BOTTOM_NAV.map((item) => item.href);
 
@@ -118,7 +119,7 @@ function SidebarWorkout() {
 
 function SidebarLiveCard({ live, here }: { live: LiveWorkout; here: boolean }) {
   const elapsed = useElapsed(live.startedAt);
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("discard the workout");
   const sets = `${live.workingSets} ${live.workingSets === 1 ? "set" : "sets"}`;
   return (
     <div className="rounded-2xl bg-surface p-3" aria-current={here ? "page" : undefined}>

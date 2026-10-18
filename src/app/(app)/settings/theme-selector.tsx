@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ACCENTS, type AccentKey } from "@/lib/accents";
 import { setAccent } from "@/lib/actions/settings";
+import { useAction } from "@/lib/use-action";
 
 export function ThemeSelector({ current }: { current: AccentKey }) {
   const [accent, setLocal] = useState<AccentKey>(current);
-  const [, start] = useTransition();
+  const [, start] = useAction("change the accent");
 
   // Re-skin the whole app instantly. Everything derives from this attribute.
   // The server layout will re-render it to the same value once the cookie lands.
@@ -19,9 +20,12 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
   function choose(key: AccentKey) {
     if (key === accent) return;
     setLocal(key);
-    start(async () => {
-      await setAccent({ accent: key });
-    });
+    start(
+      async () => {
+        await setAccent({ accent: key });
+      },
+      () => setLocal(accent),
+    );
   }
 
   return (

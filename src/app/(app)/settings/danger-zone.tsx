@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Loader2, RotateCcw, Trash2, UserX } from "lucide-react";
 import HoldButton from "@/components/reactbits/hold-button";
 import { resetProgram } from "@/lib/actions/programs";
 import { clearHistory } from "@/lib/actions/sessions";
 import { deleteAccount } from "@/lib/actions/account";
+import { useAction } from "@/lib/use-action";
 
 /**
  * The irreversible actions, each behind a press-and-hold instead of a second
@@ -17,7 +18,7 @@ export function DangerZone({
 }: {
   activeProgram: { id: string; name: string } | null;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("finish that");
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
   return (

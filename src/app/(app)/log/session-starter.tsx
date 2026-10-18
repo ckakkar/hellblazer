@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Loader2, Play, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
 import { todayLocalISO } from "@/lib/local-date";
 import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { cn } from "@/lib/utils";
+import { useAction } from "@/lib/use-action";
 
 type TemplateExercisePreview = {
   name: string;
@@ -40,7 +41,7 @@ export function SessionStarter({
   /** Start this one right away: Siri or Spotlight asked for it. */
   autoStart?: { templateId: string; programDayId: string | null } | null;
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("start the workout");
   const [chosen, setChosen] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
 

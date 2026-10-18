@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -40,6 +40,7 @@ import {
   setActiveProgram,
   updateProgram,
 } from "@/lib/actions/programs";
+import { useAction } from "@/lib/use-action";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -56,7 +57,7 @@ export function ProgramDetail({
   templates: TemplateWithExercises[];
   exercises: Exercise[];
 }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("save the change");
   const [picker, setPicker] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewDayId, setPreviewDayId] = useState<string | null>(null);

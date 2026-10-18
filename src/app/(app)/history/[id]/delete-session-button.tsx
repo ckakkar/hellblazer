@@ -1,13 +1,13 @@
 "use client";
 
-import { useTransition } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import HoldButton from "@/components/reactbits/hold-button";
 import { deleteSession } from "@/lib/actions/sessions";
+import { useAction } from "@/lib/use-action";
 
 /** Deleting a session is a press-and-hold: letting go early cancels. */
 export function DeleteSessionButton({ sessionId }: { sessionId: string }) {
-  const [pending, start] = useTransition();
+  const [pending, start] = useAction("delete the session");
   return (
     <HoldButton
       size="sm"
