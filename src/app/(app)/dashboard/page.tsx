@@ -17,14 +17,14 @@ import { SectionLabel } from "@/components/ui/page-header";
 import { Delta, type DeltaTone } from "@/components/ui/tape";
 import { ChartCard } from "@/components/ui/chart-card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { WeeklySetsChart } from "@/components/charts/weekly-sets-chart";
 import { VolumeTrendCard } from "@/components/charts/volume-trend-card";
 import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { formatVolume } from "@/lib/units";
 import { WidgetSync } from "@/components/native/widget-sync";
 import { RecoveryCard } from "@/components/native/recovery-card";
-import { fitFigure } from "@/lib/utils";
+import { cn, fitFigure } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -185,7 +185,16 @@ export default async function DashboardPage({
           right, where the portrait has faded out. */}
       <div className="grid grid-cols-1 lg:grid-cols-12">
         <FightCardHero tier={tier} className="lg:col-[1/-1] lg:row-start-1" />
-        {isNewUser ? null : activeProgress ? (
+        {isNewUser ? (
+          // A first program in the next workout's place, over the hero's foot
+          // on a phone; under the poster on a desktop, where it's too tall to
+          // sit over the portrait.
+          <OnboardingHero
+            featured={presetLite(featuredPreset)}
+            others={PRESETS.filter((p) => p.id !== featuredPreset.id).map(presetLite)}
+            className="hb-overlap relative z-10 -mt-14 md:mt-3 lg:col-[1/-1] lg:mt-2"
+          />
+        ) : activeProgress ? (
           <ProgramProgressCard
             progress={activeProgress}
             activeSession={activeSession}
@@ -202,141 +211,144 @@ export default async function DashboardPage({
                 Pick a split and it schedules your week for you.
               </p>
             </div>
-            <Link href="/programs">
-              <Button variant="secondary" size="lg" className="w-full">
-                Choose a split
-              </Button>
+            <Link
+              href="/programs"
+              className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-full")}
+            >
+              Choose a split
             </Link>
           </section>
         )}
       </div>
 
-      {isNewUser && (
-        <OnboardingHero
-          featured={presetLite(featuredPreset)}
-          others={PRESETS.filter((p) => p.id !== featuredPreset.id).map(presetLite)}
-        />
-      )}
-
-      <section>
-        <SectionLabel
-          action={
-            <span className="flex items-center gap-3">
-              <span className="text-[13px] text-muted">Since {format(weekStart, "EEE d MMM")}</span>
-              <WeekCardShare week={shareWeek} open={openWeekCard} />
-            </span>
-          }
-        >
-          This week
-        </SectionLabel>
-        {/* Volume gets the wider column, and the figures shrink to fit, so
-            "12.5k kg" still fits a 320pt phone. */}
-        {/* On a desktop the figures come out of the box and onto the page at
-            scoreboard size, ruled off like a tale of the tape. */}
-        <div className="grid grid-cols-[1.3fr_1fr_1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4 lg:rounded-none lg:border-y lg:border-white/[0.08] lg:bg-transparent lg:py-7">
-          {stats.map((st) => (
-            <div
-              key={st.label}
-              className="@container min-w-0 px-3 [--stat-max:1.625rem] min-[400px]:px-4 sm:[--stat-max:2rem] lg:px-8 lg:[--stat-max:4.5rem] lg:first:pl-1"
-            >
-              <p className="truncate text-[13px] text-muted lg:text-[15px]">{st.label}</p>
-              <p className="mt-1.5 flex h-[1.625rem] items-end leading-none sm:h-8 lg:mt-3 lg:h-[4.5rem]">
-                <span className="whitespace-nowrap">
-                  <span
-                    className="font-display hb-fit text-text"
-                    style={fitFigure(st.value, "var(--stat-max)", st.unit ? "1.25rem" : "0px")}
-                  >
-                    {st.value}
+      {/* Before the first workout there's nothing to chart: the week, the
+          heatmap, the charts and the list would be five empty boxes under the
+          one thing to do, so they wait for that first session. */}
+      {anySession && (
+        <section>
+          <SectionLabel
+            action={
+              <span className="flex items-center gap-3">
+                <span className="text-[13px] text-muted">Since {format(weekStart, "EEE d MMM")}</span>
+                <WeekCardShare week={shareWeek} open={openWeekCard} />
+              </span>
+            }
+          >
+            This week
+          </SectionLabel>
+          {/* Volume gets the wider column, and the figures shrink to fit, so
+              "12.5k kg" still fits a 320pt phone. */}
+          {/* On a desktop the figures come out of the box and onto the page at
+              scoreboard size, ruled off like a tale of the tape. */}
+          <div className="grid grid-cols-[1.3fr_1fr_1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4 lg:rounded-none lg:border-y lg:border-white/[0.08] lg:bg-transparent lg:py-7">
+            {stats.map((st) => (
+              <div
+                key={st.label}
+                className="@container min-w-0 px-3 [--stat-max:1.625rem] min-[400px]:px-4 sm:[--stat-max:2rem] lg:px-8 lg:[--stat-max:4.5rem] lg:first:pl-1"
+              >
+                <p className="truncate text-[13px] text-muted lg:text-[15px]">{st.label}</p>
+                <p className="mt-1.5 flex h-[1.625rem] items-end leading-none sm:h-8 lg:mt-3 lg:h-[4.5rem]">
+                  <span className="whitespace-nowrap">
+                    <span
+                      className="font-display hb-fit text-text"
+                      style={fitFigure(st.value, "var(--stat-max)", st.unit ? "1.25rem" : "0px")}
+                    >
+                      {st.value}
+                    </span>
+                    {st.unit && <span className="ml-1 text-[13px] text-muted lg:ml-2 lg:text-[17px]">{st.unit}</span>}
                   </span>
-                  {st.unit && <span className="ml-1 text-[13px] text-muted lg:ml-2 lg:text-[17px]">{st.unit}</span>}
-                </span>
-              </p>
-              {st.delta && <div className="mt-1.5 lg:mt-3">{st.delta}</div>}
-            </div>
-          ))}
-        </div>
-      </section>
+                </p>
+                {st.delta && <div className="mt-1.5 lg:mt-3">{st.delta}</div>}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* iPhone app only, and only once Health has something to say. */}
       <RecoveryCard />
 
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-4">
-        <ChartCard
-          title="Consistency"
-          subtitle="Working sets per day"
-          className="lg:col-span-2 lg:bg-transparent"
-          headerClassName="lg:px-1"
-          bodyClassName="p-5 pt-4 lg:px-1 lg:pb-6"
-        >
-          <ConsistencyHeatmap summaries={summaries} today={today} />
-        </ChartCard>
-        <ChartCard title="Sets per muscle" subtitle="This week so far. The band is 10-20 sets, where most growth happens">
-          <WeeklySetsChart data={weeklySets} latest={latestWorkout} />
-        </ChartCard>
-        <VolumeTrendCard daily={dailyVolume} unit={unit} today={today} />
-      </section>
-
-      <section>
-        <SectionLabel
-          action={
-            <Link
-              href="/history"
-              className="text-[13px] font-medium text-muted transition-colors hover:text-text"
+      {anySession && (
+        <>
+          <section className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-4">
+            <ChartCard
+              title="Consistency"
+              subtitle="Working sets per day"
+              className="lg:col-span-2 lg:bg-transparent"
+              headerClassName="lg:px-1"
+              bodyClassName="p-5 pt-4 lg:px-1 lg:pb-6"
             >
-              See all
-            </Link>
-          }
-        >
-          Recent sessions
-        </SectionLabel>
-        {recent.length === 0 ? (
-          <p className="rounded-2xl bg-surface px-5 py-8 text-center text-[15px] text-muted">
-            Nothing logged yet. Your first session starts the record.
-          </p>
-        ) : (
-          // Two columns on a desktop, ruled by the gaps, so a row's name and
-          // its totals sit close enough to read together.
-          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface lg:grid lg:grid-cols-2 lg:gap-px lg:divide-y-0 lg:bg-white/[0.06]">
-            {recent.map((s) => (
-              <Link
-                key={s.session_id}
-                href={s.finished_at ? `/history/${s.session_id}` : `/log/${s.session_id}`}
-                transitionTypes={["nav-forward"]}
-                className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05] lg:bg-surface lg:px-5 lg:py-4 lg:hover:bg-[#161618]"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <ViewTransition name={`session-${s.session_id}`} share="hb-morph" default="none">
-                      <span className="truncate text-[15px] font-medium text-text">
-                        {s.title ?? "Session"}
-                      </span>
-                    </ViewTransition>
-                    {!s.finished_at && <Badge variant="accent">Live</Badge>}
-                  </div>
-                  <p className="mt-0.5 text-[13px] text-muted">
-                    {s.session_date ? format(parseISO(s.session_date), "EEE d MMM") : "No date"}
-                    {!s.template_id ? ", freeform" : ""}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  {/* A workout just opened has nothing to total yet: "0 kg, 0 sets"
-                      read like a failed load. */}
-                  {!s.finished_at && !Number(s.working_sets) ? (
-                    <p className="text-[13px] text-muted">No sets yet</p>
-                  ) : (
-                    <>
-                      <p className="tnum text-[15px] text-text">
-                        {formatVolume(Number(s.total_volume ?? 0), unit)}
+              <ConsistencyHeatmap summaries={summaries} today={today} />
+            </ChartCard>
+            <ChartCard title="Sets per muscle" subtitle="This week so far. The band is 10-20 sets, where most growth happens">
+              <WeeklySetsChart data={weeklySets} latest={latestWorkout} />
+            </ChartCard>
+            <VolumeTrendCard daily={dailyVolume} unit={unit} today={today} />
+          </section>
+
+          <section>
+            <SectionLabel
+              action={
+                <Link
+                  href="/history"
+                  className="text-[13px] font-medium text-muted transition-colors hover:text-text"
+                >
+                  See all
+                </Link>
+              }
+            >
+              Recent sessions
+            </SectionLabel>
+            {recent.length === 0 ? (
+              <p className="rounded-2xl bg-surface px-5 py-8 text-center text-[15px] text-muted">
+                Nothing logged yet. Your first session starts the record.
+              </p>
+            ) : (
+              // Two columns on a desktop, ruled by the gaps, so a row's name and
+              // its totals sit close enough to read together.
+              <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface lg:grid lg:grid-cols-2 lg:gap-px lg:divide-y-0 lg:bg-white/[0.06]">
+                {recent.map((s) => (
+                  <Link
+                    key={s.session_id}
+                    href={s.finished_at ? `/history/${s.session_id}` : `/log/${s.session_id}`}
+                    transitionTypes={["nav-forward"]}
+                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05] lg:bg-surface lg:px-5 lg:py-4 lg:hover:bg-[#161618]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <ViewTransition name={`session-${s.session_id}`} share="hb-morph" default="none">
+                          <span className="truncate text-[15px] font-medium text-text">
+                            {s.title ?? "Session"}
+                          </span>
+                        </ViewTransition>
+                        {!s.finished_at && <Badge variant="accent">Live</Badge>}
+                      </div>
+                      <p className="mt-0.5 text-[13px] text-muted">
+                        {s.session_date ? format(parseISO(s.session_date), "EEE d MMM") : "No date"}
+                        {!s.template_id ? ", freeform" : ""}
                       </p>
-                      <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
-                    </>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {/* A workout just opened has nothing to total yet: "0 kg, 0 sets"
+                          read like a failed load. */}
+                      {!s.finished_at && !Number(s.working_sets) ? (
+                        <p className="text-[13px] text-muted">No sets yet</p>
+                      ) : (
+                        <>
+                          <p className="tnum text-[15px] text-text">
+                            {formatVolume(Number(s.total_volume ?? 0), unit)}
+                          </p>
+                          <p className="tnum mt-0.5 text-[13px] text-muted">{s.working_sets ?? 0} sets</p>
+                        </>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </div>
   );
 }

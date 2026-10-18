@@ -9,6 +9,7 @@ import { SwipeRow } from "@/components/ui/swipe-row";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/page-header";
+import { buttonVariants } from "@/components/ui/button";
 import { formatVolume, type Unit } from "@/lib/units";
 import type { SessionSummary } from "@/lib/data/sessions";
 import { discardSession } from "@/lib/actions/sessions";
@@ -117,7 +118,12 @@ export function HistoryList({
       <EmptyState
         icon={<CalendarDays className="size-6" />}
         title="No sessions logged yet"
-        body="Start a session from the Log tab and it'll show up here."
+        body="Every workout you finish lands here, newest first."
+        action={
+          <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
+            Start a workout
+          </Link>
+        }
       />
     );
   }

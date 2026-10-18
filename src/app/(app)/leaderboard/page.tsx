@@ -5,7 +5,8 @@ import { getLeaderboard } from "@/lib/data/leaderboard";
 import { getProfile } from "@/lib/data/profile";
 import { getUnit } from "@/lib/settings";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Standings } from "./standings";
 
 export const metadata: Metadata = { title: "King of the Hill" };
@@ -45,8 +46,8 @@ export default async function LeaderboardPage() {
               Pick a ring name and your volume joins the standings.
             </p>
           </div>
-          <Link href="/settings" className="shrink-0">
-            <Button variant="secondary">Pick a ring name</Button>
+          <Link href="/settings" className={cn(buttonVariants({ variant: "secondary" }), "shrink-0")}>
+            Pick a ring name
           </Link>
         </div>
       )}

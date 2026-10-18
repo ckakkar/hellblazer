@@ -7,7 +7,7 @@ import { getActiveProgramProgress } from "@/lib/data/programs";
 import { getActiveSession } from "@/lib/data/sessions";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SessionStarter } from "./session-starter";
 
 export const metadata: Metadata = { title: "Log workout" };
@@ -107,7 +107,14 @@ export default async function LogPage({
 
   return (
     <div className={showCard ? "mx-auto max-w-4xl lg:max-w-none" : "mx-auto max-w-4xl"}>
-      <PageHeader title="Log" subtitle="Start your next programmed day, or pick any other." />
+      <PageHeader
+        title="Log"
+        subtitle={
+          options.length === 0 && !activeProgress
+            ? "Start an empty workout, or pick a program to train from a plan."
+            : "Start your next programmed day, or pick any other."
+        }
+      />
 
       {/* On a desktop, what's next stays in view on the left while the rest
           of the week is picked from on the right. */}
@@ -128,10 +135,10 @@ export default async function LogPage({
             <EmptyState
               icon={<CalendarRange className="size-6" />}
               title="No program or templates yet"
-              body="Build a split on Templates (or load the starter split) to train from a plan."
+              body="Pick a starter program or build your own, and its days show up here, ready to start."
               action={
-                <Link href="/programs">
-                  <Button variant="secondary">Go to Programs</Button>
+                <Link href="/programs" className={buttonVariants({ variant: "secondary" })}>
+                  Go to Programs
                 </Link>
               }
             />

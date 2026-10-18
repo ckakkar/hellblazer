@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { updateProfileDetails } from "@/lib/actions/profile";
 import { ageOn, birthdayBounds, isAcceptedBirthday } from "@/lib/age";
+import { useAction } from "@/lib/use-action";
 
 type Sex = "male" | "female" | "other";
 const SEXES: { key: Sex; label: string }[] = [
@@ -41,7 +42,7 @@ export function ProfileDetails({
   const [height, setHeight] = useState(
     initHeight != null ? String(initHeight) : "",
   );
-  const [, start] = useTransition();
+  const [, start] = useAction("save your details");
   const bounds = birthdayBounds(today);
   const age = birthday ? ageOn(birthday, today) : birthYear != null ? Number(today.slice(0, 4)) - birthYear : null;
   const [saved, setSaved] = useState(false);
@@ -119,7 +120,7 @@ export function ProfileDetails({
         <label className="grid min-w-0 grid-cols-1 gap-1.5">
           <span className="text-xs font-medium text-muted">
             Birthday
-            {age != null && <span className="tnum"> · {age}</span>}
+            {age != null && <span className="tnum">, age {age}</span>}
           </span>
           <Input
             type="date"

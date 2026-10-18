@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { AtSign, Check, Flame, Loader2, Ruler, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { fromDisplayWeight, type Unit } from "@/lib/units";
 import { completeOnboarding } from "@/lib/actions/profile";
 import { ageOn, birthdayBounds, isAcceptedBirthday } from "@/lib/age";
 import { FighterArt } from "@/components/tier/fighter-art";
+import { useAction } from "@/lib/use-action";
 
 type Sex = "male" | "female" | "other";
 
@@ -45,7 +46,7 @@ export function WelcomeFlow({
   today: string;
 }) {
   const router = useRouter();
-  const [saving, startSave] = useTransition();
+  const [saving, startSave] = useAction("save your profile");
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState(suggestedName);
@@ -210,7 +211,7 @@ export function WelcomeFlow({
               <div className="mt-5">
                 <FieldLabel>
                   Birthday
-                  {age != null && <span className="tnum font-normal text-muted"> · {age}</span>}
+                  {age != null && <span className="tnum font-normal text-muted">, age {age}</span>}
                 </FieldLabel>
                 <Input
                   type="date"

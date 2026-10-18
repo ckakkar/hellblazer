@@ -11,7 +11,7 @@ import { estimatedMaxHr, type TimedSet } from "@/lib/heart-insights";
 import { HeartCard } from "@/components/workout/heart-card";
 import { slotLabel, supersetSlots } from "@/lib/supersets";
 import { getUnit } from "@/lib/settings";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
@@ -94,11 +94,12 @@ export default async function SessionDetailPage({
             sessionId={session.id}
             title={session.title ?? "Session"}
           />
-          <Link href={`/log/${session.id}`}>
-            <Button variant="secondary" size="sm">
-              <Pencil className="size-4" />
-              Edit
-            </Button>
+          <Link
+            href={`/log/${session.id}`}
+            className={buttonVariants({ variant: "secondary", size: "sm" })}
+          >
+            <Pencil className="size-4" />
+            Edit
           </Link>
           <DeleteSessionButton sessionId={session.id} />
           </div>

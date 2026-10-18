@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { TrendingUp } from "lucide-react";
 import { getLoggedExercises } from "@/lib/data/exercises";
 import {
@@ -19,6 +20,7 @@ import { LadderStanding } from "@/components/tier/ladder-standing";
 import { OneRepMaxBoard } from "@/components/one-rep-max-board";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ChartCard } from "@/components/ui/chart-card";
+import { buttonVariants } from "@/components/ui/button";
 import { Tape, TapeRow } from "@/components/ui/tape";
 import {
   OneRepMaxChart,
@@ -94,6 +96,11 @@ export default async function ProgressPage({
                 icon={<TrendingUp className="size-6" />}
                 title="No logged exercises yet"
                 body="Log some working sets and your 1RM and volume trends will appear here."
+                action={
+                  <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
+                    Start a workout
+                  </Link>
+                }
               />
             ) : (
               <ExerciseTab

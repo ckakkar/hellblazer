@@ -23,7 +23,7 @@ export function LandingFighterRoster() {
         <h2 id="ladder-title" className="text-[22px] font-semibold tracking-[-0.02em] text-text hb-display-lg lg:text-[2.5rem]">
           The ladder
         </h2>
-        <span className="text-[13px] text-muted">Ten fighters, weakest at the bottom</span>
+        <span className="text-[13px] text-muted">Ten fighters, strongest first</span>
       </div>
       {/* Swiped through on a phone; on a desktop the whole ladder is on the
           wall at once, two rows of five, strongest first. */}

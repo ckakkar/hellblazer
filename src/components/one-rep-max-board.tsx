@@ -37,7 +37,9 @@ export function OneRepMaxBoard({
         return (
           <li key={r.exerciseId} className="lg:bg-surface">
             <Link
-              href={`/progress?tab=exercise&exercise=${r.exerciseId}`}
+              // #lift scrolls to the detail, which sits above this list; without
+              // it the page lands at the top with the detail out of view.
+              href={`/progress?tab=exercise&exercise=${r.exerciseId}#lift`}
               aria-current={open ? "true" : undefined}
               className={cn(
                 "relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]",
