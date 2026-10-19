@@ -27,6 +27,18 @@ type Status = "loading" | "unsupported" | "ios-install" | "ready";
 /** The service worker's registration, or null when none turns up in time.
  *  `serviceWorker.ready` alone never settles if registration failed (private
  *  mode, a blocked script), which left this card spinning forever. */
+/** Saves this browser's subscription under the account signed in. */
+function claim(sub: PushSubscription) {
+  const json = sub.toJSON();
+  return savePushSubscription({
+    endpoint: sub.endpoint,
+    p256dh: json.keys?.p256dh ?? "",
+    auth: json.keys?.auth ?? "",
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    userAgent: navigator.userAgent.slice(0, 500),
+  });
+}
+
 function workerRegistration(timeoutMs = 4000): Promise<ServiceWorkerRegistration | null> {
   return Promise.race([
     navigator.serviceWorker.ready,
@@ -83,6 +95,9 @@ export function NotificationsManager({
       try {
         const sub = await reg.pushManager.getSubscription();
         if (!cancelled) setSubscribed(!!sub);
+        // On means on for this account: the subscription may have been
+        // saved under whoever used this browser before. Saving it claims it.
+        if (sub) void claim(sub).catch(() => {});
       } catch {
         // ignore: treat as not subscribed
       }
@@ -147,14 +162,7 @@ export function NotificationsManager({
           userVisibleOnly: true,
           applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
         }));
-      const json = sub.toJSON();
-      await savePushSubscription({
-        endpoint: sub.endpoint,
-        p256dh: json.keys?.p256dh ?? "",
-        auth: json.keys?.auth ?? "",
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        userAgent: navigator.userAgent.slice(0, 500),
-      });
+      await claim(sub);
       setSubscribed(true);
       await defaultReminderOn();
       setMsg("Notifications on. We'll nudge you when it's time to train.");

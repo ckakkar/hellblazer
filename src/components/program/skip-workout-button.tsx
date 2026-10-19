@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SkipForward } from "lucide-react";
 import FuseButton from "@/components/reactbits/fuse-button";
 import { skipWorkout } from "@/lib/actions/programs";
+import { showNotice } from "@/lib/notice";
 
 /**
  * Skip, with a way back: tapping it turns the button into Undo while a fuse
  * burns along its foot, and the day is only skipped when the fuse runs out.
  * Leaving the page mid-fuse still skips, since that's what you asked for.
- * Keyed by the day, so the next day starts fresh.
+ * Keyed by the day, so the next day starts fresh, and by the attempt: a skip
+ * the server didn't take puts the button back to Skip, with a notice.
  */
 export function SkipWorkoutButton({
   programDayId,
@@ -20,31 +22,60 @@ export function SkipWorkoutButton({
   className?: string;
   size?: "sm" | "md" | "lg";
 }) {
-  return <SkipFuse key={programDayId} programDayId={programDayId} className={className} size={size} />;
+  const [attempt, setAttempt] = useState(0);
+  return (
+    <SkipFuse
+      key={`${programDayId}:${attempt}`}
+      programDayId={programDayId}
+      className={className}
+      size={size}
+      onFail={() => setAttempt((n) => n + 1)}
+    />
+  );
 }
 
 function SkipFuse({
   programDayId,
   className,
   size,
+  onFail,
 }: {
   programDayId: string;
   className?: string;
   size: "sm" | "md" | "lg";
+  onFail: () => void;
 }) {
   const armed = useRef(false);
   const done = useRef(false);
-  const commit = useRef(() => {
+  const mounted = useRef(true);
+  const failed = useRef(onFail);
+  useEffect(() => {
+    failed.current = onFail;
+  }, [onFail]);
+  const commit = useRef(async () => {
     if (done.current) return;
     done.current = true;
-    void skipWorkout({ programDayId });
+    try {
+      await skipWorkout({ programDayId });
+    } catch {
+      done.current = false;
+      showNotice(
+        navigator.onLine
+          ? "Couldn't skip the day. Try again in a moment."
+          : "You're offline. Connect to skip the day.",
+      );
+      // Still on screen: back to Skip. (Left mid-fuse, the notice says it.)
+      if (mounted.current) failed.current();
+    }
   });
 
   // Navigating away while the fuse burns is still a skip.
   useEffect(() => {
+    mounted.current = true;
     const fire = commit.current;
     return () => {
-      if (armed.current) fire();
+      mounted.current = false;
+      if (armed.current) void fire();
     };
   }, []);
 
@@ -64,7 +95,7 @@ function SkipFuse({
       onPhaseChange={(p) => {
         armed.current = p === "armed";
       }}
-      onCommit={() => commit.current()}
+      onCommit={() => void commit.current()}
     />
   );
 }

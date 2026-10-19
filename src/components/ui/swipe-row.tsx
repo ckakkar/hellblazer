@@ -124,6 +124,16 @@ export function SwipeRow({
     }
   }
 
+  // The system took the gesture (a scroll, a call): nothing happens, whatever
+  // line the finger had crossed. Only a release acts.
+  function onPointerCancel(e: React.PointerEvent) {
+    const g = gesture.current;
+    gesture.current = null;
+    if (!g || e.pointerId !== g.pointer) return;
+    pastFull.current = false;
+    close();
+  }
+
   // After a swipe, or while open, a tap on the row only closes it.
   function onClickCapture(e: React.MouseEvent) {
     if ((e.target as Element).closest("[data-swipe-action]")) return;
@@ -143,7 +153,7 @@ export function SwipeRow({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerEnd}
-      onPointerCancel={onPointerEnd}
+      onPointerCancel={onPointerCancel}
       onClickCapture={onClickCapture}
     >
       <button

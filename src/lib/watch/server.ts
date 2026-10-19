@@ -364,7 +364,18 @@ const startSchema = z.object({
   templateId: z.string().uuid(),
   programDayId: z.string().uuid().nullish(),
   localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** When it really began (epoch ms): a workout started offline reaches the
+   *  server later. Older watch builds don't send it. */
+  startedAt: z.number().optional(),
 });
+
+/** A time the watch says something happened, if it's believable: in the
+ *  last day, and not ahead of the server's clock by more than a minute. */
+function watchTime(ms: number | undefined): string | null {
+  if (ms === undefined || !Number.isFinite(ms)) return null;
+  const now = Date.now();
+  return ms > now - 24 * 60 * 60 * 1000 && ms < now + 60 * 1000 ? new Date(ms).toISOString() : null;
+}
 
 /**
  * Starts a session from a template, through the same start_session() the web
@@ -375,7 +386,7 @@ const startSchema = z.object({
 export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promise<WatchState> {
   const v = startSchema.parse(body);
   if (await activeWorkout(ctx)) return watchState(ctx);
-  const { error } = await ctx.db.rpc("start_session", {
+  const { data: sessionId, error } = await ctx.db.rpc("start_session", {
     p_user: ctx.userId,
     ...(v.programDayId ? { p_program_day_id: v.programDayId } : { p_template_id: v.templateId }),
     p_date: v.localDate,
@@ -383,6 +394,18 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
   if (error) {
     // start_session raises "… not found" for a day or template that isn't theirs.
     throw error.code === "P0001" ? new WatchError(404, "not found") : error;
+  }
+  // Started offline: the session began when the watch says, not now, so its
+  // clock (and the heart-rate read later) line up. Only a session this call
+  // just opened; one that was already under way keeps its own.
+  const startedAt = watchTime(v.startedAt);
+  if (startedAt && sessionId) {
+    await ctx.db
+      .from("session")
+      .update({ created_at: startedAt })
+      .eq("id", sessionId)
+      .eq("user_id", ctx.userId)
+      .gte("created_at", new Date(Date.now() - 60_000).toISOString());
   }
   return watchState(ctx);
 }
@@ -393,6 +416,11 @@ const setSchema = z.object({
   setNumber: z.number().int().min(1).max(999),
   weight: z.number().min(0).max(9999),
   reps: z.number().int().min(0).max(9999),
+  /** The unit the weight was logged in. A set queued offline can reach the
+   *  server after the lifter switched units; older watch builds omit it. */
+  unit: z.enum(["kg", "lb"]).optional(),
+  /** When it was logged (epoch ms), for a set that waited for a connection. */
+  loggedAt: z.number().optional(),
 });
 
 /** Saves a working set, keyed on the watch's own id so a retry can't double it. */
@@ -410,11 +438,12 @@ export async function saveWatchSet(ctx: WatchContext, body: unknown): Promise<{ 
   const row = {
     session_exercise_id: owner.id,
     set_number: v.setNumber,
-    weight_kg: fromDisplayWeight(v.weight, unit),
+    weight_kg: fromDisplayWeight(v.weight, v.unit ?? unit),
     reps: v.reps,
     is_warmup: false,
     is_completed: true,
   };
+  const loggedAt = watchTime(v.loggedAt);
   // Update, then insert: an upsert on a caller-chosen id could overwrite
   // someone else's set; this only ever touches the caller's own rows.
   const { data: updated, error } = await db
@@ -425,7 +454,9 @@ export async function saveWatchSet(ctx: WatchContext, body: unknown): Promise<{ 
     .select("id");
   if (error) throw error;
   if (!updated || updated.length === 0) {
-    const { error: insertError } = await db.from("set").insert({ id: v.id, user_id: userId, ...row });
+    const { error: insertError } = await db
+      .from("set")
+      .insert({ id: v.id, user_id: userId, ...row, ...(loggedAt ? { created_at: loggedAt } : {}) });
     // 23505: that id exists but isn't the caller's to change.
     if (insertError) {
       throw insertError.code === "23505" ? new WatchError(409, "conflict") : insertError;

@@ -102,6 +102,11 @@ type SetKind = "drop" | "rest_pause" | null;
 type LocalSet = {
   id: string;
   weight: number | null;
+  /** The weight as stored, in kg, for a set that came from the server (or
+   *  the device queue, or the watch). Display weights are rounded to the
+   *  plate step, so re-saving a set the lifter didn't touch (a renumber,
+   *  say) keeps this rather than the rounded figure. */
+  kg?: number;
   reps: number | null;
   rpe: number | null;
   isWarmup: boolean;
@@ -118,6 +123,16 @@ type LocalExercise = {
   superset: number | null;
   sets: LocalSet[];
 };
+
+/**
+ * The kg to save for a set: what's stored, while the weight shown is still
+ * that stored weight rounded; otherwise the weight shown, converted.
+ */
+function storedKg(set: LocalSet, unit: Unit): number {
+  const shown = Number.isFinite(set.weight ?? NaN) ? (set.weight as number) : 0;
+  if (set.kg != null && toDisplayWeight(set.kg, unit) === shown) return set.kg;
+  return fromDisplayWeight(shown, unit);
+}
 
 // Running personal-best tracker per exercise. `hadHistory` gates the Removal
 // callout to exercises with prior-session data, so a brand-new lift never fires.
@@ -291,6 +306,7 @@ export function SessionLogger({
       sets: se.set.map((s) => ({
         id: s.id,
         weight: toDisplayWeight(s.weight_kg, unit),
+        kg: Number(s.weight_kg),
         reps: s.reps,
         rpe: s.rpe,
         isWarmup: s.is_warmup,
@@ -385,10 +401,7 @@ export function SessionLogger({
       sessionId: session.id,
       sessionExerciseId: seId,
       setNumber,
-      weightKg: fromDisplayWeight(
-        Number.isFinite(set.weight ?? NaN) ? (set.weight as number) : 0,
-        unit,
-      ),
+      weightKg: storedKg(set, unit),
       reps: Number.isFinite(set.reps ?? NaN) ? (set.reps as number) : 0,
       rpe: set.rpe,
       isWarmup: set.isWarmup,
@@ -513,6 +526,7 @@ export function SessionLogger({
             const restored: LocalSet = {
               id: write.id,
               weight: toDisplayWeight(write.weightKg, unit),
+              kg: write.weightKg,
               reps: write.reps,
               rpe: write.rpe,
               isWarmup: write.isWarmup,
@@ -625,6 +639,7 @@ export function SessionLogger({
             sets.splice(Math.min(r.setNumber - 1, sets.length), 0, {
               id: r.id,
               weight: toDisplayWeight(r.weightKg, unit),
+              kg: r.weightKg,
               reps: r.reps,
               rpe: r.rpe,
               isWarmup: r.isWarmup,
@@ -1027,9 +1042,11 @@ export function SessionLogger({
     clearFailed(setId);
     void persistDelete(seId, setId);
 
-    // Renumber the survivors. Computed out here, not inside the state updater:
-    // updaters must be pure, and React may invoke them more than once per
-    // commit: which would fire duplicate writes for every remaining set.
+    // Renumber the survivors after it. Computed out here, not inside the
+    // state updater: updaters must be pure, and React may invoke them more
+    // than once per commit: which would fire duplicate writes for every
+    // remaining set. The ones before it keep their numbers, so aren't saved.
+    const removedAt = ref.current.find((ex) => ex.seId === seId)?.sets.findIndex((s) => s.id === setId) ?? 0;
     const next = ref.current.map((ex) =>
       ex.seId === seId
         ? { ...ex, sets: ex.sets.filter((s) => s.id !== setId) }
@@ -1038,7 +1055,9 @@ export function SessionLogger({
     ref.current = next;
     setExercises(next);
     const target = next.find((e) => e.seId === seId);
-    target?.sets.forEach((s, i) => void persist(seId, s, i + 1));
+    target?.sets.forEach((s, i) => {
+      if (i >= removedAt) void persist(seId, s, i + 1);
+    });
   }
 
   function addExercise(exerciseId: string) {

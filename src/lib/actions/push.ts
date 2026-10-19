@@ -6,8 +6,15 @@ import { getAuthedContext } from "@/lib/auth";
 import { pushConfigured, sendPush } from "@/lib/push";
 import { isPushEndpoint } from "@/lib/push-endpoint";
 import { apnsConfigured, sendApns } from "@/lib/apns";
+import { isValidTimeZone } from "@/lib/local-date";
+import { createServiceClient } from "@/lib/supabase/service";
 
-/** Store (or refresh) this browser's push subscription for the user. */
+/**
+ * Store (or refresh) this browser's push subscription for the user. A browser
+ * belongs to whoever saved it last, so its endpoint is taken off any other
+ * account (signed out without cleaning up, say), as an iPhone's APNs token
+ * moves in claim_apns_device; otherwise both accounts' reminders arrive here.
+ */
 export async function savePushSubscription(input: {
   endpoint: string;
   p256dh: string;
@@ -21,7 +28,7 @@ export async function savePushSubscription(input: {
       endpoint: z.string().url().max(1000).refine(isPushEndpoint, "Not a push service"),
       p256dh: z.string().min(1).max(500),
       auth: z.string().min(1).max(500),
-      timezone: z.string().max(64).nullable().optional(),
+      timezone: z.string().max(64).refine(isValidTimeZone, "Not a timezone").nullable().optional(),
       userAgent: z.string().max(500).nullable().optional(),
     })
     .parse(input);
@@ -38,6 +45,11 @@ export async function savePushSubscription(input: {
     { onConflict: "user_id,endpoint" },
   );
   if (error) throw error;
+  await createServiceClient()
+    ?.from("push_subscription")
+    .delete()
+    .eq("endpoint", v.endpoint)
+    .neq("user_id", user.id);
   revalidatePath("/settings");
 }
 
@@ -62,7 +74,7 @@ export async function registerApnsDevice(input: { token: string; timezone?: stri
   const v = z
     .object({
       token: z.string().regex(/^[0-9a-f]{64,200}$/),
-      timezone: z.string().max(64).nullable().optional(),
+      timezone: z.string().max(64).refine(isValidTimeZone, "Not a timezone").nullable().optional(),
     })
     .parse(input);
   const { supabase } = await getAuthedContext();

@@ -4,6 +4,7 @@ import type { Database } from "@/lib/database.types";
 import type { Exercise } from "@/lib/data/exercises";
 import { getExerciseStats } from "@/lib/data/exercise-stats";
 import { STALE_CLOCK_MS } from "@/lib/workout-clock";
+import { selectAll } from "@/lib/data/paginate";
 
 export type Session = Database["public"]["Tables"]["session"]["Row"];
 export type SessionExercise =
@@ -76,15 +77,22 @@ export async function getSessionSummaries(
   options: { since?: string; limit?: number } = {},
 ): Promise<SessionSummary[]> {
   const supabase = await createClient();
-  let query = supabase
-    .from("v_session_summary")
-    .select("*")
-    .order("session_date", { ascending: false });
-  if (options.since) query = query.gte("session_date", options.since);
-  if (options.limit) query = query.limit(options.limit);
-  const { data, error } = await query;
-  if (error) throw error;
-  return data ?? [];
+  const query = () => {
+    let q = supabase
+      .from("v_session_summary")
+      .select("*")
+      .order("session_date", { ascending: false })
+      .order("session_id", { ascending: false });
+    if (options.since) q = q.gte("session_date", options.since);
+    return q;
+  };
+  if (options.limit) {
+    const { data, error } = await query().limit(options.limit);
+    if (error) throw error;
+    return data ?? [];
+  }
+  // All of it (History): years of training outgrow one response.
+  return selectAll((from, to) => query().range(from, to));
 }
 
 /** Whether the lifter has logged any session at all, however long ago. */

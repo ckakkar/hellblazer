@@ -7,6 +7,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
+import { countInWeek, pausedDays, readPauses } from "@/lib/program-week";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -121,18 +122,24 @@ export async function getProgramProgress(
   let lastSkipRow: { id: string; created_at: string } | null = null;
   if (weekStart && program.start_date) {
     const windowEnd = format(addDays(parseISO(weekStart), 7), "yyyy-MM-dd");
-    const [sessionCount, skipCount, lastSession, lastSkip] = await Promise.all([
+    // A workout from before a pause counts where the stopped calendar has it,
+    // so the read reaches back as far as the pauses add up to; nothing from
+    // before a restart counts (program-week.ts).
+    const pauses = readPauses(program.pauses);
+    const from = format(addDays(parseISO(weekStart), -pausedDays(pauses)), "yyyy-MM-dd");
+    const week = { weekStart, pauses, restartedAt: program.restarted_at };
+    const [sessionRows, skipRows, lastSession, lastSkip] = await Promise.all([
       supabase
         .from("session")
-        .select("id", { count: "exact", head: true })
+        .select("date, created_at")
         .eq("program_id", program.id)
-        .gte("date", weekStart)
+        .gte("date", from)
         .lt("date", windowEnd),
       supabase
         .from("program_skip")
-        .select("id", { count: "exact", head: true })
+        .select("date, created_at")
         .eq("program_id", program.id)
-        .gte("date", weekStart)
+        .gte("date", from)
         .lt("date", windowEnd),
       supabase
         .from("session")
@@ -149,8 +156,10 @@ export async function getProgramProgress(
         .limit(1)
         .maybeSingle(),
     ]);
-    sessionsThisWeek = sessionCount.count ?? 0;
-    skipsThisWeek = skipCount.count ?? 0;
+    if (sessionRows.error) throw sessionRows.error;
+    if (skipRows.error) throw skipRows.error;
+    sessionsThisWeek = countInWeek(sessionRows.data ?? [], week);
+    skipsThisWeek = countInWeek(skipRows.data ?? [], week);
     lastSessionRow = lastSession.data;
     lastSkipRow = lastSkip.data;
   }

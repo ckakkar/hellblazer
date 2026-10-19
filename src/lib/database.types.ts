@@ -191,6 +191,8 @@ export type Database = {
           name: string
           notes: string | null
           paused_at: string | null
+          pauses: Json
+          restarted_at: string | null
           start_date: string | null
           user_id: string
         }
@@ -202,6 +204,8 @@ export type Database = {
           name: string
           notes?: string | null
           paused_at?: string | null
+          pauses?: Json
+          restarted_at?: string | null
           start_date?: string | null
           user_id: string
         }
@@ -213,6 +217,8 @@ export type Database = {
           name?: string
           notes?: string | null
           paused_at?: string | null
+          pauses?: Json
+          restarted_at?: string | null
           start_date?: string | null
           user_id?: string
         }

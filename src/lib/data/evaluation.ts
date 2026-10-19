@@ -8,6 +8,7 @@ import {
   hasUnlimitedEvaluations,
   type EvalGate,
 } from "@/lib/evaluation-rules";
+import { selectAll } from "@/lib/data/paginate";
 
 /**
  * Whether the lifter may run a tier evaluation right now.
@@ -129,10 +130,16 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .order("date", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase
-        .from("v_session_summary")
-        .select("session_date, total_volume, working_sets")
-        .order("session_date", { ascending: true }),
+      // Paged: oldest first, a long history would otherwise lose its newest
+      // sessions past the response cap, and the judge would rule on old ones.
+      selectAll((from, to) =>
+        supabase
+          .from("v_session_summary")
+          .select("session_date, total_volume, working_sets")
+          .order("session_date", { ascending: true })
+          .order("session_id", { ascending: true })
+          .range(from, to),
+      ),
       // Per-exercise summary aggregated in Postgres. Reading one row per
       // exercise-session in date order used to hit the row cap and drop the
       // NEWEST lifts first, so the judge ruled on stale numbers.
@@ -142,17 +149,21 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .select("name, duration_weeks, start_date")
         .eq("is_active", true)
         .maybeSingle(),
-      supabase
-        .from("v_weekly_sets_per_muscle")
-        .select("muscle, sets, week")
-        .order("week", { ascending: false }),
+      selectAll((from, to) =>
+        supabase
+          .from("v_weekly_sets_per_muscle")
+          .select("muscle, sets, week")
+          .order("week", { ascending: false })
+          .order("muscle", { ascending: true })
+          .range(from, to),
+      ),
       supabase
         .from("profile")
         .select("sex, birth_date, birth_year, height_cm")
         .maybeSingle(),
     ]);
 
-  const sessions = sessionsRes.data ?? [];
+  const sessions = sessionsRes;
   const totalSessions = sessions.length;
   const firstSessionDate = sessions[0]?.session_date ?? null;
   const lastSessionDate = sessions[totalSessions - 1]?.session_date ?? null;
@@ -191,7 +202,7 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
     .slice(0, 24);
 
   // Average weekly sets per muscle over the most recent up-to-4 weeks
-  const weekly = weeklyRes.data ?? [];
+  const weekly = weeklyRes;
   const recentWeeks = [...new Set(weekly.map((r) => r.week))].slice(0, 4);
   const weekSet = new Set(recentWeeks);
   const muscleAgg = new Map<string, number>();

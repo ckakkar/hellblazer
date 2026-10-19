@@ -10,6 +10,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { pushConfigured, sendPush } from "@/lib/push";
 import { apnsConfigured, sendApns } from "@/lib/apns";
 import { gatherRecap, recapMessage, recapWeek } from "@/lib/weekly-recap";
+import { isValidTimeZone } from "@/lib/local-date";
+import { countInWeek, pausedDays, readPauses } from "@/lib/program-week";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,10 +28,11 @@ type Sub = {
 /** An iPhone running the app, reached through APNs. */
 type Device = { user_id: string; token: string; timezone: string | null };
 
-/** Local wall-clock hour (0-23) and date (yyyy-MM-dd) in a given IANA zone. */
+/** Local wall-clock hour (0-23) and date (yyyy-MM-dd) in a given IANA zone
+ *  (UTC for a stored one that isn't valid). */
 function localParts(tz: string | null): { hour: number; date: string } {
   const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: tz || "UTC",
+    timeZone: tz && isValidTimeZone(tz) ? tz : "UTC",
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -56,7 +59,7 @@ async function workoutDue(
   const { data: program } = await svc
     .from("program")
     .select(
-      "id, name, start_date, duration_weeks, paused_at, program_day(position, workout_template(name, day_label))",
+      "id, name, start_date, duration_weeks, paused_at, pauses, restarted_at, program_day(position, workout_template(name, day_label))",
     )
     .eq("user_id", userId)
     .eq("is_active", true)
@@ -76,21 +79,26 @@ async function workoutDue(
 
   const weekStart = format(addDays(start, (currentWeek - 1) * 7), "yyyy-MM-dd");
   const windowEnd = format(addDays(parseISO(weekStart), 7), "yyyy-MM-dd");
+  // The week as Home counts it: through pauses, and not from before a
+  // restart (program-week.ts).
+  const pauses = readPauses(program.pauses);
+  const from = format(addDays(parseISO(weekStart), -pausedDays(pauses)), "yyyy-MM-dd");
+  const week = { weekStart, pauses, restartedAt: program.restarted_at };
 
   const [sessWeek, skipWeek, sessToday, skipToday] = await Promise.all([
     svc
       .from("session")
-      .select("id", { count: "exact", head: true })
+      .select("date, created_at")
       .eq("user_id", userId)
       .eq("program_id", program.id)
-      .gte("date", weekStart)
+      .gte("date", from)
       .lt("date", windowEnd),
     svc
       .from("program_skip")
-      .select("id", { count: "exact", head: true })
+      .select("date, created_at")
       .eq("user_id", userId)
       .eq("program_id", program.id)
-      .gte("date", weekStart)
+      .gte("date", from)
       .lt("date", windowEnd),
     svc
       .from("session")
@@ -106,7 +114,7 @@ async function workoutDue(
       .eq("date", today),
   ]);
 
-  const doneThisWeek = (sessWeek.count ?? 0) + (skipWeek.count ?? 0);
+  const doneThisWeek = countInWeek(sessWeek.data ?? [], week) + countInWeek(skipWeek.data ?? [], week);
   if (doneThisWeek >= daysPerWeek) return null; // week's work is done
   if ((sessToday.count ?? 0) + (skipToday.count ?? 0) > 0) return null; // handled today
 
@@ -178,60 +186,68 @@ export async function GET(request: NextRequest) {
 
   let notified = 0;
   let recapped = 0;
+  let failed = 0;
   for (const p of profiles ?? []) {
-    const userSubs = byUser.get(p.user_id) ?? [];
-    const userPhones = phonesByUser.get(p.user_id) ?? [];
-    if (userSubs.length === 0 && userPhones.length === 0) continue;
+    // One lifter's bad data (a stored timezone that isn't one, say) can't
+    // stop the run for everyone after them.
+    try {
+      const userSubs = byUser.get(p.user_id) ?? [];
+      const userPhones = phonesByUser.get(p.user_id) ?? [];
+      if (userSubs.length === 0 && userPhones.length === 0) continue;
 
-    const send = async (payload: { title: string; body: string; url: string; tag: string }) => {
-      let sent = 0;
-      for (const s of userSubs) {
-        const r = await sendPush(s, payload);
-        if (r.ok) sent++;
-        else if (r.gone)
-          await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
-      }
-      for (const d of userPhones) {
-        const r = await sendApns(d.token, payload);
-        if (r.ok) sent++;
-        else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
-      }
-      return sent;
-    };
-
-    // "Today" in the user's primary timezone, for the due check and the recap.
-    const { date: localDate, hour } = localParts(userPhones[0]?.timezone ?? userSubs[0]?.timezone ?? null);
-
-    // reminder_hour set = reminders on. (Hobby's daily cron runs once a day, so
-    // the exact hour can't be honored; the value gates on/off.)
-    if (p.reminder_hour != null) {
-      const due = await workoutDue(svc, p.user_id, localDate);
-      if (due) {
-        notified += await send({
-          title: "Time to train",
-          body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
-          url: "/log",
-          tag: "reminder",
-        });
-      }
-    }
-
-    // The Sunday recap, once a week (recap_sent_on is the week's Monday).
-    const week = p.weekly_recap ? recapWeek(localDate, hour) : null;
-    if (week && p.recap_sent_on !== week) {
-      try {
-        const facts = await gatherRecap(svc, p.user_id, week);
-        // Opens the week as a card to share.
-        const sent = await send({ ...recapMessage(facts), url: `/dashboard?week-card=${week}`, tag: "recap" });
-        if (sent > 0) {
-          recapped++;
-          await svc.from("profile").update({ recap_sent_on: week }).eq("user_id", p.user_id);
+      const send = async (payload: { title: string; body: string; url: string; tag: string }) => {
+        let sent = 0;
+        for (const s of userSubs) {
+          const r = await sendPush(s, payload);
+          if (r.ok) sent++;
+          else if (r.gone)
+            await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
         }
-      } catch (err) {
-        console.error("weekly recap", p.user_id, err);
+        for (const d of userPhones) {
+          const r = await sendApns(d.token, payload);
+          if (r.ok) sent++;
+          else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
+        }
+        return sent;
+      };
+
+      // "Today" in the user's primary timezone, for the due check and the recap.
+      const { date: localDate, hour } = localParts(userPhones[0]?.timezone ?? userSubs[0]?.timezone ?? null);
+
+      // reminder_hour set = reminders on. (Hobby's daily cron runs once a day, so
+      // the exact hour can't be honored; the value gates on/off.)
+      if (p.reminder_hour != null) {
+        const due = await workoutDue(svc, p.user_id, localDate);
+        if (due) {
+          notified += await send({
+            title: "Time to train",
+            body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
+            url: "/log",
+            tag: "reminder",
+          });
+        }
       }
+
+      // The Sunday recap, once a week (recap_sent_on is the week's Monday).
+      const week = p.weekly_recap ? recapWeek(localDate, hour) : null;
+      if (week && p.recap_sent_on !== week) {
+        try {
+          const facts = await gatherRecap(svc, p.user_id, week);
+          // Opens the week as a card to share.
+          const sent = await send({ ...recapMessage(facts), url: `/dashboard?week-card=${week}`, tag: "recap" });
+          if (sent > 0) {
+            recapped++;
+            await svc.from("profile").update({ recap_sent_on: week }).eq("user_id", p.user_id);
+          }
+        } catch (err) {
+          console.error("weekly recap", p.user_id, err);
+        }
+      }
+    } catch (err) {
+      failed++;
+      console.error("reminders: skipped a user", p.user_id, err);
     }
   }
 
-  return NextResponse.json({ ok: true, notified, recapped });
+  return NextResponse.json({ ok: true, notified, recapped, failed });
 }

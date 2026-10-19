@@ -73,6 +73,17 @@ export async function enableNativePush(): Promise<string | null> {
   }
 }
 
+/**
+ * On sign-out: this phone stops getting the account's notifications (its
+ * token leaves the account), and the next account starts with them off.
+ * iOS's permission stays, so turning them on again is one tap.
+ */
+export async function forgetNativePush(): Promise<void> {
+  const token = storedToken();
+  storeToken(null);
+  if (token) await unregisterApnsDevice({ token });
+}
+
 export async function disableNativePush(): Promise<void> {
   const token = storedToken();
   if (token) await unregisterApnsDevice({ token });

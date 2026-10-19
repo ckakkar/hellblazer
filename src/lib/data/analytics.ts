@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/settings";
 import { getExerciseStats } from "@/lib/data/exercise-stats";
 import { MUSCLE_CHART_ORDER, type Muscle } from "@/lib/muscles";
+import { selectAll } from "@/lib/data/paginate";
 
 function isoWeekKey(d: Date): string {
   return format(startOfISOWeek(d), "yyyy-MM-dd");
@@ -195,14 +196,19 @@ export async function getExerciseProgression(
   exerciseId: string,
 ): Promise<ExerciseProgression> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("v_exercise_progression")
-    .select("*")
-    .eq("exercise_id", exerciseId)
-    .order("session_date", { ascending: true });
-  if (error) throw error;
+  // Every session of the lift, oldest first: paged, or a long-trained lift
+  // would lose its newest sessions past the response cap.
+  const data = await selectAll((from, to) =>
+    supabase
+      .from("v_exercise_progression")
+      .select("*")
+      .eq("exercise_id", exerciseId)
+      .order("session_date", { ascending: true })
+      .order("session_id", { ascending: true })
+      .range(from, to),
+  );
 
-  const points = (data ?? [])
+  const points = data
     .filter((r) => r.session_date)
     .map((r) => ({
       date: r.session_date as string,
@@ -214,10 +220,7 @@ export async function getExerciseProgression(
   const pr: ExercisePR = {
     topWeight: Math.max(0, ...points.map((p) => p.topWeight)),
     bestEst1rm: Math.max(0, ...points.map((p) => p.est1rm)),
-    bestSetVolume: Math.max(
-      0,
-      ...(data ?? []).map((r) => Number(r.best_set_volume ?? 0)),
-    ),
+    bestSetVolume: Math.max(0, ...data.map((r) => Number(r.best_set_volume ?? 0))),
     sessionsLogged: points.length,
   };
   return { points, pr };

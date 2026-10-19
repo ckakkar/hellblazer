@@ -232,6 +232,20 @@ describe("logging sets", () => {
     expect(saved.weight_kg).toBeCloseTo(102.06, 2);
   });
 
+  it("converts by the unit the set was logged in, not today's", async () => {
+    // Logged in kg while offline; the lifter has switched to pounds since.
+    await handleWatch(signedIn({ "x-fatty-unit": "lb" }), (ctx) => saveWatchSet(ctx, set({ unit: "kg" })));
+    expect(tables.set.find((row) => row.id === set().id)!.weight_kg).toBeCloseTo(225, 2);
+  });
+
+  it("keeps the time a queued set was logged, if it's believable", async () => {
+    const loggedAt = Date.now() - 20 * 60 * 1000;
+    await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set({ loggedAt })));
+    expect(tables.set.find((row) => row.id === set().id)!.created_at).toBe(new Date(loggedAt).toISOString());
+    await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set({ id: "40000000-0000-4000-8000-0000000000ff", loggedAt: Date.now() + 3_600_000 })));
+    expect(tables.set.find((row) => row.id === "40000000-0000-4000-8000-0000000000ff")!.created_at).toBeUndefined();
+  });
+
   it("updates rather than duplicates when the same set is sent again", async () => {
     await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set()));
     await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set({ reps: 6 })));

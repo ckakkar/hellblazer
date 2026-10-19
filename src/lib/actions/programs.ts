@@ -7,6 +7,7 @@ import { getAuthedContext } from "@/lib/auth";
 import { getTimeZone, getToday } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
 import type { TablesUpdate } from "@/lib/database.types";
+import { readPauses, type Pause } from "@/lib/program-week";
 
 export async function createProgram(input: {
   name: string;
@@ -71,7 +72,13 @@ export async function updateProgram(input: {
   const patch: TablesUpdate<"program"> = {};
   if (v.name !== undefined) patch.name = v.name;
   if (v.durationWeeks !== undefined) patch.duration_weeks = v.durationWeeks;
-  if (v.startDate !== undefined) patch.start_date = v.startDate;
+  if (v.startDate !== undefined) {
+    // A new start re-anchors the block: earlier pauses and a restart no
+    // longer mean anything against it (program-week.ts).
+    patch.start_date = v.startDate;
+    patch.pauses = [];
+    patch.restarted_at = null;
+  }
   if (v.notes !== undefined) patch.notes = v.notes;
   const { error } = await supabase.from("program").update(patch).eq("id", v.id);
   if (error) throw error;
@@ -161,7 +168,7 @@ export async function resumeProgram(input: { id: string }) {
   const { supabase } = await getAuthedContext();
   const { data: p } = await supabase
     .from("program")
-    .select("paused_at, start_date")
+    .select("paused_at, start_date, pauses")
     .eq("id", id)
     .maybeSingle();
   if (!p || !p.paused_at) return; // not paused
@@ -182,6 +189,10 @@ export async function resumeProgram(input: { id: string }) {
         addDays(parseISO(p.start_date), pausedForDays),
         "yyyy-MM-dd",
       );
+      // And the pause itself, so what was done before it keeps counting in
+      // the week it was done in (program-week.ts).
+      const pause: Pause = { at: dateInTimeZone(new Date(p.paused_at), tz), days: pausedForDays };
+      patch.pauses = [...readPauses(p.pauses), pause];
     }
   }
   const { error } = await supabase.from("program").update(patch).eq("id", id);
@@ -226,13 +237,19 @@ export async function rollbackLastDay(input: {
   const sessTime = lastSession ? new Date(lastSession.created_at).getTime() : -1;
   if (skipTime < 0 && sessTime < 0) return { removed: "none" };
 
+  // Only reported once the row is really gone: a refused delete (an error,
+  // or RLS matching nothing) throws, and the control says it didn't happen.
   let removed: "skip" | "session";
   if (skipTime >= sessTime) {
-    await supabase.from("program_skip").delete().eq("id", lastSkip!.id);
+    const { data, error } = await supabase.from("program_skip").delete().eq("id", lastSkip!.id).select("id");
+    if (error) throw error;
+    if (!data?.length) throw new Error("The skip wasn't removed");
     removed = "skip";
   } else {
     // Deleting the session cascades its exercises + sets.
-    await supabase.from("session").delete().eq("id", lastSession!.id);
+    const { data, error } = await supabase.from("session").delete().eq("id", lastSession!.id).select("id");
+    if (error) throw error;
+    if (!data?.length) throw new Error("The session wasn't removed");
     removed = "session";
   }
 
@@ -250,13 +267,17 @@ export async function resetProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase } = await getAuthedContext();
   // A restart must also clear skips, or old skips (dated today) would advance
-  // the fresh week-1 rotation before it even begins.
-  await supabase.from("program_skip").delete().eq("program_id", id);
+  // the fresh week-1 rotation before it even begins; and it stamps the
+  // moment, so a workout done earlier today doesn't count either.
+  const { error: skipsError } = await supabase.from("program_skip").delete().eq("program_id", id);
+  if (skipsError) throw skipsError;
   const { error } = await supabase
     .from("program")
     .update({
       start_date: await getToday(),
       paused_at: null,
+      pauses: [],
+      restarted_at: new Date().toISOString(),
     })
     .eq("id", id);
   if (error) throw error;
