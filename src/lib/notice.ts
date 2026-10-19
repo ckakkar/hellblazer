@@ -4,6 +4,8 @@
  * raised by `useAction` (`@/lib/use-action`). The logger keeps its own,
  * which also carries its PR callout.
  */
+import { haptic } from "@/lib/haptics";
+
 export type Notice = { id: number; text: string };
 
 let current: Notice | null = null;
@@ -12,6 +14,8 @@ const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
 export function showNotice(text: string) {
+  // In the app, the system's error buzz, as a failed action gets on iOS.
+  haptic("error");
   current = { id: (current?.id ?? 0) + 1, text };
   clearTimeout(timer);
   timer = setTimeout(dismissNotice, 6000);

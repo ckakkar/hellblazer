@@ -740,6 +740,7 @@ export function SessionLogger({
   );
 
   const showNotice = useCallback((message: string) => {
+    haptic("error");
     setNotice(message);
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
     noticeTimer.current = setTimeout(() => setNotice(null), 6000);
@@ -1797,7 +1798,8 @@ export function SessionLogger({
             {notice && (
               <div
                 role="alert"
-                className="pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] px-4 py-3 shadow-raised backdrop-blur"
+                data-state="open"
+                className="hb-toast pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] px-4 py-3 shadow-raised backdrop-blur"
               >
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
                 <p className="min-w-0 flex-1 text-xs leading-5 text-text">

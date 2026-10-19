@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
-import { Loader2, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
@@ -18,6 +18,15 @@ import { selectAllOnFocus } from "@/lib/utils";
 import { healthSyncOn, withNative } from "@/lib/native-plugins";
 import { useAction } from "@/lib/use-action";
 import { SwipeRow } from "@/components/ui/swipe-row";
+import { useListGlide } from "@/components/ui/use-list-glide";
+
+type Edit = { kind: "add"; log: BodyweightLog } | { kind: "remove"; id: string };
+
+/** The entries after an edit, newest date first, as the server lists them. */
+function editLogs(logs: BodyweightLog[], edit: Edit): BodyweightLog[] {
+  if (edit.kind === "remove") return logs.filter((l) => l.id !== edit.id);
+  return [edit.log, ...logs].sort((a, b) => b.date.localeCompare(a.date) || b.created_at.localeCompare(a.created_at));
+}
 
 /** Entries listed before "Show all": the chart above already shows the trend. */
 const RECENT = 5;
@@ -33,26 +42,39 @@ export function BodyweightManager({
    *  both sides of hydration. */
   today: string;
 }) {
-  const [pending, start] = useAction("save the change");
+  const [, start] = useAction("save the change");
   const [date, setDate] = useState(today);
   const [weight, setWeight] = useState("");
   const [showAll, setShowAll] = useState(false);
-  const shown = showAll ? logs : logs.slice(0, RECENT);
+  // A new entry or a deleted one shows at once; the server catches up.
+  const [entries, applyLocal] = useOptimistic(logs, editLogs);
+  const shown = showAll ? entries : entries.slice(0, RECENT);
+  const list = useRef<HTMLUListElement>(null);
+  useListGlide(list, shown.map((l) => l.id).join());
 
   function submit() {
     const w = Number(weight);
     if (!Number.isFinite(w) || w <= 0) return;
     const kg = fromDisplayWeight(w, unit);
-    start(async () => {
-      await logBodyweight({ date, weightKg: kg });
-      setWeight("");
-      // In the iOS app with Health sync on, the entry goes to Apple Health
-      // too: timed now for today, midday for an earlier date.
-      if (healthSyncOn()) {
-        const when = date === today ? Date.now() : new Date(`${date}T12:00:00`).getTime();
-        withNative((api) => api.saveBodyweight({ kg, date: when }));
-      }
-    });
+    const typed = weight;
+    setWeight("");
+    start(
+      async () => {
+        applyLocal({
+          kind: "add",
+          log: { id: `pending-${Date.now()}`, user_id: "", date, weight_kg: kg, created_at: new Date().toISOString() },
+        });
+        await logBodyweight({ date, weightKg: kg });
+        // In the iOS app with Health sync on, the entry goes to Apple Health
+        // too: timed now for today, midday for an earlier date.
+        if (healthSyncOn()) {
+          const when = date === today ? Date.now() : new Date(`${date}T12:00:00`).getTime();
+          withNative((api) => api.saveBodyweight({ kg, date: when }));
+        }
+      },
+      // Didn't go through: the number goes back in the field.
+      () => setWeight(typed),
+    );
   }
 
   return (
@@ -77,19 +99,15 @@ export function BodyweightManager({
             className="flex-1"
             aria-label="Bodyweight"
           />
-          <Button onClick={submit} disabled={pending || !weight}>
-            {pending ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Plus className="size-4" />
-            )}
+          <Button onClick={submit} disabled={!weight}>
+            <Plus className="size-4" />
             Log
           </Button>
         </div>
       </div>
 
-      {logs.length > 0 && (
-        <ul className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-[#18181b]">
+      {entries.length > 0 && (
+        <ul ref={list} className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-[#18181b]">
           {shown.map((l) => (
             // `justify-between` with no gap and nothing to stop either side
             // wrapping put the date hard against the weight at 360px and broke
@@ -97,10 +115,11 @@ export function BodyweightManager({
             // never wraps, and the two are held apart.
             // On a touch screen an entry swipes away, as in Mail; with a
             // mouse or trackpad it has a delete button.
-            <li key={l.id}>
+            <li key={l.id} data-glide={l.id}>
               <SwipeRow
                 onAction={() =>
                   start(async () => {
+                    applyLocal({ kind: "remove", id: l.id });
                     await deleteBodyweight({ id: l.id });
                   })
                 }
@@ -117,9 +136,9 @@ export function BodyweightManager({
                       <ConfirmIconButton
                         label="Delete entry"
                         confirmLabel="Tap again to delete entry"
-                        disabled={pending}
                         onConfirm={() =>
                           start(async () => {
+                            applyLocal({ kind: "remove", id: l.id });
                             await deleteBodyweight({ id: l.id });
                           })
                         }
@@ -132,14 +151,14 @@ export function BodyweightManager({
           ))}
         </ul>
       )}
-      {logs.length > RECENT && (
+      {entries.length > RECENT && (
         <button
           type="button"
           onClick={() => setShowAll((v) => !v)}
           aria-expanded={showAll}
           className="mt-1 inline-flex h-10 items-center px-1 text-[13px] text-muted transition-colors hover:text-text"
         >
-          {showAll ? "Show fewer" : `Show all ${logs.length}`}
+          {showAll ? "Show fewer" : `Show all ${entries.length}`}
         </button>
       )}
     </div>

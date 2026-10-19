@@ -5,10 +5,11 @@ import { isNativeApp } from "@/lib/native";
  * - `rest-done`: the rest is over.
  * - `success`: something big went through (a workout finished).
  * - `warning`: a destructive hold completed (delete, wipe).
+ * - `error`: something didn't go through (a notice says what).
  * - `tap`: a set landed, a rest started. A light knock.
  * - `tick`: a value stepped or a switch flipped, like a picker's detent.
  */
-export type HapticCue = "record" | "rest-done" | "success" | "warning" | "tap" | "tick";
+export type HapticCue = "record" | "rest-done" | "success" | "warning" | "error" | "tap" | "tick";
 
 /** Capacitor's selection haptic only fires after selectionStart(). */
 let selectionPrimed = false;
@@ -39,6 +40,8 @@ export function haptic(cue: HapticCue) {
             return Haptics.impact({ style: ImpactStyle.Light });
           case "warning":
             return Haptics.notification({ type: NotificationType.Warning });
+          case "error":
+            return Haptics.notification({ type: NotificationType.Error });
           case "rest-done":
             return Haptics.notification({ type: NotificationType.Warning });
           case "record":
