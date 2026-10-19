@@ -32,6 +32,8 @@ export function SwipeRow({
   const id = useId();
   const row = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
+  const action = useRef<HTMLButtonElement>(null);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gesture = useRef<{ x: number; y: number; from: number; axis: "x" | "y" | null; pointer: number } | null>(null);
   const offset = useRef(0);
   const swiped = useRef(false);
@@ -43,6 +45,14 @@ export function SwipeRow({
     if (!el) return;
     el.style.transition = animate ? EASE : "none";
     el.style.transform = x ? `translate3d(${x}px, 0, 0)` : "";
+    // The red action only exists while the row is off its rest: at rest a
+    // fraction of a pixel of it would show round the row's edges.
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    const red = action.current;
+    if (!red) return;
+    if (x !== 0) red.style.visibility = "visible";
+    else if (!animate) red.style.visibility = "hidden";
+    else hideTimer.current = setTimeout(() => offset.current === 0 && (red.style.visibility = "hidden"), 300);
   }, []);
 
   const close = useCallback(() => place(0, true), [place]);
@@ -137,11 +147,13 @@ export function SwipeRow({
       onClickCapture={onClickCapture}
     >
       <button
+        ref={action}
         type="button"
         data-swipe-action
         tabIndex={-1}
         aria-hidden
         onClick={act}
+        style={{ visibility: "hidden" }}
         className="absolute inset-y-0 right-0 flex w-full items-center justify-end bg-danger pr-5 text-[15px] font-semibold text-white"
       >
         {label}

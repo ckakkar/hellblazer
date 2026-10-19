@@ -11,7 +11,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
@@ -22,11 +21,7 @@ import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
 import type { ActiveSession } from "@/lib/data/sessions";
 import type { Preset } from "@/lib/presets";
-import {
-  createProgram,
-  deleteProgram,
-  setActiveProgram,
-} from "@/lib/actions/programs";
+import { createProgram, setActiveProgram } from "@/lib/actions/programs";
 import { useAction } from "@/lib/use-action";
 import { useIPadApp } from "@/components/ipad-app";
 
@@ -97,11 +92,16 @@ export function ProgramsManager({
             <SectionLabel>Your programs</SectionLabel>
             <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
               {programs.map((p) => (
-                <div key={p.id} className="flex items-center gap-2 pl-4 pr-2">
+                // The whole row opens the program (a stretched link); Make
+                // active sits above it. Deleting is on the program's page.
+                <div
+                  key={p.id}
+                  className="relative flex items-center gap-2 pl-4 pr-3 transition-colors hover:bg-white/[0.03] has-[a:active]:bg-white/[0.05]"
+                >
                   <Link
                     href={`/programs/${p.id}`}
                     transitionTypes={["nav-forward"]}
-                    className="min-w-0 flex-1 py-3.5"
+                    className="min-w-0 flex-1 py-3.5 after:absolute after:inset-0 focus-visible:outline-none focus-visible:after:rounded-2xl focus-visible:after:ring-2 focus-visible:after:ring-inset focus-visible:after:ring-text/40"
                   >
                     <span className="flex items-center gap-2">
                       <span className="truncate text-[15px] font-medium text-text">{p.name}</span>
@@ -116,6 +116,7 @@ export function ProgramsManager({
                     <Button
                       variant="secondary"
                       size="sm"
+                      className="z-10"
                       disabled={pending}
                       onClick={() =>
                         start(async () => {
@@ -126,24 +127,7 @@ export function ProgramsManager({
                       Make active
                     </Button>
                   )}
-                  <ConfirmIconButton
-                    label="Delete program"
-                    confirmLabel="Tap again to delete program"
-                    disabled={pending}
-                    onConfirm={() =>
-                      start(async () => {
-                        await deleteProgram({ id: p.id });
-                      })
-                    }
-                  />
-                  <Link
-                    href={`/programs/${p.id}`}
-                    transitionTypes={["nav-forward"]}
-                    aria-label={`Open ${p.name}`}
-                    className="flex size-8 items-center justify-center"
-                  >
-                    <ChevronRight className="size-4 text-muted/70" />
-                  </Link>
+                  <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
                 </div>
               ))}
             </div>

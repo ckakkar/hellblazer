@@ -12,6 +12,7 @@ import {
 import { kgToLb, type Unit } from "@/lib/units";
 import { cn } from "@/lib/utils";
 import { ChartEmpty } from "./chart-kit";
+import { Segmented } from "@/components/ui/segmented";
 
 /** One calendar day of lifted tonnage, canonical kg. */
 export type DayVolume = { date: string; volumeKg: number };
@@ -128,30 +129,17 @@ export function VolumeTrendCard({
             )}
           </p>
         </div>
-        <div
-          role="radiogroup"
-          aria-label="Volume time range"
-          className="flex shrink-0 rounded-full bg-white/[0.06] p-0.5"
-        >
-          {RANGES.map((r) => (
-            <button
-              key={r.key}
-              type="button"
-              role="radio"
-              aria-checked={range === r.key}
-              onClick={() => {
-                setRange(r.key);
-                setActive(null);
-              }}
-              className={cn(
-                "tnum h-7 rounded-full px-2.5 text-[12px] font-medium transition-colors",
-                range === r.key ? "bg-white/[0.12] text-text" : "text-muted hover:text-text",
-              )}
-            >
-              {r.label}
-            </button>
-          ))}
-        </div>
+        <Segmented
+          label="Volume time range"
+          size="sm"
+          options={RANGES.map((r) => ({ value: r.key, label: r.label }))}
+          value={range}
+          onChange={(key) => {
+            setRange(key);
+            setActive(null);
+          }}
+          className="tnum shrink-0"
+        />
       </div>
 
       {empty ? (

@@ -30,7 +30,7 @@ export function Switch({
         onChange(!checked);
       }}
       className={cn(
-        "relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-60",
+        "hb-hit relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-60",
         checked ? "bg-accent" : "bg-white/[0.16]",
       )}
     >

@@ -295,7 +295,7 @@ export default async function DashboardPage({
               action={
                 <Link
                   href="/history"
-                  className="text-[13px] font-medium text-muted transition-colors hover:text-text"
+                  className="hb-hit text-[13px] font-medium text-muted transition-colors hover:text-text"
                 >
                   See all
                 </Link>

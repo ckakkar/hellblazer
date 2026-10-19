@@ -20,7 +20,7 @@ export function SessionDate({
   const [date, setDate] = useState(defaultValue);
   const saved = useRef(defaultValue);
   return (
-    <label className="relative inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13px] text-muted focus-within:ring-2 focus-within:ring-text/25">
+    <label className="hb-hit relative inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 text-[13px] text-muted focus-within:ring-2 focus-within:ring-text/25">
       <span className="tnum">{format(parseISO(date), "EEE d MMM")}</span>
       <CalendarDays aria-hidden className="size-3.5" />
       <input

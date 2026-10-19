@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { cn, selectAllOnFocus } from "@/lib/utils";
+import { selectAllOnFocus } from "@/lib/utils";
 import { updateProfileDetails } from "@/lib/actions/profile";
 import { ageOn, birthdayBounds, isAcceptedBirthday } from "@/lib/age";
 import { useAction } from "@/lib/use-action";
+import { Segmented } from "@/components/ui/segmented";
 
 type Sex = "male" | "female" | "other";
 const SEXES: { key: Sex; label: string }[] = [
@@ -92,28 +93,19 @@ export function ProfileDetails({
 
       <div className="grid grid-cols-1 gap-1.5">
         <span className="text-xs font-medium text-muted">Sex</span>
-        <div className="inline-flex w-full rounded-full bg-white/[0.06] p-0.5">
-          {SEXES.map((o) => (
-            <button
-              key={o.key}
-              type="button"
-              aria-pressed={sex === o.key}
-              onClick={() => {
-                const next = sex === o.key ? null : o.key;
-                setSex(next);
-                persist({ sex: next });
-              }}
-              className={cn(
-                "h-9 flex-1 rounded-full px-3 text-[14px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/40",
-                sex === o.key
-                  ? "bg-white/[0.12] text-text"
-                  : "text-muted hover:text-text",
-              )}
-            >
-              {o.label}
-            </button>
-          ))}
-        </div>
+        {/* Optional: tapping the one chosen clears it. */}
+        <Segmented
+          label="Sex"
+          size="lg"
+          options={SEXES.map((o) => ({ value: o.key, label: o.label }))}
+          value={sex}
+          onChange={(key) => {
+            const next = sex === key ? null : key;
+            setSex(next);
+            persist({ sex: next });
+          }}
+          className="grid w-full"
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-3 max-[359px]:grid-cols-1">

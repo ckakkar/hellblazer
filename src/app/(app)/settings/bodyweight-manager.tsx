@@ -17,6 +17,7 @@ import type { BodyweightLog } from "@/lib/data/bodyweight";
 import { selectAllOnFocus } from "@/lib/utils";
 import { healthSyncOn, withNative } from "@/lib/native-plugins";
 import { useAction } from "@/lib/use-action";
+import { SwipeRow } from "@/components/ui/swipe-row";
 
 /** Entries listed before "Show all": the chart above already shows the trend. */
 const RECENT = 5;
@@ -88,31 +89,45 @@ export function BodyweightManager({
       </div>
 
       {logs.length > 0 && (
-        <ul className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-surface-2/60">
+        <ul className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-[#18181b]">
           {shown.map((l) => (
             // `justify-between` with no gap and nothing to stop either side
             // wrapping put the date hard against the weight at 360px and broke
             // both onto two lines at 320px. The date now truncates, the reading
             // never wraps, and the two are held apart.
-            <li key={l.id} className="flex items-center gap-3 px-4 py-2.5">
-              <span className="min-w-0 flex-1 truncate tnum text-sm text-muted">
-                {format(parseISO(l.date), "d MMM yyyy")}
-              </span>
-              <div className="flex shrink-0 items-center gap-3">
-                <span className="whitespace-nowrap tnum text-sm tabular-nums text-text">
-                  {trimNum(toDisplayWeight(l.weight_kg, unit))} {unit}
-                </span>
-                <ConfirmIconButton
-                  label="Delete entry"
-                  confirmLabel="Tap again to delete entry"
-                  disabled={pending}
-                  onConfirm={() =>
-                    start(async () => {
-                      await deleteBodyweight({ id: l.id });
-                    })
-                  }
-                />
-              </div>
+            // On a touch screen an entry swipes away, as in Mail; with a
+            // mouse or trackpad it has a delete button.
+            <li key={l.id}>
+              <SwipeRow
+                onAction={() =>
+                  start(async () => {
+                    await deleteBodyweight({ id: l.id });
+                  })
+                }
+              >
+                <div className="flex min-h-11 items-center gap-3 bg-[#18181b] px-4 py-2.5">
+                  <span className="min-w-0 flex-1 truncate tnum text-sm text-muted">
+                    {format(parseISO(l.date), "d MMM yyyy")}
+                  </span>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <span className="whitespace-nowrap tnum text-sm tabular-nums text-text">
+                      {trimNum(toDisplayWeight(l.weight_kg, unit))} {unit}
+                    </span>
+                    <div className="hidden pointer-fine:block">
+                      <ConfirmIconButton
+                        label="Delete entry"
+                        confirmLabel="Tap again to delete entry"
+                        disabled={pending}
+                        onConfirm={() =>
+                          start(async () => {
+                            await deleteBodyweight({ id: l.id });
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </div>
+              </SwipeRow>
             </li>
           ))}
         </ul>

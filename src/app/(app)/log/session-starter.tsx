@@ -8,6 +8,7 @@ import { todayLocalISO } from "@/lib/local-date";
 import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { cn } from "@/lib/utils";
 import { useAction } from "@/lib/use-action";
+import { Collapse } from "@/components/ui/collapse";
 
 type TemplateExercisePreview = {
   name: string;
@@ -130,46 +131,44 @@ export function SessionStarter({
                     />
                   </button>
 
-                  {expanded && (
-                    <div className="px-4 pb-4">
-                      {t.exercises.length > 0 ? (
-                        <ol className="divide-y divide-white/[0.05] rounded-xl bg-surface-2/60">
-                          {t.exercises.map((ex, i) => (
-                            <li key={i} className="flex items-center gap-3 px-3.5 py-2.5">
-                              <span className="tnum w-4 shrink-0 text-right text-[13px] text-muted">
-                                {i + 1}
+                  <Collapse open={expanded} className="px-4 pb-4">
+                    {t.exercises.length > 0 ? (
+                      <ol className="divide-y divide-white/[0.05] rounded-xl bg-surface-2/60">
+                        {t.exercises.map((ex, i) => (
+                          <li key={i} className="flex items-center gap-3 px-3.5 py-2.5">
+                            <span className="tnum w-4 shrink-0 text-right text-[13px] text-muted">
+                              {i + 1}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-[14px] text-text">
+                              {ex.name}
+                            </span>
+                            {ex.muscle && (
+                              <span className="hidden text-[13px] text-muted sm:inline">
+                                {MUSCLE_LABEL[ex.muscle]}
                               </span>
-                              <span className="min-w-0 flex-1 truncate text-[14px] text-text">
-                                {ex.name}
-                              </span>
-                              {ex.muscle && (
-                                <span className="hidden text-[13px] text-muted sm:inline">
-                                  {MUSCLE_LABEL[ex.muscle]}
-                                </span>
-                              )}
-                              <span className="tnum shrink-0 text-[13px] text-muted">
-                                {ex.targetSets ?? 3} × {ex.targetRepRange || "-"}
-                              </span>
-                            </li>
-                          ))}
-                        </ol>
-                      ) : (
-                        <p className="py-3 text-center text-[14px] text-muted">
-                          No exercises in this template yet.
-                        </p>
-                      )}
-                      <Button
-                        variant="accent"
-                        size="lg"
-                        className="mt-3 w-full"
-                        disabled={pending}
-                        onClick={() => begin(t.id, t.programDayId)}
-                      >
-                        {starting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
-                        Start workout
-                      </Button>
-                    </div>
-                  )}
+                            )}
+                            <span className="tnum shrink-0 text-[13px] text-muted">
+                              {ex.targetSets ?? 3} × {ex.targetRepRange || "-"}
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="py-3 text-center text-[14px] text-muted">
+                        No exercises in this template yet.
+                      </p>
+                    )}
+                    <Button
+                      variant="accent"
+                      size="lg"
+                      className="mt-3 w-full"
+                      disabled={pending}
+                      onClick={() => begin(t.id, t.programDayId)}
+                    >
+                      {starting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                      Start workout
+                    </Button>
+                  </Collapse>
                 </div>
               );
             })}

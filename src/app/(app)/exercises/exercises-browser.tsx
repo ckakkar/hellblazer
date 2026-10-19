@@ -27,6 +27,7 @@ import {
   deleteCustomExercise,
 } from "@/lib/actions/exercises";
 import { useAction } from "@/lib/use-action";
+import { Collapse } from "@/components/ui/collapse";
 
 export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
   const [q, setQ] = useState("");
@@ -211,12 +212,12 @@ function ExerciseRow({
           )}
         </div>
       </div>
-      {guide && open && (
-        <div id={guideId} className="px-4 pb-4">
+      {guide && (
+        <Collapse open={open} id={guideId} className="px-4 pb-4">
           <p className="rounded-xl bg-white/[0.04] px-3.5 py-3 text-[14px] leading-[1.55] text-muted">
             {guide}
           </p>
-        </div>
+        </Collapse>
       )}
     </div>
   );

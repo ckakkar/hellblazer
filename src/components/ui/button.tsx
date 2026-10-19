@@ -19,10 +19,11 @@ const buttonVariants = cva(
         danger: "bg-danger/10 text-danger hover:bg-danger/15",
       },
       size: {
-        sm: "h-8 px-3 text-[13px]",
+        // A finger gets 44pt around the smaller sizes (.hb-hit).
+        sm: "hb-hit h-8 px-3 text-[13px]",
         md: "h-10 px-4 text-sm",
         lg: "h-12 px-5 text-[15px]",
-        icon: "size-10",
+        icon: "hb-hit size-10",
         xl: "h-14 px-6 text-base",
       },
     },

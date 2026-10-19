@@ -297,6 +297,75 @@ button,
   }
 }
 
+/* A small control that a finger still hits: on a touch screen its hit area
+   grows to Apple's 44pt minimum around it, without changing how it looks.
+   A control that uses ::after for something else can't take it. */
+@layer components {
+  @media (pointer: coarse) {
+    /* In the components layer, so a control placed with `absolute` keeps it. */
+    .hb-hit {
+      position: relative;
+    }
+    .hb-hit::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      translate: -50% -50%;
+    }
+  }
+}
+
+/* ── Controls ─────────────────────────────────────────────────────────────
+   The segmented control's thumb glides to the segment chosen (every segment
+   is one width, so it's a translate); a disclosure opens by its height
+   (a grid row from 0fr to 1fr, the one layout animation, as there's no
+   transform that reveals space) while its content fades in. */
+.hb-seg-thumb {
+  width: calc((100% - 0.25rem) / var(--seg-n));
+  transition:
+    transform 260ms var(--ease-out),
+    opacity 150ms ease-out;
+}
+.hb-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 260ms var(--ease-out),
+    opacity 180ms ease-out;
+}
+.hb-collapse[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 280ms var(--ease-out),
+    opacity 240ms ease-out 40ms;
+}
+.hb-collapse > * {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* A notice drops in from the top and goes back the way it came. */
+.hb-toast {
+  transition:
+    transform 260ms var(--ease-out),
+    opacity 200ms ease-out;
+}
+@starting-style {
+  .hb-toast[data-state="open"] {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.98);
+  }
+}
+.hb-toast[data-state="closed"] {
+  opacity: 0;
+  transform: translateY(-14px) scale(0.98);
+}
+
 /* ── Home hero ────────────────────────────────────────────────────────────
    On a phone the rank hero runs edge to edge and up under the clear top bar
    and status bar, so the fighter owns the top of the screen. A workout in

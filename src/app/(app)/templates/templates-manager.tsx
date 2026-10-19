@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useRef, useState } from "react";
 import {
   ChevronDown,
   ChevronRight,
@@ -11,13 +11,13 @@ import {
   Plus,
   Link2,
   Timer,
+  Trash2,
   Unlink,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { TitleField } from "@/components/ui/title-field";
 import { ExercisePicker } from "@/components/exercise-picker";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
@@ -41,6 +41,8 @@ import {
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { formatRestClock, REST_CHOICES } from "@/lib/rest-timer";
 import { useAction } from "@/lib/use-action";
+import { Collapse } from "@/components/ui/collapse";
+import { useListGlide } from "@/components/ui/use-list-glide";
 
 type TemplateRow = TemplateWithExercises["template_exercise"][number];
 
@@ -231,6 +233,20 @@ function CleanupButton({
 
 type Start = (fn: () => Promise<void>) => void;
 
+type RowEdit = { kind: "move"; id: string; direction: "up" | "down" } | { kind: "remove"; id: string };
+
+/** A template's exercises after an edit, as the server will have them. */
+function editRows(rows: TemplateRow[], edit: RowEdit): TemplateRow[] {
+  const i = rows.findIndex((r) => r.id === edit.id);
+  if (i < 0) return rows;
+  if (edit.kind === "remove") return rows.filter((r) => r.id !== edit.id);
+  const j = edit.direction === "up" ? i - 1 : i + 1;
+  if (j < 0 || j >= rows.length) return rows;
+  const next = [...rows];
+  [next[i], next[j]] = [next[j], next[i]];
+  return next;
+}
+
 /**
  * One template in the list. On a phone the row opens in place to its
  * exercises; from `lg` it picks the template the pane beside the list edits.
@@ -282,39 +298,25 @@ function TemplateCard({
             </div>
           </div>
         </button>
-        <ConfirmIconButton
-          label="Delete template"
-          confirmLabel="Tap again to delete template"
-          disabled={pending}
-          onConfirm={() =>
-            start(async () => {
-              await deleteTemplate({ id: template.id });
-            })
-          }
-        />
         <button
           onClick={() => {
             onSelect();
             setOpen((v) => !v);
           }}
-          className="flex size-8 shrink-0 items-center justify-center text-muted transition-colors hover:text-text lg:hidden"
+          className="hb-hit flex size-8 shrink-0 items-center justify-center text-muted transition-colors hover:text-text lg:hidden"
           aria-expanded={open}
           aria-label={open ? "Collapse" : "Expand"}
         >
-          {open ? (
-            <ChevronUp className="size-5" />
-          ) : (
-            <ChevronDown className="size-5" />
-          )}
+          <ChevronDown className={cn("size-5 transition-transform duration-200", open && "rotate-180")} />
         </button>
         <ChevronRight aria-hidden className="hidden size-5 shrink-0 text-muted lg:block" />
       </div>
 
-      {open && (
-        <div className="border-t border-border lg:hidden">
+      <div className="lg:hidden">
+        <Collapse open={open} className="border-t border-border">
           <TemplateExercises template={template} exercises={exercises} pending={pending} start={start} />
-        </div>
-      )}
+        </Collapse>
+      </div>
     </Card>
   );
 }
@@ -396,8 +398,12 @@ function TemplateExercises({
   roomy?: boolean;
 }) {
   const [picker, setPicker] = useState(false);
-  const rows = template.template_exercise;
+  // Moves and removals show at once; the server catches up behind them, and
+  // a failed one puts the list back (useAction says what didn't happen).
+  const [rows, applyLocal] = useOptimistic(template.template_exercise, editRows);
   const slots = supersetSlots(rows, (r) => r.superset);
+  const list = useRef<HTMLUListElement>(null);
+  useListGlide(list, rows.map((r) => r.id).join());
 
   const setSets = (row: TemplateRow, raw: string) => {
     const val = parseInt(raw, 10);
@@ -430,10 +436,12 @@ function TemplateExercises({
     });
   const move = (row: TemplateRow, direction: "up" | "down") =>
     start(async () => {
+      applyLocal({ kind: "move", id: row.id, direction });
       await moveTemplateExercise({ id: row.id, direction });
     });
   const remove = (row: TemplateRow) =>
     start(async () => {
+      applyLocal({ kind: "remove", id: row.id });
       await removeTemplateExercise({ id: row.id });
     });
 
@@ -452,10 +460,10 @@ function TemplateExercises({
 
   return (
     <>
-      <ul className="divide-y divide-border">
+      <ul ref={list} className="divide-y divide-border">
         {rows.map((row, i) =>
           roomy ? (
-            <li key={row.id} className="px-6 py-4">
+            <li key={row.id} data-glide={row.id} className="px-6 py-4">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1 pt-1.5">
                   <p className="flex min-w-0 items-start gap-2">
@@ -474,7 +482,7 @@ function TemplateExercises({
                 </div>
                 <div className="-mr-3 flex shrink-0 items-center">
                   <button
-                    disabled={i === 0 || pending}
+                    disabled={i === 0}
                     aria-label={`Move ${row.exercise?.name ?? "exercise"} up`}
                     onClick={() => move(row, "up")}
                     className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-text disabled:opacity-30"
@@ -482,7 +490,7 @@ function TemplateExercises({
                     <ChevronUp className="size-5" />
                   </button>
                   <button
-                    disabled={i === rows.length - 1 || pending}
+                    disabled={i === rows.length - 1}
                     aria-label={`Move ${row.exercise?.name ?? "exercise"} down`}
                     onClick={() => move(row, "down")}
                     className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-text disabled:opacity-30"
@@ -491,7 +499,6 @@ function TemplateExercises({
                   </button>
                   <button
                     aria-label={`Remove ${row.exercise?.name ?? "exercise"}`}
-                    disabled={pending}
                     onClick={() => remove(row)}
                     className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
                   >
@@ -557,7 +564,8 @@ function TemplateExercises({
           ) : (
             <li
               key={row.id}
-              className="flex items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-4"
+              data-glide={row.id}
+              className="flex items-center gap-2 bg-surface px-3 py-2.5 sm:gap-3 sm:px-4"
             >
               <GripVertical className="hidden size-4 shrink-0 text-muted/50 sm:block" />
               <div className="min-w-0 flex-1">
@@ -624,27 +632,26 @@ function TemplateExercises({
 
               <div className="flex shrink-0 flex-col">
                 <button
-                  disabled={i === 0 || pending}
+                  disabled={i === 0}
                   aria-label="Move up"
                   onClick={() => move(row, "up")}
-                  className="text-muted hover:text-text disabled:opacity-30"
+                  className="flex h-[22px] w-7 items-center justify-center text-muted hover:text-text disabled:opacity-30"
                 >
                   <ChevronUp className="size-4" />
                 </button>
                 <button
-                  disabled={i === rows.length - 1 || pending}
+                  disabled={i === rows.length - 1}
                   aria-label="Move down"
                   onClick={() => move(row, "down")}
-                  className="text-muted hover:text-text disabled:opacity-30"
+                  className="flex h-[22px] w-7 items-center justify-center text-muted hover:text-text disabled:opacity-30"
                 >
                   <ChevronDown className="size-4" />
                 </button>
               </div>
               <button
                 aria-label="Remove exercise"
-                disabled={pending}
                 onClick={() => remove(row)}
-                className="shrink-0 text-muted transition-colors hover:text-danger"
+                className="hb-hit flex size-7 shrink-0 items-center justify-center text-muted transition-colors hover:text-danger"
               >
                 <X className="size-4" />
               </button>
@@ -657,7 +664,12 @@ function TemplateExercises({
           </li>
         )}
       </ul>
-      <div className={roomy ? "border-t border-border px-6 py-4" : "p-3 sm:p-4"}>
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-between gap-2",
+          roomy ? "border-t border-border px-6 py-4" : "p-3 sm:p-4",
+        )}
+      >
         <Button
           variant="outline"
           size={roomy ? "md" : "sm"}
@@ -666,6 +678,7 @@ function TemplateExercises({
           <Plus className="size-4" />
           Add exercise
         </Button>
+        <DeleteTemplate id={template.id} pending={pending} start={start} />
       </div>
 
       <ExercisePicker
@@ -679,5 +692,38 @@ function TemplateExercises({
         }
       />
     </>
+  );
+}
+
+/**
+ * Deleting is in the template's editor, not on every row of the list: one
+ * tap asks, the second deletes (as Programs does).
+ */
+function DeleteTemplate({ id, pending, start }: { id: string; pending: boolean; start: Start }) {
+  const [asking, setAsking] = useState(false);
+  return asking ? (
+    <div className="flex items-center gap-2">
+      <span className="text-xs text-muted">Delete this template?</span>
+      <Button
+        variant="danger"
+        size="sm"
+        disabled={pending}
+        onClick={() =>
+          start(async () => {
+            await deleteTemplate({ id });
+          })
+        }
+      >
+        Delete
+      </Button>
+      <Button variant="ghost" size="sm" onClick={() => setAsking(false)}>
+        Cancel
+      </Button>
+    </div>
+  ) : (
+    <Button variant="ghost" size="sm" onClick={() => setAsking(true)} className="hover:text-danger">
+      <Trash2 className="size-4" />
+      Delete template
+    </Button>
   );
 }

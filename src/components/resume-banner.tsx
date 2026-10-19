@@ -94,7 +94,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
           <button
             onClick={() => setConfirming(false)}
             aria-label="Keep workout"
-            className="flex size-9 items-center justify-center rounded-full text-muted hover:text-text"
+            className="hb-hit flex size-9 items-center justify-center rounded-full text-muted hover:text-text"
           >
             <X className="size-4" />
           </button>
@@ -107,7 +107,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
             href={`/log/${session.id}`}
             prefetch
             transitionTypes={["nav-forward"]}
-            className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-[14px] font-semibold text-black active:opacity-80 max-[359px]:w-11 max-[359px]:justify-center max-[359px]:px-0"
+            className="hb-hit inline-flex h-9 shrink-0 items-center gap-1.5 rounded-xl bg-accent px-3.5 text-[14px] font-semibold text-black active:opacity-80 max-[359px]:w-11 max-[359px]:justify-center max-[359px]:px-0"
           >
             <Play className="size-3.5" />
             {/* On the narrowest phones the title needs the room more. */}

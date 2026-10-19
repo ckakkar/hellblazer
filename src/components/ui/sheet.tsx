@@ -123,7 +123,7 @@ export function Sheet({
                 onClick={onClose}
                 onPointerDown={(e) => e.stopPropagation()}
                 aria-label="Close"
-                className="-mr-1.5 flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40"
+                className="hb-hit -mr-1.5 flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40"
               >
                 <X className="size-4" />
               </button>

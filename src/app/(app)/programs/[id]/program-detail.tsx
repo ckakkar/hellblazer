@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useOptimistic, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -42,6 +42,7 @@ import {
 } from "@/lib/actions/programs";
 import { useAction } from "@/lib/use-action";
 import { useIPadApp } from "@/components/ipad-app";
+import { useListGlide } from "@/components/ui/use-list-glide";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -63,7 +64,10 @@ export function ProgramDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewDayId, setPreviewDayId] = useState<string | null>(null);
   const ipad = useIPadApp();
-  const days = program.program_day;
+  // Moves and removals show at once; a failed one puts the list back.
+  const [days, applyDays] = useOptimistic<ProgramDay[], DayEdit>(program.program_day, editDays);
+  const dayList = useRef<HTMLUListElement>(null);
+  useListGlide(dayList, days.map((d) => d.id).join());
   const previewDay = days.find((d) => d.id === previewDayId) ?? null;
   const previewTemplate = previewDay
     ? templates.find((t) => t.id === previewDay.template_id) ?? null
@@ -223,13 +227,14 @@ export function ProgramDetail({
           <CardTitle>Weekly schedule</CardTitle>
         </CardHeader>
         <div className="border-t border-border">
-          <ul className="divide-y divide-border">
+          <ul ref={dayList} className="divide-y divide-border">
             {days.map((d, i) => {
               const tmpl = d.workout_template;
               return (
                 <li
                   key={d.id}
-                  className="flex items-center gap-3 px-4 py-3"
+                  data-glide={d.id}
+                  className="flex items-center gap-3 bg-surface px-4 py-3"
                 >
                   {/* The day itself opens its preview, as a row does on iOS,
                       leaving room for the name on a narrow phone. */}
@@ -254,10 +259,11 @@ export function ProgramDetail({
                   </button>
                   <div className="hidden shrink-0 flex-col sm:flex">
                     <button
-                      disabled={i === 0 || pending}
+                      disabled={i === 0}
                       aria-label="Move up"
                       onClick={() =>
                         start(async () => {
+                          applyDays({ kind: "move", id: d.id, direction: "up" });
                           await moveProgramDay({
                             id: d.id,
                             programId: program.id,
@@ -265,15 +271,16 @@ export function ProgramDetail({
                           });
                         })
                       }
-                      className="text-muted hover:text-text disabled:opacity-30"
+                      className="flex h-[22px] w-8 items-center justify-center text-muted hover:text-text disabled:opacity-30"
                     >
                       <ChevronUp className="size-4" />
                     </button>
                     <button
-                      disabled={i === days.length - 1 || pending}
+                      disabled={i === days.length - 1}
                       aria-label="Move down"
                       onClick={() =>
                         start(async () => {
+                          applyDays({ kind: "move", id: d.id, direction: "down" });
                           await moveProgramDay({
                             id: d.id,
                             programId: program.id,
@@ -281,7 +288,7 @@ export function ProgramDetail({
                           });
                         })
                       }
-                      className="text-muted hover:text-text disabled:opacity-30"
+                      className="flex h-[22px] w-8 items-center justify-center text-muted hover:text-text disabled:opacity-30"
                     >
                       <ChevronDown className="size-4" />
                     </button>
@@ -299,16 +306,16 @@ export function ProgramDetail({
                   )}
                   <button
                     aria-label="Remove day"
-                    disabled={pending}
                     onClick={() =>
                       start(async () => {
+                        applyDays({ kind: "remove", id: d.id });
                         await removeProgramDay({
                           id: d.id,
                           programId: program.id,
                         });
                       })
                     }
-                    className="-mr-2 flex size-9 shrink-0 items-center justify-center text-muted transition-colors hover:text-danger"
+                    className="hb-hit -mr-2 flex size-9 shrink-0 items-center justify-center text-muted transition-colors hover:text-danger"
                   >
                     <X className="size-4" />
                   </button>
@@ -416,4 +423,19 @@ export function ProgramDetail({
       )}
     </div>
   );
+}
+
+type ProgramDay = ProgramWithDays["program_day"][number];
+type DayEdit = { kind: "move"; id: string; direction: "up" | "down" } | { kind: "remove"; id: string };
+
+/** A program's days after an edit, as the server will have them. */
+function editDays(days: ProgramDay[], edit: DayEdit): ProgramDay[] {
+  const i = days.findIndex((d) => d.id === edit.id);
+  if (i < 0) return days;
+  if (edit.kind === "remove") return days.filter((d) => d.id !== edit.id);
+  const j = edit.direction === "up" ? i - 1 : i + 1;
+  if (j < 0 || j >= days.length) return days;
+  const next = [...days];
+  [next[i], next[j]] = [next[j], next[i]];
+  return next;
 }

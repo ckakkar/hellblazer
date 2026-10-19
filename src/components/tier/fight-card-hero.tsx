@@ -126,7 +126,7 @@ export function FightCardHero({
             </span>
             <Link
               href="/settings"
-              className="-mr-1 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/[0.1] py-1.5 pl-3 pr-2 font-medium text-text backdrop-blur-md transition-colors hover:bg-white/[0.16]"
+              className="hb-hit -mr-1 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/[0.1] py-1.5 pl-3 pr-2 font-medium text-text backdrop-blur-md transition-colors hover:bg-white/[0.16]"
             >
               {tier ? "Get judged" : "Get ranked"}
               <ChevronRight className="size-3.5" />

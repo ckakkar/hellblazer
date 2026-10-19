@@ -2,8 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { MUSCLE_CHART_ORDER, MUSCLE_LABEL, isWeakPoint } from "@/lib/muscles";
+import { Segmented } from "@/components/ui/segmented";
 
 type ExerciseOption = { exercise_id: string; exercise_name: string };
 
@@ -32,22 +32,17 @@ export function ProgressControls({
 
   return (
     <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div role="tablist" className="inline-flex self-start rounded-full bg-white/[0.06] p-0.5">
-        {(["exercise", "muscle"] as const).map((t) => (
-          <button
-            key={t}
-            role="tab"
-            onClick={() => go({ tab: t })}
-            aria-selected={tab === t}
-            className={cn(
-              "h-8 rounded-full px-4 text-[13px] font-medium transition-colors",
-              tab === t ? "bg-white/[0.12] text-text" : "text-muted hover:text-text",
-            )}
-          >
-            {t === "exercise" ? "Lifts" : "Muscles"}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        kind="tabs"
+        label="Progress by"
+        options={[
+          { value: "exercise", label: "Lifts" },
+          { value: "muscle", label: "Muscles" },
+        ]}
+        value={tab}
+        onChange={(t) => go({ tab: t })}
+        className="self-start"
+      />
 
       {tab === "exercise" ? (
         <Select
