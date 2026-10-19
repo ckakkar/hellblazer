@@ -5,8 +5,9 @@ import WidgetKit
 /// like Screen Time's bars: a row per muscle, its bar on a see-through track
 /// with the 10–20 set range marked, and the count. A bar inside the range
 /// takes the tint; the lifter's weak points carry a dot. Medium shows the
-/// weak points and the most trained muscles; large shows them all. Resets to
-/// zero when the week rolls over.
+/// weak points and the most trained muscles; large shows them all, and the
+/// iPad's extra large sets them in two columns beside the week's total.
+/// Resets to zero when the week rolls over.
 struct MuscleSetsWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "MuscleSets", provider: NextBoutProvider()) { entry in
@@ -16,7 +17,7 @@ struct MuscleSetsWidget: Widget {
         }
         .configurationDisplayName("Sets per Muscle")
         .description("This week's working sets for each muscle, against the 10–20 set range.")
-        .supportedFamilies([.systemMedium, .systemLarge])
+        .supportedFamilies([.systemMedium, .systemLarge, .systemExtraLarge])
     }
 }
 
@@ -34,44 +35,104 @@ struct MuscleSetsView: View {
             let rows = visibleRows(muscles, stale: snapshot.isFromPastWeek(now: entry.date))
             let scale = max(Band.high + 4, rows.map(\.sets).max() ?? 0)
             let total = rows.reduce(0) { $0 + $1.sets }
-            VStack(alignment: .leading, spacing: 0) {
-                WidgetHeader(title: "Sets this week", symbol: "flame.fill", trailing: "Goal 10–20")
-                if family == .systemLarge {
-                    HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(number(total))
-                            .font(WidgetStyle.figure(28))
-                            .monospacedDigit()
-                            .contentTransition(.numericText(value: total))
-                        Text("working sets")
-                            .font(WidgetStyle.title(14))
-                            .foregroundStyle(.secondary)
+            if family == .systemExtraLarge {
+                extraLarge(rows, scale: scale, total: total)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    WidgetHeader(title: "Sets this week", symbol: "flame.fill", trailing: "Goal 10–20")
+                    if family == .systemLarge {
+                        HStack(alignment: .firstTextBaseline, spacing: 4) {
+                            Text(number(total))
+                                .font(WidgetStyle.figure(28))
+                                .monospacedDigit()
+                                .contentTransition(.numericText(value: total))
+                            Text("working sets")
+                                .font(WidgetStyle.title(14))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.top, 2)
+                        .padding(.bottom, 6)
                     }
-                    .padding(.top, 2)
-                    .padding(.bottom, 6)
-                }
-                VStack(spacing: 0) {
-                    ForEach(rows, id: \.key) { row in
-                        MuscleRow(row: row, scale: scale)
-                            .frame(maxHeight: .infinity)
+                    VStack(spacing: 0) {
+                        ForEach(rows, id: \.key) { row in
+                            MuscleRow(row: row, scale: scale)
+                                .frame(maxHeight: .infinity)
+                        }
                     }
+                    .padding(.top, family == .systemLarge ? 0 : 4)
                 }
-                .padding(.top, family == .systemLarge ? 0 : 4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         } else {
             WidgetEmpty(title: "Sets this week", symbol: "flame.fill", message: "Open Fatty to see this week's sets per muscle here.")
         }
     }
 
-    /// Large: every muscle, in the chart's order. Medium has room for five:
-    /// the weak points first, then whatever's been trained most.
+    /// The week's total and what it says, then every muscle in two columns.
+    private func extraLarge(_ rows: [WidgetSnapshot.MuscleSets], scale: Double, total: Double) -> some View {
+        let inBand = rows.filter { $0.sets >= Band.low }.count
+        let behind = rows.filter(\.weak).min { $0.sets < $1.sets }
+        let half = (rows.count + 1) / 2
+        return VStack(alignment: .leading, spacing: 0) {
+            WidgetHeader(title: "Sets this week", symbol: "flame.fill", trailing: "Goal 10–20 a muscle")
+            HStack(alignment: .top, spacing: 28) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(number(total))
+                        .font(WidgetStyle.figure(52))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(value: total))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text("working sets")
+                        .font(WidgetStyle.title(15))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 10)
+                    Text("\(inBand) of \(rows.count) in range")
+                        .font(.subheadline.weight(.semibold))
+                        .monospacedDigit()
+                    if let behind, behind.sets < Band.low {
+                        Text("Most behind: \(behind.label), \(number(behind.sets))")
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                    }
+                }
+                .frame(width: 170, alignment: .leading)
+                .padding(.top, 8)
+                // Both columns on the same rows, as many as the longer has.
+                GeometryReader { geo in
+                    let row = min(44, geo.size.height / CGFloat(max(1, half)))
+                    HStack(alignment: .top, spacing: 28) {
+                        column(Array(rows.prefix(half)), scale: scale, row: row)
+                        column(Array(rows.dropFirst(half)), scale: scale, row: row)
+                    }
+                }
+            }
+            .frame(maxHeight: .infinity)
+            .padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func column(_ rows: [WidgetSnapshot.MuscleSets], scale: Double, row height: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            ForEach(rows, id: \.key) { row in
+                MuscleRow(row: row, scale: scale)
+                    .frame(height: height)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .top)
+    }
+
+    /// Large and extra large: every muscle, in the chart's order. Medium has
+    /// room for five: the weak points first, then whatever's been trained most.
     private func visibleRows(_ muscles: [WidgetSnapshot.MuscleSets], stale: Bool) -> [WidgetSnapshot.MuscleSets] {
         let rows = stale ? muscles.map { row in
             var zeroed = row
             zeroed.sets = 0
             return zeroed
         } : muscles
-        guard family != .systemLarge else { return rows }
+        guard family == .systemMedium else { return rows }
         let weak = rows.filter(\.weak)
         let rest = rows.filter { !$0.weak }.sorted { $0.sets > $1.sets }
         return Array((weak + rest).prefix(5))

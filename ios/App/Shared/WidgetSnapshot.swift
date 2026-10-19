@@ -32,7 +32,8 @@ struct WidgetSnapshot: Codable {
     var fighter: Fighter?
     /// Weeks in a row with the plan hit, for the Streak widget.
     var streak: Streak?
-    /// Days trained in the last 12 weeks (yyyy-MM-dd), for its calendar.
+    /// Days trained in the last 26 weeks (yyyy-MM-dd), for its calendar
+    /// (the medium size shows the last 12).
     var trainingDays: [String]?
     /// The latest new best estimated max, for the Last PR widget.
     var record: Record?

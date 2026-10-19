@@ -2,7 +2,8 @@ import SwiftUI
 import WidgetKit
 
 /// Weeks in a row you've hit your plan (a workout a week without one), and
-/// on the medium size, the last twelve weeks of training as a calendar. The
+/// on the medium size, the last twelve weeks of training as a calendar; the
+/// iPad's extra large spreads half a year across it. The
 /// server works the streak out into the snapshot; the widget keeps it true
 /// as weeks end without the app (WidgetSnapshot.streakWeeks).
 struct StreakWidget: Widget {
@@ -14,7 +15,7 @@ struct StreakWidget: Widget {
         }
         .configurationDisplayName("Streak")
         .description("Weeks in a row you've hit your plan, and the days you trained.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryCircular, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemExtraLarge, .accessoryCircular, .accessoryRectangular])
     }
 }
 
@@ -116,6 +117,47 @@ struct StreakView: View {
                         .lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+            case .systemExtraLarge:
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack(alignment: .top, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            WidgetHeader(title: "Streak", symbol: "flame.fill")
+                            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                                Text("\(weeks)")
+                                    .font(WidgetStyle.figure(54))
+                                    .monospacedDigit()
+                                    .contentTransition(.numericText(value: Double(weeks)))
+                                    .lineLimit(1)
+                                Text(weeks == 1 ? "week" : "weeks")
+                                    .font(WidgetStyle.title(17))
+                                    .foregroundStyle(.secondary)
+                                Text(weeks == 0 ? "Hit your plan to start one" : "unbeaten, on plan")
+                                    .font(.subheadline.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                    .padding(.leading, 6)
+                            }
+                            .padding(.top, 2)
+                        }
+                        Spacer(minLength: 0)
+                        VStack(alignment: .trailing, spacing: 6) {
+                            Text(thisWeek(snapshot))
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                                .lineLimit(1)
+                            Text("\(trained(snapshot)) days in 26 weeks")
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                                .lineLimit(1)
+                            CapsuleBar(value: weekFraction(snapshot), height: 5)
+                                .frame(width: 150)
+                        }
+                    }
+                    TrainingCalendar(days: Set(snapshot.trainingDays ?? []), today: entry.date, weeks: 26, months: true)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(.top, 14)
+                }
             case .systemMedium:
                 HStack(alignment: .top, spacing: 12) {
                     count(weeks, snapshot)
@@ -185,55 +227,94 @@ struct StreakView: View {
         return done == 1 ? "1 workout this week" : "\(done) workouts this week"
     }
 
+    private func trained(_ snapshot: WidgetSnapshot) -> Int {
+        snapshot.trainingDays?.count ?? 0
+    }
+
     private func weekFraction(_ snapshot: WidgetSnapshot) -> Double {
         let goal = Double(max(1, need(snapshot) ?? 1))
         return min(1, Double(done(snapshot)) / goal)
     }
 }
 
-/// Twelve weeks, Monday at the top, this week on the right: a filled square
-/// for each day trained, today ringed. See-through where empty, so it keeps
-/// its shape in the Clear and Tinted looks.
+/// Weeks of training (twelve, or half a year on the iPad), Monday at the
+/// top, this week on the right: a filled square for each day trained, today
+/// ringed. See-through where empty, so it keeps its shape in the Clear and
+/// Tinted looks. `months` labels the columns where a month starts.
 private struct TrainingCalendar: View {
     let days: Set<String>
     let today: Date
+    var weeks = 12
+    var months = false
 
-    private static let weeks = 12
+    private static let monthFormat: DateFormatter = {
+        let format = DateFormatter()
+        format.setLocalizedDateFormatFromTemplate("MMM")
+        return format
+    }()
 
     var body: some View {
         let calendar = Calendar(identifier: .iso8601)
         let monday = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
         let todayKey = RecoveryCache.dayKey(today)
+        let label: CGFloat = months ? 16 : 0
         GeometryReader { geo in
             let gap: CGFloat = 3
-            let cell = min((geo.size.width - gap * CGFloat(Self.weeks - 1)) / CGFloat(Self.weeks), (geo.size.height - gap * 6) / 7)
-            HStack(spacing: gap) {
-                ForEach(0..<Self.weeks, id: \.self) { column in
-                    VStack(spacing: gap) {
-                        ForEach(0..<7, id: \.self) { row in
-                            let offset = (column - (Self.weeks - 1)) * 7 + row
-                            let day = calendar.date(byAdding: .day, value: offset, to: monday) ?? monday
-                            let key = RecoveryCache.dayKey(day)
-                            let trained = days.contains(key)
-                            RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
-                                .fill(trained ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(day > today ? Color.clear : WidgetStyle.track))
-                                .glow(trained, radius: 3)
-                                .widgetAccentable(trained)
-                                .overlay {
-                                    if key == todayKey {
-                                        RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
-                                            .strokeBorder(Color.primary, lineWidth: 1.2)
+            let cell = min((geo.size.width - gap * CGFloat(weeks - 1)) / CGFloat(weeks), (geo.size.height - label - gap * 6) / 7)
+            VStack(alignment: .leading, spacing: 0) {
+                if months {
+                    HStack(spacing: gap) {
+                        ForEach(0..<weeks, id: \.self) { column in
+                            // Over the week a month starts in.
+                            let start = calendar.date(byAdding: .day, value: (column - (weeks - 1)) * 7, to: monday) ?? monday
+                            let sunday = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+                            let opens = calendar.component(.day, from: sunday) <= 7
+                            Text(opens ? Self.monthFormat.string(from: sunday) : "")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .fixedSize()
+                                .frame(width: cell, height: label, alignment: .topLeading)
+                        }
+                    }
+                }
+                HStack(spacing: gap) {
+                    ForEach(0..<weeks, id: \.self) { column in
+                        VStack(spacing: gap) {
+                            ForEach(0..<7, id: \.self) { row in
+                                let offset = (column - (weeks - 1)) * 7 + row
+                                let day = calendar.date(byAdding: .day, value: offset, to: monday) ?? monday
+                                let key = RecoveryCache.dayKey(day)
+                                let trained = days.contains(key)
+                                RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
+                                    .fill(trained ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(day > today ? Color.clear : WidgetStyle.track))
+                                    .glow(trained, radius: 3)
+                                    .widgetAccentable(trained)
+                                    .overlay {
+                                        if key == todayKey {
+                                            RoundedRectangle(cornerRadius: cell * 0.28, style: .continuous)
+                                                .strokeBorder(Color.primary, lineWidth: 1.2)
+                                        }
                                     }
-                                }
-                                .frame(width: cell, height: cell)
+                                    .frame(width: cell, height: cell)
+                            }
                         }
                     }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: months ? .bottomLeading : .trailing)
         }
-        .aspectRatio(CGFloat(Self.weeks) / 7, contentMode: .fit)
+        // Wider than tall by its weeks to its days (plus the month labels).
+        .aspectRatio(CGFloat(weeks) / (months ? 7.9 : 7), contentMode: .fit)
         .accessibilityElement()
-        .accessibilityLabel("\(days.count) days trained in the last twelve weeks")
+        .accessibilityLabel("\(trainedInView) days trained in the last \(weeks) weeks")
+    }
+
+    /// Days trained within the weeks shown (the snapshot holds 26).
+    private var trainedInView: Int {
+        let calendar = Calendar(identifier: .iso8601)
+        let monday = calendar.dateInterval(of: .weekOfYear, for: today)?.start ?? today
+        guard let first = calendar.date(byAdding: .day, value: -(weeks - 1) * 7, to: monday) else { return days.count }
+        let from = RecoveryCache.dayKey(first)
+        return days.filter { $0 >= from }.count
     }
 }

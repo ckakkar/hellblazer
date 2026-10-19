@@ -22,6 +22,11 @@ const config: CapacitorConfig = {
   ios: {
     // The page already pads for the notch and home bar (viewport-fit=cover).
     contentInset: "never",
+    // On an iPad, WebKit otherwise asks for desktop sites and calls itself a
+    // Mac. The site is built for touch at every width, and the server tells
+    // the iPad app apart by "iPad" plus "Fatty" in the user agent
+    // (src/lib/surface.ts).
+    preferredContentMode: "mobile",
     // Required for the service worker to run in WKWebView. The domains are
     // listed under WKAppBoundDomains in ios/App/App/Info.plist.
     limitsNavigationsToAppBoundDomains: true,

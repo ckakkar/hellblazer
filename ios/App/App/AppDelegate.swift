@@ -10,7 +10,9 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Intents that open the app (Siri, the Control Center button) land here.
         IntentRouter.handler = { NativeRouter.shared.open(path: $0) }
         // "Same again" and "Log a set" (Siri, the Action button, Control
-        // Center) run here, often with the app in the background.
+        // Center) run here, often with the app in the background. Not on an
+        // iPad: it shows workouts, the iPhone and the watch run them.
+        VoiceSetLogger.watchOnly = UIDevice.current.userInterfaceIdiom == .pad
         SetLogging.handler = { await VoiceSetLogger.log($0) }
         // "Log a set" in your own words, where Apple's on-device model runs.
         SetLogging.canRead = { SetReader.available }

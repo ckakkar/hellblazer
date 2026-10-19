@@ -2,7 +2,9 @@ import SwiftUI
 import WidgetKit
 
 /// Your rank fighter on the Home Screen: the portrait, the rank, the ladder
-/// and who's next, as the rank card on Home has them. Art-led, like the
+/// and who's next, as the rank card on Home has them. The iPad's extra large
+/// is the whole fight card: the fighter, and your week, streak, next bout
+/// and latest record beside them. Art-led, like the
 /// Music and Photos widgets: dark in every look. In Clear and Tinted it
 /// shows the see-through portrait (ClearArt), and fades with transparency
 /// rather than a dark overlay, which those looks would turn white.
@@ -15,7 +17,7 @@ struct FighterWidget: Widget {
         }
         .configurationDisplayName("Your Fighter")
         .description("Your rank fighter, and who's next up the ladder.")
-        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+        .supportedFamilies([.systemSmall, .systemMedium, .systemExtraLarge, .accessoryRectangular])
         .contentMarginsDisabled()
     }
 }
@@ -30,6 +32,8 @@ struct FighterEntry: TimelineEntry {
     /// fighter in ink should that be missing.
     let clear: UIImage?
     let ink: UIImage?
+    /// The rest of the card, for the extra large size.
+    var snapshot: WidgetSnapshot? = nil
 }
 
 struct FighterProvider: TimelineProvider {
@@ -47,8 +51,18 @@ struct FighterProvider: TimelineProvider {
         completion(context.isPreview && entry.fighter == nil ? placeholder(in: context) : entry)
     }
 
+    /// Now, and again when the week rolls over, so the fight card's week
+    /// starts at zero on its own.
     func getTimeline(in context: Context, completion: @escaping (Timeline<FighterEntry>) -> Void) {
-        completion(Timeline(entries: [current()], policy: .never))
+        let now = current()
+        var entries = [now]
+        if let weekEnd = now.snapshot?.weekEnd(), weekEnd > now.date {
+            entries.append(FighterEntry(
+                date: weekEnd, known: now.known, fighter: now.fighter, portrait: now.portrait,
+                clear: now.clear, ink: now.ink, snapshot: now.snapshot
+            ))
+        }
+        completion(Timeline(entries: entries, policy: .never))
     }
 
     private func current() -> FighterEntry {
@@ -60,7 +74,8 @@ struct FighterProvider: TimelineProvider {
             fighter: fighter,
             portrait: fighter.flatMap { FighterArt.load(for: $0.key) },
             clear: fighter.flatMap { FighterArt.loadClear(for: $0.key) },
-            ink: fighter.flatMap { FighterArt.loadInk(for: $0.key) }
+            ink: fighter.flatMap { FighterArt.loadInk(for: $0.key) },
+            snapshot: snapshot
         )
     }
 }
@@ -76,6 +91,7 @@ struct FighterView: View {
                 switch family {
                 case .accessoryRectangular: rectangular(fighter)
                 case .systemMedium: medium(fighter)
+                case .systemExtraLarge: extraLarge(fighter)
                 default: small(fighter)
                 }
             } else {
@@ -145,6 +161,51 @@ struct FighterView: View {
             .padding(.trailing, 16)
             .padding(.leading, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// The fight card (iPad): the portrait down the left, fading into the
+    /// black; the name at poster size, the ladder, then the week ruled off
+    /// beneath like the tale of the tape on Home.
+    private func extraLarge(_ fighter: WidgetSnapshot.Fighter) -> some View {
+        GeometryReader { geo in
+            HStack(spacing: 0) {
+                portrait
+                    .frame(width: geo.size.width * 0.42)
+                    .mask(LinearGradient(
+                        stops: [.init(color: .black, location: 0.62), .init(color: .clear, location: 1)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ))
+                VStack(alignment: .leading, spacing: 0) {
+                    rankLine(fighter)
+                    Text(fighter.name)
+                        .font(WidgetStyle.figure(46))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.55)
+                        .padding(.top, 6)
+                    Text(fighter.epithet)
+                        .font(.title2.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Ladder(rank: fighter.rank, of: fighter.of, height: 6)
+                        .padding(.top, 14)
+                    Text(fighter.next.map { "Next up the ladder: \($0)" } ?? "Top of the ladder")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .padding(.top, 6)
+                    Spacer(minLength: 10)
+                    if let snapshot = entry.snapshot {
+                        CardTape(snapshot: snapshot, date: entry.date)
+                    }
+                }
+                .padding(.vertical, 22)
+                .padding(.trailing, 24)
+                .padding(.leading, 4)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
     }
 
@@ -257,17 +318,93 @@ struct FighterView: View {
     }
 }
 
+/// The fight card's lower half: the week's numbers ruled off, then the next
+/// bout and the latest record.
+private struct CardTape: View {
+    let snapshot: WidgetSnapshot
+    let date: Date
+
+    var body: some View {
+        let stale = snapshot.isFromPastWeek(now: date)
+        let sessions = stale ? 0 : snapshot.sessionsThisWeek
+        let sets = stale ? 0 : snapshot.setsThisWeek
+        let streak = snapshot.streakWeeks(at: date)
+        VStack(alignment: .leading, spacing: 0) {
+            Rectangle()
+                .fill(WidgetStyle.track)
+                .frame(height: 1)
+            HStack(alignment: .top, spacing: 0) {
+                stat(snapshot.sessionsPlanned.map { "\(sessions)/\($0)" } ?? "\(sessions)", "Workouts")
+                stat("\(sets)", "Sets")
+                stat("\(streak)", "Week streak", lit: streak > 0)
+            }
+            .padding(.top, 10)
+            VStack(alignment: .leading, spacing: 3) {
+                if let next = snapshot.nextBout {
+                    line("Next bout", next)
+                }
+                if let record = snapshot.record {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Label("Removal", systemImage: "bolt.fill")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Brand.flame)
+                            .widgetAccentable()
+                        Text("\(record.name), \(weight(record.weight)) \(snapshot.unit ?? "kg") × \(record.reps)")
+                            .font(.caption.weight(.medium))
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .padding(.top, 10)
+        }
+    }
+
+    private func stat(_ value: String, _ label: String, lit: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(value)
+                .font(WidgetStyle.figure(32))
+                .monospacedDigit()
+                .foregroundStyle(lit ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(.primary))
+                .glow(lit, radius: 5)
+                .widgetAccentable(lit)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func line(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.caption.weight(.medium))
+                .lineLimit(1)
+        }
+    }
+
+    private func weight(_ value: Double) -> String {
+        value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value)
+    }
+}
+
 /// The ladder, as on Home: a step per rank, lit up to yours.
 private struct Ladder: View {
     let rank: Int
     let of: Int
+    var height: CGFloat = 4
 
     var body: some View {
         HStack(spacing: 3) {
             ForEach(1...max(1, of), id: \.self) { step in
                 Capsule()
                     .fill(step <= rank ? AnyShapeStyle(Brand.flame) : AnyShapeStyle(Color.white.opacity(0.2)))
-                    .frame(height: 4)
+                    .frame(height: height)
                     .glow(step <= rank, radius: 3)
                     .widgetAccentable(step <= rank)
             }

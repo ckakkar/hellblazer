@@ -23,6 +23,11 @@ enum WidgetStyle {
     static func title(_ size: CGFloat = 17) -> Font {
         .system(size: size, weight: .heavy).width(.expanded)
     }
+
+    /// On an iPad, which shows workouts rather than runs them (the iPhone
+    /// and the watch do): its widgets have no Start, and open the app's
+    /// Home instead of the Log screen.
+    @MainActor static var onIPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 }
 
 /// The card behind every widget: black, the red glowing in from the top

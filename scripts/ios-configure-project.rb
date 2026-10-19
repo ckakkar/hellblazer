@@ -53,6 +53,9 @@ bundle(app, file(app_group, "PrivacyInfo.xcprivacy"))
 app.build_configurations.each do |config|
   config.build_settings["CODE_SIGN_ENTITLEMENTS"] = "App/App.entitlements"
   config.build_settings["IPHONEOS_DEPLOYMENT_TARGET"] = DEPLOYMENT
+  # iPhone and iPad. The iPad is the showcase (src/lib/surface.ts): it
+  # watches workouts the iPhone and the watch run, and edits the plan.
+  config.build_settings["TARGETED_DEVICE_FAMILY"] = "1,2"
   # Apple's on-device model (SetReader.swift) is iOS 26 only: linked weakly
   # so the app still opens on iOS 17 and 18, where it just isn't offered.
   flags = Array(config.build_settings["OTHER_LDFLAGS"] || ["$(inherited)"])
@@ -88,7 +91,8 @@ widgets.build_configurations.each do |config|
   s["CODE_SIGN_ENTITLEMENTS"] = "Widgets/Widgets.entitlements"
   s["CODE_SIGN_STYLE"] = "Automatic"
   s["IPHONEOS_DEPLOYMENT_TARGET"] = DEPLOYMENT
-  s["TARGETED_DEVICE_FAMILY"] = "1"
+  # iPhone and iPad, like the app (its iPad widgets include the extra large).
+  s["TARGETED_DEVICE_FAMILY"] = "1,2"
   s["SWIFT_VERSION"] = "5.0"
   # An extension's versions must match the app's: copy the app's version
   # (bump MARKETING_VERSION on both targets together). CI overrides the build

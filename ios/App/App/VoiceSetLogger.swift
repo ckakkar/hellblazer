@@ -57,6 +57,12 @@ enum RemovedSets {
 enum VoiceSetLogger {
     typealias Activity = WorkoutActivityAttributes
 
+    /// On an iPad, which watches workouts rather than runs them (the
+    /// iPhone and the watch do), every voice action says so instead. Set at
+    /// launch (AppDelegate).
+    static var watchOnly = false
+    private static let watchOnlyReply = "Log your sets on your iPhone or Apple Watch. Your iPad shows the workout live."
+
     /// The workout for the Live Activity, as the page would send it.
     private struct ActivityState: Decodable {
         var sessionId: String
@@ -178,6 +184,7 @@ enum VoiceSetLogger {
     // MARK: Log
 
     static func log(_ request: SetLogging.Request) async -> String {
+        if watchOnly { return watchOnlyReply }
         var body: [String: Any] = [:]
         if let weight = request.weight, let reps = request.reps {
             body["weight"] = weight
@@ -242,6 +249,7 @@ enum VoiceSetLogger {
     /// said, read here against the workout's exercises (SetReader), then
     /// matched, filled in and saved by the server (logHeardSets).
     static func logSpoken(_ words: String) async -> String {
+        if watchOnly { return watchOnlyReply }
         let workout: SpokenWorkout
         let fetched: Result<SpokenWorkout, CallError> = await get("/api/device/set")
         switch fetched {
@@ -315,6 +323,7 @@ enum VoiceSetLogger {
     // MARK: Undo
 
     static func undo() async -> String {
+        if watchOnly { return watchOnlyReply }
         let reply: UndoReply
         let result: Result<UndoReply, CallError> = await post("/api/device/undo")
         switch result {
@@ -344,6 +353,7 @@ enum VoiceSetLogger {
     // MARK: Finish
 
     static func finish() async -> String {
+        if watchOnly { return "Finish your workout on your iPhone or Apple Watch." }
         let reply: FinishReply
         let result: Result<FinishReply, CallError> = await post("/api/device/finish")
         switch result {

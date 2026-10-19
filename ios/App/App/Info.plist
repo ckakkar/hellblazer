@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.kkrwhofrags.hellblazer.recovery</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CAPACITOR_DEBUG</key>
 	<string>$(CAPACITOR_DEBUG)</string>
 	<key>CFBundleDevelopmentRegion</key>
@@ -18,8 +24,6 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
 	<key>CFBundleShortVersionString</key>
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleURLTypes</key>
@@ -41,17 +45,10 @@
 	<true/>
 	<key>NSHealthShareUsageDescription</key>
 	<string>Fatty reads your sleep, heart rate variability and resting heart rate to show how recovered you are, your heart rate during workouts to show how hard they were, and finds the workouts your Apple Watch recorded to add their effort. It all stays on this iPhone.</string>
+	<key>NSHealthShareUsageDescription~ipad</key>
+	<string>Fatty reads your sleep, heart rate variability and resting heart rate to show how recovered you are, your heart rate during workouts to show how hard they were, and finds the workouts your Apple Watch recorded to add their effort. It all stays on this iPad.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Fatty saves your finished workouts, how hard they were, and your bodyweight to Apple Health.</string>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-		<string>remote-notification</string>
-	</array>
-	<key>BGTaskSchedulerPermittedIdentifiers</key>
-	<array>
-		<string>com.kkrwhofrags.hellblazer.recovery</string>
-	</array>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>
@@ -115,6 +112,53 @@
 			</dict>
 		</dict>
 	</array>
+	<key>UIApplicationShortcutItems~ipad</key>
+	<array>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>chart.line.uptrend.xyaxis</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Progress</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.kkrwhofrags.hellblazer.progress</string>
+			<key>UIApplicationShortcutItemUserInfo</key>
+			<dict>
+				<key>path</key>
+				<string>/progress</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>clock.arrow.circlepath</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>History</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.kkrwhofrags.hellblazer.history</string>
+			<key>UIApplicationShortcutItemUserInfo</key>
+			<dict>
+				<key>path</key>
+				<string>/history</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UIApplicationShortcutItemIconSymbolName</key>
+			<string>list.bullet.clipboard</string>
+			<key>UIApplicationShortcutItemTitle</key>
+			<string>Templates</string>
+			<key>UIApplicationShortcutItemType</key>
+			<string>com.kkrwhofrags.hellblazer.templates</string>
+			<key>UIApplicationShortcutItemUserInfo</key>
+			<dict>
+				<key>path</key>
+				<string>/templates</string>
+			</dict>
+		</dict>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -126,6 +170,13 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UIUserInterfaceStyle</key>
 	<string>Dark</string>

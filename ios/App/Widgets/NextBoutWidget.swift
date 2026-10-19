@@ -2,7 +2,8 @@ import SwiftUI
 import WidgetKit
 
 /// Home Screen and Lock Screen widget: the next programmed workout and how
-/// the week is going, with a Start button on the medium size. The app writes
+/// the week is going, with a Start button on the medium size (on an iPhone:
+/// the iPad's says where the workout's started instead). The app writes
 /// the snapshot whenever the dashboard loads, and after a workout's finished
 /// anywhere (a silent push); when the week rolls over, it starts at zero.
 struct NextBoutWidget: Widget {
@@ -10,8 +11,9 @@ struct NextBoutWidget: Widget {
         StaticConfiguration(kind: "NextBout", provider: NextBoutProvider()) { entry in
             NextBoutView(entry: entry)
                 .fightCard()
-                // Tapping it starts the next bout: the Log screen.
-                .widgetURL(URL(string: "https://hellblazer.vercel.app/log"))
+                // Tapping it starts the next bout: the Log screen. An iPad
+                // opens Home, where a workout under way shows live.
+                .widgetURL(URL(string: WidgetStyle.onIPad ? "https://hellblazer.vercel.app/dashboard" : "https://hellblazer.vercel.app/log"))
         }
         .configurationDisplayName("Next Bout")
         .description("Your next workout and this week's training.")
@@ -134,7 +136,12 @@ struct NextBoutView: View {
                                 .frame(maxWidth: 150)
                             Spacer(minLength: 0)
                             // Starts that day in the app, straight into the logger.
-                            if let start = snapshot.startURL {
+                            if WidgetStyle.onIPad {
+                                Label("On your iPhone", systemImage: "iphone")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            } else if let start = snapshot.startURL {
                                 Link(destination: start) {
                                     WidgetButtonLabel(title: "Start", symbol: "play.fill")
                                 }
