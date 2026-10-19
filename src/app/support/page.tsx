@@ -19,7 +19,7 @@ export default function SupportPage() {
       <section>
         <h2>Signing in</h2>
         <p>
-          Fatty uses Google on the website, and Google or Apple in the iPhone app. Signing in with
+          Fatty uses Google on the website, and Google or Apple in the iPhone and iPad app. Signing in with
           the same email on both gives you one account. With Apple&apos;s Hide My Email you get a
           separate account.
         </p>
@@ -36,9 +36,18 @@ export default function SupportPage() {
       <section>
         <h2>Notifications</h2>
         <p>
-          Turn them on in Settings → Notifications. In the iPhone app, if you said no to the prompt
-          earlier, allow them in iOS Settings → Notifications → Fatty. On the website, iPhones only
-          get notifications after you add Fatty to the Home Screen.
+          Turn them on in Settings → Notifications. In the app, if you said no to the prompt
+          earlier, allow them in Settings → Notifications → Fatty. On the website, iPhones and iPads
+          only get notifications after you add Fatty to the Home Screen.
+        </p>
+      </section>
+
+      <section>
+        <h2>On iPad</h2>
+        <p>
+          The iPad app is for looking back and planning: your rank, progress and history, and
+          building programs, templates and exercises. Workouts are started and logged on your
+          iPhone or Apple Watch. While one is under way, the iPad shows it live, set by set.
         </p>
       </section>
 

@@ -5,6 +5,7 @@ import { Button, type ButtonProps } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
 import { todayLocalISO } from "@/lib/local-date";
 import { useAction } from "@/lib/use-action";
+import { useIPadApp } from "@/components/ipad-app";
 
 export function StartWorkoutButton({
   programDayId,
@@ -25,6 +26,8 @@ export function StartWorkoutButton({
   className?: string;
 }) {
   const [pending, start] = useAction("start the workout");
+  // Workouts start on the iPhone or the watch.
+  if (useIPadApp()) return null;
   return (
     <Button
       variant={variant}

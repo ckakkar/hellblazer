@@ -1,4 +1,5 @@
 import type { PluginListenerHandle } from "@capacitor/core";
+import { deviceName } from "@/lib/device";
 import { registerApnsDevice, unregisterApnsDevice } from "@/lib/actions/push";
 
 // iOS app only: notifications through Apple Push Notification service. The
@@ -68,7 +69,7 @@ export async function enableNativePush(): Promise<string | null> {
     storeToken(token);
     return null;
   } catch {
-    return "Couldn't register this iPhone for notifications. Try again.";
+    return `Couldn't register this ${deviceName()} for notifications. Try again.`;
   }
 }
 

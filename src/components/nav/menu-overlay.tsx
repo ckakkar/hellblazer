@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, Flame, LogOut, Play, Plus, Trophy, X } from "lucide-react";
+import { ChevronRight, Flame, LogOut, Play, Plus, Radio, Trophy, X } from "lucide-react";
 import { FighterArt } from "@/components/tier/fighter-art";
 import { Portal } from "@/components/ui/portal";
 import { useModal, usePresence } from "@/components/ui/use-modal";
@@ -11,7 +11,8 @@ import { signOutOfApp } from "@/lib/sign-out";
 import { MAX_RANK, type TierKey } from "@/lib/tiers";
 import { cn } from "@/lib/utils";
 import { useLiveWorkout } from "@/lib/live-workout";
-import { BOTTOM_NAV, SECONDARY_NAV } from "./nav-items";
+import { useIPadApp } from "@/components/ipad-app";
+import { BOTTOM_NAV, IPAD_BOTTOM_NAV, SECONDARY_NAV } from "./nav-items";
 
 /** Matches the `.hb-menu` exit transition in globals.css. */
 const EXIT_MS = 240;
@@ -55,12 +56,18 @@ export function MenuOverlay({
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + "/");
   const live = useLiveWorkout();
+  const ipad = useIPadApp();
 
   if (!mounted) return null;
-  const tiles = SECONDARY_NAV.filter((i) => i.href !== "/leaderboard");
   // The menu covers the tab bar, so it carries the main tabs too (Log is the
-  // big button below, Profile is the card at the top).
-  const main = BOTTOM_NAV.filter((i) => i.href !== "/log" && i.href !== "/settings");
+  // big button below, Profile is the card at the top). The iPad's tabs have
+  // History in place of Log, and no button: workouts start on the phone.
+  const main = (ipad ? IPAD_BOTTOM_NAV : BOTTOM_NAV).filter(
+    (i) => i.href !== "/log" && i.href !== "/settings",
+  );
+  const tiles = SECONDARY_NAV.filter(
+    (i) => i.href !== "/leaderboard" && !main.some((m) => m.href === i.href),
+  );
   // Items rise in one after another, top to bottom.
   const rise = (i: number) => ({ animationDelay: `${60 + i * 45}ms` });
 
@@ -181,7 +188,7 @@ export function MenuOverlay({
             <span className="mt-1.5 text-[13px] text-muted">The standings, by volume lifted</span>
           </Link>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className={cn("grid gap-3", tiles.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
             {tiles.map((item, i) => {
               const active = isActive(item.href);
               return (
@@ -208,19 +215,23 @@ export function MenuOverlay({
             })}
           </div>
 
-          <Link
-            href={live ? `/log/${live}` : "/log"}
-            onClick={onClose}
-            className="hb-hero-rise hb-glow mt-1 flex h-14 items-center justify-center gap-2 rounded-2xl bg-accent text-[16px] font-semibold text-black"
-            style={rise(8)}
-          >
-            {live ? (
-              <Play className="size-5 fill-current" strokeWidth={2.5} />
-            ) : (
-              <Plus className="size-5" strokeWidth={2.5} />
-            )}
-            {live ? "Resume workout" : "Start a workout"}
-          </Link>
+          {(!ipad || live) && (
+            <Link
+              href={live ? `/log/${live}` : "/log"}
+              onClick={onClose}
+              className="hb-hero-rise hb-glow mt-1 flex h-14 items-center justify-center gap-2 rounded-2xl bg-accent text-[16px] font-semibold text-black"
+              style={rise(8)}
+            >
+              {ipad ? (
+                <Radio className="size-5" strokeWidth={2.5} />
+              ) : live ? (
+                <Play className="size-5 fill-current" strokeWidth={2.5} />
+              ) : (
+                <Plus className="size-5" strokeWidth={2.5} />
+              )}
+              {ipad ? "Watch live" : live ? "Resume workout" : "Start a workout"}
+            </Link>
+          )}
 
           <div
             className="hb-hero-rise flex items-center justify-between gap-3 pt-3"

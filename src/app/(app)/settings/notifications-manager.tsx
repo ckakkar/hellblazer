@@ -1,5 +1,6 @@
 "use client";
 
+import { deviceName, isAppleTouchDevice } from "@/lib/device";
 import { useEffect, useState, useTransition } from "react";
 import { Bell, Loader2, Send, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export function NotificationsManager({
         "PushManager" in window &&
         "Notification" in window;
       if (!supported) {
-        const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent);
+        const isIOS = isAppleTouchDevice();
         const standalone =
           window.matchMedia?.("(display-mode: standalone)").matches ||
           (navigator as unknown as { standalone?: boolean }).standalone === true;
@@ -172,7 +173,7 @@ export function NotificationsManager({
         const { disableNativePush } = await import("@/lib/native-push");
         await disableNativePush();
         setSubscribed(false);
-        setMsg("Notifications turned off on this iPhone.");
+        setMsg(`Notifications turned off on this ${deviceName()}.`);
         return;
       }
       const reg = await workerRegistration();
@@ -237,7 +238,7 @@ export function NotificationsManager({
         <div className="text-sm text-muted">
           <p className="font-medium text-text">Add to Home Screen first</p>
           <p className="mt-1">
-            On iPhone, notifications only work in the installed app. Tap{" "}
+            On iPhone and iPad, notifications only work in the installed app. Tap{" "}
             <Share className="inline size-3.5 align-text-bottom" /> Share →{" "}
             <span className="text-text">Add to Home Screen</span>, then open
             Fatty from its icon and come back here.

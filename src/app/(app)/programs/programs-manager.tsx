@@ -28,6 +28,7 @@ import {
   setActiveProgram,
 } from "@/lib/actions/programs";
 import { useAction } from "@/lib/use-action";
+import { useIPadApp } from "@/components/ipad-app";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -46,6 +47,7 @@ export function ProgramsManager({
 }) {
   const [pending, start] = useAction("save the change");
   const [creating, setCreating] = useState(false);
+  const ipad = useIPadApp();
 
   return (
     <div>
@@ -77,6 +79,7 @@ export function ProgramsManager({
               progress={activeProgress}
               activeSession={activeSession}
               href={`/programs/${activeProgress.program.id}`}
+              ipad={ipad}
             />
           </div>
         )}

@@ -8,7 +8,7 @@ import { PrefetchKind } from "next/dist/client/components/router-reducer/router-
 const TICK_MS = 10_000;
 
 /** Where the tab bar shows (it's `md:hidden`). */
-const TAB_BAR = "(max-width: 767.98px)";
+const TAB_BAR = "(max-width: 743.98px)";
 
 /**
  * The tab bar prefetches each tab's whole page, so a tap shows it at once.

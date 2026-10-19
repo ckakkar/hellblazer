@@ -1,5 +1,6 @@
 "use client";
 
+import { useDeviceName } from "@/lib/device";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowDownRight, ArrowRight, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,7 @@ export type RecoveryView =
   | { kind: "ready"; recovery: Recovery };
 
 /**
- * iPhone app only: how recovered you are this morning, from Apple Health's
+ * iPhone and iPad app only: how recovered you are this morning, from Apple Health's
  * sleep, heart rate variability and resting heart rate (src/lib/recovery.ts).
  * Read on the phone and never sent anywhere. Until Health has been asked,
  * it offers to connect; "Not now" hides it (Settings brings it back).
@@ -107,6 +108,7 @@ export function RecoveryPanel({
   onConnect: () => void;
   onHide: () => void;
 }) {
+  const device = useDeviceName();
   if (view.kind === "hidden") return null;
 
   if (view.kind === "ask" || view.kind === "empty") {
@@ -119,7 +121,7 @@ export function RecoveryPanel({
           </p>
           <p className="mt-1 text-[15px] leading-6 text-muted">
             {view.kind === "ask"
-              ? "Fatty can read your sleep, heart rate variability and resting heart rate from Apple Health, and tell you each morning whether to go hard or go lighter. It stays on this iPhone."
+              ? `Fatty can read your sleep, heart rate variability and resting heart rate from Apple Health, and tell you each morning whether to go hard or go lighter. It stays on this ${device}.`
               : "Health has no sleep or heart readings for Fatty. Wear your Apple Watch to bed, or allow Fatty in the Health app under Sharing → Apps → Fatty, and Recovery shows up here."}
           </p>
           <div className="mt-4 flex flex-wrap gap-2">

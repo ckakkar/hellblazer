@@ -8,6 +8,7 @@ import { getActiveSession, getSessionSummaries, hasAnySession } from "@/lib/data
 import { getActiveProgramProgress, getPrograms } from "@/lib/data/programs";
 import { getProfile } from "@/lib/data/profile";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
+import { isIPadApp } from "@/lib/surface";
 import { OnboardingHero } from "./onboarding-hero";
 import { PRESETS } from "@/lib/presets";
 import { FightCardHero } from "@/components/tier/fight-card-hero";
@@ -50,6 +51,7 @@ export default async function DashboardPage({
     profile,
     unit,
     activeSession,
+    ipad,
   ] = await Promise.all([
     getCurrentWeekSetsPerMuscle(),
     getLatestWorkoutSets(),
@@ -62,6 +64,7 @@ export default async function DashboardPage({
     getProfile(),
     getUnit(),
     getActiveSession(),
+    isIPadApp(),
   ]);
   const tier = getTier(profile?.tier);
 
@@ -199,6 +202,7 @@ export default async function DashboardPage({
             progress={activeProgress}
             activeSession={activeSession}
             href={`/programs/${activeProgress.program.id}`}
+            ipad={ipad}
             className="hb-overlap relative z-10 -mt-14 md:mt-3 lg:col-span-5 lg:col-start-8 lg:row-start-1 lg:mb-10 lg:mt-0 lg:self-end"
           />
         ) : (

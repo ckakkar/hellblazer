@@ -15,17 +15,20 @@ import { LiveWorkoutSync } from "@/components/live-workout-sync";
 import { DeviceSync } from "@/components/native/device-sync";
 import { getAccent, getUnit } from "@/lib/settings";
 import { accentSwatch } from "@/lib/accents";
+import { isIPadApp } from "@/lib/surface";
+import { IPadAppProvider } from "@/components/ipad-app";
 
 export default async function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [user, shell, unit, accent] = await Promise.all([
+  const [user, shell, unit, accent, ipad] = await Promise.all([
     requireSessionUser(),
     getShellProfile(),
     getUnit(),
     getAccent(),
+    isIPadApp(),
   ]);
 
   // First run after Google sign-in: collect the basics before anything else.
@@ -42,6 +45,7 @@ export default async function AppLayout({
   const tier = getTier(shell.tier);
 
   return (
+    <IPadAppProvider value={ipad}>
     <div className="relative isolate min-h-dvh">
       {/* Arena light: the accent, faint, from above. Static, and it scrolls
           away with the page; the home and profile heroes cover it. */}
@@ -66,25 +70,29 @@ export default async function AppLayout({
         }}
       />
       <div className="md:pl-60">
-        <main className="hb-ptr-content mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-10 md:pb-16 lg:max-w-[80rem] lg:px-12">
+        {/* From md the status bar is the only inset (an iPad's, in the app);
+            it's zero in a browser. */}
+        <main className="hb-ptr-content mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-[calc(env(safe-area-inset-top)+2.5rem)] md:pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:max-w-[80rem] lg:px-12">
           {/* Streamed so its lookup never blocks the page content. */}
           <Suspense fallback={null}>
-            <ResumeBannerSlot />
+            <ResumeBannerSlot ipad={ipad} />
           </Suspense>
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>
+    </IPadAppProvider>
   );
 }
 
-async function ResumeBannerSlot() {
+/** The iPad has no banner: its sidebar shows the workout under way. */
+async function ResumeBannerSlot({ ipad }: { ipad: boolean }) {
   const activeSession = await getActiveSession();
   return (
     <>
       <WorkoutActivitySync activeSessionId={activeSession?.id ?? null} />
       <LiveWorkoutSync session={activeSession && !activeSession.stale ? activeSession : null} />
-      {activeSession && <ResumeBanner session={activeSession} />}
+      {activeSession && !ipad && <ResumeBanner session={activeSession} />}
     </>
   );
 }

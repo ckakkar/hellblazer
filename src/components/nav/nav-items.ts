@@ -41,6 +41,19 @@ export const BOTTOM_NAV: NavItem[] = [
   { href: "/settings", label: "Profile", icon: User },
 ];
 
+/**
+ * The iPad app's tab bar, for a window too narrow for the sidebar (Split
+ * View, Slide Over). Workouts aren't run on an iPad, so History takes the
+ * place of Log.
+ */
+export const IPAD_BOTTOM_NAV: NavItem[] = [
+  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
+  { href: "/programs", label: "Programs", icon: CalendarRange },
+  { href: "/progress", label: "Progress", icon: TrendingUp },
+  { href: "/history", label: "History", icon: History },
+  { href: "/settings", label: "Profile", icon: User },
+];
+
 /** Mobile top-bar overflow (secondary destinations). */
 export const SECONDARY_NAV: NavItem[] = [
   { href: "/leaderboard", label: "King of the Hill", icon: Trophy },

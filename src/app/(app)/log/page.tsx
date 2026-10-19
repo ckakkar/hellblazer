@@ -9,6 +9,7 @@ import { ProgramProgressCard } from "@/components/program/program-progress-card"
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import { SessionStarter } from "./session-starter";
+import { isIPadApp } from "@/lib/surface";
 
 export const metadata: Metadata = { title: "Log workout" };
 
@@ -19,12 +20,17 @@ export default async function LogPage({
 }: {
   searchParams: Promise<{ start?: string }>;
 }) {
-  const [templates, activeProgress, activeSession, { start }] = await Promise.all([
+  const [templates, activeProgress, activeSession, { start }, ipad] = await Promise.all([
     getTemplates(),
     getActiveProgramProgress(),
     getActiveSession(),
     searchParams,
+    isIPadApp(),
   ]);
+
+  // Nothing starts on an iPad (a widget or Siri can still land here): show
+  // the workout under way, or home.
+  if (ipad) redirect(activeSession && !activeSession.stale ? `/log/${activeSession.id}` : "/dashboard");
 
   // Full template details (movements, target sets/reps) for the preview dropdown,
   // keyed by id: the program-day select only carries exercise counts.

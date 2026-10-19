@@ -66,7 +66,7 @@ export function SignInMethods({
         : (email ?? "Connected")
       : canConnect
         ? "Not connected"
-        : "Connect it from the Fatty iPhone app";
+        : "Connect it in the Fatty app on iPhone or iPad";
     return (
       <SettingsRow
         key={provider}

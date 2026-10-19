@@ -43,6 +43,25 @@ export async function createTemplate(input: {
   return { id: data.id };
 }
 
+/** Renames a template and its day label (the name the logger and programs show). */
+export async function updateTemplate(input: { id: string; name?: string; dayLabel?: string | null }) {
+  const v = z
+    .object({
+      id: z.string().uuid(),
+      name: z.string().trim().min(1).max(120).optional(),
+      dayLabel: z.string().trim().max(120).nullable().optional(),
+    })
+    .parse(input);
+  const { supabase } = await getAuthedContext();
+  const patch: TablesUpdate<"workout_template"> = {};
+  if (v.name !== undefined) patch.name = v.name;
+  if (v.dayLabel !== undefined) patch.day_label = v.dayLabel || null;
+  const { error } = await supabase.from("workout_template").update(patch).eq("id", v.id);
+  if (error) throw error;
+  revalidatePath("/templates");
+  revalidatePath("/programs", "layout");
+}
+
 export async function deleteTemplate(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase } = await getAuthedContext();

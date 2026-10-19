@@ -1,15 +1,16 @@
 import { addDays, format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 
 /**
- * The fun end of the iPhone widgets (ios/App/Widgets/FighterWidget.swift,
+ * The fun end of the iPhone and iPad widgets (ios/App/Widgets/FighterWidget.swift,
  * StreakWidget.swift, RecordWidget.swift): the week streak, the training
  * calendar, and the latest record, worked out from what the snapshot
  * already reads (src/lib/widget-snapshot.ts). Dates are yyyy-MM-dd in the
  * lifter's calendar.
  */
 
-/** Weeks the calendar widget shows, this one included. */
-export const CALENDAR_WEEKS = 12;
+/** Weeks the calendar widgets can show, this one included: the medium
+ *  Streak shows the last 12, the iPad's extra large all 26. */
+export const CALENDAR_WEEKS = 26;
 
 const monday = (date: string) => format(startOfISOWeek(parseISO(date)), "yyyy-MM-dd");
 

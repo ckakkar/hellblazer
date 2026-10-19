@@ -41,6 +41,7 @@ import {
   updateProgram,
 } from "@/lib/actions/programs";
 import { useAction } from "@/lib/use-action";
+import { useIPadApp } from "@/components/ipad-app";
 
 const DURATIONS = [4, 6, 8, 12, 16];
 
@@ -61,6 +62,7 @@ export function ProgramDetail({
   const [picker, setPicker] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [previewDayId, setPreviewDayId] = useState<string | null>(null);
+  const ipad = useIPadApp();
   const days = program.program_day;
   const previewDay = days.find((d) => d.id === previewDayId) ?? null;
   const previewTemplate = previewDay
@@ -107,7 +109,7 @@ export function ProgramDetail({
         }
       />
 
-      <ProgramProgressCard progress={progress} activeSession={activeSession} />
+      <ProgramProgressCard progress={progress} activeSession={activeSession} ipad={ipad} />
 
       {/* Day-to-day controls: pause the block, or roll back the last advance */}
       {program.start_date && !progress.isCompleted && (

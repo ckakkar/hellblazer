@@ -1,5 +1,6 @@
 "use client";
 
+import { useDeviceName } from "@/lib/device";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { HeartPulse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -87,6 +88,7 @@ export function HeartCard({
   /** From the lifter's age; null to estimate from the workout. */
   maxHr: number | null;
 }) {
+  const device = useDeviceName();
   const [view, setView] = useState<View>({ at: "hidden" });
   const [summary, setSummary] = useState<{ text: string; written: boolean } | null>(null);
   const [reload, setReload] = useState(0);
@@ -168,7 +170,7 @@ export function HeartCard({
           <>
             <p className="mt-2 text-[15px] leading-[1.5] text-muted">
               See when this workout pushed you hardest and how fast you recovered between sets, from
-              your Apple Watch. It&apos;s all worked out on this iPhone.
+              your Apple Watch. It&apos;s all worked out on this {device}.
             </p>
             <Button
               variant="secondary"
@@ -202,7 +204,7 @@ export function HeartCard({
       {shown ? (
         <>
           <p className="mt-3 text-[15px] leading-[1.5] text-text">{shown.text}</p>
-          {shown.written && <p className="mt-1 text-[13px] text-muted">Written on this iPhone.</p>}
+          {shown.written && <p className="mt-1 text-[13px] text-muted">Written on this {device}.</p>}
         </>
       ) : (
         <div aria-hidden className="mt-3 space-y-2">

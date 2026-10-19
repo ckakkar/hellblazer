@@ -4,16 +4,19 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { SettingsRow } from "@/components/ui/settings-list";
 import { Switch } from "@/components/ui/switch";
 import { canKeepAwake, keepAwakeOn, setKeepAwake } from "@/lib/keep-awake";
+import { useIPadApp } from "@/components/ipad-app";
 
 const noop = () => () => {};
 
 /**
- * Keeps the screen on while a workout's open (useKeepAwake in the logger).
- * Per device; hidden where the browser can't do it.
+ * Keeps the screen on while a workout's open (useKeepAwake in the logger),
+ * or on an iPad while one's being watched live. Per device; hidden where
+ * the browser can't do it.
  */
 export function KeepAwakeRow() {
   const supported = useSyncExternalStore(noop, canKeepAwake, () => false);
   const [on, setOn] = useState(true);
+  const ipad = useIPadApp();
 
   // The saved choice is per device, so it's read after mount.
   useEffect(() => {
@@ -25,7 +28,11 @@ export function KeepAwakeRow() {
   return (
     <SettingsRow
       label="Keep screen on"
-      hint="While a workout's open, so your phone doesn't lock between sets."
+      hint={
+        ipad
+          ? "While you watch a workout live, so the screen doesn't lock."
+          : "While a workout's open, so the screen doesn't lock between sets."
+      }
       control={
         <Switch
           checked={on}

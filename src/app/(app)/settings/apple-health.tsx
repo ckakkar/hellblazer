@@ -1,5 +1,6 @@
 "use client";
 
+import { useDeviceName } from "@/lib/device";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { SettingsGroup, SettingsRow } from "@/components/ui/settings-list";
 import { isNativeApp } from "@/lib/native";
@@ -10,7 +11,7 @@ import { recoveryOnHome, setRecoveryOnHome } from "@/components/native/recovery-
 const noop = () => () => {};
 
 /**
- * iPhone app only: the Apple Health switches. Saving: finished workouts
+ * iPhone and iPad app only: the Apple Health switches. Saving: finished workouts
  * (with their effort) and logged bodyweight go to Health (saveToHealth in
  * the session logger, the bodyweight manager). Recovery: sleep, HRV and
  * resting heart rate are read for the card on Home, on the phone only.
@@ -18,11 +19,12 @@ const noop = () => () => {};
  */
 export function AppleHealthSettings() {
   const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
+  const device = useDeviceName();
   if (!inApp) return null;
   return (
     <SettingsGroup
       label="Apple Health"
-      caption="What Fatty reads from Health stays on this iPhone. Manage access in the Health app under Sharing → Apps → Fatty."
+      caption={`What Fatty reads from Health stays on this ${device}. Manage access in the Health app under Sharing → Apps → Fatty.`}
     >
       <HealthRow />
       <RecoveryRow />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useDeviceName } from "@/lib/device";
 import { useEffect, useId, useRef, useState } from "react";
 import { Loader2, Mic, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ export function SaySets({
   /** Inside an exercise's sheet rather than on the logger itself. */
   inSheet?: boolean;
 }) {
+  const device = useDeviceName();
   const [ready, setReady] = useState(false);
   const [stage, setStage] = useState<Stage>({ at: "closed" });
   const [text, setText] = useState("");
@@ -237,7 +239,7 @@ export function SaySets({
           {error}
         </p>
       ) : (
-        <p className="mt-2 text-[13px] text-muted">Tap the keyboard&apos;s mic to say it. It&apos;s read on this iPhone.</p>
+        <p className="mt-2 text-[13px] text-muted">Tap the keyboard&apos;s mic to say it. It&apos;s read on this {device}.</p>
       )}
       <div className="mt-3 flex gap-2">
         <Button

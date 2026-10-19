@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, Pause, Play } from "lucide-react";
+import { CheckCircle2, Pause, Play, Radio, Watch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { WorkoutClock } from "@/components/resume-banner";
@@ -14,14 +14,20 @@ import { PauseResumeButton } from "./program-controls";
  * workout's name is the headline, and starting it is the one accent action.
  * While a workout is under way, that workout is what to do next: the card
  * offers Resume instead of starting the following day on top of it.
+ *
+ * On the iPad (`ipad`), where workouts aren't run, the workout under way is
+ * one to watch, and the next one is started on the iPhone or the watch.
  */
 export function ProgramProgressCard({
   progress,
   activeSession = null,
   href,
+  ipad = false,
   className,
 }: {
   progress: ProgramProgress;
+  /** In the iPad app (useIPadApp or isIPadApp). */
+  ipad?: boolean;
   /** The workout in progress, from getActiveSession(). */
   activeSession?: ActiveSession | null;
   href?: string;
@@ -119,15 +125,15 @@ export function ProgramProgressCard({
       ) : live ? (
         <>
           <p className="tnum mt-5 text-[13px] text-muted">
-            In progress
+            {ipad ? "Live" : "In progress"}
             <WorkoutClock startedAt={live.startedAt} prefix=", " />
           </p>
           <h2 className="mt-0.5 text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-text">
             {live.title ?? "Workout"}
           </h2>
           <p className="tnum mt-0.5 text-[13px] text-muted">
-            {live.workingSets} {live.workingSets === 1 ? "set" : "sets"} logged. Finish it to
-            start another.
+            {live.workingSets} {live.workingSets === 1 ? "set" : "sets"} logged
+            {ipad ? " so far." : ". Finish it to start another."}
           </p>
 
           {week}
@@ -140,8 +146,8 @@ export function ProgramProgressCard({
             transitionTypes={["nav-forward"]}
             className={cn(buttonVariants({ variant: "accent", size: "lg" }), "hb-glow mt-5 w-full")}
           >
-            <Play className="size-4" />
-            Resume
+            {ipad ? <Radio className="size-4" /> : <Play className="size-4" />}
+            {ipad ? "Watch live" : "Resume"}
           </Link>
         </>
       ) : nextDay?.template_id ? (
@@ -158,6 +164,15 @@ export function ProgramProgressCard({
 
           {week}
 
+          {ipad ? (
+            <div className="mt-5 flex items-center gap-3">
+              <p className="flex min-w-0 flex-1 items-center gap-2 text-[13px] text-muted">
+                <Watch className="size-4 shrink-0" />
+                Start it on your iPhone or Apple Watch.
+              </p>
+              <SkipWorkoutButton programDayId={nextDay.id} />
+            </div>
+          ) : (
           <div className="mt-5 flex gap-2">
             <StartWorkoutButton
               programDayId={nextDay.id}
@@ -168,6 +183,7 @@ export function ProgramProgressCard({
             />
             <SkipWorkoutButton programDayId={nextDay.id} size="lg" />
           </div>
+          )}
         </>
       ) : (
         <p className="mt-5 text-[15px] text-muted">

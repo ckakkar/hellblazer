@@ -28,12 +28,10 @@ describe("weekStreak", () => {
 });
 
 describe("trainingDays", () => {
-  it("keeps the calendar's twelve weeks, each day once, oldest first", () => {
-    expect(trainingDays(["2026-09-30", "2026-07-13", "2026-07-12", "2026-09-30", "2026-08-01"], "2026-09-30")).toEqual([
-      "2026-07-13",
-      "2026-08-01",
-      "2026-09-30",
-    ]);
+  it("keeps the calendar's 26 weeks, each day once, oldest first", () => {
+    expect(
+      trainingDays(["2026-09-30", "2026-07-13", "2026-04-05", "2026-04-06", "2026-09-30", "2026-08-01"], "2026-09-30"),
+    ).toEqual(["2026-04-06", "2026-07-13", "2026-08-01", "2026-09-30"]);
   });
 });
 

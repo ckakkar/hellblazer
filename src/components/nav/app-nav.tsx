@@ -3,20 +3,19 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, Ellipsis, Flame, Play, Plus, X } from "lucide-react";
+import { ChevronLeft, Ellipsis, Flame, Play, Plus, Radio, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import { FighterArt } from "@/components/tier/fighter-art";
 import { useElapsed } from "@/components/resume-banner";
 import { discardSession } from "@/lib/actions/sessions";
-import { NAV_SECTIONS, BOTTOM_NAV, type NavItem } from "./nav-items";
+import { NAV_SECTIONS, BOTTOM_NAV, IPAD_BOTTOM_NAV, type NavItem } from "./nav-items";
 import { MenuOverlay, type NavIdentity } from "./menu-overlay";
 import { useWarmTabs } from "./warm-tabs";
 import { useLiveSession, useLiveWorkout, type LiveWorkout } from "@/lib/live-workout";
 import { useAction } from "@/lib/use-action";
-
-const TAB_HREFS = BOTTOM_NAV.map((item) => item.href);
+import { useIPadApp } from "@/components/ipad-app";
 
 /** The compact title the mobile top bar shows once the large one scrolls off. */
 const TITLES: [prefix: string, title: string][] = [
@@ -83,7 +82,7 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
       href={item.href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] font-medium tracking-[-0.01em] transition-colors",
+        "relative flex items-center gap-3 rounded-xl px-3 py-2 text-[15px] font-medium tracking-[-0.01em] transition-colors pointer-coarse:py-2.5",
         active ? "text-text" : "text-muted hover:text-text",
       )}
     >
@@ -102,6 +101,8 @@ function SidebarLink({ item, active }: { item: NavItem; active: boolean }) {
 function SidebarWorkout() {
   const live = useLiveSession();
   const pathname = usePathname();
+  const ipad = useIPadApp();
+  if (ipad) return live ? <SidebarWatchLive live={live} here={pathname === `/log/${live.id}`} /> : null;
   if (!live) {
     return (
       <Link
@@ -137,7 +138,7 @@ function SidebarLiveCard({ live, here }: { live: LiveWorkout; here: boolean }) {
           <ConfirmIconButton
             icon={X}
             label="Discard workout"
-            confirmLabel="Click again to discard the workout"
+            confirmLabel="Tap again to discard the workout"
             disabled={pending}
             onConfirm={() => start(async () => void (await discardSession({ id: live.id })))}
             className="-mr-1 -mt-1 rounded-full"
@@ -153,6 +154,40 @@ function SidebarLiveCard({ live, here }: { live: LiveWorkout; here: boolean }) {
         >
           <Play className="size-4" />
           Resume
+        </Link>
+      )}
+    </div>
+  );
+}
+
+/**
+ * The iPad's version: the workout running on the phone or the watch, to
+ * watch as it happens. Nothing to discard or finish here; that's done where
+ * it's being lifted.
+ */
+function SidebarWatchLive({ live, here }: { live: LiveWorkout; here: boolean }) {
+  const elapsed = useElapsed(live.startedAt);
+  const sets = `${live.workingSets} ${live.workingSets === 1 ? "set" : "sets"}`;
+  return (
+    <div className="rounded-2xl bg-surface p-3" aria-current={here ? "page" : undefined}>
+      <div className="flex items-start gap-2.5 pl-0.5">
+        <span className="mt-[7px] size-2 shrink-0 rounded-full bg-accent" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-medium text-text">{live.title ?? "Workout"}</p>
+          <p className="tnum truncate text-[13px] text-muted">
+            {elapsed ? <span className="text-accent-ink">{elapsed}</span> : "Live"}, {sets}
+          </p>
+        </div>
+      </div>
+      {!here && (
+        <Link
+          href={`/log/${live.id}`}
+          prefetch
+          transitionTypes={["nav-forward"]}
+          className={cn(buttonVariants({ variant: "accent" }), "hb-glow mt-3 w-full")}
+        >
+          <Radio className="size-4" />
+          Watch live
         </Link>
       )}
     </div>
@@ -205,7 +240,9 @@ export function AppNav({
 }) {
   const isActive = useActive();
   const pathname = usePathname();
-  useWarmTabs(TAB_HREFS);
+  const ipad = useIPadApp();
+  const tabs = ipad ? IPAD_BOTTOM_NAV : BOTTOM_NAV;
+  useWarmTabs(tabs.map((item) => item.href));
   // While a workout is under way, every "start one" control resumes it.
   const live = useLiveWorkout();
   const resume = (item: NavItem): NavItem =>
@@ -218,16 +255,18 @@ export function AppNav({
       {/* Desktop sidebar */}
       <aside
         aria-label="Sidebar"
-        className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-bg px-3 pb-3 pt-6 md:flex"
+        className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-bg px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] md:flex"
         style={{ viewTransitionName: "hb-sidebar" }}
       >
         <Link href="/dashboard" className="flex items-center gap-2 self-start px-3">
           <Flame className="size-[22px] text-accent" strokeWidth={2.25} />
           <span className="font-display text-[1.375rem] leading-none text-text">Fatty</span>
         </Link>
-        <div className="mt-7">
-          <SidebarWorkout />
-        </div>
+        {(!ipad || live) && (
+          <div className="mt-7">
+            <SidebarWorkout />
+          </div>
+        )}
         <nav aria-label="Main" className="mt-7 flex flex-col gap-5">
           {NAV_SECTIONS.map((items, i) => (
             <div key={i} className="flex flex-col gap-0.5">
@@ -244,12 +283,13 @@ export function AppNav({
 
       <MobileTopBar identity={identity} email={userEmail} />
 
-      {/* Mobile tab bar: a floating capsule of black glass. */}
+      {/* Mobile tab bar: a floating capsule of black glass, a phone's width
+          at most (an iPad's narrow Split View window gets a phone layout). */}
       <nav
-        className="hb-glass fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 grid h-16 grid-cols-5 rounded-[1.75rem] px-1.5 min-[400px]:inset-x-5 md:hidden"
+        className="hb-glass fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.5rem)] z-30 mx-auto grid h-16 max-w-[27.5rem] grid-cols-5 rounded-[1.75rem] px-1.5 min-[400px]:inset-x-5 md:hidden"
         style={{ viewTransitionName: "hb-tabbar" }}
       >
-        {BOTTOM_NAV.map((item) => {
+        {tabs.map((item) => {
           const active = isActive(item.href);
           const isLog = item.href === "/log";
           if (isLog) {

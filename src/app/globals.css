@@ -8,6 +8,10 @@
    variable (--accent-rgb) so Settings can re-skin it; it is spent only on what
    is live right now, a record being broken, and the log action. */
 @theme {
+  /* md is the iPad mini's portrait width (744pt), not Tailwind's 768, so
+     every iPad gets the sidebar in portrait. The raw media queries below
+     use the same line. */
+  --breakpoint-md: 46.5rem;
   --color-bg: #000000;
   --color-surface: #121214;
   --color-surface-2: #1c1c1f;
@@ -306,7 +310,7 @@ button,
     --hb-gutter: 1.25rem;
   }
 }
-@media (max-width: 767.98px) {
+@media (max-width: 743.98px) {
   /* A page whose program card already shows the workout under way (its clock
      and Resume) doesn't stack the resume banner above it too. On the home
      page that also keeps the hero full-bleed and Resume above the tab bar. */
@@ -348,7 +352,7 @@ button,
 }
 /* The card that overlaps the hero's foot: glass, so the portrait's fade
    reads through it. Opaque on a tablet, where it sits below the hero. */
-@media (max-width: 767.98px), (min-width: 1024px) {
+@media (max-width: 743.98px), (min-width: 1024px) {
   .hb-overlap {
     background-color: rgb(20 20 22 / 0.78);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
@@ -373,7 +377,7 @@ button,
 }
 /* The profile banner's portrait from `md`, where it sits to the right on
    the arena light: faded at the top and both sides so it has no box edge. */
-@media (min-width: 768px) {
+@media (min-width: 744px) {
   .hb-banner-fade {
     -webkit-mask-image:
       linear-gradient(to right, transparent, #000 30%, #000 82%, transparent),
@@ -384,6 +388,18 @@ button,
       linear-gradient(to bottom, transparent, #000 35%);
     mask-composite: intersect;
   }
+}
+/* The iPad live view's portrait behind the bout's name: faded on every side
+   and gone by the scoreboard's figures. */
+.hb-live-art {
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 38%, #000 78%, transparent),
+    linear-gradient(to bottom, transparent, #000 18%, #000 42%, transparent 82%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 38%, #000 78%, transparent),
+    linear-gradient(to bottom, transparent, #000 18%, #000 42%, transparent 82%);
+  mask-composite: intersect;
 }
 /* The landing's portrait on a desktop: it fades out leftward under the
    headline, so the two overlap without a seam. */
@@ -431,7 +447,7 @@ button,
 /* Scrolling, the portrait drifts at a fraction of the page's speed and dims,
    so the hero reads as depth rather than a flat card. */
 @supports (animation-timeline: scroll()) {
-  @media (max-width: 767.98px) {
+  @media (max-width: 743.98px) {
     .hb-hero-parallax {
       animation: hb-hero-parallax linear both;
       animation-timeline: scroll(root);
@@ -543,6 +559,18 @@ button,
   }
   100% {
     opacity: 0;
+  }
+}
+
+/* A set logged on the phone lands on the iPad's live view: it rises into
+   its place once. */
+.hb-set-land {
+  animation: hb-set-land 260ms var(--ease-out) both;
+}
+@keyframes hb-set-land {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
   }
 }
 
@@ -1684,7 +1712,7 @@ html[data-ua-nav]::view-transition-new(*) {
 .hb-ptr-content {
   transition: translate 320ms var(--ease-out);
 }
-@media (max-width: 767px) {
+@media (max-width: 743px) {
   html.hb-ptr .hb-ptr-content {
     translate: 0 2.75rem;
   }

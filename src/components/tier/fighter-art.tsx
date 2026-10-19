@@ -37,8 +37,8 @@ export function FighterArt({
     variant === "thumbnail"
       ? "56px"
       : variant === "hero"
-        ? "(max-width: 768px) 100vw, 640px"
-        : "(max-width: 768px) 72vw, 420px";
+        ? "(max-width: 744px) 100vw, 640px"
+        : "(max-width: 744px) 72vw, 420px";
 
   return (
     <figure

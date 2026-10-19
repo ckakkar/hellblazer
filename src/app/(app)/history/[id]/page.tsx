@@ -94,8 +94,9 @@ export default async function SessionDetailPage({
             sessionId={session.id}
             title={session.title ?? "Session"}
           />
+          {/* `edit`: on an iPad, /log/[id] is otherwise the live view. */}
           <Link
-            href={`/log/${session.id}`}
+            href={`/log/${session.id}?edit`}
             className={buttonVariants({ variant: "secondary", size: "sm" })}
           >
             <Pencil className="size-4" />
