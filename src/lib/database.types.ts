@@ -398,8 +398,11 @@ export type Database = {
           id: string
           note: string | null
           position: number
+          rest_seconds: number | null
           session_id: string
           superset: number | null
+          target_rep_range: string | null
+          target_sets: number | null
           user_id: string
         }
         Insert: {
@@ -407,8 +410,11 @@ export type Database = {
           id?: string
           note?: string | null
           position?: number
+          rest_seconds?: number | null
           session_id: string
           superset?: number | null
+          target_rep_range?: string | null
+          target_sets?: number | null
           user_id: string
         }
         Update: {
@@ -416,8 +422,11 @@ export type Database = {
           id?: string
           note?: string | null
           position?: number
+          rest_seconds?: number | null
           session_id?: string
           superset?: number | null
+          target_rep_range?: string | null
+          target_sets?: number | null
           user_id?: string
         }
         Relationships: [

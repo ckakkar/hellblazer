@@ -236,45 +236,30 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
   const startedAt = Date.parse(session.created_at);
   if (Date.now() - startedAt > STALE_CLOCK_MS) return null;
 
-  const [rows, targets] = await Promise.all([
-    (async () => {
-      const { data, error: rowsError } = await db
-        .from("session_exercise")
-        .select(
-          "id, exercise_id, position, superset, exercise(name, equipment, mechanic, primary_muscle), set(id, set_number, weight_kg, reps, is_warmup, kind)",
-        )
-        .eq("session_id", session.id)
-        .eq("user_id", userId)
-        .order("position", { ascending: true });
-      if (rowsError) throw rowsError;
-      return data ?? [];
-    })(),
-    (async () => {
-      if (!session.template_id) return [];
-      const { data, error: targetError } = await db
-        .from("template_exercise")
-        .select("position, target_sets, target_rep_range, rest_seconds")
-        .eq("template_id", session.template_id)
-        .eq("user_id", userId);
-      if (targetError) throw targetError;
-      return data ?? [];
-    })(),
-  ]);
+  // Targets are the session's own, copied from the template when it
+  // started (start_session), so a template edited since doesn't move them.
+  const { data, error: rowsError } = await db
+    .from("session_exercise")
+    .select(
+      "id, exercise_id, position, superset, target_sets, target_rep_range, rest_seconds, exercise(name, equipment, mechanic, primary_muscle), set(id, set_number, weight_kg, reps, is_warmup, kind)",
+    )
+    .eq("session_id", session.id)
+    .eq("user_id", userId)
+    .order("position", { ascending: true });
+  if (rowsError) throw rowsError;
+  const rows = data ?? [];
 
   // The previous session's working sets per movement, for copy-forward.
   const last = await lastPerformances(ctx, [...new Set(rows.map((r) => r.exercise_id))], session.id);
 
-  // Targets come from the template, matched by position as swaps keep it.
-  const byPosition = new Map(targets.map((t) => [t.position, t]));
   const exercises: WatchExercise[] = rows.map((row) => {
-    const target = byPosition.get(row.position);
     const past = last.get(row.exercise_id) ?? [];
     return {
       id: row.id,
       name: row.exercise?.name ?? "Exercise",
-      targetSets: target?.target_sets ?? null,
-      targetReps: target?.target_rep_range ?? null,
-      restSeconds: target?.rest_seconds ?? null,
+      targetSets: row.target_sets,
+      targetReps: row.target_rep_range,
+      restSeconds: row.rest_seconds,
       sets: [...row.set]
         .sort((a, b) => a.set_number - b.set_number)
         .map((s) => ({
@@ -286,7 +271,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
           kind: s.kind,
         })),
       last: past.map(({ weight, reps }) => ({ weight, reps })),
-      target: targetOf(past, target?.target_rep_range ?? null, row.exercise, unit),
+      target: targetOf(past, row.target_rep_range, row.exercise, unit),
       superset: row.superset ?? null,
     };
   });

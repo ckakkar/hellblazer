@@ -4,7 +4,7 @@ import {
   getSessionDetail,
   getLastPerformances,
   getExercisePRs,
-  getSessionTargets,
+  sessionTargets,
 } from "@/lib/data/sessions";
 import { getExercises } from "@/lib/data/exercises";
 import { getUnit } from "@/lib/settings";
@@ -45,10 +45,7 @@ export default async function LoggerPage({
   if (ipad && edit === undefined) {
     if (boardIsOver(session.finished_at)) redirect(`/history/${id}`);
     const exerciseIds = [...new Set(session.session_exercise.map((se) => se.exercise_id))];
-    const [last, targets] = await Promise.all([
-      getLastPerformances(exerciseIds, id),
-      getSessionTargets(session),
-    ]);
+    const last = await getLastPerformances(exerciseIds, id);
     return (
       <LiveView
         sessionId={session.id}
@@ -57,7 +54,7 @@ export default async function LoggerPage({
         startedAt={session.created_at}
         finishedAt={session.finished_at}
         durationMin={session.duration_min}
-        board={liveBoard(session, targets, exercisePRs)}
+        board={liveBoard(session, sessionTargets(session), exercisePRs)}
         last={last}
         unit={unit}
         fighter={fighter}
@@ -68,10 +65,8 @@ export default async function LoggerPage({
   const exerciseIds = [
     ...new Set(session.session_exercise.map((se) => se.exercise_id)),
   ];
-  const [lastPerformances, targets] = await Promise.all([
-    getLastPerformances(exerciseIds, id),
-    getSessionTargets(session),
-  ]);
+  const lastPerformances = await getLastPerformances(exerciseIds, id);
+  const targets = sessionTargets(session);
 
   return (
     <SessionLogger

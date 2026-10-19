@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(23);
+select plan(26);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -56,6 +56,23 @@ select is(
 select ok(
   (select program_id is not null from public.session where id = current_setting('test.session')::uuid),
   'a start from a program day counts toward the program'
+);
+select is(
+  (select target_sets from public.session_exercise
+   where session_id = current_setting('test.session')::uuid order by position limit 1),
+  3,
+  'and keeps the template''s targets with the session'
+);
+update public.template_exercise set target_sets = 9;
+select is(
+  (select max(target_sets) from public.session_exercise where session_id = current_setting('test.session')::uuid),
+  3,
+  'so editing the template afterwards doesn''t change them'
+);
+select is(
+  public.start_session(null, current_setting('test.day')::uuid, current_date, null),
+  current_setting('test.session')::uuid,
+  'a start while a workout is under way returns that workout instead of opening another'
 );
 
 insert into public."set" (user_id, session_exercise_id, set_number, weight_kg, reps)

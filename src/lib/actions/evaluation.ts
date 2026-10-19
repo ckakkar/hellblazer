@@ -6,7 +6,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getEvalGate, getTrainingProfile } from "@/lib/data/evaluation";
 import { EVAL_COOLDOWN_DAYS, daysUntil } from "@/lib/evaluation-rules";
 import { getProfile } from "@/lib/data/profile";
-import { TIERS, TIER_KEYS, MAX_RANK, getTier } from "@/lib/tiers";
+import { TIERS, MAX_RANK, getTier } from "@/lib/tiers";
 
 export type EvalResult =
   | {
@@ -233,16 +233,22 @@ Respond with ONLY a JSON object of exactly this shape:
       highlights?: string[];
     };
 
-    let tierKey = (parsed.tier ?? "").toLowerCase().trim();
-    if (!(TIER_KEYS as readonly string[]).includes(tierKey)) {
-      const byName = TIERS.find(
-        (t) =>
-          parsed.tier &&
-          t.name.toLowerCase().includes(parsed.tier.toLowerCase().trim()),
-      );
-      tierKey = byName?.key ?? "hatsumi";
+    // The verdict has to name a fighter on the ladder, by key or by name. An
+    // answer that doesn't is a failed run (no verdict, no cooldown spent),
+    // never a guess: falling back to a default once made a garbled reply a
+    // real, acceptable rank 3.
+    const named = (parsed.tier ?? "").toLowerCase().trim();
+    const verdict =
+      getTier(named) ??
+      (named ? TIERS.find((t) => t.name.toLowerCase() === named) : undefined);
+    if (!verdict) {
+      return {
+        ok: false,
+        error: "failed",
+        message: "The judge's answer didn't name a fighter on the ladder. Try again.",
+      };
     }
-    let tier = getTier(tierKey)!;
+    let tier = verdict;
 
     // Enforce the ratchet regardless of what the model returned.
     if (currentTier && tier.rank < currentTier.rank) {

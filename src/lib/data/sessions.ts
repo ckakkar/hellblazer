@@ -123,7 +123,7 @@ export async function getSessionDetail(
   return detail;
 }
 
-/** What the template asks of each of the session's exercises. */
+/** What the template asked of each of the session's exercises. */
 export type SessionTarget = {
   /** Working sets planned; null without a target. */
   sets: number | null;
@@ -134,25 +134,16 @@ export type SessionTarget = {
 };
 
 /**
- * The template's targets and rests for a session's exercises, keyed by
- * session_exercise id. Matched by position, which a swap keeps; an
- * exercise added mid-session has none.
+ * The targets and rests for a session's exercises, keyed by session_exercise
+ * id. They're the template's as it was when the session started
+ * (start_session copies them), so editing the template later, reordering
+ * included, never changes a session's; an exercise added mid-session has none.
  */
-export async function getSessionTargets(
-  session: SessionDetail,
-): Promise<Record<string, SessionTarget>> {
-  if (!session.template_id) return {};
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("template_exercise")
-    .select("position, target_sets, rest_seconds, target_rep_range")
-    .eq("template_id", session.template_id);
-  if (error) throw error;
-  const byPosition = new Map((data ?? []).map((t) => [t.position, t]));
+export function sessionTargets(session: SessionDetail): Record<string, SessionTarget> {
   const targets: Record<string, SessionTarget> = {};
   for (const se of session.session_exercise) {
-    const t = byPosition.get(se.position);
-    if (t) targets[se.id] = { sets: t.target_sets, rest: t.rest_seconds, reps: t.target_rep_range };
+    if (se.target_sets == null && se.rest_seconds == null && se.target_rep_range == null) continue;
+    targets[se.id] = { sets: se.target_sets, rest: se.rest_seconds, reps: se.target_rep_range };
   }
   return targets;
 }
