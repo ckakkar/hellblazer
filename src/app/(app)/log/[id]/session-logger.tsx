@@ -2254,7 +2254,7 @@ function LastAndTarget({
   return (
     <dl
       className={cn(
-        "tnum grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-2.5 text-[15px] leading-5",
+        "tnum grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-2.5 text-[15px] leading-5 [text-wrap:balance]",
         className,
       )}
     >
@@ -2262,9 +2262,11 @@ function LastAndTarget({
         <>
           <dt className="text-[13px] text-muted">Last session</dt>
           <dd className="text-text/85">
-            {notebookSets(
-              last.sets.map((s) => ({ weight: toDisplayWeight(s.weight_kg, unit), reps: s.reps })),
-              unit,
+            {keepSetsTogether(
+              notebookSets(
+                last.sets.map((s) => ({ weight: toDisplayWeight(s.weight_kg, unit), reps: s.reps })),
+                unit,
+              ),
             )}
             <span className="ml-2 whitespace-nowrap text-[13px] text-muted">
               {format(parseISO(last.session_date), "d MMM")}
@@ -2276,9 +2278,11 @@ function LastAndTarget({
         <>
           <dt className="text-[13px] text-muted">Today so far</dt>
           <dd className="font-semibold text-text">
-            {notebookSets(
-              today.map((s) => ({ weight: Number(s.weight) || 0, reps: s.reps ?? 0 })),
-              unit,
+            {keepSetsTogether(
+              notebookSets(
+                today.map((s) => ({ weight: Number(s.weight) || 0, reps: s.reps ?? 0 })),
+                unit,
+              ),
             )}
           </dd>
         </>
@@ -2286,7 +2290,7 @@ function LastAndTarget({
         <>
           <dt className="text-[13px] text-muted">Today&apos;s target</dt>
           <dd>
-            <span className="font-semibold text-text">{targetLabel(target, unit)}</span>
+            <span className="whitespace-nowrap font-semibold text-text">{targetLabel(target, unit)}</span>
             <span
               className={cn(
                 "ml-2 whitespace-nowrap text-[13px]",
@@ -2300,6 +2304,11 @@ function LastAndTarget({
       ) : null}
     </dl>
   );
+}
+
+/** "62.5 kg × 11" never splits across lines; a list wraps only after a comma. */
+function keepSetsTogether(text: string): string {
+  return text.replace(/ (kg|lb|×)/g, "\u00a0$1").replace(/× /g, "×\u00a0");
 }
 
 /** The set table's columns: label, weight, reps, RPE, a marker. */

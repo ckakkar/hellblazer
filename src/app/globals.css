@@ -106,7 +106,7 @@
     --sheet-bg: rgb(252 251 249 / 0.95);
     --sheet-solid: rgb(252 251 249);
     --topbar-bg: rgb(242 241 237 / 0.8);
-    --overlap-bg: rgb(255 255 255 / 0.84);
+    --overlap-bg: rgb(255 255 255 / 0.92);
     --scrim: rgb(20 20 22 / 0.3);
     --menu-scrim: rgb(242 241 237 / 0.88);
   }
@@ -133,7 +133,7 @@
   --sheet-bg: rgb(252 251 249 / 0.95);
   --sheet-solid: rgb(252 251 249);
   --topbar-bg: rgb(242 241 237 / 0.8);
-  --overlap-bg: rgb(255 255 255 / 0.84);
+  --overlap-bg: rgb(255 255 255 / 0.92);
   --scrim: rgb(20 20 22 / 0.3);
   --menu-scrim: rgb(242 241 237 / 0.88);
 }
