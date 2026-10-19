@@ -10,6 +10,9 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         window = UIWindow(windowScene: windowScene)
+        // The lifter's light/dark choice, if they made one, before anything
+        // paints (the launch cover and the web view's ground follow it).
+        window?.overrideUserInterfaceStyle = Appearance.stored
         window?.rootViewController = HellBlazerViewController()
         window?.makeKeyAndVisible()
 

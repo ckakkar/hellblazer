@@ -27,6 +27,12 @@ class HellBlazerViewController: CAPBridgeViewController {
 
     private func configureWebView() {
         guard let webView = webView else { return }
+        // Behind the page (an overscroll, the frame before it paints): the
+        // paper by day and black at night, not a fixed black.
+        let ground = UIColor(named: "Ground") ?? .black
+        view.backgroundColor = ground
+        webView.backgroundColor = ground
+        webView.scrollView.backgroundColor = ground
         let scroll = webView.scrollView
         // Capacitor turns bouncing off. iOS lists rubber-band at the ends,
         // including short ones, so the page does too.

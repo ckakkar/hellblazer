@@ -21,8 +21,8 @@ import AppIntents
 ///   Recovery on Home, read on the phone only (HealthExtras.swift).
 /// - Widgets, Siri and Spotlight: the snapshot they read.
 /// - The share sheet, for files the site builds (share card, CSV export).
-/// - Web view chrome: lifting the launch screen, the edge swipe back, and
-///   keeping the screen on during a workout.
+/// - Web view chrome: lifting the launch screen, the edge swipe back,
+///   keeping the screen on during a workout, and light or dark.
 /// - Voice logging (VoiceSetLogger): the rest settings it goes by.
 /// - Sets said in your own words (SetReader), read by Apple's on-device
 ///   model, for the logger's "Say it".
@@ -45,6 +45,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "share", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "ready", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setBackGesture", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setAppearance", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "takeRestCommand", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "watchStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "watchSync", returnType: CAPPluginReturnPromise),
@@ -602,6 +603,37 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             self.bridge?.webView?.allowsBackForwardNavigationGestures = enabled
         }
         call.resolve()
+    }
+
+    /// Light, dark, or the device's: the page's Appearance setting, applied
+    /// to the window so the status bar, keyboard and the web view's own
+    /// `prefers-color-scheme` agree with it, and kept for the next launch.
+    @objc func setAppearance(_ call: CAPPluginCall) {
+        let style = Appearance.style(for: call.getString("appearance"))
+        Appearance.stored = style
+        DispatchQueue.main.async {
+            self.bridge?.viewController?.view.window?.overrideUserInterfaceStyle = style
+        }
+        call.resolve()
+    }
+}
+
+/// The lifter's light/dark choice, remembered on the device so the app opens
+/// in it before the page has said anything.
+enum Appearance {
+    private static let key = "hb.appearance"
+
+    static func style(for name: String?) -> UIUserInterfaceStyle {
+        switch name {
+        case "light": return .light
+        case "dark": return .dark
+        default: return .unspecified
+        }
+    }
+
+    static var stored: UIUserInterfaceStyle {
+        get { UIUserInterfaceStyle(rawValue: UserDefaults.standard.integer(forKey: key)) ?? .unspecified }
+        set { UserDefaults.standard.set(newValue.rawValue, forKey: key) }
     }
 }
 

@@ -14,7 +14,9 @@ const config: CapacitorConfig = {
   webDir: "app-shell",
   backgroundColor: "#000000",
   // Lets the server tell app traffic apart from the website's.
-  appendUserAgent: "Fatty",
+  // "Fatty-appearance": this build follows light and dark (2.6 on); older
+  // ones are kept on dark (src/lib/surface.ts).
+  appendUserAgent: "Fatty Fatty-appearance",
   server: {
     url: "https://hellblazer.vercel.app",
     errorPath: "offline.html",
