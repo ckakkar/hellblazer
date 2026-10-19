@@ -31,10 +31,16 @@ enum WidgetRefresher {
     }
 
     /// Forgets the token (signing out); returns it so the site can revoke it.
+    /// The account's snapshot goes too, so the widgets, Siri and Spotlight
+    /// stop showing its lifts, history and rank to whoever's next.
     static func unlink() -> String? {
         let token = Keychain.phoneToken
         Keychain.phoneToken = nil
         defaults.removeObject(forKey: Key.userId)
+        WidgetSnapshot.clear()
+        WidgetCenter.shared.reloadAllTimelines()
+        SpotlightIndex.clear()
+        HellBlazerShortcuts.updateAppShortcutParameters()
         return token
     }
 

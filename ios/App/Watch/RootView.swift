@@ -7,22 +7,38 @@ struct RootView: View {
     @EnvironmentObject private var model: WatchModel
     @Environment(\.scenePhase) private var scenePhase
 
+    /// Which screen is up, so moving between them crossfades instead of
+    /// cutting (the countdown grows into the workout, as in Workout).
+    private var stage: String {
+        if model.token == nil { return "connect" }
+        if model.summary != nil { return "summary" }
+        if model.starting != nil { return "countdown" }
+        if model.state?.active != nil { return "workout" }
+        if model.state != nil { return "start" }
+        return model.problem != nil ? "problem" : "loading"
+    }
+
     var body: some View {
         Group {
             if model.token == nil {
                 ConnectView()
+                    .transition(.opacity)
             } else if let summary = model.summary {
                 NavigationStack {
                     SummaryView(summary: summary)
                 }
+                .transition(.opacity.combined(with: .scale(scale: 1.04)))
             } else if let option = model.starting {
                 CountdownView(option: option)
+                    .transition(.opacity.combined(with: .scale(scale: 0.92)))
             } else if let workout = model.state?.active {
                 WorkoutView(workout: workout)
+                    .transition(.opacity.combined(with: .scale(scale: 1.06)))
             } else if let state = model.state {
                 NavigationStack {
                     StartView(state: state)
                 }
+                .transition(.opacity)
             } else if let problem = model.problem {
                 MessageView(
                     symbol: model.problemIsOffline ? "wifi.exclamationmark" : "exclamationmark.icloud",
@@ -35,6 +51,7 @@ struct RootView: View {
                 ProgressView()
             }
         }
+        .animation(.smooth(duration: 0.32), value: stage)
         .onChange(of: scenePhase, initial: true) { _, phase in
             model.scenePhaseChanged(phase)
         }

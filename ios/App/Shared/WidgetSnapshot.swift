@@ -119,6 +119,11 @@ struct WidgetSnapshot: Codable {
         UserDefaults(suiteName: appGroup)?.set(data, forKey: storageKey)
     }
 
+    /// Signed out: the widgets have nothing of that account to show.
+    static func clear() {
+        UserDefaults(suiteName: appGroup)?.removeObject(forKey: storageKey)
+    }
+
     static func load() -> WidgetSnapshot? {
         guard let data = UserDefaults(suiteName: appGroup)?.data(forKey: storageKey) else { return nil }
         return try? JSONDecoder().decode(WidgetSnapshot.self, from: data)

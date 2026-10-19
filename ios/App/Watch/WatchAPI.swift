@@ -103,6 +103,12 @@ struct SetWrite: Codable, Equatable {
     var setNumber: Int
     var weight: Double
     var reps: Int
+    /// The unit `weight` was logged in: the lifter can switch units before a
+    /// queued set reaches the server. Nil in a queue from an older build.
+    var unit: String? = nil
+    /// When it was logged (epoch ms), so a set that waited for a connection
+    /// keeps its time (the heart-rate read places sets by it).
+    var loggedAt: Double? = nil
 }
 
 enum APIError: Error {
@@ -125,12 +131,17 @@ struct WatchAPI {
         try await send("state", method: "GET", body: Optional<Empty>.none)
     }
 
-    func start(_ option: StartOption, localDate: String) async throws -> WatchState {
-        try await send("start", body: StartBody(templateId: option.templateId, programDayId: option.programDayId, localDate: localDate))
+    /// `startedAt` (epoch ms) for a workout started offline: the server
+    /// dates it from then, not from when the connection came back.
+    func start(_ option: StartOption, localDate: String, startedAt: Double? = nil) async throws -> WatchState {
+        try await send("start", body: StartBody(templateId: option.templateId, programDayId: option.programDayId, localDate: localDate, startedAt: startedAt))
     }
 
     func save(_ write: SetWrite) async throws {
-        let body = SetBody(id: write.id, sessionExerciseId: write.sessionExerciseId, setNumber: write.setNumber, weight: write.weight, reps: write.reps)
+        let body = SetBody(
+            id: write.id, sessionExerciseId: write.sessionExerciseId, setNumber: write.setNumber,
+            weight: write.weight, reps: write.reps, unit: write.unit ?? unit, loggedAt: write.loggedAt
+        )
         let _: Ok = try await send("set", body: body)
     }
 
@@ -148,6 +159,7 @@ struct WatchAPI {
         var templateId: String
         var programDayId: String?
         var localDate: String
+        var startedAt: Double?
     }
     private struct SetBody: Encodable {
         var id: String
@@ -155,6 +167,8 @@ struct WatchAPI {
         var setNumber: Int
         var weight: Double
         var reps: Int
+        var unit: String
+        var loggedAt: Double?
     }
     private struct DeleteBody: Encodable { var id: String }
     private struct FinishBody: Encodable {

@@ -97,6 +97,9 @@ final class WatchModel: ObservableObject {
     private var offline: OfflineWorkout?
     private var pendingFinish: PendingFinish?
     private var flushing = false
+    /// The set `flush` is sending right now: it's left the queue's hands,
+    /// so an undo has to let it land and take it back on the server.
+    private var inFlight: String?
     private var restTask: Task<Void, Never>?
     private var pollTask: Task<Void, Never>?
     private var heartRateWatch: AnyCancellable?
@@ -525,7 +528,7 @@ final class WatchModel: ObservableObject {
         guard let started = offline else { return true }
         let fresh: WatchState
         do {
-            fresh = try await api.start(started.option, localDate: started.localDate)
+            fresh = try await api.start(started.option, localDate: started.localDate, startedAt: started.workout.startedAt)
         } catch APIError.server(let status) where (400..<500).contains(status) {
             // The day was deleted since: nothing left to attach the sets to.
             pending.removeAll { $0.sessionId == started.workout.id }
@@ -617,7 +620,9 @@ final class WatchModel: ObservableObject {
             sessionExerciseId: exerciseId,
             setNumber: (active.exercises[i].sets.map(\.n).max() ?? 0) + 1,
             weight: weight,
-            reps: reps
+            reps: reps,
+            unit: unit,
+            loggedAt: Date().timeIntervalSince1970 * 1000
         )
         active.exercises[i].sets.append(
             LoggedSet(id: write.id, n: write.setNumber, weight: weight, reps: reps, warmup: false)
@@ -674,6 +679,11 @@ final class WatchModel: ObservableObject {
         active.exercises[i].sets.removeAll { $0.id == last.id }
         state?.active = active
         clearRest()
+        // Already on its way up: wait for that send to finish. Then it's
+        // either still queued (the send failed) or on the server.
+        while inFlight == last.id {
+            try? await Task.sleep(nanoseconds: 50_000_000)
+        }
         if pending.contains(where: { $0.id == last.id }) {
             pending.removeAll { $0.id == last.id }
             savePending()
@@ -703,16 +713,22 @@ final class WatchModel: ObservableObject {
         defer { flushing = false }
         guard await syncOffline(api) else { return false }
         while let write = pending.first {
+            inFlight = write.id
             do {
                 try await api.save(write)
             } catch APIError.unlinked {
+                inFlight = nil
                 return false
             } catch APIError.server(let status) where (400..<500).contains(status) {
                 // Refused for good (the workout was deleted, say): drop it.
             } catch {
+                inFlight = nil
                 return false
             }
-            pending.removeFirst()
+            inFlight = nil
+            // By id, not the head: the queue may have changed while the
+            // send was out (a set logged or another undone meanwhile).
+            pending.removeAll { $0.id == write.id }
             savePending()
         }
         if let finish = pendingFinish {
