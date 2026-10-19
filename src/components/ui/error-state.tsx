@@ -27,7 +27,7 @@ export function ErrorState({
         fullScreen ? "min-h-dvh" : "min-h-[62dvh]",
       )}
     >
-      <h1 className="font-display text-[2rem] leading-tight text-text sm:text-[2.5rem]">
+      <h1 className="text-[2rem] font-bold leading-tight tracking-[-0.03em] text-text sm:text-[2.5rem]">
         Something didn&apos;t load
       </h1>
       <p className="mt-2 max-w-sm text-[15px] leading-[1.5] text-muted">

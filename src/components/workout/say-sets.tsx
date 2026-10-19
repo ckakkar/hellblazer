@@ -111,7 +111,7 @@ export function SaySets({
     loggedTimer.current = setTimeout(() => setLogged(null), 4000);
   }
 
-  const box = inSheet ? "bg-white/[0.04]" : "bg-surface";
+  const box = inSheet ? "bg-text/[0.04]" : "bg-surface";
 
   if (stage.at === "closed") {
     return (
@@ -124,7 +124,7 @@ export function SaySets({
         ) : (
           <button
             onClick={() => setStage({ at: "typing" })}
-            className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+            className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-left transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
           >
             <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text">
               <Mic className="size-4" />
@@ -230,7 +230,7 @@ export function SaySets({
         }
         className={cn(
           "mt-2 block w-full resize-none rounded-xl px-3.5 py-3 text-base text-text placeholder:text-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/25 disabled:opacity-60",
-          inSheet ? "bg-white/[0.06]" : "bg-surface-2",
+          inSheet ? "bg-text/[0.06]" : "bg-surface-2",
         )}
       />
       {error ? (

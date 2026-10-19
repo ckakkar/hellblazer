@@ -97,7 +97,7 @@ export function Sheet({
       >
         <div
           data-state={state}
-          className="hb-sheet-backdrop absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="hb-sheet-backdrop absolute inset-0 bg-[var(--scrim)] backdrop-blur-sm"
           onClick={onClose}
         />
         <div
@@ -113,7 +113,7 @@ export function Sheet({
             onPointerUp={onPointerEnd}
             onPointerCancel={onPointerEnd}
           >
-            <div className="mx-auto mt-2.5 h-1 w-9 rounded-full bg-white/20 sm:hidden" />
+            <div className="mx-auto mt-2.5 h-1 w-9 rounded-full bg-text/20 sm:hidden" />
             <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-3 sm:pt-4">
               <h2 className="truncate text-[17px] font-semibold tracking-[-0.015em] text-text">
                 {title}
@@ -123,7 +123,7 @@ export function Sheet({
                 onClick={onClose}
                 onPointerDown={(e) => e.stopPropagation()}
                 aria-label="Close"
-                className="hb-hit -mr-1.5 flex size-9 items-center justify-center rounded-full bg-white/[0.07] text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40"
+                className="hb-hit -mr-1.5 flex size-9 items-center justify-center rounded-full bg-text/[0.07] text-muted transition-colors hover:text-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40"
               >
                 <X className="size-4" />
               </button>

@@ -17,7 +17,7 @@ export function TierLadder({
           title={t.name}
           className={cn(
             "h-1 flex-1 rounded-full transition-colors",
-            t.rank <= rank ? "bg-accent" : "bg-white/[0.12]",
+            t.rank <= rank ? "bg-accent" : "bg-text/[0.12]",
           )}
         />
       ))}

@@ -17,6 +17,8 @@ interface NumberStepperProps {
   suffix?: string;
   className?: string;
   ariaLabel?: string;
+  /** "lg" for the set being logged: the figure is the screen's subject. */
+  size?: "md" | "lg";
 }
 
 /**
@@ -39,6 +41,7 @@ export function NumberStepper({
   suffix,
   className,
   ariaLabel,
+  size = "md",
 }: NumberStepperProps) {
   const round = (n: number) => {
     const f = 10 ** precision;
@@ -53,14 +56,19 @@ export function NumberStepper({
     onChange(clamp(round((value ?? 0) + dir * step)));
   };
 
-  const figure = fitFigure(value == null || Number.isNaN(value) ? placeholder : String(value), "22px", suffix ? "2rem" : "0px");
+  const figure = fitFigure(
+    value == null || Number.isNaN(value) ? placeholder : String(value),
+    size === "lg" ? "32px" : "22px",
+    suffix ? "2rem" : "0px",
+  );
   const button =
-    "flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-white/[0.06] @max-[11rem]:w-9";
+    "flex w-12 shrink-0 items-center justify-center text-muted transition-colors hover:text-text active:bg-text/[0.06] @max-[11rem]:w-9";
 
   return (
     <div
       className={cn(
-        "@container flex h-14 items-stretch overflow-hidden rounded-2xl bg-surface-2",
+        "@container flex items-stretch overflow-hidden rounded-2xl bg-surface-2",
+        size === "lg" ? "h-[4.25rem]" : "h-14",
         className,
       )}
     >

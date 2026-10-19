@@ -1,3 +1,4 @@
+import type * as React from "react";
 import Image from "next/image";
 import { FIGHTER_ART } from "@/lib/fighter-art";
 import type { TierKey } from "@/lib/tiers";
@@ -22,6 +23,11 @@ type FighterArtProps = {
  * Canon-based Kengan portrait. Non-thumbnail variants fade into whatever they
  * sit on: set `--hb-fade` on an ancestor to that surface's colour (it
  * defaults to the page black).
+ *
+ * Every crop is centred on the fighter's face (`--fx`/`--fy`, from
+ * fighter-art.ts), and a thumbnail is a head-and-shoulders crop rather than
+ * the whole figure shrunk. A layout that wants the face somewhere else
+ * offsets from those, e.g. `object-[calc(var(--fx)+10%)_var(--fy)]`.
  */
 export function FighterArt({
   fighterKey = "ohma",
@@ -33,6 +39,7 @@ export function FighterArt({
   fade = "corner",
 }: FighterArtProps) {
   const art = FIGHTER_ART[fighterKey];
+  const focus = { "--fx": `${art.face.x}%`, "--fy": `${art.face.y}%` } as React.CSSProperties;
   const sizes =
     variant === "thumbnail"
       ? "56px"
@@ -43,6 +50,7 @@ export function FighterArt({
   return (
     <figure
       className={cn("pointer-events-none relative isolate overflow-hidden", className)}
+      style={focus}
       data-variant={variant}
       aria-hidden={alt ? undefined : true}
     >
@@ -56,7 +64,7 @@ export function FighterArt({
           placeholder="blur"
           sizes={sizes}
           className={cn(
-            "h-full w-full object-cover object-center contrast-[1.05]",
+            "h-full w-full origin-[var(--fx)_var(--fy)] scale-[1.9] object-cover object-[var(--fx)_var(--fy)] contrast-[1.05]",
             imageClassName,
           )}
         />
@@ -71,7 +79,7 @@ export function FighterArt({
           placeholder="blur"
           sizes={sizes}
           className={cn(
-            "absolute inset-0 h-full w-full object-cover object-center contrast-[1.05]",
+            "absolute inset-0 h-full w-full object-cover object-[var(--fx)_var(--fy)] contrast-[1.05]",
             imageClassName,
           )}
         />

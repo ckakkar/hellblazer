@@ -27,7 +27,7 @@ export function VictoryScreen({
       <div
         role="status"
         aria-live="assertive"
-        className="fixed inset-0 z-[60] flex flex-col justify-end overflow-hidden bg-bg"
+        className="hb-plate fixed inset-0 z-[60] flex flex-col justify-end overflow-hidden bg-bg"
       >
         <div className="hb-victory-art absolute inset-0 [--hb-fade:var(--color-bg)]">
           <FighterArt
@@ -35,7 +35,7 @@ export function VictoryScreen({
             variant="hero"
             fade="bottom"
             className="absolute inset-0"
-            imageClassName="object-[60%_10%] opacity-80"
+            imageClassName="opacity-80"
           />
           <div
             aria-hidden

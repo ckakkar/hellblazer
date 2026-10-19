@@ -293,7 +293,7 @@ function StepConnector({ isComplete }: { isComplete: boolean }) {
   };
 
   return (
-    <div className="relative mx-2 h-0.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
+    <div className="relative mx-2 h-0.5 flex-1 overflow-hidden rounded-full bg-text/[0.08]">
       <motion.div
         className="absolute left-0 top-0 h-full bg-text"
         variants={lineVariants}

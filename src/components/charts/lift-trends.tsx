@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  */
 function Sparkline({ values }: { values: number[] }) {
   if (values.length < 2) {
-    return <div className="flex h-10 items-center text-[12px] text-muted">One session so far</div>;
+    return <div className="flex h-8 items-center text-[12px] text-muted">One session</div>;
   }
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -25,7 +25,7 @@ function Sparkline({ values }: { values: number[] }) {
   const line = pts.map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
   const last = pts[pts.length - 1];
   return (
-    <div className="relative h-10">
+    <div className="relative h-8">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
         <path d={`${line} L100 100 L0 100 Z`} fill="currentColor" opacity="0.07" />
         <path
@@ -48,59 +48,66 @@ function Sparkline({ values }: { values: number[] }) {
 }
 
 /**
- * Your most-trained lifts as small multiples: today's estimated 1RM, its
- * 12-week line, and the change over that window. Each opens the lift's deep
- * dive below.
+ * Your most-trained lifts, one ruled line each: the name, its 12-week line,
+ * today's estimated 1RM and the change. A quiet list to compare against the
+ * lift open above; each line opens its lift there.
  */
-export function LiftTrends({ lifts, unit }: { lifts: LiftTrend[]; unit: Unit }) {
+export function LiftTrends({ lifts, unit, selected }: { lifts: LiftTrend[]; unit: Unit; selected?: string }) {
   if (lifts.length === 0) return null;
   return (
     <section>
       <SectionLabel action={<span className="text-[13px] text-muted">Est. 1RM, 12 weeks</span>}>
         Top lifts
       </SectionLabel>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <ol className="divide-y divide-text/[0.08] border-y border-text/[0.12]">
         {lifts.map((l) => {
           const up = (l.changePct ?? 0) > 0;
           const down = (l.changePct ?? 0) < 0;
+          const open = l.exerciseId === selected;
           return (
-            <Link
-              key={l.exerciseId}
-              href={`/progress?tab=exercise&exercise=${l.exerciseId}#lift`}
-              className="flex min-w-0 flex-col rounded-2xl bg-surface p-4 text-text transition-colors hover:bg-surface-2 active:bg-surface-2"
-            >
-              <span className="truncate text-[13px] text-muted">{l.name}</span>
-              <span className="mt-1.5 flex items-baseline gap-1">
-                <span className="font-display text-[1.625rem] leading-none">
-                  {trimNum(Math.round(toDisplayWeight(l.current, unit) * 2) / 2)}
-                </span>
-                <span className="text-[13px] text-muted">{unit}</span>
-              </span>
-              <div className="mt-3">
-                <Sparkline values={l.points.map((p) => p.e1rm)} />
-              </div>
-              <span
-                className={cn(
-                  "tnum mt-2.5 inline-flex items-center gap-0.5 text-[13px]",
-                  up ? "text-text" : "text-muted",
-                )}
+            <li key={l.exerciseId}>
+              <Link
+                href={`/progress?tab=exercise&exercise=${l.exerciseId}#lift`}
+                aria-current={open ? "true" : undefined}
+                className="grid grid-cols-[minmax(0,1fr)_4.5rem_auto] items-center gap-x-4 px-1 py-3 transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
               >
-                {l.changePct === null ? (
-                  "New this block"
-                ) : l.changePct === 0 ? (
-                  "Holding"
-                ) : (
-                  <>
-                    {up && <ArrowUpRight className="size-3.5" />}
-                    {down && <ArrowDownRight className="size-3.5" />}
-                    {Math.abs(l.changePct)}%
-                  </>
-                )}
-              </span>
-            </Link>
+                <span className="min-w-0">
+                  <span className={cn("block truncate text-[15px]", open ? "font-semibold text-text" : "text-text/85")}>
+                    {l.name}
+                  </span>
+                  <span
+                    className={cn(
+                      "tnum mt-0.5 inline-flex items-center gap-0.5 text-[13px]",
+                      up ? "text-text" : "text-muted",
+                    )}
+                  >
+                    {l.changePct === null ? (
+                      "New this block"
+                    ) : l.changePct === 0 ? (
+                      "Holding"
+                    ) : (
+                      <>
+                        {up && <ArrowUpRight className="size-3.5" />}
+                        {down && <ArrowDownRight className="size-3.5" />}
+                        {Math.abs(l.changePct)}%
+                      </>
+                    )}
+                  </span>
+                </span>
+                <span className={open ? "text-text" : "text-muted"}>
+                  <Sparkline values={l.points.map((p) => p.e1rm)} />
+                </span>
+                <span className="flex items-baseline justify-end gap-1">
+                  <span className="font-display text-[1.25rem] leading-none text-text">
+                    {trimNum(Math.round(toDisplayWeight(l.current, unit) * 2) / 2)}
+                  </span>
+                  <span className="text-[12px] text-muted">{unit}</span>
+                </span>
+              </Link>
+            </li>
           );
         })}
-      </div>
+      </ol>
     </section>
   );
 }

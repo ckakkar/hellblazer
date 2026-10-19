@@ -97,13 +97,12 @@ export function WelcomeFlow({
       }}
     >
       <div className="grid w-full max-w-5xl grid-cols-1 overflow-hidden lg:grid-cols-[1.12fr_0.88fr] lg:rounded-3xl lg:bg-surface">
-        <section className="relative hidden min-h-[42rem] overflow-hidden lg:block">
+        <section className="hb-plate relative hidden min-h-[42rem] overflow-hidden bg-bg lg:block">
           <FighterArt
             fighterKey="ohma"
             variant="hero"
             priority
             className="absolute inset-0"
-            imageClassName="object-[center_22%]"
           />
           <div className="absolute inset-x-0 bottom-0 z-10 p-10">
             <div className="font-display text-5xl leading-[1] text-text">Set up your profile.</div>
@@ -116,7 +115,7 @@ export function WelcomeFlow({
         <div className="w-full sm:p-7 lg:flex lg:flex-col lg:justify-center">
         <div className="mb-8 lg:hidden">
           <Flame className="mb-6 size-7 text-accent" strokeWidth={2.25} />
-          <h1 className="font-display text-[2.25rem] leading-[1.05] text-text">
+          <h1 className="text-[2.25rem] font-bold leading-[1.05] tracking-[-0.03em] text-text">
             Set up your profile
           </h1>
           <p className="mt-2 text-[15px] leading-6 text-muted">

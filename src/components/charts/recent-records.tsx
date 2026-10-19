@@ -16,17 +16,15 @@ export function RecentRecords({ records, unit }: { records: RecentRecord[]; unit
   return (
     <section>
       <SectionLabel>Recent records</SectionLabel>
-      <ol className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+      <ol className="divide-y divide-text/[0.08] border-y border-text/[0.12]">
         {records.map((r) => (
           <li key={`${r.sessionId}-${r.exerciseId}`}>
             <Link
               href={`/history/${r.sessionId}`}
               transitionTypes={["nav-forward"]}
-              className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+              className="flex items-center gap-3 px-1 py-3 transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent/15 text-accent">
-                <Zap className="size-4" />
-              </span>
+              <Zap aria-hidden className="size-4 shrink-0 fill-current text-accent" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[15px] font-medium text-text">{r.name}</span>
                 <span className="block truncate text-[13px] text-muted">

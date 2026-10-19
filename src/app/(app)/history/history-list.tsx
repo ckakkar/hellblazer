@@ -186,13 +186,13 @@ export function HistoryList({
                 {formatVolume(monthVolume(m.rows), unit)} lifted
               </p>
             </div>
-            <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+            <div className="divide-y divide-text/[0.08] border-y border-text/[0.12]">
               {m.rows.map((s) => (
                 <SwipeRow key={s.session_id} onAction={() => remove(s)}>
                 <Link
                   href={s.finished_at ? `/history/${s.session_id}` : `/log/${s.session_id}`}
                   transitionTypes={["nav-forward"]}
-                  className="flex items-center gap-3 bg-surface px-4 py-3.5 transition-colors hover:bg-surface-2 active:bg-surface-2"
+                  className="flex items-center gap-3 bg-bg px-1 py-3.5 transition-colors hover:bg-surface active:bg-surface"
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">

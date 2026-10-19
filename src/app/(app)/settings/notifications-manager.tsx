@@ -275,7 +275,7 @@ export function NotificationsManager({
       ) : (
         <>
           <div className="flex items-center gap-2 text-sm text-text">
-            <span className="flex size-6 items-center justify-center rounded-full bg-white/[0.08] text-text">
+            <span className="flex size-6 items-center justify-center rounded-full bg-text/[0.08] text-text">
               <Bell className="size-3.5" />
             </span>
             Notifications are on for this device.

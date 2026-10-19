@@ -29,7 +29,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   const color = (i: number, other?: boolean) => {
     if (other) return "var(--color-surface-2)";
     const alpha = Math.max(0.28, 1 - (i / Math.max(1, slices.length)) * 0.8);
-    return `rgb(244 242 238 / ${alpha.toFixed(2)})`;
+    return `color-mix(in oklab, var(--color-text) ${Math.round(alpha * 100)}%, transparent)`;
   };
 
   return (

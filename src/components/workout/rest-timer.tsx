@@ -273,52 +273,49 @@ function useRestRemaining(t: RestTimerControls): number {
 }
 
 const roundButton =
-  "tnum flex size-10 items-center justify-center rounded-full bg-white/[0.06] text-[13px] text-muted transition-colors hover:text-text active:bg-white/[0.1]";
+  "tnum flex size-10 items-center justify-center rounded-full bg-text/[0.06] text-[13px] text-muted transition-colors hover:text-text active:bg-text/[0.1]";
 
-/** The full rest timer, under the logger's live readout. */
+/** Ticks on the rest timer's scale; every fifth is long. */
+const TICKS = 40;
+
+/**
+ * The full rest timer, under the exercise you're on. Built as an instrument
+ * rather than a card: an outlined face, the clock big, and a tick scale that
+ * fills as the rest runs, so its state reads at a glance from the bench.
+ */
 export function RestTimerCard({ timer }: { timer: RestTimerControls }) {
   const remaining = useRestRemaining(timer);
   const running = timer.endsAt !== null;
   const { finished } = timer;
-  const progress = timer.total > 0 ? ((timer.total - remaining) / timer.total) * 100 : 0;
+  const started = running || timer.pausedRemaining !== null;
+  const lit = finished ? TICKS : started && timer.total > 0 ? Math.round(((timer.total - remaining) / timer.total) * TICKS) : 0;
 
   return (
     <section
       aria-label="Rest timer"
       className={cn(
-        "relative overflow-hidden rounded-2xl",
-        finished ? "bg-accent/[0.12]" : "bg-surface",
+        "rounded-3xl px-4 pb-3 pt-3.5 ring-1 ring-inset transition-colors duration-200",
+        finished ? "bg-accent/[0.08] ring-accent/40" : "ring-text/[0.12]",
       )}
     >
-      <span
-        aria-hidden
-        className="absolute inset-y-0 left-0 bg-white/[0.04] transition-[width] duration-300"
-        style={{ width: `${running || timer.pausedRemaining !== null ? progress : 0}%` }}
-      />
-      <div className="relative flex items-center gap-2 px-4 py-3 min-[360px]:gap-3">
+      <div className="flex items-end gap-2 min-[360px]:gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 text-[13px] text-muted">
             <TimerReset className={cn("size-3.5", finished && "text-accent")} />
-            {finished
-              ? "Rest's over"
-              : running
-                ? "Resting"
-                : timer.pausedRemaining !== null
-                  ? "Paused"
-                  : "Rest"}
+            {finished ? "Rest's over" : running ? "Resting" : timer.pausedRemaining !== null ? "Paused" : "Rest"}
           </div>
           <div
             className={cn(
               // Shrinks a little on a 320pt phone, where the controls need the row.
-              "font-display mt-1 text-[clamp(1.5rem,7.5vw,1.75rem)] leading-none",
-              finished ? "text-accent" : "text-text",
+              "font-display mt-1.5 text-[clamp(2rem,10vw,2.625rem)] leading-none",
+              finished ? "text-accent" : running ? "text-text" : "text-text/70",
             )}
             aria-live="polite"
           >
             {finished ? "Go" : formatRestClock(remaining)}
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1 min-[360px]:gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 pb-0.5 min-[360px]:gap-1.5">
           <button
             type="button"
             onClick={() => timer.adjust(-15)}
@@ -353,7 +350,24 @@ export function RestTimerCard({ timer }: { timer: RestTimerControls }) {
           </button>
         </div>
       </div>
-      <label className="relative flex items-center justify-between gap-3 border-t border-white/[0.06] px-4 py-2.5 text-[13px] text-muted">
+      {/* The scale: one tick per fortieth of the rest, lit as it runs. */}
+      <div aria-hidden className="mt-3.5 flex h-3 items-end justify-between">
+        {Array.from({ length: TICKS + 1 }, (_, i) => (
+          <span
+            key={i}
+            className={cn(
+              "w-px transition-colors duration-200",
+              i % 5 === 0 ? "h-3" : "h-1.5",
+              i < lit || (finished && i <= lit)
+                ? finished
+                  ? "bg-accent"
+                  : "bg-text"
+                : "bg-text/[0.18]",
+            )}
+          />
+        ))}
+      </div>
+      <label className="mt-3 flex items-center justify-between gap-3 border-t border-text/[0.08] pt-2.5 text-[13px] text-muted">
         Start after each set
         <Switch checked={timer.auto} onChange={timer.setAuto} label="Start the rest timer after each set" />
       </label>
@@ -372,14 +386,14 @@ export function RestTimerBar({ timer }: { timer: RestTimerControls }) {
   const { finished } = timer;
   const progress = timer.total > 0 ? ((timer.total - remaining) / timer.total) * 100 : 0;
   const pill =
-    "tnum flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-white/[0.07] px-2 text-[13px] text-text active:bg-white/[0.12] min-[360px]:px-2.5";
+    "tnum flex h-9 min-w-9 shrink-0 items-center justify-center rounded-full bg-text/[0.07] px-2 text-[13px] text-text active:bg-text/[0.12] min-[360px]:px-2.5";
 
   return (
     <div
       aria-label="Rest timer"
       className={cn(
         "relative mb-3 overflow-hidden rounded-2xl",
-        finished ? "bg-accent/[0.12]" : "bg-white/[0.05]",
+        finished ? "bg-accent/[0.12]" : "bg-text/[0.05]",
       )}
     >
       <div className="flex h-12 items-center gap-1.5 pl-3.5 pr-1.5 min-[360px]:gap-2">

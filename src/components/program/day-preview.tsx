@@ -187,7 +187,7 @@ export function DayPreview({
                     setQ("");
                   }}
                   aria-label={`Swap ${r.name}`}
-                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-muted transition-colors hover:text-text"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-text/[0.06] text-muted transition-colors hover:text-text"
                 >
                   <Repeat2 className="size-4" />
                 </button>

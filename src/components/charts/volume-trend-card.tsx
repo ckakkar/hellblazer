@@ -115,8 +115,8 @@ export function VolumeTrendCard({
   const picked = active != null ? points[active] : null;
 
   return (
-    <section className={cn("flex flex-col rounded-2xl bg-surface", className)}>
-      <div className="flex items-start justify-between gap-3 px-5 pt-4">
+    <section className={cn("flex flex-col border-t border-text/[0.12]", className)}>
+      <div className="flex items-start justify-between gap-3 px-1 pt-4">
         <div className="min-w-0">
           <h3 className="text-[15px] font-semibold tracking-[-0.01em] text-text">Volume</h3>
           <p className="tnum mt-0.5 truncate text-[13px] text-muted" aria-live="polite">
@@ -147,7 +147,7 @@ export function VolumeTrendCard({
       ) : (
         // Beside the taller sets-per-muscle card on a desktop, the plot grows
         // to the card's height instead of leaving a gap under it.
-        <div className="px-4 pb-4 pt-5 lg:flex lg:flex-1 lg:flex-col">
+        <div className="pb-2 pt-5 lg:flex lg:flex-1 lg:flex-col">
           <div
             className="relative h-[200px] lg:h-auto lg:min-h-[200px] lg:flex-1"
             role="img"
@@ -162,7 +162,7 @@ export function VolumeTrendCard({
                 style={{ bottom: `${f * 100}%`, transform: "translateY(50%)" }}
               >
                 <span className="tnum w-8 shrink-0 text-right text-[11px] text-muted">{short(top * f)}</span>
-                <span className="h-px flex-1 bg-white/[0.06]" />
+                <span className="h-px flex-1 bg-text/[0.06]" />
               </div>
             ))}
             <div
@@ -177,7 +177,7 @@ export function VolumeTrendCard({
                   key={i}
                   className={cn(
                     "flex h-full flex-1 items-end justify-center rounded-md transition-colors duration-150",
-                    active === i && "bg-white/[0.04]",
+                    active === i && "bg-text/[0.04]",
                   )}
                   onPointerEnter={() => setActive(i)}
                   onPointerDown={() => setActive(i)}

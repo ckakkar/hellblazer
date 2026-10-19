@@ -273,7 +273,7 @@ function TemplateCard({
     <Card
       className={cn(
         "transition-shadow",
-        selected && "lg:bg-surface-2 lg:shadow-[inset_0_0_0_1.5px_rgb(244_242_238/0.3)]",
+        selected && "lg:bg-surface-2 lg:shadow-[inset_0_0_0_1.5px_color-mix(in_oklab,var(--color-text)_30%,transparent)]",
       )}
     >
       <div className="flex items-center gap-3 p-4">
@@ -352,7 +352,7 @@ function TemplatePane({
                 await updateTemplate({ id: template.id, name });
               });
           }}
-          className="font-display text-[1.75rem] leading-[1.1] text-text"
+          className="text-[1.75rem] font-bold leading-[1.1] tracking-[-0.03em] text-text"
         />
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
           <input
@@ -468,7 +468,7 @@ function TemplateExercises({
                 <div className="min-w-0 flex-1 pt-1.5">
                   <p className="flex min-w-0 items-start gap-2">
                     {slots[i] && (
-                      <span className="tnum mt-0.5 shrink-0 rounded bg-white/[0.08] px-1.5 text-[12px] font-semibold text-text">
+                      <span className="tnum mt-0.5 shrink-0 rounded bg-text/[0.08] px-1.5 text-[12px] font-semibold text-text">
                         {slotLabel(slots[i])}
                       </span>
                     )}
@@ -571,7 +571,7 @@ function TemplateExercises({
               <div className="min-w-0 flex-1">
                 <div className="flex min-w-0 items-center gap-1.5">
                   {slots[i] && (
-                    <span className="tnum shrink-0 rounded bg-white/[0.08] px-1 text-[11px] font-semibold text-text">
+                    <span className="tnum shrink-0 rounded bg-text/[0.08] px-1 text-[11px] font-semibold text-text">
                       {slotLabel(slots[i])}
                     </span>
                   )}

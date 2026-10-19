@@ -107,7 +107,7 @@ export function BodyweightManager({
       </div>
 
       {entries.length > 0 && (
-        <ul ref={list} className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-[#18181b]">
+        <ul ref={list} className="mt-4 divide-y divide-text/[0.06] overflow-hidden rounded-xl bg-surface">
           {shown.map((l) => (
             // `justify-between` with no gap and nothing to stop either side
             // wrapping put the date hard against the weight at 360px and broke
@@ -124,7 +124,7 @@ export function BodyweightManager({
                   })
                 }
               >
-                <div className="flex min-h-11 items-center gap-3 bg-[#18181b] px-4 py-2.5">
+                <div className="flex min-h-11 items-center gap-3 bg-surface px-4 py-2.5">
                   <span className="min-w-0 flex-1 truncate tnum text-sm text-muted">
                     {format(parseISO(l.date), "d MMM yyyy")}
                   </span>

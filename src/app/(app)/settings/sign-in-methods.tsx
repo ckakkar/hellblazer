@@ -82,7 +82,7 @@ export function SignInMethods({
               type="button"
               onClick={() => connect(provider)}
               disabled={busy !== null}
-              className="inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-[#242428] disabled:opacity-60"
+              className="inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-surface-3 disabled:opacity-60"
             >
               {busy === provider && <Loader2 className="size-4 animate-spin" />}
               Connect

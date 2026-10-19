@@ -165,7 +165,7 @@ export function RecoveryPanel({
             <p className="mt-0.5 text-[13px] leading-5 text-muted">{recovery.advice}</p>
           </div>
         </div>
-        <dl className="mt-4 grid grid-cols-[1.2fr_1fr_1fr] divide-x divide-white/[0.06] border-t border-white/[0.06] py-3.5">
+        <dl className="mt-4 grid grid-cols-[1.2fr_1fr_1fr] divide-x divide-text/[0.06] border-t border-text/[0.06] py-3.5">
           <Cell label="Sleep" reading={recovery.sleep} show={formatSleep} />
           <Cell label="HRV" unit="ms" reading={recovery.hrv} show={(v) => String(Math.round(v))} />
           <Cell label="Resting" unit="bpm" reading={recovery.rhr} show={(v) => String(Math.round(v))} />

@@ -31,7 +31,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
         )}
       </div>
 
-      <ol className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+      <ol className="divide-y divide-text/[0.08] border-y border-text/[0.12]">
         {ladder.map((t) => {
           const isYou = current !== null && t.rank === rank;
           const passed = t.rank < rank;
@@ -39,7 +39,7 @@ export function LadderStanding({ tierKey }: { tierKey: string | null }) {
           return (
             <li
               key={t.key}
-              className={cn("flex items-center gap-3 px-3 py-2.5", isYou && "bg-white/[0.06]")}
+              className={cn("flex items-center gap-3 px-1 py-2.5", isYou && "-mx-2 rounded-xl bg-text/[0.06] px-3")}
             >
               <span className="tnum w-5 shrink-0 text-right text-[13px] text-muted">{t.rank}</span>
               <FighterArt

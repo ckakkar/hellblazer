@@ -61,7 +61,7 @@ export function OnboardingHero({
         </p>
       </div>
 
-      <div className="mt-5 rounded-2xl bg-white/[0.04] p-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:self-start lg:p-5">
+      <div className="mt-5 rounded-2xl bg-text/[0.04] p-4 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:mt-0 lg:self-start lg:p-5">
         <p className="text-[17px] font-semibold tracking-[-0.015em] text-text">{featured.name}</p>
         <p className="tnum mt-0.5 text-[13px] text-muted">
           {featured.days} days a week, {featured.weeks} weeks
@@ -88,7 +88,7 @@ export function OnboardingHero({
                 key={p.id}
                 disabled={pending}
                 onClick={() => load(p.id)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-[13px] text-text transition-colors hover:bg-[#242428] disabled:opacity-45"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-[13px] text-text transition-colors hover:bg-surface-3 disabled:opacity-45"
               >
                 {loadingId === p.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
                 {p.name}

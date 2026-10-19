@@ -20,11 +20,11 @@ const OLD = WEEKS - MOBILE_WEEKS; // columns hidden on mobile
 // A bone ramp rather than the accent: consistency is a record, not a live
 // event, so it reads in the neutral ink like the rest of the history.
 const LEVELS = [
-  "rgb(255 255 255 / 0.06)",
-  "rgb(244 242 238 / 0.24)",
-  "rgb(244 242 238 / 0.45)",
-  "rgb(244 242 238 / 0.7)",
-  "rgb(244 242 238 / 0.95)",
+  "color-mix(in oklab, var(--color-text) 7%, transparent)",
+  "color-mix(in oklab, var(--color-text) 24%, transparent)",
+  "color-mix(in oklab, var(--color-text) 45%, transparent)",
+  "color-mix(in oklab, var(--color-text) 70%, transparent)",
+  "color-mix(in oklab, var(--color-text) 95%, transparent)",
 ];
 
 function level(sets: number): number {

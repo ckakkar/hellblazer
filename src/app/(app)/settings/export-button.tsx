@@ -6,7 +6,7 @@ import { isNativeApp } from "@/lib/native";
 
 const noop = () => () => {};
 const buttonClass =
-  "inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-[#242428] disabled:opacity-60";
+  "inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-surface-3 disabled:opacity-60";
 
 /**
  * Every logged set as a CSV. The website downloads it; the iOS app can't

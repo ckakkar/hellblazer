@@ -134,7 +134,7 @@ export function LiveView({
             variant="hero"
             fade="bottom"
             className="absolute inset-0"
-            imageClassName="object-[50%_14%] opacity-60"
+            imageClassName="opacity-60"
           />
         </div>
         <header>
@@ -172,7 +172,7 @@ export function LiveView({
         </header>
 
         {/* The scoreboard, ruled off on the page like the home's week. */}
-        <dl className="mt-7 grid grid-cols-2 gap-y-6 border-y border-white/[0.08] py-6 sm:grid-cols-4 sm:divide-x sm:divide-white/[0.06] lg:mt-10 lg:py-8">
+        <dl className="mt-7 grid grid-cols-2 gap-y-6 border-y border-text/[0.08] py-6 sm:grid-cols-4 sm:divide-x sm:divide-text/[0.06] lg:mt-10 lg:py-8">
           {stats.map((st) => (
             <div
               key={st.label}
@@ -208,11 +208,11 @@ export function LiveView({
         <Portal>
           <div key={removal.id} aria-hidden className="hb-pr-edge pointer-events-none fixed inset-0 z-[54]" />
           <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[55] flex justify-center px-4">
-            <div className="hb-pr-banner relative w-full max-w-md overflow-hidden rounded-2xl bg-[rgb(22_22_25/0.96)] py-3.5 pl-5 pr-4 shadow-raised backdrop-blur">
+            <div className="hb-plate hb-pr-banner relative w-full max-w-md overflow-hidden rounded-2xl bg-elevated/95 py-3.5 pl-5 pr-4 shadow-raised backdrop-blur">
               <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-accent" />
               <span
                 aria-hidden
-                className="hb-pr-sheen absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/[0.12] to-transparent"
+                className="hb-pr-sheen absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-text/[0.12] to-transparent"
               />
               <div className="flex items-baseline justify-between gap-3">
                 <span className="hb-pr-word font-display text-[1.375rem] leading-none text-accent">Removal</span>
@@ -322,7 +322,7 @@ function OnTheBar({
               className={cn(
                 "tnum min-w-[5.5rem] rounded-xl px-3 py-2",
                 s.record ? "bg-accent/[0.12] shadow-[inset_0_0_0_1px_rgb(var(--accent-rgb)/0.45)]" : "bg-surface-2",
-                s.id === top?.id && !s.record && "shadow-[inset_0_0_0_1px_rgb(244_242_238/0.35)]",
+                s.id === top?.id && !s.record && "shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--color-text)_35%,transparent)]",
                 !seen.has(s.id) && "hb-set-land",
               )}
             >
@@ -337,7 +337,7 @@ function OnTheBar({
           {Array.from({ length: toGo }).map((_, i) => (
             <li
               key={`to-go-${i}`}
-              className="min-w-[5.5rem] rounded-xl border border-dashed border-white/[0.12] px-3 py-2"
+              className="min-w-[5.5rem] rounded-xl border border-dashed border-text/[0.12] px-3 py-2"
             >
               <span className="tnum block text-[11px] text-muted">Set {exercise.sets.length + i + 1}</span>
               <span className="block text-[15px] text-muted">To go</span>
@@ -362,7 +362,7 @@ function TheCard({ board, unit, live }: { board: LiveBoard; unit: Unit; live: bo
       <h2 id="hb-the-card" className="px-5 pb-1 pt-3 text-[13px] text-muted">
         The card
       </h2>
-      <ol className="divide-y divide-white/[0.06]">
+      <ol className="divide-y divide-text/[0.06]">
         {board.exercises.map((e) => {
           const now = live && e.id === board.currentId && !e.done;
           const working = e.sets.filter((s) => !s.warmup);
@@ -372,7 +372,7 @@ function TheCard({ board, unit, live }: { board: LiveBoard; unit: Unit; live: bo
                 aria-hidden
                 className={cn(
                   "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full",
-                  e.done ? "bg-text text-bg" : now ? "bg-accent" : "border border-white/[0.18]",
+                  e.done ? "bg-text text-bg" : now ? "bg-accent" : "border border-text/[0.18]",
                 )}
               >
                 {e.done && <Check className="size-3" strokeWidth={3} />}
@@ -380,7 +380,7 @@ function TheCard({ board, unit, live }: { board: LiveBoard; unit: Unit; live: bo
               <div className="min-w-0 flex-1">
                 <p className="flex items-center gap-1.5">
                   {e.slot && (
-                    <span className="tnum shrink-0 rounded bg-white/[0.08] px-1 text-[11px] font-semibold text-text">
+                    <span className="tnum shrink-0 rounded bg-text/[0.08] px-1 text-[11px] font-semibold text-text">
                       {e.slot}
                     </span>
                   )}

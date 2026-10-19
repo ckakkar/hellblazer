@@ -29,7 +29,7 @@ export function FightCardHero({
   return (
     <section
       className={cn(
-        "hb-hero-bleed hb-poster relative isolate flex h-[clamp(22rem,57svh,34rem)] flex-col justify-end overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] [--hero-name:clamp(2.75rem,13.5vw,3.75rem)] md:h-auto md:min-h-[21rem] md:bg-surface md:[--hb-fade:var(--color-surface)] md:[--hero-name:4rem] lg:min-h-[clamp(30rem,62svh,36rem)] lg:rounded-none lg:bg-transparent lg:[--hb-fade:var(--color-bg)] lg:[--hero-name:8rem]",
+        "hb-plate hb-hero-bleed hb-poster relative isolate flex h-[clamp(22rem,57svh,34rem)] flex-col justify-end overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] [--hero-name:clamp(2.75rem,13.5vw,3.75rem)] md:h-auto md:min-h-[21rem] md:bg-surface md:[--hb-fade:var(--color-surface)] md:[--hero-name:4rem] lg:min-h-[clamp(30rem,62svh,36rem)] lg:rounded-none lg:bg-transparent lg:[--hb-fade:var(--color-bg)] lg:[--hero-name:8rem]",
         className,
       )}
     >
@@ -42,7 +42,6 @@ export function FightCardHero({
             priority
             fade="bottom"
             className="absolute inset-0"
-            imageClassName="object-[62%_12%] md:object-[center_18%] lg:object-[center_14%]"
           />
           <div
             aria-hidden
@@ -114,7 +113,7 @@ export function FightCardHero({
                 key={t.key}
                 className={cn(
                   "h-1 flex-1 rounded-full",
-                  t.rank <= rank ? "hb-hero-step bg-accent" : "bg-white/[0.14]",
+                  t.rank <= rank ? "hb-hero-step bg-accent" : "bg-text/[0.14]",
                 )}
                 style={t.rank <= rank ? { animationDelay: `${260 + i * 70}ms` } : undefined}
               />
@@ -126,7 +125,7 @@ export function FightCardHero({
             </span>
             <Link
               href="/settings"
-              className="hb-hit -mr-1 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-white/[0.1] py-1.5 pl-3 pr-2 font-medium text-text backdrop-blur-md transition-colors hover:bg-white/[0.16]"
+              className="hb-hit -mr-1 inline-flex shrink-0 items-center gap-0.5 rounded-full bg-text/[0.1] py-1.5 pl-3 pr-2 font-medium text-text backdrop-blur-md transition-colors hover:bg-text/[0.16]"
             >
               {tier ? "Get judged" : "Get ranked"}
               <ChevronRight className="size-3.5" />

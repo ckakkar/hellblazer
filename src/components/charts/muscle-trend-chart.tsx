@@ -71,7 +71,7 @@ export function MuscleTrendChart({
           tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : `${v}`)}
         />
         <Tooltip
-          cursor={{ fill: "rgba(255,255,255,0.03)" }}
+          cursor={{ fill: "color-mix(in oklab, var(--color-text) 5%, transparent)" }}
           content={({ active, payload, label }) => {
             if (!active || !payload?.length) return null;
             const row = payload[0].payload as { sets: number; volume: number };

@@ -7,12 +7,13 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ReferenceDot,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import { kgToLb, type Unit } from "@/lib/units";
+import { kgToLb, trimNum, type Unit } from "@/lib/units";
 import {
   AXIS_TICK,
   ChartEmpty,
@@ -27,17 +28,30 @@ function conv(kg: number, unit: Unit) {
   return Math.round((unit === "lb" ? kgToLb(kg) : kg) * 10) / 10;
 }
 
+/**
+ * A lift's estimated max session by session. The record is marked: the one
+ * point on the line in the accent, with its figure, since breaking it is
+ * what the line is for.
+ */
 export function OneRepMaxChart({
   data,
   unit,
+  height = 260,
 }: {
   data: Point[];
   unit: Unit;
+  height?: number;
 }) {
   const chartData = data.map((p) => ({
     date: format(parseISO(p.date), "d MMM"),
     est1rm: conv(p.est1rm, unit),
   }));
+  const recordAt = chartData.reduce((best, d, i) => (d.est1rm > chartData[best].est1rm ? i : best), 0);
+  const record = chartData[recordAt] ?? null;
+  // Its figure sits above the dot, or to its left near the right edge, where
+  // above would run off the chart. Rounded as the page's figures are.
+  const recordLabel = record ? `${trimNum(Math.round(record.est1rm * 2) / 2)} ${unit}` : "";
+  const nearEnd = recordAt > (chartData.length - 1) * 0.8;
   if (chartData.length === 0)
     return <ChartEmpty message="No working sets logged for this exercise yet." />;
 
@@ -46,8 +60,8 @@ export function OneRepMaxChart({
   const yWidth = axisWidthFor(chartData.map((d) => d.est1rm));
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
+    <ResponsiveContainer width="100%" height={height}>
+      <AreaChart data={chartData} margin={{ top: 28, right: 16, bottom: 4, left: 0 }}>
         <defs>
           <linearGradient id="oneRmFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--color-text)" stopOpacity={0.14} />
@@ -87,8 +101,27 @@ export function OneRepMaxChart({
           strokeWidth={2}
           fill="url(#oneRmFill)"
           dot={{ r: 2.5, fill: "var(--color-text)", strokeWidth: 0 }}
-          activeDot={{ r: 4.5, fill: "var(--color-text)", stroke: "var(--color-surface)", strokeWidth: 2 }}
+          activeDot={{ r: 4.5, fill: "var(--color-text)", stroke: "var(--color-bg)", strokeWidth: 2 }}
         />
+        {record && chartData.length > 1 && (
+          <ReferenceDot
+            x={record.date}
+            y={record.est1rm}
+            r={5.5}
+            fill="rgb(var(--accent-rgb))"
+            stroke="var(--color-bg)"
+            strokeWidth={2.5}
+            ifOverflow="visible"
+            label={{
+              value: recordLabel,
+              position: nearEnd ? "left" : "top",
+              offset: nearEnd ? 12 : 10,
+              fill: "var(--color-text)",
+              fontSize: 12,
+              fontWeight: 600,
+            }}
+          />
+        )}
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -130,7 +163,7 @@ export function VolumeBarsChart({
           tickFormatter={volTick}
         />
         <Tooltip
-          cursor={{ fill: "rgba(255,255,255,0.03)" }}
+          cursor={{ fill: "color-mix(in oklab, var(--color-text) 5%, transparent)" }}
           content={({ active, payload, label }) =>
             active && payload?.length ? (
               <TooltipBox label={label}>

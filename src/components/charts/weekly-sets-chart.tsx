@@ -53,16 +53,16 @@ export function WeeklySetsChart({
               <span className={cn("truncate text-[13px]", inRange ? "text-text" : "text-muted")}>
                 {r.label}
               </span>
-              <span className="relative h-1.5 overflow-hidden rounded-full bg-white/[0.04]">
+              <span className="relative h-1.5 overflow-hidden rounded-full bg-text/[0.04]">
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 bg-white/[0.1]"
+                  className="absolute inset-y-0 bg-text/[0.1]"
                   style={{ left: pct(LOW), width: pct(HIGH - LOW) }}
                 />
                 <span
                   className={cn(
                     "relative block h-full rounded-full",
-                    inRange ? "bg-text/85" : "bg-white/30",
+                    inRange ? "bg-text/85" : "bg-text/30",
                   )}
                   style={{ width: r.sets > 0 ? `max(3%, ${pct(r.sets)})` : "0%" }}
                   data-grow={grow}

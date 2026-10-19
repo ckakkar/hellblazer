@@ -28,27 +28,27 @@ export function OneRepMaxBoard({
     // Two columns on a desktop, filled top to bottom so the ranking reads down
     // the first and carries on in the second.
     <ul
-      className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface lg:grid lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-[repeat(var(--rows),auto)] lg:gap-px lg:divide-y-0 lg:bg-white/[0.06]"
+      className="border-t border-text/[0.12] lg:grid lg:grid-flow-col lg:grid-cols-2 lg:grid-rows-[repeat(var(--rows),auto)] lg:gap-x-10"
       style={{ "--rows": Math.ceil(rows.length / 2) } as React.CSSProperties}
     >
       {rows.map((r, i) => {
         const pct = Math.max(4, Math.round((r.bestEst1rm / max) * 100));
         const open = r.exerciseId === selected;
         return (
-          <li key={r.exerciseId} className="lg:bg-surface">
+          <li key={r.exerciseId} className="border-b border-text/[0.08]">
             <Link
               // #lift scrolls to the detail, which sits above this list; without
               // it the page lands at the top with the detail out of view.
               href={`/progress?tab=exercise&exercise=${r.exerciseId}#lift`}
               aria-current={open ? "true" : undefined}
               className={cn(
-                "relative flex items-center gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]",
+                "relative flex items-center gap-3 px-1 py-3 transition-colors hover:bg-text/[0.03]",
                 open && "lg:shadow-[inset_3px_0_0_var(--color-text)]",
               )}
             >
               <span
                 aria-hidden
-                className="absolute inset-y-0 left-0 bg-white/[0.035]"
+                className="absolute inset-y-0 left-0 bg-text/[0.035]"
                 style={{ width: `${pct}%` }}
               />
               <span className="tnum relative w-5 shrink-0 text-right text-[13px] text-muted">
@@ -72,8 +72,6 @@ export function OneRepMaxBoard({
           </li>
         );
       })}
-      {/* Squares off an odd count, so the second column doesn't end on a gap. */}
-      {rows.length % 2 === 1 && <li aria-hidden className="hidden lg:block lg:bg-surface" />}
     </ul>
   );
 }

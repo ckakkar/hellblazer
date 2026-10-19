@@ -19,7 +19,6 @@ export function LandingArenaHero({ error, deleted }: { error?: string; deleted?:
           priority
           fade="bottom"
           className="absolute inset-0"
-          imageClassName="object-[center_18%]"
         />
         <header className="absolute inset-x-0 top-0 flex items-center gap-2 px-5 pt-[calc(env(safe-area-inset-top)+1rem)] lg:hidden">
           <Flame className="size-5 text-accent" strokeWidth={2.25} />

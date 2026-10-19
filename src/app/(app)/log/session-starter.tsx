@@ -73,7 +73,7 @@ export function SessionStarter({
     <button
       disabled={pending}
       onClick={() => begin(null)}
-      className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-4 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05] disabled:opacity-60"
+      className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-4 text-left transition-colors hover:bg-text/[0.03] active:bg-text/[0.05] disabled:opacity-60"
     >
       <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted">
         {pending && chosen === "freeform" ? (
@@ -102,7 +102,7 @@ export function SessionStarter({
             </h2>
             {countsLabel && <span className="text-[13px] text-muted">{countsLabel}</span>}
           </div>
-          <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+          <div className="divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-surface">
             {templates.map((t) => {
               const expanded = openId === t.id;
               const starting = pending && chosen === t.id;
@@ -112,7 +112,7 @@ export function SessionStarter({
                   <button
                     onClick={() => setOpenId(expanded ? null : t.id)}
                     aria-expanded={expanded}
-                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03]"
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-text/[0.03]"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[15px] font-medium text-text">
@@ -133,7 +133,7 @@ export function SessionStarter({
 
                   <Collapse open={expanded} className="px-4 pb-4">
                     {t.exercises.length > 0 ? (
-                      <ol className="divide-y divide-white/[0.05] rounded-xl bg-surface-2/60">
+                      <ol className="divide-y divide-text/[0.05] rounded-xl bg-surface-2/60">
                         {t.exercises.map((ex, i) => (
                           <li key={i} className="flex items-center gap-3 px-3.5 py-2.5">
                             <span className="tnum w-4 shrink-0 text-right text-[13px] text-muted">

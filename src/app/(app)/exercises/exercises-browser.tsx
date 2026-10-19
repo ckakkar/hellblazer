@@ -92,7 +92,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
               <span>{MUSCLE_LABEL[g.muscle]}</span>
               <span className="tnum text-muted">{g.items.length}</span>
             </h2>
-            <Card className="divide-y divide-white/[0.06] overflow-hidden">
+            <Card className="divide-y divide-text/[0.06] overflow-hidden">
               {g.items.map((e) => (
                 <ExerciseRow
                   key={e.id}
@@ -214,7 +214,7 @@ function ExerciseRow({
       </div>
       {guide && (
         <Collapse open={open} id={guideId} className="px-4 pb-4">
-          <p className="rounded-xl bg-white/[0.04] px-3.5 py-3 text-[14px] leading-[1.55] text-muted">
+          <p className="rounded-xl bg-text/[0.04] px-3.5 py-3 text-[14px] leading-[1.55] text-muted">
             {guide}
           </p>
         </Collapse>

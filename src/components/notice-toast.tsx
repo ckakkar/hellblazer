@@ -27,7 +27,7 @@ export function NoticeToast() {
           key={shown.id}
           role="alert"
           data-state={notice ? "open" : "closed"}
-          className="hb-toast pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] px-4 py-3 shadow-raised backdrop-blur"
+          className="hb-toast pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-elevated/95 px-4 py-3 shadow-raised backdrop-blur"
         >
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
           <p className="min-w-0 flex-1 text-xs leading-5 text-text">{shown.text}</p>

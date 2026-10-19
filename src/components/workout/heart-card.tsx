@@ -208,12 +208,12 @@ export function HeartCard({
         </>
       ) : (
         <div aria-hidden className="mt-3 space-y-2">
-          <div className="h-3.5 w-full animate-pulse rounded-full bg-white/[0.06]" />
-          <div className="h-3.5 w-3/5 animate-pulse rounded-full bg-white/[0.06]" />
+          <div className="h-3.5 w-full animate-pulse rounded-full bg-text/[0.06]" />
+          <div className="h-3.5 w-3/5 animate-pulse rounded-full bg-text/[0.06]" />
         </div>
       )}
 
-      <div className="mt-4 grid grid-cols-3 divide-x divide-white/[0.06] rounded-xl bg-white/[0.03] py-3">
+      <div className="mt-4 grid grid-cols-3 divide-x divide-text/[0.06] rounded-xl bg-text/[0.03] py-3">
         {[
           { label: "Average", value: String(h.avg), unit: "bpm" },
           { label: "Peak", value: String(h.peak), unit: "bpm" },
@@ -233,7 +233,7 @@ export function HeartCard({
 
       <HeartChart h={h} start={start} end={end} names={new Map(h.exercises.map((e) => [e.key, e.name]))} />
 
-      <ul className="mt-4 divide-y divide-white/[0.06] overflow-hidden rounded-xl bg-white/[0.03]">
+      <ul className="mt-4 divide-y divide-text/[0.06] overflow-hidden rounded-xl bg-text/[0.03]">
         {hardest.length > 0 && (
           <li className="px-3.5 py-3">
             <p className="text-[13px] text-muted">Hardest exercises, by peak</p>
@@ -389,7 +389,7 @@ function HeartChart({
         >
           {grid.map((g) => (
             <g key={g}>
-              <line x1={PAD.left} x2={width - PAD.right} y1={y(g)} y2={y(g)} className="stroke-white/[0.07]" />
+              <line x1={PAD.left} x2={width - PAD.right} y1={y(g)} y2={y(g)} className="stroke-text/[0.07]" />
               <text x={PAD.left - 6} y={y(g) + 4} textAnchor="end" className="tnum fill-muted text-[11px]">
                 {g}
               </text>
@@ -420,7 +420,7 @@ function HeartChart({
                 x2={x(point.t)}
                 y1={PAD.top}
                 y2={HEIGHT - PAD.bottom}
-                className="stroke-white/25"
+                className="stroke-text/25"
                 strokeWidth={1}
               />
               <circle cx={x(point.t)} cy={y(point.bpm)} r={4} strokeWidth={2} className="fill-text stroke-surface" />

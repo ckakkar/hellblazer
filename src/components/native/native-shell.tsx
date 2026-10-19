@@ -31,6 +31,13 @@ export function NativeShell() {
     if (!isNativeApp()) return;
     document.documentElement.dataset.app = "ios";
     withNative((api) => api.ready());
+    // The window follows the page's light/dark choice (the server set it on
+    // <html> from the cookie), so a choice made on another visit, or cleared
+    // by signing out, can't leave the status bar disagreeing with the page.
+    const theme = document.documentElement.dataset.theme;
+    withNative(async (api) =>
+      api.setAppearance?.({ appearance: theme === "light" || theme === "dark" ? theme : "system" }),
+    );
     window.__hbNavigate = (path: string) => {
       if (!/^\/(?![/\\])/.test(path)) return false;
       router.push(path);

@@ -1,6 +1,7 @@
 import { cookies, headers } from "next/headers";
 import type { Unit } from "@/lib/units";
 import { DEFAULT_ACCENT, isAccentKey, type AccentKey } from "@/lib/accents";
+import { appearanceIsLocked } from "@/lib/surface";
 import {
   TZ_COOKIE_NAME,
   dateInTimeZone,
@@ -9,6 +10,21 @@ import {
 
 const UNIT_COOKIE = "wt_unit";
 const ACCENT_COOKIE = "hb_accent";
+const APPEARANCE_COOKIE = "hb_theme";
+
+/** Night (dark), paper (light), or whichever the device is set to. */
+export type Appearance = "system" | "light" | "dark";
+export const APPEARANCES: readonly Appearance[] = ["system", "light", "dark"];
+
+/**
+ * Reads the light/dark preference from a cookie; the system's by default.
+ * An app build that can't follow it is always dark (surface.ts).
+ */
+export async function getAppearance(): Promise<Appearance> {
+  if (await appearanceIsLocked()) return "dark";
+  const v = (await cookies()).get(APPEARANCE_COOKIE)?.value;
+  return v === "light" || v === "dark" ? v : "system";
+}
 
 /** Reads the user's display-unit preference from a cookie (canonical is kg). */
 export async function getUnit(): Promise<Unit> {
@@ -44,3 +60,4 @@ export async function getToday(): Promise<string> {
 
 export const UNIT_COOKIE_NAME = UNIT_COOKIE;
 export const ACCENT_COOKIE_NAME = ACCENT_COOKIE;
+export const APPEARANCE_COOKIE_NAME = APPEARANCE_COOKIE;

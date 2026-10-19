@@ -1,12 +1,15 @@
 @import "tailwindcss";
 
 /* ── Fatty · design tokens → Tailwind theme ─────────────────────────
-   Black glass, loud numbers. The canvas is true black so the installed app
-   dissolves into an OLED phone and its status bar; content sits on graphite
-   surfaces a single step up. Hierarchy comes from type size and weight, not
-   from boxes, rules or labels. The accent is routed through one channel
-   variable (--accent-rgb) so Settings can re-skin it; it is spent only on what
-   is live right now, a record being broken, and the log action. */
+   A fighter's training journal, printed like a fight programme. Two papers:
+   night (the default here: true black, so the app dissolves into an OLED
+   phone and its status bar, with bone type) and paper (bone, with black ink;
+   below, from the system's setting or Profile → Appearance). The fighters
+   are always printed on black plates (.hb-plate), in both. Every colour is a
+   token, so a component written once reads on either. The accent is routed
+   through one channel variable (--accent-rgb) so Settings can re-skin it; it
+   is spent only on what is live right now, a record being broken, and the
+   log action. */
 @theme {
   /* md is the iPad mini's portrait width (744pt), not Tailwind's 768, so
      every iPad gets the sidebar in portrait. The raw media queries below
@@ -15,6 +18,10 @@
   --color-bg: #000000;
   --color-surface: #121214;
   --color-surface-2: #1c1c1f;
+  /* A surface-2 control under the pointer or the finger. */
+  --color-surface-3: #242428;
+  /* What floats: sheets, notices, menus. */
+  --color-elevated: #1c1c1f;
   --color-border: #28282c;
   --color-text: #f4f2ee;
   --color-muted: #8e8c88;
@@ -61,6 +68,100 @@
   --accent-rgb: 223 45 40;
   --accent-dim-rgb: 150 26 24;
   --accent-glow: rgb(var(--accent-rgb) / 0.18);
+  /* Materials (the glass that floats over content), per paper. */
+  --glass-bg: rgb(16 16 18 / 0.82);
+  --glass-edge: rgb(255 255 255 / 0.07);
+  --sheet-bg: rgb(20 20 22 / 0.94);
+  --sheet-solid: rgb(20 20 22);
+  --topbar-bg: rgb(0 0 0 / 0.72);
+  --overlap-bg: rgb(20 20 22 / 0.78);
+  --scrim: rgb(0 0 0 / 0.6);
+  --menu-scrim: rgb(0 0 0 / 0.8);
+}
+
+/* ── Paper: the light theme ───────────────────────────────────────────────
+   Bone paper, black ink, the accent as the programme's one spot colour.
+   Follows the system unless Profile → Appearance picks one (<html
+   data-theme>, set from a cookie on the server, so there's no flash). */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --color-bg: #f2f1ed;
+    --color-surface: #ffffff;
+    --color-surface-2: #e8e6e0;
+    --color-surface-3: #dedbd4;
+    --color-elevated: #ffffff;
+    --color-border: #d6d3cb;
+    --color-text: #141416;
+    --color-muted: #66635d;
+    --color-accent-ink: color-mix(in oklab, rgb(var(--accent-rgb)) 76%, black);
+    --color-danger: #c62828;
+    --color-warn: #a15c00;
+    --color-chart-2: #4f4d48;
+    --color-chart-3: #8f8c85;
+    --color-chart-4: #c4c1b9;
+    --shadow-raised: 0 18px 50px -20px rgb(20 20 22 / 0.3);
+    --glass-bg: rgb(250 249 246 / 0.8);
+    --glass-edge: rgb(20 20 22 / 0.08);
+    --sheet-bg: rgb(252 251 249 / 0.95);
+    --sheet-solid: rgb(252 251 249);
+    --topbar-bg: rgb(242 241 237 / 0.8);
+    --overlap-bg: rgb(255 255 255 / 0.84);
+    --scrim: rgb(20 20 22 / 0.3);
+    --menu-scrim: rgb(242 241 237 / 0.88);
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-bg: #f2f1ed;
+  --color-surface: #ffffff;
+  --color-surface-2: #e8e6e0;
+  --color-surface-3: #dedbd4;
+  --color-elevated: #ffffff;
+  --color-border: #d6d3cb;
+  --color-text: #141416;
+  --color-muted: #66635d;
+  --color-accent-ink: color-mix(in oklab, rgb(var(--accent-rgb)) 76%, black);
+  --color-danger: #c62828;
+  --color-warn: #a15c00;
+  --color-chart-2: #4f4d48;
+  --color-chart-3: #8f8c85;
+  --color-chart-4: #c4c1b9;
+  --shadow-raised: 0 18px 50px -20px rgb(20 20 22 / 0.3);
+  --glass-bg: rgb(250 249 246 / 0.8);
+  --glass-edge: rgb(20 20 22 / 0.08);
+  --sheet-bg: rgb(252 251 249 / 0.95);
+  --sheet-solid: rgb(252 251 249);
+  --topbar-bg: rgb(242 241 237 / 0.8);
+  --overlap-bg: rgb(255 255 255 / 0.84);
+  --scrim: rgb(20 20 22 / 0.3);
+  --menu-scrim: rgb(242 241 237 / 0.88);
+}
+
+/* A plate: printed black whatever the paper. The fighters, the victory
+   screen, the podium: the programme's photo pages. Everything inside reads
+   the night tokens. */
+.hb-plate {
+  color-scheme: dark;
+  --color-bg: #000000;
+  --color-surface: #121214;
+  --color-surface-2: #1c1c1f;
+  --color-surface-3: #242428;
+  --color-elevated: #1c1c1f;
+  --color-border: #28282c;
+  --color-text: #f4f2ee;
+  --color-muted: #8e8c88;
+  --color-accent-ink: color-mix(in oklab, rgb(var(--accent-rgb)) 86%, white);
+  --color-danger: #ef5350;
+  --color-warn: #f2a93b;
+  --color-chart-2: #a8a6a1;
+  --color-chart-3: #6b6a67;
+  --color-chart-4: #3d3d40;
+  --glass-bg: rgb(16 16 18 / 0.82);
+  --glass-edge: rgb(255 255 255 / 0.07);
+  --sheet-bg: rgb(20 20 22 / 0.94);
+  --overlap-bg: rgb(20 20 22 / 0.78);
+  color: var(--color-text);
 }
 
 /* ── Selectable accent palettes ───────────────────────────────────────────
@@ -204,23 +305,23 @@ label {
    Black glass for anything that floats over content: tab bar, sidebar,
    sheets. Content itself stays opaque. */
 .hb-glass {
-  background-color: rgb(16 16 18 / 0.82);
+  background-color: var(--glass-bg);
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.07);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
 }
 .hb-sheet {
-  background-color: rgb(20 20 22 / 0.94);
+  background-color: var(--sheet-bg);
   -webkit-backdrop-filter: blur(32px) saturate(180%);
   backdrop-filter: blur(32px) saturate(180%);
-  box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+  box-shadow: inset 0 1px 0 0 var(--glass-edge);
 }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .hb-glass {
-    background-color: rgb(14 14 16 / 0.97);
+    background-color: var(--color-elevated);
   }
   .hb-sheet {
-    background-color: rgb(20 20 22);
+    background-color: var(--sheet-solid);
   }
 }
 
@@ -233,10 +334,10 @@ label {
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-color: rgb(0 0 0 / 0.72);
+  background-color: var(--topbar-bg);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   backdrop-filter: blur(24px) saturate(180%);
-  box-shadow: inset 0 -1px 0 0 rgb(255 255 255 / 0.08);
+  box-shadow: inset 0 -1px 0 0 var(--glass-edge);
 }
 @supports (animation-timeline: scroll()) {
   .hb-topbar::before {
@@ -430,14 +531,73 @@ button,
     height: 12rem;
   }
 }
+/* On paper the fighter's plate is a printed panel: on a phone it sits
+   below the status bar (whose ink is dark on paper) instead of running up
+   under it, and on a desktop the poster is a black plate on the page. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    .hb-hero-bleed {
+      background-color: var(--color-bg);
+    }
+    @media (max-width: 743.98px) {
+      .hb-hero-bleed,
+      main:has(.hb-resume):not(:has([data-live-card])) .hb-hero-bleed {
+        margin-inline: 0;
+        margin-top: 0;
+        border-radius: 1.75rem;
+      }
+      .hb-hero-bleed .hb-bleed-art {
+        top: 0;
+        -webkit-mask-image: none;
+        mask-image: none;
+      }
+      .hb-hero-bleed.hb-bleed-grow {
+        height: 12rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .hb-poster {
+        border-radius: 2rem;
+        padding-inline: 3rem;
+      }
+    }
+  }
+}
+:root[data-theme="light"] {
+  .hb-hero-bleed {
+    background-color: var(--color-bg);
+  }
+  @media (max-width: 743.98px) {
+    .hb-hero-bleed,
+    main:has(.hb-resume):not(:has([data-live-card])) .hb-hero-bleed {
+      margin-inline: 0;
+      margin-top: 0;
+      border-radius: 1.75rem;
+    }
+    .hb-hero-bleed .hb-bleed-art {
+      top: 0;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .hb-hero-bleed.hb-bleed-grow {
+      height: 12rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .hb-poster {
+      border-radius: 2rem;
+      padding-inline: 3rem;
+    }
+  }
+}
 /* The card that overlaps the hero's foot: glass, so the portrait's fade
    reads through it. Opaque on a tablet, where it sits below the hero. */
 @media (max-width: 743.98px), (min-width: 1024px) {
   .hb-overlap {
-    background-color: rgb(20 20 22 / 0.78);
+    background-color: var(--overlap-bg);
     -webkit-backdrop-filter: blur(24px) saturate(160%);
     backdrop-filter: blur(24px) saturate(160%);
-    box-shadow: inset 0 1px 0 0 rgb(255 255 255 / 0.07);
+    box-shadow: inset 0 1px 0 0 var(--glass-edge);
   }
 }
 /* On a desktop the home hero is a poster on the page itself, not a card: the
@@ -480,6 +640,20 @@ button,
     linear-gradient(to right, transparent, #000 38%, #000 78%, transparent),
     linear-gradient(to bottom, transparent, #000 18%, #000 42%, transparent 82%);
   mask-composite: intersect;
+}
+/* On paper the live view's portrait prints as ink: the black ground goes
+   to paper and the linework to ink, faint enough to sit under the name. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) .hb-live-art {
+    filter: grayscale(1) invert(1) contrast(1.15);
+    mix-blend-mode: multiply;
+    opacity: 0.45;
+  }
+}
+:root[data-theme="light"] .hb-live-art {
+  filter: grayscale(1) invert(1) contrast(1.15);
+  mix-blend-mode: multiply;
+  opacity: 0.45;
 }
 /* The landing's portrait on a desktop: it fades out leftward under the
    headline, so the two overlap without a seam. */
@@ -678,7 +852,7 @@ button,
 .hb-menu-scrim {
   background:
     radial-gradient(90% 40% at 50% 0%, rgb(var(--accent-rgb) / 0.16), transparent 72%),
-    rgb(0 0 0 / 0.8);
+    var(--menu-scrim);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
   backdrop-filter: blur(28px) saturate(140%);
 }
@@ -827,8 +1001,8 @@ button,
   border-radius: calc(2 * var(--u));
 }
 .hb-bar-steel::after {
-  border-color: rgb(244 242 238 / 0.75);
-  background: color-mix(in srgb, rgb(244 242 238) 7%, var(--color-bg));
+  border-color: color-mix(in oklab, var(--color-text) 75%, transparent);
+  background: color-mix(in srgb, var(--color-text) 7%, var(--color-bg));
 }
 .hb-bar-steel::before {
   display: none;
@@ -838,7 +1012,7 @@ button,
 }
 /* The bar itself, in faint bone lines. */
 .hb-bar-ink {
-  stroke: rgb(244 242 238 / 0.45);
+  stroke: color-mix(in oklab, var(--color-text) 45%, transparent);
 }
 .hb-bar-ink * {
   stroke-width: 1.5px;
@@ -923,7 +1097,7 @@ button,
   width: calc(2.4 * var(--u));
   height: calc(8.5 * var(--u));
   border-radius: calc(1.2 * var(--u));
-  background: rgb(244 242 238 / 0.75);
+  background: color-mix(in oklab, var(--color-text) 75%, transparent);
   transform-origin: 50% calc(100% - 1.2 * var(--u));
   transform: rotate(-78deg);
   animation: hb-bar-lever 3600ms linear infinite both;
@@ -1698,7 +1872,8 @@ button,
     z-index: 100;
     display: grid;
     place-items: center;
-    background: var(--color-bg);
+    /* Black in either theme: it continues iOS's launch image, which is. */
+    background: #000;
     transition: opacity 260ms var(--ease-out);
   }
 }

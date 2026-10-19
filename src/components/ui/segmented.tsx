@@ -38,7 +38,7 @@ export function Segmented<T extends string>({
       role={tabs ? "tablist" : "radiogroup"}
       aria-label={label}
       className={cn(
-        "relative isolate inline-grid auto-cols-fr grid-flow-col rounded-full bg-white/[0.06] p-0.5",
+        "relative isolate inline-grid auto-cols-fr grid-flow-col rounded-full bg-text/[0.06] p-0.5",
         className,
       )}
       style={{ "--seg-n": options.length } as React.CSSProperties}
@@ -46,7 +46,7 @@ export function Segmented<T extends string>({
       <span
         aria-hidden
         className={cn(
-          "hb-seg-thumb absolute inset-y-0.5 left-0.5 -z-10 rounded-full bg-white/[0.12]",
+          "hb-seg-thumb absolute inset-y-0.5 left-0.5 -z-10 rounded-full bg-text/[0.12]",
           index < 0 && "opacity-0",
         )}
         style={{ transform: `translateX(${Math.max(0, index) * 100}%)` }}

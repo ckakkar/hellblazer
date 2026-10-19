@@ -29,7 +29,9 @@ import {
 import { MuscleTrendChart } from "@/components/charts/muscle-trend-chart";
 import { MuscleVolumeDonut } from "@/components/charts/muscle-volume-donut";
 import { MuscleBalanceRadar } from "@/components/charts/muscle-balance-radar";
-import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
+import { format, parseISO } from "date-fns";
+import { formatVolume, toDisplayWeight, trimNum, type Unit } from "@/lib/units";
+import { liftStory } from "@/lib/lift-story";
 import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
 import { ProgressControls } from "./progress-controls";
 
@@ -44,22 +46,29 @@ export default async function ProgressPage({
 }) {
   const sp = await searchParams;
   const tab = sp.tab === "muscle" ? "muscle" : "exercise";
-  const [loggedExercises, unit, profile, oneRepMaxes] = await Promise.all([
+  const [loggedExercises, unit, profile, oneRepMaxes, trends] = await Promise.all([
     getLoggedExercises(),
     getUnit(),
     getProfile(),
     getAllExercise1RMs(),
+    getTopLiftTrends(4, 12),
   ]);
 
   // Validate URL params: bad values fall back instead of crashing the page.
   const selectedMuscle: Muscle = MUSCLES.includes(sp.muscle as Muscle)
     ? (sp.muscle as Muscle)
     : "back";
+  // With no lift asked for, the page opens on the one that moved most: the
+  // biggest gain among your top lifts, else your most-logged lift.
+  const mover = trends
+    .filter((t) => (t.changePct ?? 0) > 0 && loggedExercises.some((e) => e.exercise_id === t.exerciseId))
+    .sort((a, b) => (b.changePct ?? 0) - (a.changePct ?? 0))[0];
   const selectedExercise =
     (sp.exercise &&
     loggedExercises.some((e) => e.exercise_id === sp.exercise)
       ? sp.exercise
       : undefined) ??
+    mover?.exerciseId ??
     loggedExercises[0]?.exercise_id ??
     undefined;
 
@@ -77,12 +86,6 @@ export default async function ProgressPage({
         selectedExercise={selectedExercise}
         selectedMuscle={selectedMuscle}
       />
-
-      {tab === "exercise" && loggedExercises.length > 0 && selectedExercise && (
-        <div className="mb-10">
-          <LiftTrendsSection unit={unit} />
-        </div>
-      )}
 
       {/* On a desktop the page splits: the open lift (or muscle) on the left,
           the latest records and the ladder beside it, and every lift below in
@@ -119,9 +122,17 @@ export default async function ProgressPage({
 
         <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
           {tab === "exercise" && loggedExercises.length > 0 && selectedExercise && (
-            <div className="-order-1 min-w-0 lg:order-none">
-              <RecentRecordsSection unit={unit} />
-            </div>
+            <>
+              {/* The other lifts, quieter: a line each to compare against. */}
+              {trends.length > 1 && (
+                <div className="min-w-0">
+                  <LiftTrends lifts={trends} unit={unit} selected={selectedExercise} />
+                </div>
+              )}
+              <div className="min-w-0">
+                <RecentRecordsSection unit={unit} />
+              </div>
+            </>
           )}
           <div className="order-1 min-w-0 lg:order-none">
             <LadderStanding tierKey={profile?.tier ?? null} />
@@ -145,13 +156,6 @@ export default async function ProgressPage({
   );
 }
 
-/** The top lifts' 12-week lines. */
-async function LiftTrendsSection({ unit }: { unit: "kg" | "lb" }) {
-  const lifts = await getTopLiftTrends(4, 12);
-  if (lifts.length === 0) return null;
-  return <LiftTrends lifts={lifts} unit={unit} />;
-}
-
 /** The latest records broken. */
 async function RecentRecordsSection({ unit }: { unit: "kg" | "lb" }) {
   const records = await getRecentRecords(5);
@@ -171,8 +175,15 @@ async function ExerciseTab({
   const { points, pr } = await getExerciseProgression(exerciseId);
 
   return (
-    // The top-lift cards link here (#lift); the margin clears the top bar.
-    <div id="lift" className="grid scroll-mt-24 grid-cols-1 gap-4">
+    // The top-lift list links here (#lift); the margin clears the top bar.
+    <div id="lift" className="grid scroll-mt-24 grid-cols-1 gap-8">
+      <section>
+        <LiftLead name={exerciseName} points={points} unit={unit} />
+        <div className="mt-6">
+          <OneRepMaxChart data={points} unit={unit} height={300} />
+        </div>
+      </section>
+
       {/* A lift's personal records are a tale of the tape by any other name, so
           they're set as one: the lift is named, and the records read down a
           column instead of sitting in four equal boxes. */}
@@ -202,17 +213,59 @@ async function ExerciseTab({
         />
       </Tape>
 
-      <ChartCard
-        title="Estimated 1RM"
-        subtitle="Best working set per session (Epley)"
-      >
-        <OneRepMaxChart data={points} unit={unit} />
-      </ChartCard>
-
       <ChartCard title="Volume per session" subtitle="Working sets only">
         <VolumeBarsChart data={points} unit={unit} />
       </ChartCard>
     </div>
+  );
+}
+
+/**
+ * The lift's story in one figure: how far its estimated max moved over the
+ * block, with where it started and where its record sits. The dot by the
+ * record matches the one on the chart below.
+ */
+function LiftLead({
+  name,
+  points,
+  unit,
+}: {
+  name: string;
+  points: { date: string; est1rm: number }[];
+  unit: Unit;
+}) {
+  const story = liftStory(points);
+  const w = (kg: number) => trimNum(Math.round(toDisplayWeight(kg, unit) * 2) / 2);
+  if (!story) {
+    return <h2 className="text-[1.375rem] font-bold tracking-[-0.025em] text-text">{name}</h2>;
+  }
+  const moved = story.sessions > 1 ? Math.round(toDisplayWeight(story.change, unit) * 2) / 2 : 0;
+  const span = `${story.weeks} ${story.weeks === 1 ? "week" : "weeks"}`;
+  const figure = moved > 0 ? `+${trimNum(moved)}` : moved < 0 ? `−${trimNum(-moved)}` : w(story.to);
+  const line =
+    story.sessions === 1
+      ? "Estimated max, from the one session in the last 12 weeks."
+      : moved === 0
+        ? `Estimated max, level over ${span}.`
+        : `On its estimated max over ${span}, ${w(story.from)} to ${w(story.to)} ${unit}.`;
+  const recordIsLatest = story.record.value <= story.to;
+  return (
+    <header>
+      <h2 className="text-[1.375rem] font-bold leading-tight tracking-[-0.025em] text-text">{name}</h2>
+      <p className="mt-3 flex items-baseline gap-2">
+        <span className="font-display text-[clamp(3.25rem,15vw,5rem)] leading-[0.9] text-text">{figure}</span>
+        <span className="text-[17px] text-muted">{unit}</span>
+      </p>
+      <p className="mt-3 max-w-md text-[15px] leading-6 text-text/80">
+        {line}{" "}
+        <span className="whitespace-nowrap text-muted">
+          <span aria-hidden className="mr-1.5 inline-block size-2 rounded-full bg-accent align-middle" />
+          {recordIsLatest && story.sessions > 1
+            ? `A record, ${format(parseISO(story.record.date), "d MMM")}.`
+            : `Record ${w(story.record.value)} ${unit}, ${format(parseISO(story.record.date), "d MMM")}.`}
+        </span>
+      </p>
+    </header>
   );
 }
 

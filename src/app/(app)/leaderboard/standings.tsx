@@ -44,7 +44,7 @@ export function Standings({
               >
                 <div
                   className={cn(
-                    "relative overflow-hidden rounded-2xl bg-surface [--hb-fade:var(--color-surface)]",
+                    "hb-plate relative overflow-hidden rounded-2xl bg-surface [--hb-fade:var(--color-surface)]",
                     first
                       ? "aspect-[3/4.3] ring-1 ring-accent/70 hb-glow"
                       : "aspect-[3/4]",
@@ -56,7 +56,6 @@ export function Standings({
                       variant="card"
                       fade="bottom"
                       className="absolute inset-0"
-                      imageClassName="object-[center_14%]"
                     />
                   ) : (
                     <span className="font-display absolute inset-0 flex items-center justify-center text-[2.5rem] text-muted">
@@ -94,7 +93,7 @@ export function Standings({
       {rest.length > 0 && (
         <ol
           start={podium.length + 1}
-          className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface"
+          className="divide-y divide-text/[0.08] border-y border-text/[0.12]"
         >
           {rest.map((e, j) => {
             const i = j + podium.length;
@@ -103,8 +102,8 @@ export function Standings({
               <li
                 key={`${e.username}-${i}`}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-3",
-                  mine && "bg-white/[0.06]",
+                  "flex items-center gap-3 px-1 py-3",
+                  mine && "-mx-2 rounded-xl bg-text/[0.06] px-3",
                 )}
               >
                 <span className="tnum flex w-6 shrink-0 justify-end text-[13px] text-muted">

@@ -39,7 +39,7 @@ export function AppleSignIn({ next = "/dashboard" }: { next?: string }) {
         variant="secondary"
         onClick={signIn}
         disabled={loading}
-        className="w-full bg-white text-black hover:bg-white/90 sm:w-auto"
+        className="w-full bg-white text-black hover:bg-text/90 sm:w-auto"
       >
         {loading ? <Loader2 className="size-5 animate-spin" /> : <AppleGlyph />}
         Continue with Apple

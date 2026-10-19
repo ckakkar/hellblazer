@@ -201,6 +201,9 @@ export interface HellBlazerNative {
   donateWorkoutStart(options: { sessionId: string; templateId: string; label: string }): Promise<void>;
   /** Whether finished workouts go to Apple Health, for one finished by voice. */
   setHealthSync(options: { on: boolean }): Promise<void>;
+  /** Light, dark or the device's: the window's style, so the status bar
+   *  and the keyboard match the page. Builds before 2.6 don't have it. */
+  setAppearance?(options: { appearance: "system" | "light" | "dark" }): Promise<void>;
   /** Whether this iPhone can read sets said in words (Apple's on-device model). */
   setReaderStatus(): Promise<{ status: SetReaderStatus }>;
   /**

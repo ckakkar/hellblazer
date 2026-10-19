@@ -31,7 +31,7 @@ export function PresetCarousel({
         {presets.map((p) => (
           <div
             key={p.id}
-            className="flex w-[82%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-surface [--hb-fade:var(--color-surface)] sm:w-auto"
+            className="hb-plate flex w-[82%] shrink-0 snap-start flex-col overflow-hidden rounded-2xl bg-surface [--hb-fade:var(--color-surface)] sm:w-auto"
           >
             {/* The style's fighter fronts the card, with the style's name
                 set over the foot of the portrait. */}
@@ -41,7 +41,6 @@ export function PresetCarousel({
                 variant="card"
                 fade="bottom"
                 className="absolute inset-0"
-                imageClassName="object-[center_16%]"
               />
               <span className="font-display absolute bottom-3 left-5 right-5 text-[1.375rem] leading-none text-text">
                 {p.name.split(" · ")[0]}

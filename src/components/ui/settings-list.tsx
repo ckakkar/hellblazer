@@ -28,7 +28,7 @@ export function SettingsGroup({
   return (
     <section className={className}>
       <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">{label}</h2>
-      <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+      <div className="divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-surface">
         {children}
       </div>
       {caption && (
@@ -84,7 +84,7 @@ export function SettingsRow({
     return (
       <Link
         href={href}
-        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
       >
         {head}
       </Link>

@@ -108,7 +108,7 @@ export function ProgramDetail({
                   await updateProgram({ id: program.id, name: val });
                 });
             }}
-            className="font-display block w-full min-w-0 resize-none overflow-hidden bg-transparent text-[1.75rem] leading-[1.1] text-text [field-sizing:content] focus:outline-none sm:text-[2.25rem]"
+            className="block w-full min-w-0 resize-none overflow-hidden bg-transparent text-[2rem] font-bold leading-[1.08] tracking-[-0.03em] text-text [field-sizing:content] focus:outline-none sm:text-[2.5rem]"
           />
         }
       />
@@ -244,7 +244,7 @@ export function ProgramDetail({
                     title="Preview this day"
                     className="-my-1.5 flex min-w-0 flex-1 items-center gap-3 rounded-lg py-1.5 text-left"
                   >
-                    <span className="tnum flex size-7 shrink-0 items-center justify-center rounded-full bg-white/[0.06] text-[12px] text-muted">
+                    <span className="tnum flex size-7 shrink-0 items-center justify-center rounded-full bg-text/[0.06] text-[12px] text-muted">
                       {i + 1}
                     </span>
                     <span className="min-w-0 flex-1">

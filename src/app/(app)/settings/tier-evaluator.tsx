@@ -165,7 +165,7 @@ export function TierEvaluator({
       )}
 
       {result && result.ok && (
-        <div className="overflow-hidden rounded-2xl bg-surface-2 [--hb-fade:var(--color-surface-2)]">
+        <div className="hb-plate overflow-hidden rounded-2xl bg-surface-2 [--hb-fade:var(--color-surface-2)]">
           {/* The reveal: the judged fighter pushes in and their name lands
               like a poster, then the reasoning and the choice. */}
           <div className="relative h-64">
@@ -175,7 +175,6 @@ export function TierEvaluator({
                 variant="card"
                 fade="bottom"
                 className="absolute inset-0"
-                imageClassName="object-[center_14%]"
               />
             </div>
             <div className="absolute inset-x-5 bottom-3">
@@ -192,7 +191,7 @@ export function TierEvaluator({
                 </span>
               )}
               {direction === "same" && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-white/[0.14] py-0.5 pl-1.5 pr-2 font-medium text-text backdrop-blur-md">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-text/[0.14] py-0.5 pl-1.5 pr-2 font-medium text-text backdrop-blur-md">
                   <Minus className="size-3.5" /> same rank
                 </span>
               )}

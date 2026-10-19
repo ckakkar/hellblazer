@@ -50,7 +50,7 @@ export function RepRangeChart({ weeks }: { weeks: RepRangeWeek[] }) {
         ))}
       </div>
 
-      <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-white/[0.06] pt-3">
+      <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-text/[0.06] pt-3">
         {BANDS.map((b) => (
           <div key={b.key} className="min-w-0">
             <dt className="flex items-center gap-1.5 text-[12px] text-muted">

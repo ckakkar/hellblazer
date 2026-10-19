@@ -16,6 +16,21 @@ export function isIPadAppAgent(userAgent: string): boolean {
   return /\bFatty\b/.test(userAgent) && /\b(iPad|Macintosh)\b/.test(userAgent);
 }
 
+/**
+ * App builds before 2.6 lock their window to dark: the status bar stays
+ * light-on-dark whatever the page does, so on paper it would vanish. Those
+ * builds get the dark theme whatever's chosen; 2.6 and later add
+ * "Fatty-appearance" to the user agent and follow the choice natively.
+ */
+export function appearanceLockedAgent(userAgent: string): boolean {
+  return /\bFatty\b/.test(userAgent) && !/\bFatty-appearance\b/.test(userAgent);
+}
+
+/** Whether this request comes from an app build that can only be dark. */
+export const appearanceIsLocked = cache(async function appearanceIsLocked(): Promise<boolean> {
+  return appearanceLockedAgent((await headers()).get("user-agent") ?? "");
+});
+
 /** Whether this request comes from the iPad app. Cached per request. */
 export const isIPadApp = cache(async function isIPadApp(): Promise<boolean> {
   return isIPadAppAgent((await headers()).get("user-agent") ?? "");

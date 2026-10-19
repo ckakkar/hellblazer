@@ -90,13 +90,13 @@ export function ProgramsManager({
         ) : (
           <section className={cn("mb-10", activeProgress && "lg:mb-0")}>
             <SectionLabel>Your programs</SectionLabel>
-            <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+            <div className="divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-surface">
               {programs.map((p) => (
                 // The whole row opens the program (a stretched link); Make
                 // active sits above it. Deleting is on the program's page.
                 <div
                   key={p.id}
-                  className="relative flex items-center gap-2 pl-4 pr-3 transition-colors hover:bg-white/[0.03] has-[a:active]:bg-white/[0.05]"
+                  className="relative flex items-center gap-2 pl-4 pr-3 transition-colors hover:bg-text/[0.03] has-[a:active]:bg-text/[0.05]"
                 >
                   <Link
                     href={`/programs/${p.id}`}
@@ -269,7 +269,7 @@ function CreateProgramSheet({
                   onClick={() => toggle(t.id)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
-                    active ? "bg-white/[0.08]" : "bg-surface-2/60 hover:bg-surface-2",
+                    active ? "bg-text/[0.08]" : "bg-surface-2/60 hover:bg-surface-2",
                   )}
                 >
                   <span

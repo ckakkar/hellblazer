@@ -69,7 +69,7 @@ export function WeekCardShare({ week, open }: { week: string; open?: string | nu
       <button
         type="button"
         onClick={() => setShown(week)}
-        className="hb-hit inline-flex items-center gap-1.5 rounded-full bg-white/[0.07] px-3 py-1 text-[13px] font-medium text-text transition-colors active:bg-white/[0.12]"
+        className="hb-hit inline-flex items-center gap-1.5 rounded-full bg-text/[0.07] px-3 py-1 text-[13px] font-medium text-text transition-colors active:bg-text/[0.12]"
       >
         <Share2 className="size-3.5" />
         Share

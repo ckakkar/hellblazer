@@ -14,6 +14,10 @@ import type { TierKey } from "@/lib/tiers";
 export type FighterArtEntry = {
   src: StaticImageData;
   source: string;
+  /** Where the face is, as percentages of the portrait. Every crop centres
+   *  on it (object-position), and a thumbnail zooms in on it, so a fighter
+   *  is recognisable at 40px, not a torso. Measured by eye on a 10% grid. */
+  face: { x: number; y: number };
 };
 
 /**
@@ -22,14 +26,14 @@ export type FighterArtEntry = {
  * fails compilation instead of becoming a broken runtime URL.
  */
 export const FIGHTER_ART: Record<TierKey, FighterArtEntry> = {
-  rei: { src: rei, source: "mikazuchi01.jpg" },
-  setsuna: { src: setsuna, source: "kiryu01.jpg" },
-  hatsumi: { src: hatsumi, source: "hatsumi01.jpg" },
-  gaolang: { src: gaolang, source: "kaolan01.jpg" },
-  julius: { src: julius, source: "julius01.jpg" },
-  raian: { src: raian, source: "raian01.jpg" },
-  wakatsuki: { src: wakatsuki, source: "wakatsuki01.jpg" },
-  ohma: { src: ohma, source: "tokita01.jpg" },
-  agito: { src: agito, source: "agito01.jpg" },
-  kuroki: { src: kuroki, source: "kuroki01.jpg" },
+  rei: { src: rei, source: "mikazuchi01.jpg", face: { x: 50, y: 21 } },
+  setsuna: { src: setsuna, source: "kiryu01.jpg", face: { x: 44, y: 21 } },
+  hatsumi: { src: hatsumi, source: "hatsumi01.jpg", face: { x: 54, y: 20 } },
+  gaolang: { src: gaolang, source: "kaolan01.jpg", face: { x: 26, y: 23 } },
+  julius: { src: julius, source: "julius01.jpg", face: { x: 63, y: 14 } },
+  raian: { src: raian, source: "raian01.jpg", face: { x: 40, y: 23 } },
+  wakatsuki: { src: wakatsuki, source: "wakatsuki01.jpg", face: { x: 44, y: 20 } },
+  ohma: { src: ohma, source: "tokita01.jpg", face: { x: 44, y: 23 } },
+  agito: { src: agito, source: "agito01.jpg", face: { x: 41, y: 20 } },
+  kuroki: { src: kuroki, source: "kuroki01.jpg", face: { x: 38, y: 20 } },
 };

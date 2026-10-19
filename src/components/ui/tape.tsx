@@ -49,7 +49,8 @@ export function Tape({
           {title}
         </h2>
       )}
-      <dl className="divide-y divide-white/[0.06] rounded-2xl bg-surface px-4">
+      {/* Ruled, on the page: a record is read down a column, like a ledger. */}
+      <dl className="divide-y divide-text/[0.08] border-y border-text/[0.12]">
         {children}
       </dl>
     </section>
@@ -71,7 +72,7 @@ export function TapeRow({
   note?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 py-3.5">
+    <div className="flex items-center gap-3 px-1 py-3.5">
       <dt className="min-w-0 flex-1">
         <span className="block text-[15px] text-text">{label}</span>
         {note && <span className="mt-0.5 block text-[13px] text-muted">{note}</span>}

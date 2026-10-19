@@ -31,7 +31,7 @@ export function Switch({
       }}
       className={cn(
         "hb-hit relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200 disabled:opacity-60",
-        checked ? "bg-accent" : "bg-white/[0.16]",
+        checked ? "bg-accent" : "bg-text/[0.16]",
       )}
     >
       <span

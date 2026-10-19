@@ -5,7 +5,7 @@ import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
 import { TimezoneSync } from "@/components/timezone-sync";
 import { NativeShell } from "@/components/native/native-shell";
-import { getAccent, getTimeZone } from "@/lib/settings";
+import { getAccent, getAppearance, getTimeZone } from "@/lib/settings";
 import { NoticeToast } from "@/components/notice-toast";
 
 /* One family, two widths. Archivo is variable on width as well as weight, so
@@ -61,8 +61,24 @@ export const metadata: Metadata = {
   },
 };
 
-export const viewport: Viewport = {
-  themeColor: "#000000",
+/** The browser's and the status bar's colour: the paper's, light or night. */
+const THEME_COLOR = { light: "#f2f1ed", dark: "#000000" } as const;
+
+export async function generateViewport(): Promise<Viewport> {
+  const appearance = await getAppearance();
+  return {
+    ...viewport,
+    themeColor:
+      appearance === "system"
+        ? [
+            { media: "(prefers-color-scheme: light)", color: THEME_COLOR.light },
+            { media: "(prefers-color-scheme: dark)", color: THEME_COLOR.dark },
+          ]
+        : THEME_COLOR[appearance],
+  };
+}
+
+const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   // No maximumScale: pinch-zoom stays available for accessibility; the 16px
@@ -80,11 +96,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [accent, timeZone] = await Promise.all([getAccent(), getTimeZone()]);
+  const [accent, timeZone, appearance] = await Promise.all([getAccent(), getTimeZone(), getAppearance()]);
   return (
     <html
       lang="en"
       data-accent={accent}
+      // Unset follows the device (the CSS asks the system); set, it's fixed.
+      data-theme={appearance === "system" ? undefined : appearance}
       className={`${archivo.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-bg text-text">

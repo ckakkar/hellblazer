@@ -51,7 +51,7 @@ export function DangerZone({
         </div>
       )}
 
-      <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-text/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-[15px] font-medium text-danger">Delete all history</div>
           <p className="mt-0.5 text-[13px] leading-5 text-muted">
@@ -73,7 +73,7 @@ export function DangerZone({
         </HoldButton>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 border-t border-text/[0.06] pt-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="text-[15px] font-medium text-danger">Delete account</div>
           <p className="mt-0.5 text-[13px] leading-5 text-muted">

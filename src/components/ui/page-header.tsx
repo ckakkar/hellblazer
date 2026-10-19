@@ -2,8 +2,10 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * A large title, iOS-style: the page names itself in the expanded cut and gets
- * out of the way. `stat` sits beside it as a quiet read-out; `action` is the
+ * A large title, iOS-style: the page names itself, bold at the text width,
+ * and gets out of the way. The expanded cut is kept for what deserves it (a
+ * fighter's name, a record, the figures), so a page title never competes
+ * with them. `stat` sits beside it as a quiet read-out; `action` is the
  * page's one primary control.
  */
 export function PageHeader({
@@ -29,7 +31,7 @@ export function PageHeader({
       <div className="min-w-0 max-w-2xl">
         {/* A long one-word name (a template called "Upper/Lower/Arms") breaks
             rather than running off a narrow phone. */}
-        <h1 className="font-display text-[2.125rem] leading-[1.05] text-text [overflow-wrap:anywhere] sm:text-[2.75rem] lg:text-[4rem] lg:leading-[0.95]">
+        <h1 className="text-[2.125rem] font-bold leading-[1.05] tracking-[-0.03em] text-text [overflow-wrap:anywhere] sm:text-[2.5rem] lg:text-[3.25rem] lg:leading-[1]">
           {title}
         </h1>
         {subtitle && (

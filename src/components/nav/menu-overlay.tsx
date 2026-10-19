@@ -101,7 +101,7 @@ export function MenuOverlay({
             type="button"
             onClick={onClose}
             aria-label="Close menu"
-            className="hb-menu-close flex size-11 items-center justify-center rounded-full bg-white/[0.08] text-text"
+            className="hb-menu-close flex size-11 items-center justify-center rounded-full bg-text/[0.08] text-text"
           >
             <X className="size-5" />
           </button>
@@ -112,7 +112,7 @@ export function MenuOverlay({
           <Link
             href="/settings"
             onClick={onClose}
-            className="hb-hero-rise flex items-center gap-3.5 rounded-3xl bg-white/[0.07] p-3 pr-4 transition-colors active:bg-white/[0.1]"
+            className="hb-hero-rise flex items-center gap-3.5 rounded-3xl bg-text/[0.07] p-3 pr-4 transition-colors active:bg-text/[0.1]"
             style={rise(0)}
           >
             {identity.tierKey ? (
@@ -173,7 +173,7 @@ export function MenuOverlay({
             href="/leaderboard"
             onClick={onClose}
             aria-current={isActive("/leaderboard") ? "page" : undefined}
-            className="hb-hero-rise relative isolate mt-auto flex h-40 flex-col justify-end overflow-hidden rounded-3xl bg-surface p-4 [--hb-fade:var(--color-surface)] [@media(min-height:761px)]:mt-2"
+            className="hb-plate hb-hero-rise relative isolate mt-auto flex h-40 flex-col justify-end overflow-hidden rounded-3xl bg-surface p-4 [--hb-fade:var(--color-surface)] [@media(min-height:761px)]:mt-2"
             style={rise(4)}
           >
             <FighterArt
@@ -181,7 +181,6 @@ export function MenuOverlay({
               variant="card"
               fade="corner"
               className="absolute inset-y-0 right-0 -z-10 w-[62%]"
-              imageClassName="object-[center_14%]"
             />
             <Trophy className="size-5 text-accent" />
             <span className="font-display mt-2 text-[1.625rem] leading-none text-text">King of the Hill</span>
@@ -199,11 +198,11 @@ export function MenuOverlay({
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "hb-hero-rise flex h-[7.5rem] flex-col justify-between rounded-3xl p-3.5 transition-colors",
-                    active ? "bg-white/[0.12]" : "bg-white/[0.07] active:bg-white/[0.1]",
+                    active ? "bg-text/[0.12]" : "bg-text/[0.07] active:bg-text/[0.1]",
                   )}
                   style={rise(5 + i)}
                 >
-                  <span className="flex size-10 items-center justify-center rounded-full bg-white/[0.08]">
+                  <span className="flex size-10 items-center justify-center rounded-full bg-text/[0.08]">
                     <item.icon className="size-5 text-text" />
                   </span>
                   <span>

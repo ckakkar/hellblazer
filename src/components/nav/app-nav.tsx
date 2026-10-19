@@ -66,7 +66,7 @@ function ActiveHighlight() {
   return (
     <span
       aria-hidden
-      className="absolute inset-0 rounded-xl bg-white/[0.07]"
+      className="absolute inset-0 rounded-xl bg-text/[0.07]"
       style={{ viewTransitionName: "hb-side-active" }}
     />
   );
@@ -202,7 +202,7 @@ function SidebarYou({ identity, active }: { identity: NavIdentity; active: boole
       aria-current={active ? "page" : undefined}
       className={cn(
         "relative flex items-center gap-3 rounded-xl p-2 transition-colors",
-        !active && "hover:bg-white/[0.04]",
+        !active && "hover:bg-text/[0.04]",
       )}
     >
       {active && <ActiveHighlight />}
@@ -255,7 +255,7 @@ export function AppNav({
       {/* Desktop sidebar */}
       <aside
         aria-label="Sidebar"
-        className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-white/[0.06] bg-bg px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] md:flex"
+        className="fixed inset-y-0 left-0 z-30 hidden w-60 flex-col border-r border-text/[0.06] bg-bg px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-[calc(env(safe-area-inset-top)+1.5rem)] md:flex"
         style={{ viewTransitionName: "hb-sidebar" }}
       >
         <Link href="/dashboard" className="flex items-center gap-2 self-start px-3">
@@ -276,7 +276,7 @@ export function AppNav({
             </div>
           ))}
         </nav>
-        <div className="mt-auto border-t border-white/[0.06] pt-3">
+        <div className="mt-auto border-t border-text/[0.06] pt-3">
           <SidebarYou identity={identity} active={isActive("/settings")} />
         </div>
       </aside>
@@ -327,7 +327,7 @@ export function AppNav({
               {active && (
                 <span
                   aria-hidden
-                  className="absolute inset-x-0.5 inset-y-1.5 rounded-[1.375rem] bg-white/[0.09]"
+                  className="absolute inset-x-0.5 inset-y-1.5 rounded-[1.375rem] bg-text/[0.09]"
                   style={{ viewTransitionName: "hb-tab-active" }}
                 />
               )}

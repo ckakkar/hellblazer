@@ -5,7 +5,7 @@ export default function NotFound() {
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-6 text-center">
       <Flame className="size-7 text-accent" strokeWidth={2.25} />
-      <h1 className="font-display mt-6 text-[2.5rem] leading-tight text-text">Page not found</h1>
+      <h1 className="mt-6 text-[2.25rem] font-bold leading-tight tracking-[-0.03em] text-text">Page not found</h1>
       <p className="mt-2 max-w-sm text-[15px] text-muted">
         This page doesn&apos;t exist, or it has moved.
       </p>

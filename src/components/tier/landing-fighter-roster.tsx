@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FighterArt } from "@/components/tier/fighter-art";
+import { FighterCard } from "@/components/tier/fighter-card";
 import { Sheet } from "@/components/ui/sheet";
 import { FIGHTER_DOSSIERS } from "@/lib/fighter-dossiers";
 import { TIERS, type TierKey } from "@/lib/tiers";
@@ -33,23 +33,13 @@ export function LandingFighterRoster() {
             <button
               type="button"
               onClick={() => setOpenKey(t.key)}
+              aria-label={`${t.name}, ${t.epithet}, rank ${t.rank}`}
               className="group block w-full text-left"
-              style={{ ["--hb-fade" as string]: "var(--color-surface)" }}
             >
-              <span className="relative block aspect-[3/4] overflow-hidden rounded-2xl bg-surface">
-                <FighterArt
-                  fighterKey={t.key}
-                  variant="card"
-                  fade="bottom"
-                  className="absolute inset-0"
-                  imageClassName="object-[center_20%] transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-                <span className="font-display absolute left-3 top-2.5 text-[15px] text-text/80">
-                  {t.rank}
-                </span>
-              </span>
-              <span className="mt-2 block truncate px-0.5 text-[15px] font-medium text-text">{t.name}</span>
-              <span className="block truncate px-0.5 text-[13px] text-muted">{t.epithet}</span>
+              <FighterCard
+                tier={t}
+                imageClassName="transition-transform duration-300 group-hover:scale-[1.03]"
+              />
             </button>
           </li>
         ))}
@@ -62,7 +52,7 @@ export function LandingFighterRoster() {
               {open.epithet}, rank {open.rank} of {TIERS.length}
             </p>
             <p className="mt-4 text-[16px] leading-[1.5] text-text">{dossier.profile}</p>
-            <dl className="mt-5 divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.05]">
+            <dl className="mt-5 divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-text/[0.05]">
               <div className="flex items-baseline justify-between gap-4 px-4 py-3">
                 <dt className="text-[15px] text-muted">Style</dt>
                 <dd className="text-right text-[15px] text-text">{dossier.discipline}</dd>

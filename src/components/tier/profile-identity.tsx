@@ -1,6 +1,5 @@
 import { ProfileAvatar } from "./profile-avatar";
 import { FighterArt } from "./fighter-art";
-import { cn } from "@/lib/utils";
 import { MAX_RANK, type Tier } from "@/lib/tiers";
 
 /* The profile opens on who you are, laid out like a fighter's page: your
@@ -28,7 +27,7 @@ export function ProfileIdentity({
 
   return (
     <header className={className}>
-      <div className="hb-hero-bleed hb-bleed-grow relative isolate h-48 overflow-hidden rounded-3xl [--hb-fade:var(--color-bg)] md:h-44">
+      <div className="hb-plate hb-hero-bleed hb-bleed-grow relative isolate h-48 overflow-hidden rounded-3xl bg-bg [--hb-fade:var(--color-bg)] md:h-44">
         <div className="hb-hero-art hb-bleed-art hb-banner-fade absolute inset-0 -z-10 md:left-auto md:w-[58%]">
           <FighterArt
             fighterKey={tier?.key ?? "ohma"}
@@ -36,7 +35,7 @@ export function ProfileIdentity({
             priority
             fade="bottom"
             className="absolute inset-0"
-            imageClassName={cn("object-[center_5%] md:object-[center_16%]", tier ? "opacity-75" : "opacity-40 grayscale")}
+            imageClassName={tier ? "opacity-75" : "opacity-40 grayscale"}
           />
           <div
             aria-hidden

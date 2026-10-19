@@ -14,7 +14,8 @@ export default async function Landing({
   const { error, deleted } = await searchParams;
 
   return (
-    <main className="min-h-dvh bg-bg">
+    // The landing is the programme's cover: printed black in either theme.
+    <main className="hb-plate min-h-dvh bg-bg">
       <LandingArenaHero error={error} deleted={deleted === "1"} />
       <LandingFighterRoster />
       <footer className="flex items-center justify-between gap-4 px-5 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 text-[13px] text-muted sm:px-8 lg:px-14 xl:px-20">

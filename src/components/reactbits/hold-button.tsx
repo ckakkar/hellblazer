@@ -73,7 +73,7 @@ const SIZES: Record<HoldButtonSize, string> = {
   lg: 'h-[52px] px-7 text-[17px]'
 };
 
-const GLOW = 'inset_0_1px_0_rgba(255,255,255,0.06),0_10px_32px_-6px_color-mix(in_srgb,var(--hold-fill)_70%,transparent)';
+const GLOW = 'inset_0_1px_0_color-mix(in oklab, var(--color-text) 6%, transparent),0_10px_32px_-6px_color-mix(in_srgb,var(--hold-fill)_70%,transparent)';
 
 const LABEL_SPAN =
   '[grid-area:1/1] inline-flex items-center gap-2 whitespace-nowrap [transition:opacity_200ms_ease,filter_200ms_ease]';
@@ -329,7 +329,7 @@ const HoldButton: React.FC<HoldButtonProps> = ({
       ref={buttonRef}
       type="button"
       disabled={disabled}
-      className={`hold-root group relative isolate m-0 inline-grid cursor-pointer touch-manipulation select-none place-items-center border-0 font-medium leading-none tracking-[0.01em] outline-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none] [background:var(--hold-bg)] [border-radius:var(--hold-radius)] [color:var(--hold-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] [transition:transform_160ms_var(--hold-ease-out),background-color_160ms_ease,box-shadow_var(--hold-release)_var(--hold-ease-out)] [@media(hover:hover)_and_(pointer:fine)]:enabled:hover:[background:color-mix(in_srgb,var(--hold-bg)_92%,#fff)] data-[phase=holding]:data-[input=pointer]:[transform:scale(var(--hold-press))] data-[glow=true]:data-[phase=holding]:shadow-[${GLOW}] data-[glow=true]:data-[phase=done]:shadow-[${GLOW}] data-[glow=true]:data-[phase=holding]:[transition:transform_160ms_var(--hold-ease-out),background-color_160ms_ease,box-shadow_var(--hold-hold)_linear] focus-visible:[outline:2px_solid_var(--hold-fill)] focus-visible:outline-offset-[3px] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 contrast-more:[outline:1px_solid_var(--hold-text)] ${SIZES[size] || SIZES.md}${className ? ` ${className}` : ''}`}
+      className={`hold-root group relative isolate m-0 inline-grid cursor-pointer touch-manipulation select-none place-items-center border-0 font-medium leading-none tracking-[0.01em] outline-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none] [background:var(--hold-bg)] [border-radius:var(--hold-radius)] [color:var(--hold-text)] shadow-[inset_0_1px_0_color-mix(in oklab, var(--color-text) 6%, transparent)] [transition:transform_160ms_var(--hold-ease-out),background-color_160ms_ease,box-shadow_var(--hold-release)_var(--hold-ease-out)] [@media(hover:hover)_and_(pointer:fine)]:enabled:hover:[background:color-mix(in_srgb,var(--hold-bg)_92%,#fff)] data-[phase=holding]:data-[input=pointer]:[transform:scale(var(--hold-press))] data-[glow=true]:data-[phase=holding]:shadow-[${GLOW}] data-[glow=true]:data-[phase=done]:shadow-[${GLOW}] data-[glow=true]:data-[phase=holding]:[transition:transform_160ms_var(--hold-ease-out),background-color_160ms_ease,box-shadow_var(--hold-hold)_linear] focus-visible:[outline:2px_solid_var(--hold-fill)] focus-visible:outline-offset-[3px] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 contrast-more:[outline:1px_solid_var(--hold-text)] ${SIZES[size] || SIZES.md}${className ? ` ${className}` : ''}`}
       data-phase={phase}
       data-input={input ?? undefined}
       data-direction={direction}

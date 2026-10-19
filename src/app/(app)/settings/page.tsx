@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getUser } from "@/lib/auth";
 import { format, parseISO } from "date-fns";
-import { getUnit, getAccent, getTimeZone, getToday } from "@/lib/settings";
+import { getUnit, getAccent, getAppearance, getTimeZone, getToday } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getProfile } from "@/lib/data/profile";
@@ -16,6 +16,8 @@ import {
   SettingsRow,
 } from "@/components/ui/settings-list";
 import { UnitToggle } from "./unit-toggle";
+import { AppearanceToggle } from "./appearance-toggle";
+import { appearanceIsLocked } from "@/lib/surface";
 import { ThemeSelector } from "./theme-selector";
 import { ProfileDetails } from "./profile-details";
 import { UsernameField } from "./username-field";
@@ -42,7 +44,7 @@ export default async function ProfilePage({
   searchParams: Promise<{ link_error?: string }>;
 }) {
   const { link_error: linkError } = await searchParams;
-  const [user, unit, accent, logs, profile, active, notifications, evalGate, tz, today] =
+  const [user, unit, accent, logs, profile, active, notifications, evalGate, tz, today, appearance, appearanceLocked] =
     await Promise.all([
       getUser(),
       getUnit(),
@@ -54,6 +56,8 @@ export default async function ProfilePage({
       getEvalGate(),
       getTimeZone(),
       getToday(),
+      getAppearance(),
+      appearanceIsLocked(),
     ]);
 
   // Formatted here, in the lifter's timezone: a client component formatting
@@ -149,6 +153,10 @@ export default async function ProfilePage({
           label="Preferences"
           caption="Weights are always stored in kg and converted for display."
         >
+          {/* An app build that can only be dark doesn't offer the choice. */}
+          {!appearanceLocked && (
+            <SettingsRow label="Appearance" control={<AppearanceToggle current={appearance} />} />
+          )}
           <SettingsRow label="Units" control={<UnitToggle current={unit} />} />
           <SettingsRow
             label="Accent"

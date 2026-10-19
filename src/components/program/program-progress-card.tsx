@@ -64,7 +64,7 @@ export function ProgramProgressCard({
                   ? "bg-text"
                   : i < doneThisWeek
                     ? "bg-text/35"
-                    : "bg-white/[0.1]",
+                    : "bg-text/[0.1]",
               )}
             />
           ))}

@@ -15,15 +15,12 @@ import { unstable_rethrow, useRouter } from "next/navigation";
 import {
   ArrowDownRight,
   ArrowRight,
-  ArrowUpRight,
   Check,
   CloudOff,
-  Equal,
   Flame,
   Heart,
   Link2,
   Loader2,
-  Lock,
   Pencil,
   Play,
   Plus,
@@ -53,7 +50,8 @@ import { VictoryScreen } from "@/components/workout/victory-screen";
 import SlideCommit from "@/components/reactbits/slide-commit";
 import type { TierKey } from "@/lib/tiers";
 import { cn, fitFigure, selectAllOnFocus } from "@/lib/utils";
-import { pickHype, randomVictory } from "@/lib/hype";
+import { randomVictory } from "@/lib/hype";
+import { coachLine, notebookSets } from "@/lib/coach";
 import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
@@ -293,7 +291,6 @@ export function SessionLogger({
       unit,
     });
   };
-  const hype = pickHype(session.id);
 
   const [exercises, setExercises] = useState<LocalExercise[]>(() =>
     session.session_exercise.map((se) => ({
@@ -1291,6 +1288,29 @@ export function SessionLogger({
   const currentIndex = exercises.findIndex((e) => !completed.has(e.seId));
   const active = exercises.find((e) => e.seId === activeSeId) ?? null;
   const doneCount = exercises.filter((e) => completed.has(e.seId)).length;
+  // One observation about this workout, from its numbers, or nothing.
+  const coach = (() => {
+    if (isEditing) return null;
+    const on = currentIndex >= 0 ? exercises[currentIndex] : null;
+    const target = on && on.sets.length === 0 ? targetFor(on) : null;
+    const best = on ? prBest.current?.get(on.exerciseId) : undefined;
+    return coachLine({
+      exercises: exercises.length,
+      done: doneCount,
+      records: prSets.size,
+      next:
+        on && target && best?.hadHistory
+          ? {
+              name: on.name,
+              targetWeight: target.weight,
+              targetWeightKg: fromDisplayWeight(target.weight, unit),
+              targetReps: target.reps,
+              bestEst1rm: best.est1rm,
+            }
+          : null,
+      unit,
+    });
+  })();
   // What's up next, for the Lock Screen and the rest alert: the exercise
   // open on screen, else the same rule the watch and Siri follow
   // (next-set.ts): the one being worked until its target's met, then the
@@ -1401,7 +1421,7 @@ export function SessionLogger({
               title: value.trim() || null,
             }).catch(() => showNotice("Couldn't save the session title."));
           }}
-          className="font-display mt-1 text-[2rem] leading-tight text-text sm:text-[2.5rem]"
+          className="mt-1 text-[2rem] font-bold leading-tight tracking-[-0.03em] text-text sm:text-[2.5rem]"
         />
         <p className="tnum mt-0.5 text-[13px] text-muted">
           {exercises.length > 0
@@ -1409,41 +1429,17 @@ export function SessionLogger({
             : "No exercises yet"}
         </p>
 
-        {/* Live readout: glanced at mid-set, not read, so three figures on one
-            baseline. The clock is the only accent because it is the thing
-            moving. */}
-        <div className="mt-5 grid grid-cols-[1.3fr_0.8fr_1.1fr] divide-x divide-white/[0.06] rounded-2xl bg-surface py-4">
-          <div className="@container min-w-0 px-3 min-[400px]:px-3.5">
-            <p className="text-[13px] text-muted">Volume</p>
-            <p className="mt-1.5 flex h-[1.625rem] items-end leading-none">
-              <span className="whitespace-nowrap">
-                {/* Animates only when it changes, which here means a set just
-                    landed. The move is the information. */}
-                <span
-                  className="font-display hb-fit text-text"
-                  style={fitFigure(Math.round(totalForce).toLocaleString("en-US"), STAT_SIZE, "1.25rem")}
-                >
-                  <CountUp to={Math.round(totalForce)} animateOnMount={false} duration={0.7} separator="," />
-                </span>
-                <span className="ml-1 text-[13px] text-muted">{unit}</span>
-              </span>
-            </p>
-          </div>
-          <div className="@container min-w-0 px-3 min-[400px]:px-3.5">
-            <p className="text-[13px] text-muted">Sets</p>
-            <p className="mt-1.5 flex h-[1.625rem] items-end leading-none">
-              <span className="font-display hb-fit text-text" style={fitFigure(String(totalSets), STAT_SIZE)}>
-                <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
-              </span>
-            </p>
-          </div>
+        {/* The workout's figures, ruled off like a scoreboard strip rather
+            than boxed: glanced at mid-set, not read. Time first, as it's the
+            one that moves (and the one accent). */}
+        <dl className="mt-5 grid grid-cols-[1.05fr_0.75fr_1.2fr] border-y border-text/[0.1] py-3">
           <div
-            className="@container min-w-0 px-3 min-[400px]:px-3.5"
+            className="@container min-w-0 pr-3"
             title="Workout time"
             aria-label={`Time ${timeLabel}`}
           >
-            <p className="text-[13px] text-muted">Time</p>
-            <p className="mt-1.5 flex h-[1.625rem] items-end whitespace-nowrap leading-none">
+            <dt className="text-[12px] text-muted">Time</dt>
+            <dd className="mt-1 flex h-[1.5rem] items-end whitespace-nowrap leading-none">
               {clockLive || duration ? (
                 <span
                   className={cn("font-display hb-fit", clockLive ? "text-accent-ink" : "text-text")}
@@ -1454,10 +1450,34 @@ export function SessionLogger({
               ) : (
                 <span className="text-[15px] text-muted">{timeLabel}</span>
               )}
-            </p>
+            </dd>
           </div>
-        </div>
-        <p className="mt-3 px-1 text-[13px] text-muted">{hype}</p>
+          <div className="@container min-w-0 border-l border-text/[0.08] px-3">
+            <dt className="text-[12px] text-muted">Sets</dt>
+            <dd className="mt-1 flex h-[1.5rem] items-end leading-none">
+              <span className="font-display hb-fit text-text" style={fitFigure(String(totalSets), STAT_SIZE)}>
+                <CountUp to={totalSets} animateOnMount={false} duration={0.5} />
+              </span>
+            </dd>
+          </div>
+          <div className="@container min-w-0 border-l border-text/[0.08] pl-3">
+            <dt className="text-[12px] text-muted">Volume</dt>
+            <dd className="mt-1 flex h-[1.5rem] items-end leading-none">
+              <span className="whitespace-nowrap">
+                {/* Animates only when it changes, which here means a set just
+                    landed. The move is the information. */}
+                <span
+                  className="font-display hb-fit text-text"
+                  style={fitFigure(Math.round(totalForce).toLocaleString("en-US"), STAT_SIZE, "1.25rem")}
+                >
+                  <CountUp to={Math.round(totalForce)} animateOnMount={false} duration={0.7} separator="," />
+                </span>
+                <span className="ml-1 text-[12px] text-muted">{unit}</span>
+              </span>
+            </dd>
+          </div>
+        </dl>
+        {coach && <p className="mt-3 text-[14px] leading-5 text-text">{coach}</p>}
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
         {failed.size > 0 ? (
@@ -1493,9 +1513,9 @@ export function SessionLogger({
         ) : null}
       </header>
 
-      {/* The queue in three states. Done work and upcoming work are quiet
-          grouped rows; only the exercise you're on is lifted out, with the
-          one button that matters. */}
+      {/* The queue in three states. Done work and upcoming work are ruled
+          lines on the page, a training log rather than cards; only the
+          exercise you're on is lifted out, with the one button that matters. */}
       {(() => {
         const rows = exercises.map((ex, i) => ({ ex, i }));
         const done = rows.filter(({ ex }) => completed.has(ex.seId));
@@ -1516,7 +1536,7 @@ export function SessionLogger({
         return (
           <section className="space-y-3">
             {done.length > 0 && (
-              <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+              <div className="divide-y divide-text/[0.08] border-y border-text/[0.08]">
                 {done.map(({ ex }) => {
                   const workingSets = ex.sets.filter((s) => !s.isWarmup);
                   const hasPR = ex.sets.some((s) => prSets.has(s.id));
@@ -1524,7 +1544,7 @@ export function SessionLogger({
                     <button
                       key={ex.seId}
                       onClick={() => setActiveSeId(ex.seId)}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+                      className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
                     >
                       <Check className="size-4 shrink-0 text-muted" />
                       <div className="min-w-0 flex-1">
@@ -1540,9 +1560,10 @@ export function SessionLogger({
                         </div>
                         <div className="tnum mt-0.5 truncate text-[13px] text-muted">
                           {workingSets.length > 0
-                            ? workingSets
-                                .map((s) => `${trimNum(Number(s.weight) || 0)}×${s.reps ?? 0}`)
-                                .join(", ")
+                            ? notebookSets(
+                                workingSets.map((s) => ({ weight: Number(s.weight) || 0, reps: s.reps ?? 0 })),
+                                unit,
+                              )
                             : "Skipped"}
                         </div>
                       </div>
@@ -1556,35 +1577,32 @@ export function SessionLogger({
             {current && (() => {
               const { ex, i } = current;
               const last = lastFor(ex.exerciseId);
+              const target = ex.sets.length === 0 ? targetFor(ex) : null;
+              const today = ex.sets.filter((s) => !s.isWarmup);
               return (
-                <div className="rounded-2xl bg-surface p-5">
-                  <div className="flex items-baseline justify-between gap-2 text-[13px]">
-                    <span className="font-medium text-text">Up now</span>
-                    <span className="tnum text-muted">
+                <div className="rounded-3xl bg-surface p-5">
+                  <div className="flex items-baseline justify-between gap-2 text-[13px] text-muted">
+                    <span>{MUSCLE_LABEL[ex.primaryMuscle]}</span>
+                    <span className="tnum">
                       {i + 1} of {exercises.length}
                     </span>
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-[1.375rem] font-semibold leading-tight tracking-[-0.02em] text-text">
+                  <div className="mt-1 flex flex-wrap items-center gap-2">
+                    <h2 className="text-[1.5rem] font-bold leading-tight tracking-[-0.025em] text-text">
                       {ex.name}
-                    </span>
+                    </h2>
                     {addedTag(ex.seId)}
                   </div>
-                  <p className="tnum mt-1 text-[13px] text-muted">
-                    {MUSCLE_LABEL[ex.primaryMuscle]}
-                    {last &&
-                      `. Last time (${format(parseISO(last.session_date), "d MMM")}): ${last.sets
-                        .slice(0, 4)
-                        .map((s) => `${trimNum(toDisplayWeight(s.weight_kg, unit))}×${s.reps}`)
-                        .join(", ")}${last.sets.length > 4 ? "…" : ""}`}
-                  </p>
                   {ex.note && <p className="mt-1 text-[13px] text-muted">{ex.note}</p>}
                   {slots[i] && <SupersetLine slot={slots[i]} exercises={exercises} index={i} className="mt-2" />}
-                  {(() => {
-                    const target = ex.sets.length === 0 ? targetFor(ex) : null;
-                    return target ? <TargetLine target={target} unit={unit} className="mt-3" /> : null;
-                  })()}
-                  <Button variant="accent" size="lg" className="mt-4 w-full" onClick={() => setActiveSeId(ex.seId)}>
+                  <LastAndTarget
+                    last={last ?? null}
+                    target={target}
+                    today={today.length > 0 ? today : null}
+                    unit={unit}
+                    className="mt-4 border-t border-text/[0.08] pt-4"
+                  />
+                  <Button variant="accent" size="lg" className="mt-5 w-full" onClick={() => setActiveSeId(ex.seId)}>
                     <Play className="size-4" />
                     {ex.sets.length > 0 ? "Continue exercise" : "Start exercise"}
                   </Button>
@@ -1598,16 +1616,16 @@ export function SessionLogger({
             {!isEditing && <RestTimerCard timer={rest} />}
 
             {upcoming.length > 0 && (
-              <div className="divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-surface">
+              <ol aria-label="Still to come" className="divide-y divide-text/[0.08] border-y border-text/[0.08]">
                 {upcoming.map(({ ex, i }) => (
-                  <div key={ex.seId} className="flex items-center gap-3 px-4 py-3">
-                    <Lock className="size-3.5 shrink-0 text-muted/60" />
-                    <span className="min-w-0 flex-1 truncate text-[15px] text-muted">{ex.name}</span>
+                  <li key={ex.seId} className="flex items-center gap-3 px-1 py-3">
+                    <span className="tnum w-4 shrink-0 text-[13px] text-muted">{i + 1}</span>
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-text/80">{ex.name}</span>
                     {addedTag(ex.seId)}
-                    <span className="tnum shrink-0 text-[13px] text-muted">{i + 1}</span>
-                  </div>
+                    <span className="shrink-0 text-[13px] text-muted">{MUSCLE_LABEL[ex.primaryMuscle]}</span>
+                  </li>
                 ))}
-              </div>
+              </ol>
             )}
 
             {exercises.length === 0 && (
@@ -1629,9 +1647,9 @@ export function SessionLogger({
             {/* Bonus work for this session only; the program is untouched. */}
             <button
               onClick={() => setPicker(true)}
-              className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-3.5 text-left transition-colors hover:bg-white/[0.03] active:bg-white/[0.05]"
+              className="flex w-full items-center gap-3 rounded-2xl px-1 py-2 text-left transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
             >
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-2 text-text">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-text/[0.07] text-text">
                 <Plus className="size-4" />
               </span>
               <span className="min-w-0">
@@ -1818,7 +1836,7 @@ export function SessionLogger({
               <div
                 role="alert"
                 data-state="open"
-                className="hb-toast pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-[rgb(28_28_31/0.96)] px-4 py-3 shadow-raised backdrop-blur"
+                className="hb-toast pointer-events-auto flex w-full max-w-md items-start gap-3 rounded-2xl bg-elevated/95 px-4 py-3 shadow-raised backdrop-blur"
               >
                 <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" />
                 <p className="min-w-0 flex-1 text-xs leading-5 text-text">
@@ -1835,11 +1853,11 @@ export function SessionLogger({
             )}
             {removal && (
               <div role="status" aria-live="polite" className="w-full max-w-md">
-                <div className="hb-pr-banner pointer-events-auto relative overflow-hidden rounded-2xl bg-[rgb(22_22_25/0.96)] py-3.5 pl-5 pr-4 shadow-raised backdrop-blur">
+                <div className="hb-plate hb-pr-banner pointer-events-auto relative overflow-hidden rounded-2xl bg-elevated/95 py-3.5 pl-5 pr-4 shadow-raised backdrop-blur">
                   <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-accent" />
                   <span
                     aria-hidden
-                    className="hb-pr-sheen absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/[0.12] to-transparent"
+                    className="hb-pr-sheen absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-text/[0.12] to-transparent"
                   />
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="hb-pr-word font-display text-[1.375rem] leading-none text-accent">Removal</span>
@@ -1924,6 +1942,17 @@ function ActiveExerciseModal({
   const [swapping, setSwapping] = useState(false);
   const [q, setQ] = useState("");
   const hasSets = exercise.sets.length > 0;
+  // The set in the editor: the newest, unless an earlier one was tapped. A
+  // new set takes the editor back.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [setCount, setSetCount] = useState(exercise.sets.length);
+  if (setCount !== exercise.sets.length) {
+    setSetCount(exercise.sets.length);
+    if (exercise.sets.length > setCount) setOpenId(null);
+  }
+  const openIndex = exercise.sets.findIndex((s) => s.id === openId);
+  const editIndex = openIndex >= 0 ? openIndex : exercise.sets.length - 1;
+  const editing = editIndex >= 0 ? { set: exercise.sets[editIndex], index: editIndex } : null;
   // A set landing pushes what's under it down: it glides there, not jumps.
   const actionsRef = useRef<HTMLDivElement>(null);
   const linksRef = useRef<HTMLDivElement>(null);
@@ -1977,7 +2006,7 @@ function ActiveExerciseModal({
     >
       {swapping ? (
         <div>
-          <div className="sticky top-0 z-10 bg-[rgb(20_20_22)] px-4 pb-3 pt-1">
+          <div className="sticky top-0 z-10 bg-[var(--sheet-solid)] px-4 pb-3 pt-1">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" />
               <Input
@@ -1992,7 +2021,7 @@ function ActiveExerciseModal({
               Picks become this day’s new default going forward.
             </p>
           </div>
-          <ul className="mx-4 mb-4 divide-y divide-white/[0.06] overflow-hidden rounded-2xl bg-white/[0.04]">
+          <ul className="mx-4 mb-4 divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-text/[0.04]">
             {filtered.map((e) => (
               <li key={e.id}>
                 <button
@@ -2001,7 +2030,7 @@ function ActiveExerciseModal({
                     setSwapping(false);
                     setQ("");
                   }}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors active:bg-white/[0.05]"
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors active:bg-text/[0.05]"
                 >
                   <div className="min-w-0">
                     <div className="truncate text-[15px] text-text">{e.name}</div>
@@ -2024,26 +2053,19 @@ function ActiveExerciseModal({
             <Badge variant="muted">{MUSCLE_LABEL[exercise.primaryMuscle]}</Badge>
             <button
               onClick={() => setSwapping(true)}
-              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-white/[0.07] px-3 text-[13px] text-text transition-colors active:bg-white/[0.1]"
+              className="inline-flex h-8 items-center gap-1.5 rounded-full bg-text/[0.07] px-3 text-[13px] text-text transition-colors active:bg-text/[0.1]"
             >
               <Repeat2 className="size-3.5" />
               Swap movement
             </button>
           </div>
 
-          {lastPerformance && (
-            <div className="tnum mb-3 rounded-xl bg-white/[0.04] px-3.5 py-2.5 text-[13px] text-muted">
-              Last time ({format(parseISO(lastPerformance.session_date), "d MMM")}):{" "}
-              {lastPerformance.sets
-                .slice(0, 5)
-                .map(
-                  (s) =>
-                    `${trimNum(toDisplayWeight(s.weight_kg, unit))}${unit}×${s.reps}`,
-                )
-                .join(", ")}
-              {target && <TargetLine target={target} unit={unit} className="mt-1.5" />}
-            </div>
-          )}
+          <LastAndTarget
+            last={lastPerformance}
+            target={target}
+            unit={unit}
+            className="mb-4 border-b border-text/[0.08] pb-4"
+          />
           {exercise.note && (
             <div className="mb-3 text-[13px] text-muted">{exercise.note}</div>
           )}
@@ -2058,19 +2080,65 @@ function ActiveExerciseModal({
           )}
 
           <div className="grid grid-cols-1 gap-2">
-            {exercise.sets.map((s, i) => (
-              <SetRow
-                key={s.id}
-                label={setLabel(exercise.sets, i)}
-                set={s}
-                unit={unit}
-                weightStep={weightStep}
-                flash={s.id === flashId}
-                isPR={prSets.has(s.id)}
-                onChange={(patch) => onUpdateSet(s.id, patch)}
-                onRemove={() => onRemoveSet(s.id)}
-              />
-            ))}
+            {/* Sets done are a quiet record, one line each; the set being
+                worked is the big editor, in its place in the order. Tapping
+                a line opens that set there. */}
+            {(() => {
+              const line = (s: LocalSet) => {
+                const i = exercise.sets.indexOf(s);
+                return (
+                  <SetLine
+                    key={s.id}
+                    label={setLabel(exercise.sets, i)}
+                    set={s}
+                    isPR={prSets.has(s.id)}
+                    flash={s.id === flashId}
+                    onOpen={() => setOpenId(s.id)}
+                  />
+                );
+              };
+              const before = exercise.sets.slice(0, editIndex);
+              const after = exercise.sets.slice(editIndex + 1);
+              return (
+                <div role="table" aria-label="Sets" className="tnum">
+                  {exercise.sets.length > 1 && (
+                    <div role="row" className={cn(SET_COLUMNS, "pb-1.5 text-[12px] text-muted")}>
+                      <span role="columnheader">Set</span>
+                      <span role="columnheader" className="text-right">{unit}</span>
+                      <span role="columnheader" className="text-right">Reps</span>
+                      <span role="columnheader" className="text-right">RPE</span>
+                      <span aria-hidden />
+                    </div>
+                  )}
+                  {before.length > 0 && (
+                    <div role="rowgroup" className="mb-2 divide-y divide-text/[0.07] border-y border-text/[0.07]">
+                      {before.map(line)}
+                    </div>
+                  )}
+                  {editing && (
+                    <SetRow
+                      key={editing.set.id}
+                      label={setLabel(exercise.sets, editing.index)}
+                      set={editing.set}
+                      unit={unit}
+                      weightStep={weightStep}
+                      flash={editing.set.id === flashId}
+                      isPR={prSets.has(editing.set.id)}
+                      onChange={(patch) => onUpdateSet(editing.set.id, patch)}
+                      onRemove={() => {
+                        setOpenId(null);
+                        onRemoveSet(editing.set.id);
+                      }}
+                    />
+                  )}
+                  {after.length > 0 && (
+                    <div role="rowgroup" className="mt-2 divide-y divide-text/[0.07] border-y border-text/[0.07]">
+                      {after.map(line)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             <div ref={actionsRef} className="grid grid-cols-1 gap-2">
               <Button
@@ -2164,17 +2232,121 @@ function setLabel(sets: LocalSet[], i: number): string {
 
 const NEXT_KIND: Record<string, SetKind> = { plain: "drop", drop: "rest_pause", rest_pause: null };
 
-/** "Today: 82.5 kg × 6, up 2.5 kg": the target and why, an arrow when it's up. */
-function TargetLine({ target, unit, className }: { target: Target; unit: Unit; className?: string }) {
-  const Icon = target.change === "up" ? ArrowUpRight : target.change === "hold" ? Equal : Plus;
+/**
+ * Last session and today's target in two aligned rows, the way a lifter
+ * reads a training card: down the weights, not across a sentence. Mid
+ * exercise, today's sets so far take the target's place.
+ */
+function LastAndTarget({
+  last,
+  target,
+  today,
+  unit,
+  className,
+}: {
+  last: LastPerformance | null;
+  target: Target | null;
+  today?: LocalSet[] | null;
+  unit: Unit;
+  className?: string;
+}) {
+  if (!last && !target && !today) return null;
   return (
-    <p className={cn("tnum flex items-center gap-1.5 text-[13px]", className)}>
-      <Icon className={cn("size-3.5 shrink-0", target.change === "up" ? "text-accent" : "text-muted")} />
-      <span className="min-w-0 truncate">
-        <span className="text-text">Today: {targetLabel(target, unit)}</span>
-        <span className="text-muted">, {targetReason(target, unit)}</span>
+    <dl
+      className={cn(
+        "tnum grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-4 gap-y-2.5 text-[15px] leading-5",
+        className,
+      )}
+    >
+      {last && (
+        <>
+          <dt className="text-[13px] text-muted">Last session</dt>
+          <dd className="text-text/85">
+            {notebookSets(
+              last.sets.map((s) => ({ weight: toDisplayWeight(s.weight_kg, unit), reps: s.reps })),
+              unit,
+            )}
+            <span className="ml-2 whitespace-nowrap text-[13px] text-muted">
+              {format(parseISO(last.session_date), "d MMM")}
+            </span>
+          </dd>
+        </>
+      )}
+      {today ? (
+        <>
+          <dt className="text-[13px] text-muted">Today so far</dt>
+          <dd className="font-semibold text-text">
+            {notebookSets(
+              today.map((s) => ({ weight: Number(s.weight) || 0, reps: s.reps ?? 0 })),
+              unit,
+            )}
+          </dd>
+        </>
+      ) : target ? (
+        <>
+          <dt className="text-[13px] text-muted">Today&apos;s target</dt>
+          <dd>
+            <span className="font-semibold text-text">{targetLabel(target, unit)}</span>
+            <span
+              className={cn(
+                "ml-2 whitespace-nowrap text-[13px]",
+                target.change === "up" ? "text-accent-ink" : "text-muted",
+              )}
+            >
+              {targetReason(target, unit)}
+            </span>
+          </dd>
+        </>
+      ) : null}
+    </dl>
+  );
+}
+
+/** The set table's columns: label, weight, reps, RPE, a marker. */
+const SET_COLUMNS = "grid grid-cols-[minmax(0,1fr)_4.5rem_3rem_3rem_1.25rem] items-center gap-x-2 px-1";
+
+/** A set already done, as one line of the record. Tap to edit it. */
+function SetLine({
+  label,
+  set,
+  isPR,
+  flash,
+  onOpen,
+}: {
+  label: string;
+  set: LocalSet;
+  isPR?: boolean;
+  flash?: boolean;
+  onOpen: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="row"
+      onClick={onOpen}
+      aria-label={`${label}, ${trimNum(Number(set.weight) || 0)} by ${set.reps ?? 0}. Edit`}
+      className={cn(
+        SET_COLUMNS,
+        "hb-hit w-full py-2.5 text-left text-[15px] transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]",
+        flash && "hb-set-in",
+      )}
+    >
+      <span role="cell" className={cn("truncate text-[13px]", set.isWarmup ? "text-warn" : "text-muted")}>
+        {label}
       </span>
-    </p>
+      <span role="cell" className="text-right text-text">
+        {set.weight == null ? "–" : trimNum(set.weight)}
+      </span>
+      <span role="cell" className="text-right text-text">
+        {set.reps ?? "–"}
+      </span>
+      <span role="cell" className="text-right text-muted">
+        {set.rpe ?? ""}
+      </span>
+      <span role="cell" className="flex justify-end">
+        {isPR && <Zap aria-label="Record" className="size-3.5 fill-current text-accent" />}
+      </span>
+    </button>
   );
 }
 
@@ -2201,13 +2373,13 @@ function SetRow({
   return (
     <div
       className={cn(
-        "rounded-2xl p-3",
-        set.isWarmup ? "bg-warn/[0.07]" : isPR ? "bg-accent/[0.09]" : "bg-white/[0.04]",
+        "rounded-3xl p-3.5",
+        set.isWarmup ? "bg-warn/[0.07]" : isPR ? "bg-accent/[0.09]" : "bg-text/[0.05]",
         flash && "hb-set-in",
       )}
     >
-      <div className="mb-2 flex items-center justify-between">
-        <span className="flex items-center gap-2 tnum text-[13px] text-muted">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="flex items-center gap-2 tnum text-[15px] font-semibold text-text">
           {set.isWarmup ? (
             label
           ) : (
@@ -2217,8 +2389,8 @@ function SetRow({
               onClick={() => onChange({ kind: NEXT_KIND[set.kind ?? "plain"] })}
               aria-label={`${label}. Change the set's kind`}
               className={cn(
-                "-mx-1.5 rounded-full px-1.5 py-0.5 transition-colors active:bg-white/[0.08]",
-                set.kind && "bg-white/[0.07] text-text",
+                "-mx-1.5 rounded-full px-1.5 py-0.5 transition-colors active:bg-text/[0.08]",
+                set.kind && "bg-text/[0.07] text-text",
               )}
             >
               {label}
@@ -2247,7 +2419,7 @@ function SetRow({
                   rpe: e.target.value === "" ? null : Number(e.target.value),
                 })
               }
-              className="tnum h-9 w-12 rounded-lg bg-white/[0.06] px-1 text-center text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-text/25"
+              className="tnum h-9 w-12 rounded-lg bg-text/[0.06] px-1 text-center text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-text/25"
             />
           </label>
           <button
@@ -2255,7 +2427,7 @@ function SetRow({
             onClick={() => onChange({ isWarmup: !set.isWarmup })}
             className={cn(
               "flex size-9 items-center justify-center rounded-full transition-colors",
-              set.isWarmup ? "bg-warn/15 text-warn" : "bg-white/[0.06] text-muted hover:text-text",
+              set.isWarmup ? "bg-warn/15 text-warn" : "bg-text/[0.06] text-muted hover:text-text",
             )}
           >
             <Flame className="size-4" />
@@ -2263,7 +2435,7 @@ function SetRow({
           <button
             aria-label="Delete set"
             onClick={onRemove}
-            className="flex size-9 items-center justify-center rounded-full bg-white/[0.06] text-muted transition-colors hover:text-danger"
+            className="flex size-9 items-center justify-center rounded-full bg-text/[0.06] text-muted transition-colors hover:text-danger"
           >
             <X className="size-4" />
           </button>
@@ -2271,10 +2443,11 @@ function SetRow({
       </div>
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <div className="mb-1 tnum text-[12px] text-muted">
-            Weight ({unit})
+          <div className="mb-1.5 px-1 tnum text-[12px] text-muted">
+            Weight, {unit}
           </div>
           <NumberStepper
+            size="lg"
             ariaLabel="weight"
             value={set.weight}
             onChange={(v) => onChange({ weight: Number.isNaN(v) ? null : v })}
@@ -2283,10 +2456,11 @@ function SetRow({
           />
         </div>
         <div>
-          <div className="mb-1 tnum text-[12px] text-muted">
+          <div className="mb-1.5 px-1 tnum text-[12px] text-muted">
             Reps
           </div>
           <NumberStepper
+            size="lg"
             ariaLabel="reps"
             value={set.reps}
             onChange={(v) => onChange({ reps: Number.isNaN(v) ? null : v })}
