@@ -126,9 +126,11 @@ export type Database = {
           created_at: string
           display_name: string | null
           evaluation_run_at: string | null
+          evaluation_started_at: string | null
           height_cm: number | null
           onboarded_at: string | null
           pending_tier: string | null
+          pending_tier_id: string | null
           pending_tier_rationale: string | null
           recap_sent_on: string | null
           reminder_hour: number | null
@@ -146,9 +148,11 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           evaluation_run_at?: string | null
+          evaluation_started_at?: string | null
           height_cm?: number | null
           onboarded_at?: string | null
           pending_tier?: string | null
+          pending_tier_id?: string | null
           pending_tier_rationale?: string | null
           recap_sent_on?: string | null
           reminder_hour?: number | null
@@ -166,9 +170,11 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           evaluation_run_at?: string | null
+          evaluation_started_at?: string | null
           height_cm?: number | null
           onboarded_at?: string | null
           pending_tier?: string | null
+          pending_tier_id?: string | null
           pending_tier_rationale?: string | null
           recap_sent_on?: string | null
           reminder_hour?: number | null
@@ -186,6 +192,7 @@ export type Database = {
         Row: {
           created_at: string
           duration_weeks: number
+          from_preset: boolean
           id: string
           is_active: boolean
           name: string
@@ -199,6 +206,7 @@ export type Database = {
         Insert: {
           created_at?: string
           duration_weeks?: number
+          from_preset?: boolean
           id?: string
           is_active?: boolean
           name: string
@@ -212,6 +220,7 @@ export type Database = {
         Update: {
           created_at?: string
           duration_weeks?: number
+          from_preset?: boolean
           id?: string
           is_active?: boolean
           name?: string
@@ -400,6 +409,7 @@ export type Database = {
       }
       session_exercise: {
         Row: {
+          ended_at: string | null
           exercise_id: string
           id: string
           note: string | null
@@ -412,6 +422,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ended_at?: string | null
           exercise_id: string
           id?: string
           note?: string | null
@@ -424,6 +435,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ended_at?: string | null
           exercise_id?: string
           id?: string
           note?: string | null
@@ -594,6 +606,7 @@ export type Database = {
         Row: {
           created_at: string
           day_label: string | null
+          from_preset: boolean
           id: string
           name: string
           position: number
@@ -602,6 +615,7 @@ export type Database = {
         Insert: {
           created_at?: string
           day_label?: string | null
+          from_preset?: boolean
           id?: string
           name: string
           position?: number
@@ -610,6 +624,7 @@ export type Database = {
         Update: {
           created_at?: string
           day_label?: string | null
+          from_preset?: boolean
           id?: string
           name?: string
           position?: number
@@ -627,6 +642,7 @@ export type Database = {
           exercise_name: string | null
           session_date: string | null
           session_id: string | null
+          session_started_at: string | null
           top_weight: number | null
           user_id: string | null
           volume: number | null
@@ -689,6 +705,7 @@ export type Database = {
           session_date: string | null
           session_exercise_id: string | null
           session_id: string | null
+          session_started_at: string | null
           set_id: string | null
           set_number: number | null
           user_id: string | null
@@ -765,6 +782,14 @@ export type Database = {
           session_date: string
         }[]
       }
+      lift_record_dates: {
+        Args: { p_user?: string }
+        Returns: {
+          exercise_id: string
+          record_date: string
+          sessions_before: number
+        }[]
+      }
       load_preset: {
         Args: { p_days: Json; p_name: string; p_today: string; p_weeks: number }
         Returns: string
@@ -777,7 +802,7 @@ export type Database = {
         Args: { p_direction: string; p_id: string }
         Returns: undefined
       }
-      purge_abandoned_templates: { Args: never; Returns: undefined }
+      purge_abandoned_templates: { Args: never; Returns: number }
       recent_records: {
         Args: { p_limit?: number }
         Returns: {
@@ -798,6 +823,10 @@ export type Database = {
           strength: number
           week: string
         }[]
+      }
+      swap_session_exercise: {
+        Args: { p_exercise: string; p_id: string }
+        Returns: Json
       }
       set_active_program: {
         Args: { p_active: boolean; p_id: string; p_today: string }
