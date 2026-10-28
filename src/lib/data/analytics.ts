@@ -1,3 +1,4 @@
+import "server-only";
 import { format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/settings";

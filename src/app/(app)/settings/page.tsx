@@ -37,6 +37,7 @@ import { KeepAwakeRow } from "./keep-awake-row";
 import { WeeklyRecapRow } from "./weekly-recap-row";
 import { SignOutButton } from "./sign-out-button";
 import { ExportButton } from "./export-button";
+import { DisconnectDevices } from "./disconnect-devices";
 import { SignInMethods, type SignInMethod } from "./sign-in-methods";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -299,6 +300,11 @@ export default async function ProfilePage({
               label="Export your data"
               hint="Every logged set as a CSV, weights in kg."
               control={<ExportButton />}
+            />
+            <SettingsRow
+              label="Disconnect devices"
+              hint="Every linked Apple Watch and phone stops at once, for a lost one."
+              control={<DisconnectDevices />}
             />
             <SettingsRow label="Privacy" href="/privacy" />
             <SettingsRow label="Support" hint="cyrus@kkrwhofrags.xyz" href="/support" />

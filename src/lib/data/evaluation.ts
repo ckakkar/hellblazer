@@ -1,3 +1,4 @@
+import "server-only";
 import { addDays, differenceInCalendarDays, format, parseISO, subDays } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
 import { getToday } from "@/lib/settings";
