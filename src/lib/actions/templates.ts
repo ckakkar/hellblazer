@@ -221,19 +221,21 @@ export async function moveTemplateExercise(input: {
 }
 
 /**
- * Manual "clean up" from the Templates screen: removes what repeated preset
- * loads leave behind (purge_abandoned_templates). Inactive programs never
- * trained go, then templates in no program and no logged session. Anything
- * you've logged against, and your active split, are always kept.
+ * Manual "clean up" from the Templates screen: removes the starter copies
+ * repeated preset loads leave behind (purge_abandoned_templates), and only
+ * those never changed or trained. Anything you wrote or edited, anything
+ * you've logged against, and your active split are always kept. Returns how
+ * many went.
  */
-export async function cleanupTemplates() {
+export async function cleanupTemplates(): Promise<number> {
   const { supabase } = await getAuthedContext();
-  const { error } = await supabase.rpc("purge_abandoned_templates");
+  const { data: removed, error } = await supabase.rpc("purge_abandoned_templates");
   if (error) throw error;
   revalidatePath("/templates");
   revalidatePath("/programs");
   revalidatePath("/log");
   revalidatePath("/dashboard");
+  return removed ?? 0;
 }
 
 /**
@@ -248,8 +250,9 @@ export async function loadPreset(input: { presetId: string }) {
   const { supabase } = await getAuthedContext();
 
   // One transaction (load_preset): it replaces the previous split
-  // (deactivates it, purges abandoned blocks and orphaned templates so past
-  // loads don't pile up), creates the days and their exercises, and bundles
+  // (deactivates it, and clears earlier starter copies never changed or
+  // trained, so past loads don't pile up; your own drafts stay), creates the
+  // days and their exercises, and bundles
   // them into an active 8-week block starting today. A failure leaves the old
   // split exactly as it was.
   const { error } = await supabase.rpc("load_preset", {

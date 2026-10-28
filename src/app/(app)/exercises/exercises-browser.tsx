@@ -22,6 +22,7 @@ import {
 } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
 import { getExerciseGuide } from "@/lib/exercise-guides";
+import { matchesExercise } from "@/lib/exercise-search";
 import {
   createCustomExercise,
   deleteCustomExercise,
@@ -42,11 +43,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
     const s = q.trim().toLowerCase();
     const filtered = exercises.filter((e) => {
       if (muscle !== "all" && e.primary_muscle !== muscle) return false;
-      if (!s) return true;
-      return (
-        e.name.toLowerCase().includes(s) ||
-        MUSCLE_LABEL[e.primary_muscle].toLowerCase().includes(s)
-      );
+      return matchesExercise(e, s);
     });
     return MUSCLE_CHART_ORDER.map((m) => ({
       muscle: m,

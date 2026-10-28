@@ -43,6 +43,7 @@ import {
 import { cn, selectAllOnFocus } from "@/lib/utils";
 import { formatRestClock, REST_CHOICES } from "@/lib/rest-timer";
 import { useAction } from "@/lib/use-action";
+import { showNotice } from "@/lib/notice";
 import { Collapse } from "@/components/ui/collapse";
 import { useListGlide } from "@/components/ui/use-list-glide";
 
@@ -221,10 +222,15 @@ function CleanupButton({
       disabled={pending}
       onClick={() =>
         start(async () => {
-          await cleanupTemplates();
+          const removed = await cleanupTemplates();
+          showNotice(
+            removed > 0
+              ? `Removed ${removed} unused starter ${removed === 1 ? "copy" : "copies"}. Your own templates are kept.`
+              : "Nothing to clean up. Templates you wrote or changed are always kept.",
+          );
         })
       }
-      title="Delete leftover templates you've never trained and aren't in a program"
+      title="Remove starter copies you never changed or trained. Your own templates are always kept."
       className="inline-flex h-8 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-[13px] text-muted transition-colors hover:text-text disabled:opacity-45"
     >
       <Eraser className="size-3.5" />

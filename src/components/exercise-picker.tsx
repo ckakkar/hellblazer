@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Sheet } from "@/components/ui/sheet";
 import { SearchField } from "@/components/ui/search-field";
 import { MUSCLE_LABEL } from "@/lib/muscles";
+import { matchesExercise } from "@/lib/exercise-search";
 import type { Exercise } from "@/lib/data/exercises";
 
 export function ExercisePicker({
@@ -38,16 +39,7 @@ export function ExercisePicker({
     onClose();
   }
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return exercises;
-    return exercises.filter(
-      (e) =>
-        e.name.toLowerCase().includes(s) ||
-        MUSCLE_LABEL[e.primary_muscle].toLowerCase().includes(s) ||
-        (e.equipment ?? "").toLowerCase().includes(s),
-    );
-  }, [q, exercises]);
+  const filtered = useMemo(() => exercises.filter((e) => matchesExercise(e, q)), [q, exercises]);
 
   return (
     <Sheet open={open} onClose={close} title={title} fill>

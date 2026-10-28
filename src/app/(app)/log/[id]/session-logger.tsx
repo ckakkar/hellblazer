@@ -53,6 +53,7 @@ import { cn, fitFigure, selectAllOnFocus } from "@/lib/utils";
 import { randomVictory } from "@/lib/hype";
 import { coachLine, notebookSets } from "@/lib/coach";
 import { isLogged, isStraight, isWork } from "@/lib/set-kinds";
+import { matchesExercise } from "@/lib/exercise-search";
 import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
@@ -2090,17 +2091,10 @@ function ActiveExerciseModal({
   useGlide(actionsRef, exercise.sets.length);
   useGlide(linksRef, `${exercise.sets.length}:${superset.slot ? 1 : 0}`);
 
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    const base = exerciseLibrary.filter((e) => e.id !== exercise.exerciseId);
-    if (!s) return base;
-    return base.filter(
-      (e) =>
-        e.name.toLowerCase().includes(s) ||
-        MUSCLE_LABEL[e.primary_muscle].toLowerCase().includes(s) ||
-        (e.equipment ?? "").toLowerCase().includes(s),
-    );
-  }, [q, exerciseLibrary, exercise.exerciseId]);
+  const filtered = useMemo(
+    () => exerciseLibrary.filter((e) => e.id !== exercise.exerciseId && matchesExercise(e, q)),
+    [q, exerciseLibrary, exercise.exerciseId],
+  );
 
   return (
     <Sheet
