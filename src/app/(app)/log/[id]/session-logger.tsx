@@ -2560,19 +2560,23 @@ function SetRow({
             />
           </label>
           <button
-            aria-label="Toggle warm-up"
+            aria-label="Warm-up set"
+            aria-pressed={set.isWarmup}
             onClick={() => onChange({ isWarmup: !set.isWarmup })}
             className={cn(
-              "flex size-9 items-center justify-center rounded-full transition-colors",
+              "hb-hit flex size-10 items-center justify-center rounded-full transition-colors",
               set.isWarmup ? "bg-warn/15 text-warn" : "bg-text/[0.06] text-muted hover:text-text",
             )}
           >
             <Flame className="size-4" />
           </button>
+          {/* Set apart from the warm-up toggle, so a thumb aiming for one
+              can't land on the other: each has a 44pt target, and they
+              don't overlap. */}
           <button
             aria-label="Delete set"
             onClick={onRemove}
-            className="flex size-9 items-center justify-center rounded-full bg-text/[0.06] text-muted transition-colors hover:text-danger"
+            className="hb-hit ml-2 flex size-10 items-center justify-center rounded-full bg-text/[0.06] text-muted transition-colors hover:text-danger"
           >
             <X className="size-4" />
           </button>
