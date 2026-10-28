@@ -75,6 +75,16 @@ enum WidgetRefresher {
             return
         }
         URLSession.shared.dataTask(with: request) { data, response, _ in
+            // The token's been revoked (signed out elsewhere, the account
+            // deleted): the account's widgets, Spotlight and shortcuts go,
+            // rather than showing its last snapshot indefinitely.
+            if (response as? HTTPURLResponse)?.statusCode == 401 {
+                DispatchQueue.main.async {
+                    _ = unlink()
+                    completion(false)
+                }
+                return
+            }
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   let data,
                   let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)

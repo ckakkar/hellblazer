@@ -36,6 +36,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "workoutActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "endWorkoutActivity", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "scheduleRestAlert", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "syncRest", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "cancelRestAlert", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "healthStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestHealth", returnType: CAPPluginReturnPromise),
@@ -148,6 +149,17 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
             endsAt: Date(timeIntervalSince1970: endsAtMs / 1000),
             label: call.getString("label")
         )
+        call.resolve()
+    }
+
+    /// The page's rest, to the watch: started, paused, moved or skipped here.
+    /// `endsAt` is epoch ms, absent when there's no rest running.
+    @objc func syncRest(_ call: CAPPluginCall) {
+        guard let sessionId = call.getString("sessionId") else {
+            call.reject("sessionId is required")
+            return
+        }
+        WatchBridge.shared.sendRest(sessionId: sessionId, endsAt: call.getDouble("endsAt"), total: call.getDouble("total") ?? 0)
         call.resolve()
     }
 

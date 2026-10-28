@@ -35,6 +35,19 @@ enum RestControl {
         NotificationCenter.default.post(name: commandPosted, object: nil)
     }
 
+    /// Where a rest changed on the phone goes next: the app sets it to send
+    /// the rest to the watch (WatchBridge), so the wrist follows the Lock
+    /// Screen and Siri as it follows the page. Nil in the widget extension.
+    static var toWatch: ((Command) -> Void)?
+
+    /// A rest changed on the phone: for the page, and for the watch. A rest
+    /// that came from the watch goes through `post` alone, so it never
+    /// echoes back.
+    static func postFromPhone(_ command: Command) {
+        post(command)
+        toWatch?(command)
+    }
+
     /// The waiting command for this session, handed over once.
     static func take(sessionId: String) -> Command? {
         guard let data = store?.data(forKey: commandKey),
@@ -64,7 +77,7 @@ enum RestControl {
             await activity.update(ActivityContent(state: updated, staleDate: end))
         }
         RestAlert.schedule(sessionId: sessionId, endsAt: end, label: state?.exercise)
-        post(Command(sessionId: sessionId, endsAt: end.timeIntervalSince1970 * 1000, total: total, alert: true))
+        postFromPhone(Command(sessionId: sessionId, endsAt: end.timeIntervalSince1970 * 1000, total: total, alert: true))
     }
 
     /// No more rest: straight to the next set.
@@ -76,7 +89,7 @@ enum RestControl {
             await activity.update(ActivityContent(state: state, staleDate: nil))
         }
         RestAlert.cancel()
-        post(Command(sessionId: sessionId, endsAt: nil, total: 0, alert: false))
+        postFromPhone(Command(sessionId: sessionId, endsAt: nil, total: 0, alert: false))
     }
 }
 

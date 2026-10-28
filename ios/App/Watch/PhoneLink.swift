@@ -12,6 +12,9 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     var onContext: (([String: Any]) -> Void)?
     /// The phone changed the workout (a set logged there, say).
     var onPhoneChanged: (() -> Void)?
+    /// The phone started, moved or skipped the rest: ["sessionId", "endsAt"
+    /// (epoch ms, 0 for none), "total" (seconds), "sentAt" (epoch ms)].
+    var onRest: (([String: Any]) -> Void)?
 
     private var session: WCSession? { WCSession.isSupported() ? WCSession.default : nil }
 
@@ -60,6 +63,18 @@ final class PhoneLink: NSObject, WCSessionDelegate {
     }
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        receive(message)
+    }
+
+    /// The same, queued while the watch app wasn't running.
+    func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        receive(userInfo)
+    }
+
+    private func receive(_ message: [String: Any]) {
+        if let rest = message["rest"] as? [String: Any] {
+            DispatchQueue.main.async { self.onRest?(rest) }
+        }
         if message["changed"] != nil {
             DispatchQueue.main.async { self.onPhoneChanged?() }
         }

@@ -59,6 +59,9 @@ final class WatchBridge: NSObject, WCSessionDelegate {
         guard let session else { return }
         session.delegate = self
         session.activate()
+        RestControl.toWatch = { [weak self] command in
+            self?.sendRest(sessionId: command.sessionId, endsAt: command.endsAt, total: command.total)
+        }
     }
 
     /// Runs `done` on the main queue once the session is up, or after two
@@ -150,6 +153,29 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     func phoneChanged() {
         guard let session, session.activationState == .activated, session.isReachable else { return }
         session.sendMessage(["changed": true], replyHandler: nil, errorHandler: nil)
+    }
+
+    /// A rest started, moved or skipped on the phone (the page, the Lock
+    /// Screen, Siri), so the wrist shows the same one. `endsAt` is epoch ms,
+    /// nil when it was skipped. The watch follows without answering, so it
+    /// never echoes back; it ignores one that arrives late (`sentAt`).
+    func sendRest(sessionId: String, endsAt: Double?, total: Double) {
+        guard !disabled, let session, session.activationState == .activated,
+              session.isPaired, session.isWatchAppInstalled
+        else { return }
+        let message: [String: Any] = [
+            "rest": [
+                "sessionId": sessionId,
+                "endsAt": endsAt ?? 0,
+                "total": total,
+                "sentAt": Date().timeIntervalSince1970 * 1000,
+            ] as [String: Any],
+        ]
+        if session.isReachable {
+            session.sendMessage(message, replyHandler: nil) { _ in session.transferUserInfo(message) }
+        } else {
+            session.transferUserInfo(message)
+        }
     }
 
     /// Whether the watch is recording this session to Apple Health.

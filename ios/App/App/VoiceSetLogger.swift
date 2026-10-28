@@ -423,10 +423,10 @@ enum VoiceSetLogger {
         WorkoutActivity.upsert(sessionId: a.sessionId, startedAt: Date(timeIntervalSince1970: a.startedAt / 1000), state: state)
         if let endsAt, let rest {
             RestAlert.schedule(sessionId: a.sessionId, endsAt: endsAt, label: a.exercise)
-            RestControl.post(.init(sessionId: a.sessionId, endsAt: endsAt.timeIntervalSince1970 * 1000, total: rest, alert: true))
+            RestControl.postFromPhone(.init(sessionId: a.sessionId, endsAt: endsAt.timeIntervalSince1970 * 1000, total: rest, alert: true))
         } else if clearRest {
             RestAlert.cancel()
-            RestControl.post(.init(sessionId: a.sessionId, endsAt: nil, total: 0, alert: false))
+            RestControl.postFromPhone(.init(sessionId: a.sessionId, endsAt: nil, total: 0, alert: false))
         }
         WatchBridge.shared.phoneChanged()
         DispatchQueue.main.async {

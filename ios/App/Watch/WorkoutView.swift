@@ -332,7 +332,7 @@ private struct DonePage: View {
     let workout: Workout
 
     var body: some View {
-        let working = workout.exercises.flatMap(\.workingSets)
+        let working = workout.exercises.flatMap(\.workSets)
         VStack(spacing: 6) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 28, weight: .semibold))
@@ -485,7 +485,7 @@ private struct MetricsPage: View {
     @Environment(\.isLuminanceReduced) private var dimmed
     let workout: Workout
 
-    private var working: [LoggedSet] { workout.exercises.flatMap(\.workingSets) }
+    private var working: [LoggedSet] { workout.exercises.flatMap(\.workSets) }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: dimmed ? 1 : 0.05)) { context in

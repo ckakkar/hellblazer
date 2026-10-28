@@ -10,6 +10,7 @@ class HellBlazerViewController: CAPBridgeViewController {
     /// up, so a cold start goes launch screen → app with no blank frame.
     private var launchCover: UIView?
     private var loadingObservation: NSKeyValueObservation?
+    private var zoomedWidth: CGFloat = 0
 
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(HellBlazerNativePlugin())
@@ -23,6 +24,41 @@ class HellBlazerViewController: CAPBridgeViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         coverUntilReady()
+        applyTextSize()
+        // The lifter changed their text size in Settings, or Control Center.
+        registerForTraitChanges([UITraitPreferredContentSizeCategory.self]) { (self: Self, _) in
+            self.applyTextSize()
+        }
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        // Turned, or resized on an iPad: the cap below depends on the width.
+        if view.bounds.width != zoomedWidth { applyTextSize() }
+    }
+
+    /// The lifter's iOS text size, as the page's zoom: the page lays itself
+    /// out as it would in a narrower window, so text, targets and figures
+    /// grow together and nothing clips. It's built down to 320 points wide,
+    /// so the zoom stops where the page would get narrower than that. Never
+    /// smaller than the design's own sizes.
+    private func applyTextSize() {
+        guard let webView, view.bounds.width > 0 else { return }
+        zoomedWidth = view.bounds.width
+        let wanted: CGFloat
+        switch traitCollection.preferredContentSizeCategory {
+        case .extraLarge: wanted = 1.08
+        case .extraExtraLarge: wanted = 1.16
+        case .extraExtraExtraLarge: wanted = 1.24
+        case .accessibilityMedium: wanted = 1.32
+        case .accessibilityLarge: wanted = 1.4
+        case .accessibilityExtraLarge: wanted = 1.48
+        case .accessibilityExtraExtraLarge: wanted = 1.56
+        case .accessibilityExtraExtraExtraLarge: wanted = 1.64
+        default: wanted = 1
+        }
+        let zoom = max(1, min(wanted, view.bounds.width / 320))
+        if abs(webView.pageZoom - zoom) > 0.001 { webView.pageZoom = zoom }
     }
 
     private func configureWebView() {
@@ -44,7 +80,8 @@ class HellBlazerViewController: CAPBridgeViewController {
         // Off until a pushed page turns it on (see setBackGesture).
         webView.allowsBackForwardNavigationGestures = false
         // An app's interface doesn't pinch-zoom or double-tap-zoom. The
-        // website keeps zoom; this only runs inside the app.
+        // website keeps zoom; this only runs inside the app. Larger text
+        // comes from the iOS text size instead (applyTextSize).
         webView.configuration.userContentController.addUserScript(
             WKUserScript(source: Self.viewportLock, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         )

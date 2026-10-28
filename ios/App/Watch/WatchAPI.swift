@@ -11,6 +11,13 @@ struct WatchState: Codable, Equatable {
     var options: [StartOption]
     /// This week so far, for the complications. Optional: older servers.
     var week: Week?
+    /// With no workout on: the sessions finished in the last day, so a
+    /// workout that left the watch's view can be told finished (Health keeps
+    /// it) from discarded (it doesn't). Nil from an older server.
+    var finished: [String]?
+    /// From a start: the session it made, however old (an offline workout
+    /// that reached the server hours later). Nil from an older server.
+    var started: Workout?
 
     struct Week: Codable, Equatable {
         /// Monday, yyyy-MM-dd.
@@ -47,9 +54,19 @@ struct Exercise: Codable, Equatable, Identifiable {
     /// Its superset group (src/lib/supersets.ts): consecutive exercises
     /// sharing one are done back to back, resting after the round.
     var superset: Int?
+    /// Ended by hand ("Done with this one") on any device: done, whatever its
+    /// target says. Nil from a server before it.
+    var ended: Bool?
 
-    /// The sets that count toward the plan: no warm-ups, no drop sets.
-    var workingSets: [LoggedSet] { sets.filter { !$0.warmup && $0.kind != "drop" } }
+    /// The sets that count toward the plan: plain working sets, as
+    /// src/lib/set-kinds.ts has them (no warm-ups, drops or rest-pause).
+    var workingSets: [LoggedSet] {
+        sets.filter { !$0.warmup && $0.reps >= 1 && $0.kind != "drop" && $0.kind != "rest_pause" }
+    }
+
+    /// Every working set, drops and rest-pause in full: the workout's sets
+    /// and volume.
+    var workSets: [LoggedSet] { sets.filter { !$0.warmup && $0.reps >= 1 } }
 }
 
 struct Target: Codable, Equatable {
