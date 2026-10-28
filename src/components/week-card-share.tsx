@@ -15,6 +15,13 @@ import { shareImage } from "@/lib/share-image";
 export function WeekCardShare({ week, open }: { week: string; open?: string | null }) {
   const router = useRouter();
   const [shown, setShown] = useState<string | null>(open ?? null);
+  // A recap link followed while the dashboard is already open changes the
+  // prop, not the mount: open the week it asks for.
+  const [requested, setRequested] = useState<string | null>(open ?? null);
+  if ((open ?? null) !== requested) {
+    setRequested(open ?? null);
+    if (open) setShown(open);
+  }
   const [card, setCard] = useState<{ week: string; blob: Blob; url: string } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { ConfirmIconButton } from "@/components/ui/confirm-icon-button";
 import {
   fromDisplayWeight,
-  toDisplayWeight,
+  toDisplayBodyweight,
   trimNum,
   type Unit,
 } from "@/lib/units";
@@ -79,7 +79,7 @@ export function BodyweightManager({
 
   return (
     <div>
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <div className="flex flex-col gap-2 rounded-2xl bg-surface p-2 sm:flex-row">
         <Input
           type="date"
           value={date}
@@ -107,7 +107,7 @@ export function BodyweightManager({
       </div>
 
       {entries.length > 0 && (
-        <ul ref={list} className="mt-4 divide-y divide-text/[0.06] overflow-hidden rounded-xl bg-surface">
+        <ul ref={list} className="mt-4 divide-y divide-text/[0.08] overflow-hidden border-y border-text/[0.12]">
           {shown.map((l) => (
             // `justify-between` with no gap and nothing to stop either side
             // wrapping put the date hard against the weight at 360px and broke
@@ -124,15 +124,18 @@ export function BodyweightManager({
                   })
                 }
               >
-                <div className="flex min-h-11 items-center gap-3 bg-surface px-4 py-2.5">
-                  <span className="min-w-0 flex-1 truncate tnum text-sm text-muted">
+                <div className="flex min-h-12 items-center gap-3 bg-bg px-1 py-2">
+                  <span className="min-w-0 flex-1 truncate tnum text-[15px] text-muted">
                     {format(parseISO(l.date), "d MMM yyyy")}
                   </span>
-                  <div className="flex shrink-0 items-center gap-3">
-                    <span className="whitespace-nowrap tnum text-sm tabular-nums text-text">
-                      {trimNum(toDisplayWeight(l.weight_kg, unit))} {unit}
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="whitespace-nowrap tnum text-[15px] text-text">
+                      {trimNum(toDisplayBodyweight(l.weight_kg, unit))}
+                      <span className="ml-1 text-[13px] text-muted">{unit}</span>
                     </span>
-                    <div className="hidden pointer-fine:block">
+                    {/* Swipe on touch, and a button everywhere, so a tap or
+                        a screen reader can delete too. */}
+                    <div>
                       <ConfirmIconButton
                         label="Delete entry"
                         confirmLabel="Tap again to delete entry"

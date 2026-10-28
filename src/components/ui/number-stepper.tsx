@@ -93,7 +93,9 @@ export function NumberStepper({
             const v = e.target.value;
             if (v === "") return onChange(NaN);
             const n = Number(v);
-            if (!Number.isNaN(n)) onChange(n);
+            // Typed numbers keep the buttons' rules: inside min and max, at
+            // the field's precision (whole reps, never 8.5 or -3).
+            if (!Number.isNaN(n)) onChange(clamp(round(n)));
           }}
           style={{
             ...figure,

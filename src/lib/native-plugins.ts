@@ -156,6 +156,9 @@ export interface HellBlazerNative {
   /** `sessionId` lets the alert's +30s and a tap find the workout. */
   scheduleRestAlert(options: { endsAt: number; label?: string; sessionId?: string }): Promise<void>;
   cancelRestAlert(): Promise<void>;
+  /** The page's rest, to the Apple Watch (2.7 on): started, paused, moved or
+   *  skipped here. `endsAt` (epoch ms) absent when none is running. */
+  syncRest(options: { sessionId: string; endsAt?: number; total: number }): Promise<void>;
   healthStatus(): Promise<HealthStatus>;
   requestHealth(): Promise<HealthStatus>;
   /** `effort` (1-10, the session's average RPE) becomes its Effort rating (iOS 18). */

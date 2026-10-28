@@ -5,8 +5,9 @@
  * the shadcn MCP registry. Local changes: lucide icons instead of Hugeicons,
  * fills its container when no width is given (measured with a
  * ResizeObserver), the app's colours with the success fill in the lifter's
- * accent (a CSS colour, so its text colour is passed explicitly), and no
- * bounce or landing dip: it eases home and stops.
+ * accent (a CSS colour, so its text colour is passed explicitly), no
+ * bounce or landing dip (it eases home and stops), and a tap arms it so a
+ * second tap confirms, for anyone who can't drag.
  */
 import React, { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { animate, motion, useMotionValue, useMotionValueEvent, useReducedMotion, useTransform } from 'motion/react';
@@ -18,6 +19,10 @@ export interface SlideCommitProps {
   label?: ReactNode;
   doneLabel?: ReactNode;
   errorLabel?: ReactNode;
+  /** Shown after a tap: a second tap within a few seconds confirms, so
+   *  there's a way to confirm without dragging (WCAG 2.5.7), still two
+   *  deliberate actions rather than one stray tap. */
+  tapAgainLabel?: ReactNode;
   onConfirm?: () => void | Promise<unknown>;
   onDone?: () => void;
   onError?: (reason: unknown) => void;
@@ -92,6 +97,7 @@ const SlideCommit: React.FC<SlideCommitProps> = ({
   label = 'Slide to pay',
   doneLabel = 'Paid',
   errorLabel = 'Payment failed',
+  tapAgainLabel = 'Tap again to confirm',
   onConfirm,
   onDone,
   onError,
@@ -127,6 +133,9 @@ const SlideCommit: React.FC<SlideCommitProps> = ({
   }, [fixedWidth]);
   const width = fixedWidth ?? measured;
   const [phase, setPhase] = useState<SlideCommitPhase>('idle');
+  const [armed, setArmed] = useState(false);
+  const armTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(armTimer.current), []);
   const [held, setHeld] = useState(false);
   const [hot, setHot] = useState(false);
 
@@ -324,6 +333,17 @@ const SlideCommit: React.FC<SlideCommitProps> = ({
     setHeld(false);
     if (x.get() >= TRAVEL) commit(false);
     else if (g.moved) goHome(velocityOf(g.hist));
+    else {
+      // A tap, not a slide: the first arms it, a second confirms.
+      clearTimeout(armTimer.current);
+      if (armed) {
+        setArmed(false);
+        commit(true);
+      } else {
+        setArmed(true);
+        armTimer.current = setTimeout(() => setArmed(false), 3500);
+      }
+    }
   };
   useEffect(() => {
     live.current = { move, up };
@@ -392,7 +412,7 @@ const SlideCommit: React.FC<SlideCommitProps> = ({
           aria-hidden="true"
         >
           <span className="[grid-area:1/1] [transition:opacity_200ms_ease,filter_200ms_ease] [color:color-mix(in_srgb,var(--sc-ink)_45%,transparent)] group-data-[phase=error]:opacity-0 group-data-[phase=error]:blur-[2px]">
-            {label}
+            {armed ? tapAgainLabel : label}
           </span>
           <span className="[grid-area:1/1] [transition:opacity_200ms_ease,filter_200ms_ease] [color:var(--sc-no)] opacity-0 blur-[2px] group-data-[phase=error]:opacity-100 group-data-[phase=error]:blur-none">
             {errorLabel}
@@ -444,7 +464,15 @@ const SlideCommit: React.FC<SlideCommitProps> = ({
           </motion.div>
         </motion.div>
         <span className="sr-only" aria-live="polite">
-          {phase === 'pending' ? 'Working' : phase === 'done' ? doneLabel : phase === 'error' ? errorLabel : ''}
+          {phase === 'pending'
+            ? 'Working'
+            : phase === 'done'
+              ? doneLabel
+              : phase === 'error'
+                ? errorLabel
+                : armed
+                  ? tapAgainLabel
+                  : ''}
         </span>
       </motion.div>
     </div>

@@ -28,6 +28,7 @@ type ExportRow = {
   reps: number | null;
   rpe: number | null;
   is_warmup: boolean | null;
+  kind: string | null;
   created_at: string;
   session_exercise: {
     exercise: { name: string | null; primary_muscle: string | null } | null;
@@ -56,7 +57,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from("set")
       .select(
-        `set_number, weight_kg, reps, rpe, is_warmup, created_at,
+        `set_number, weight_kg, reps, rpe, is_warmup, kind, created_at,
          session_exercise:session_exercise_id (
            exercise:exercise_id ( name, primary_muscle ),
            session:session_id ( date, title )
@@ -96,7 +97,9 @@ export async function GET() {
         text(ex?.name),
         cell(ex?.primary_muscle),
         cell(r.set_number),
-        cell(working ? "working" : "warmup"),
+        // A drop or rest-pause set says so: they count in full, but aren't
+        // straight sets.
+        cell(working ? (r.kind ?? "working") : "warmup"),
         cell(w),
         cell(reps),
         cell(r.rpe ?? ""),

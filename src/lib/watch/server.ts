@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
+import { isStraight } from "@/lib/set-kinds";
 import {
   getProgramProgress,
   PROGRAM_SELECT,
@@ -133,12 +134,27 @@ export async function watchState(ctx: WatchContext): Promise<WatchState> {
     thisWeek(ctx),
   ]);
   if (!active) {
-    const plans = await startPlans(ctx, start.options.map((o) => o.templateId));
+    const [plans, finished] = await Promise.all([
+      startPlans(ctx, start.options.map((o) => o.templateId)),
+      recentlyFinished(ctx),
+    ]);
     const withPlan = (o: WatchStartOption) => ({ ...o, plan: plans.get(o.templateId) ?? [] });
     start.options = start.options.map(withPlan);
     if (start.next) start.next = withPlan(start.next);
+    return { unit: ctx.unit, active, ...start, week: { ...week, planned }, finished };
   }
   return { unit: ctx.unit, active, ...start, week: { ...week, planned } };
+}
+
+/** Sessions finished in the last day: how the watch tells a finish from a discard. */
+async function recentlyFinished(ctx: WatchContext): Promise<string[]> {
+  const { data, error } = await ctx.db
+    .from("session")
+    .select("id")
+    .eq("user_id", ctx.userId)
+    .gte("finished_at", new Date(Date.now() - 24 * 3600_000).toISOString());
+  if (error) throw error;
+  return (data ?? []).map((s) => s.id);
 }
 
 /** Each template's exercises in order, with targets, rest and last time's sets. */
@@ -222,7 +238,7 @@ async function thisWeek(ctx: WatchContext): Promise<Omit<WatchWeek, "planned">> 
  * open for hours: that's a forgotten session, not a workout on the wrist.
  */
 async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
-  const { db, userId, unit } = ctx;
+  const { db, userId } = ctx;
   const { data: session, error } = await db
     .from("session")
     .select("id, title, created_at, template_id")
@@ -233,15 +249,24 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
     .maybeSingle();
   if (error) throw error;
   if (!session) return null;
+  if (Date.now() - Date.parse(session.created_at) > STALE_CLOCK_MS) return null;
+  return workoutOf(ctx, session);
+}
+
+/** A session as the watch shows it, however long ago it started. */
+async function workoutOf(
+  ctx: WatchContext,
+  session: { id: string; title: string | null; created_at: string },
+): Promise<WatchWorkout> {
+  const { db, userId, unit } = ctx;
   const startedAt = Date.parse(session.created_at);
-  if (Date.now() - startedAt > STALE_CLOCK_MS) return null;
 
   // Targets are the session's own, copied from the template when it
   // started (start_session), so a template edited since doesn't move them.
   const { data, error: rowsError } = await db
     .from("session_exercise")
     .select(
-      "id, exercise_id, position, superset, target_sets, target_rep_range, rest_seconds, exercise(name, equipment, mechanic, primary_muscle), set(id, set_number, weight_kg, reps, is_warmup, kind)",
+      "id, exercise_id, position, superset, target_sets, target_rep_range, rest_seconds, ended_at, exercise(name, equipment, mechanic, primary_muscle), set(id, set_number, weight_kg, reps, is_warmup, kind)",
     )
     .eq("session_id", session.id)
     .eq("user_id", userId)
@@ -273,6 +298,7 @@ async function activeWorkout(ctx: WatchContext): Promise<WatchWorkout | null> {
       last: past.map(({ weight, reps }) => ({ weight, reps })),
       target: targetOf(past, row.target_rep_range, row.exercise, unit),
       superset: row.superset ?? null,
+      ended: row.ended_at != null,
     };
   });
 
@@ -331,7 +357,9 @@ async function startOptions(
     const progress = await getProgramProgress(program, { supabase: db, timeZone });
     const nextTemplate = progress.nextDay?.workout_template;
     const next =
-      !progress.isCompleted && progress.nextDay && nextTemplate
+      // Paused or not yet started: nothing is due, so nothing's offered as
+      // the next programmed day (starting one would advance the block).
+      !progress.isCompleted && !progress.isPaused && !progress.isUpcoming && progress.nextDay && nextTemplate
         ? {
             templateId: nextTemplate.id,
             programDayId: progress.nextDay.id,
@@ -385,6 +413,21 @@ function watchTime(ms: number | undefined): string | null {
  */
 export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promise<WatchState> {
   const v = startSchema.parse(body);
+  const startedAt = watchTime(v.startedAt);
+  // A workout started offline that reaches the server late, retried: the
+  // session it made the first time (its start time is the watch's) is the
+  // one, not another. Returned as `started` even if it's too old to be the
+  // live workout, so the watch can move its sets over either way.
+  if (startedAt) {
+    const { data: made } = await ctx.db
+      .from("session")
+      .select("id, title, created_at")
+      .eq("user_id", ctx.userId)
+      .eq("created_at", startedAt)
+      .limit(1)
+      .maybeSingle();
+    if (made) return { ...(await watchState(ctx)), started: await workoutOf(ctx, made) };
+  }
   if (await activeWorkout(ctx)) return watchState(ctx);
   const { data: sessionId, error } = await ctx.db.rpc("start_session", {
     p_user: ctx.userId,
@@ -398,7 +441,6 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
   // Started offline: the session began when the watch says, not now, so its
   // clock (and the heart-rate read later) line up. Only a session this call
   // just opened; one that was already under way keeps its own.
-  const startedAt = watchTime(v.startedAt);
   if (startedAt && sessionId) {
     await ctx.db
       .from("session")
@@ -407,7 +449,11 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
       .eq("user_id", ctx.userId)
       .gte("created_at", new Date(Date.now() - 60_000).toISOString());
   }
-  return watchState(ctx);
+  const { data: made } = sessionId
+    ? await ctx.db.from("session").select("id, title, created_at").eq("id", sessionId).eq("user_id", ctx.userId).maybeSingle()
+    : { data: null };
+  const state = await watchState(ctx);
+  return made ? { ...state, started: await workoutOf(ctx, made) } : state;
 }
 
 const setSchema = z.object({
@@ -415,7 +461,9 @@ const setSchema = z.object({
   sessionExerciseId: z.string().uuid(),
   setNumber: z.number().int().min(1).max(999),
   weight: z.number().min(0).max(9999),
-  reps: z.number().int().min(0).max(9999),
+  // At least a rep (the database holds every set to it); a refusal the
+  // watch drops rather than retries.
+  reps: z.number().int().min(1).max(999),
   /** The unit the weight was logged in. A set queued offline can reach the
    *  server after the lifter switched units; older watch builds omit it. */
   unit: z.enum(["kg", "lb"]).optional(),
@@ -598,7 +646,7 @@ export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<Voi
     weight: numbers.weight,
     reps: numbers.reps,
     unit: ctx.unit,
-    setNumber: logged.sets.filter((s) => !s.warmup && s.kind !== "drop").length,
+    setNumber: logged.sets.filter(isStraight).length,
     targetSets: exercise.targetSets,
     restSeconds: exercise.restSeconds,
     complete,

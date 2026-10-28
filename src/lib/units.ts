@@ -19,6 +19,15 @@ export function toDisplayWeight(kg: number, unit: Unit): number {
   return Math.round(raw * 2) / 2;
 }
 
+/**
+ * Bodyweight to show: to a tenth, as the scale reads, not to the plates'
+ * half (a stored 70.1 kg stays 70.1, not 70).
+ */
+export function toDisplayBodyweight(kg: number, unit: Unit): number {
+  const raw = unit === "lb" ? kgToLb(kg) : kg;
+  return Math.round(raw * 10) / 10;
+}
+
 /** Convert a value the user typed in their display unit back to canonical kg. */
 export function fromDisplayWeight(value: number, unit: Unit): number {
   return unit === "lb" ? lbToKg(value) : value;

@@ -18,6 +18,19 @@ export type WatchState = {
   options: WatchStartOption[];
   /** This week so far, for the watch face complications. */
   week: WatchWeek;
+  /**
+   * With no workout on: the sessions finished in the last day. A workout
+   * that left the watch's view is in here if it was finished (Health keeps
+   * the recording), and not if it was discarded or just left open too long
+   * (the recording's thrown away). Absent from a server before it.
+   */
+  finished?: string[];
+  /**
+   * From a start: the session it made (or made already, when an offline
+   * start is retried), however old, so the watch can move a workout's sets
+   * onto it even when it's too old to be the live one.
+   */
+  started?: WatchWorkout;
 };
 
 export type WatchWeek = {
@@ -52,6 +65,9 @@ export type WatchExercise = {
   target: WatchTarget | null;
   /** Its superset group (src/lib/supersets.ts); null on its own. */
   superset: number | null;
+  /** Ended by hand ("Done with this one") on any device: done, whatever
+   *  its target says. Absent from a server before it. */
+  ended?: boolean;
 };
 
 export type WatchTarget = { weight: number; reps: number };

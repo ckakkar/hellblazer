@@ -15,18 +15,21 @@ import { cn } from "@/lib/utils";
    the labels. */
 
 export function SettingsGroup({
+  id,
   label,
   caption,
   children,
   className,
 }: {
+  /** An anchor, for a link that jumps to the group. */
+  id?: string;
   label: string;
   caption?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={className}>
+    <section id={id} className={cn("scroll-mt-24", className)}>
       <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">{label}</h2>
       <div className="divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-surface">
         {children}

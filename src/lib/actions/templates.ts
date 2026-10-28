@@ -182,7 +182,8 @@ export async function removeTemplateExercise(input: { id: string }) {
 
 /**
  * Change the movement on a prescribed template exercise (e.g. while previewing a
- * day, swap Pendlay rows for seated rows). Becomes that day's new default.
+ * day, swap Pendlay rows for seated rows). Every workout of that day from
+ * now on; a workout already under way keeps what it started with.
  */
 export async function swapTemplateExercise(input: {
   id: string;

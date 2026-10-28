@@ -63,6 +63,8 @@ export type ProgramProgress = {
   currentWeek: number | null; // null when not started
   isCompleted: boolean;
   isPaused: boolean;
+  /** Its start date is still to come: no week yet, nothing advances. */
+  isUpcoming: boolean;
   daysPerWeek: number;
   sessionsThisWeek: number;
   skipsThisWeek: number;
@@ -102,15 +104,20 @@ export async function getProgramProgress(
   let weekStart: string | null = null;
   let endDate: string | null = null;
   let isCompleted = false;
+  let isUpcoming = false;
 
   if (program.start_date) {
     const start = parseISO(program.start_date);
     endDate = format(addDays(start, totalWeeks * 7 - 1), "yyyy-MM-dd");
     const daysSince = differenceInCalendarDays(nowRef, start);
-    const rawWeek = Math.floor(Math.max(0, daysSince) / 7) + 1;
-    isCompleted = rawWeek > totalWeeks;
-    currentWeek = Math.min(rawWeek, totalWeeks);
-    weekStart = format(addDays(start, (currentWeek - 1) * 7), "yyyy-MM-dd");
+    // A block that starts on a later date is upcoming, not in week 1.
+    isUpcoming = daysSince < 0;
+    if (!isUpcoming) {
+      const rawWeek = Math.floor(daysSince / 7) + 1;
+      isCompleted = rawWeek > totalWeeks;
+      currentWeek = Math.min(rawWeek, totalWeeks);
+      weekStart = format(addDays(start, (currentWeek - 1) * 7), "yyyy-MM-dd");
+    }
   }
 
   // Count sessions logged AND days skipped this week, and grab the latest of
@@ -201,6 +208,7 @@ export async function getProgramProgress(
     currentWeek,
     isCompleted,
     isPaused,
+    isUpcoming,
     daysPerWeek,
     sessionsThisWeek,
     skipsThisWeek,

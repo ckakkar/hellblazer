@@ -21,12 +21,27 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
   const svc = createServiceClient();
   if (!svc) return { ok: false, error: "Account deletion isn't available right now. Try again later." };
 
-  const { data: apple } = await svc
+  // Sign in with Apple is revoked first, and its outcome counts: an
+  // account deleted while Apple still lists the app as signed in breaks App
+  // Store rules, so a failed read or revoke stops here, with nothing deleted,
+  // and the lifter can try again.
+  const { data: apple, error: appleErr } = await svc
     .from("apple_token")
     .select("refresh_token")
     .eq("user_id", user.id)
     .maybeSingle();
-  if (apple?.refresh_token) await revokeAppleToken(apple.refresh_token);
+  if (appleErr) return { ok: false, error: "Couldn't delete your account. Try again." };
+  if (apple?.refresh_token) {
+    const revoked =
+      (await revokeAppleToken(apple.refresh_token)) || (await revokeAppleToken(apple.refresh_token));
+    if (!revoked) {
+      console.error("Apple revoke failed during account deletion", user.id);
+      return {
+        ok: false,
+        error: "Couldn't reach Apple to sign Fatty out of your Apple ID. Nothing was deleted. Try again in a moment.",
+      };
+    }
+  }
 
   const { error } = await svc.auth.admin.deleteUser(user.id);
   if (error) return { ok: false, error: "Couldn't delete your account. Try again." };

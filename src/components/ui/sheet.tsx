@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useSyncExternalStore } from "react";
 import { X } from "lucide-react";
 import { Portal } from "@/components/ui/portal";
 import { useModal, usePresence } from "@/components/ui/use-modal";
@@ -13,6 +13,30 @@ const DISMISS_PX = 110;
 const DISMISS_PX_PER_S = 650;
 /** The sheet follows the finger at this ratio, so the pull feels weighted. */
 const DRAG_RATIO = 0.7;
+
+/**
+ * The part of the screen the keyboard leaves, as "top:height" in CSS pixels,
+ * or "" when nothing covers the page. iOS doesn't shrink the layout for the
+ * keyboard: a sheet pinned to the bottom of the page sits behind it, and as
+ * a search narrows its list the sheet shrinks down out of sight. Pinned to
+ * the visual viewport instead, it stays on top of the keyboard.
+ */
+function viewportBox(): string {
+  const vv = window.visualViewport;
+  if (!vv || window.innerHeight - vv.height < 1) return "";
+  return `${Math.round(vv.offsetTop)}:${Math.round(vv.height)}`;
+}
+
+function subscribeViewport(changed: () => void) {
+  const vv = window.visualViewport;
+  if (!vv) return () => {};
+  vv.addEventListener("resize", changed);
+  vv.addEventListener("scroll", changed);
+  return () => {
+    vv.removeEventListener("resize", changed);
+    vv.removeEventListener("scroll", changed);
+  };
+}
 
 /**
  * Bottom sheet on phones, centred dialog from `sm` up. It rises from the edge
@@ -31,14 +55,20 @@ export function Sheet({
   title,
   children,
   footer,
+  fill = false,
 }: {
   open: boolean;
   onClose: () => void;
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  /** Full height on a phone whatever's in it: for a list a search narrows,
+   *  so the field stays put as results come and go. */
+  fill?: boolean;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const box = useSyncExternalStore(subscribeViewport, viewportBox, () => "");
+  const [boxTop, boxHeight] = box ? box.split(":").map(Number) : [null, null];
   const mounted = usePresence(open, EXIT_MS);
   useModal(open, panelRef, onClose);
 
@@ -87,9 +117,11 @@ export function Sheet({
     <Portal>
       <div
         className={cn(
-          "fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4",
+          "fixed inset-x-0 top-0 z-50 flex h-dvh items-end justify-center sm:items-center sm:p-4",
           !open && "pointer-events-none",
         )}
+        style={boxHeight !== null ? { top: boxTop ?? 0, height: boxHeight } : undefined}
+        data-keyboard={boxHeight !== null || undefined}
         role="dialog"
         aria-modal="true"
         aria-label={title}
@@ -104,7 +136,12 @@ export function Sheet({
           ref={panelRef}
           data-state={state}
           tabIndex={-1}
-          className="hb-sheet hb-sheet-panel relative z-10 flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-[1.75rem] pb-[env(safe-area-inset-bottom)] focus:outline-none sm:rounded-[1.75rem] sm:pb-0"
+          className={cn(
+            "hb-sheet hb-sheet-panel relative z-10 flex max-h-[88%] w-full max-w-lg flex-col rounded-t-[1.75rem] focus:outline-none sm:rounded-[1.75rem] sm:pb-0",
+            // The keyboard covers the home bar, so no room is kept for it.
+            boxHeight === null && "pb-[env(safe-area-inset-bottom)]",
+            fill && "max-sm:h-[88%]",
+          )}
         >
           <div
             className="shrink-0 touch-none cursor-grab active:cursor-grabbing"

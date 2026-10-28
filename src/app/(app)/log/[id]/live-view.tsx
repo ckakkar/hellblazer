@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { isStraight } from "@/lib/set-kinds";
 import { useRouter } from "next/navigation";
 import { Check, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
@@ -260,7 +261,7 @@ function OnTheBar({
   seen: Set<string>;
 }) {
   const planned = exercise.target ?? 0;
-  const toGo = Math.max(0, planned - exercise.sets.filter((s) => !s.warmup && s.kind !== "drop").length);
+  const toGo = Math.max(0, planned - exercise.sets.filter(isStraight).length);
   const top = exercise.sets.reduce<BoardSet | null>(
     (newest, s) => (!newest || s.createdAt > newest.createdAt ? s : newest),
     null,

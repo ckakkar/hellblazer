@@ -58,27 +58,22 @@ export type LatestRecord = {
 };
 
 /**
- * The most recent new best estimated max on any lift: the first session a
- * lift reached its all-time best, when it had been trained before (a first
- * session isn't a record). `trend` is each lift's last sessions' best
- * estimated max, oldest first, as the Lift Trend widget has it.
+ * The most recent new best estimated max on any lift: the session a lift
+ * first reached its all-time best, when it had been trained before (a first
+ * session isn't a record). `records` comes from the whole history
+ * (lift_record_dates), so a best reached long ago and only matched lately
+ * keeps its own date, and the set shown is the one behind that best.
  */
 export function latestRecord(
-  lifts: { id: string; name: string; bestWeight: number; bestReps: number; estimatedMax: number; sessions: number }[],
-  trends: { id: string; points: { date: string; e1rm: number }[] }[],
+  lifts: { id: string; name: string; bestWeight: number; bestReps: number; estimatedMax: number }[],
+  records: { id: string; date: string; sessionsBefore: number }[],
 ): LatestRecord | null {
   let latest: LatestRecord | null = null;
   const byId = new Map(lifts.map((l) => [l.id, l]));
-  for (const trend of trends) {
-    const lift = byId.get(trend.id);
-    if (!lift || trend.points.length === 0) continue;
-    const best = Math.max(...trend.points.map((p) => p.e1rm));
-    const at = trend.points.findIndex((p) => p.e1rm >= best - 0.05);
-    // Its best is from before the sessions the trend holds: long ago.
-    if (Math.abs(best - lift.estimatedMax) > 1) continue;
-    const firstEver = at === 0 && lift.sessions <= trend.points.length;
-    if (firstEver) continue;
-    const date = trend.points[at].date;
+  for (const record of records) {
+    const lift = byId.get(record.id);
+    if (!lift || record.sessionsBefore === 0) continue;
+    const { date } = record;
     if (!latest || date > latest.date || (date === latest.date && lift.estimatedMax > latest.estimatedMax)) {
       latest = {
         name: lift.name,

@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { toDisplayWeight, trimNum, type Unit } from "@/lib/units";
+import { toDisplayBodyweight, trimNum, type Unit } from "@/lib/units";
 import { roundTicks } from "@/lib/axis-ticks";
 import { AXIS_TICK, GRID_STROKE, TooltipBox, axisWidthFor } from "./chart-kit";
 
@@ -22,7 +22,7 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((l) => ({
       date: format(parseISO(l.date), "d MMM"),
-      weight: Math.round(toDisplayWeight(l.weight_kg, unit) * 10) / 10,
+      weight: toDisplayBodyweight(l.weight_kg, unit),
     }));
 
   if (data.length < 2) return null; // need at least two points to draw a trend

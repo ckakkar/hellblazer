@@ -2,6 +2,7 @@
 
 import { useOptimistic, useRef, useState } from "react";
 import {
+  ArrowLeftRight,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -35,6 +36,7 @@ import {
   moveTemplateExercise,
   removeTemplateExercise,
   setTemplateSuperset,
+  swapTemplateExercise,
   updateTemplate,
   updateTemplateExercise,
 } from "@/lib/actions/templates";
@@ -233,13 +235,19 @@ function CleanupButton({
 
 type Start = (fn: () => Promise<void>) => void;
 
-type RowEdit = { kind: "move"; id: string; direction: "up" | "down" } | { kind: "remove"; id: string };
+type RowEdit =
+  | { kind: "move"; id: string; direction: "up" | "down" }
+  | { kind: "remove"; id: string }
+  | { kind: "swap"; id: string; exercise: Exercise };
 
 /** A template's exercises after an edit, as the server will have them. */
 function editRows(rows: TemplateRow[], edit: RowEdit): TemplateRow[] {
   const i = rows.findIndex((r) => r.id === edit.id);
   if (i < 0) return rows;
   if (edit.kind === "remove") return rows.filter((r) => r.id !== edit.id);
+  if (edit.kind === "swap") {
+    return rows.map((r) => (r.id === edit.id ? { ...r, exercise_id: edit.exercise.id, exercise: edit.exercise } : r));
+  }
   const j = edit.direction === "up" ? i - 1 : i + 1;
   if (j < 0 || j >= rows.length) return rows;
   const next = [...rows];
@@ -398,6 +406,8 @@ function TemplateExercises({
   roomy?: boolean;
 }) {
   const [picker, setPicker] = useState(false);
+  // The exercise being swapped for another: this day, every workout to come.
+  const [swapping, setSwapping] = useState<TemplateRow | null>(null);
   // Moves and removals show at once; the server catches up behind them, and
   // a failed one puts the list back (useAction says what didn't happen).
   const [rows, applyLocal] = useOptimistic(template.template_exercise, editRows);
@@ -444,6 +454,12 @@ function TemplateExercises({
       applyLocal({ kind: "remove", id: row.id });
       await removeTemplateExercise({ id: row.id });
     });
+  // Keeps its sets, reps, rest, cue and superset: only the movement changes.
+  const swap = (row: TemplateRow, exercise: Exercise) =>
+    start(async () => {
+      applyLocal({ kind: "swap", id: row.id, exercise });
+      await swapTemplateExercise({ id: row.id, newExerciseId: exercise.id });
+    });
 
   const restOptions = (
     <>
@@ -481,6 +497,14 @@ function TemplateExercises({
                   </p>
                 </div>
                 <div className="-mr-3 flex shrink-0 items-center">
+                  <button
+                    aria-label={`Swap ${row.exercise?.name ?? "exercise"} for another`}
+                    title="Swap for another movement"
+                    onClick={() => setSwapping(row)}
+                    className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-text"
+                  >
+                    <ArrowLeftRight className="size-[18px]" />
+                  </button>
                   <button
                     disabled={i === 0}
                     aria-label={`Move ${row.exercise?.name ?? "exercise"} up`}
@@ -575,7 +599,16 @@ function TemplateExercises({
                       {slotLabel(slots[i])}
                     </span>
                   )}
-                  <span className="truncate text-sm text-text">{row.exercise?.name ?? "Unknown"}</span>
+                  {/* The name swaps it, as the logger's does. */}
+                  <button
+                    type="button"
+                    onClick={() => setSwapping(row)}
+                    aria-label={`Swap ${row.exercise?.name ?? "exercise"} for another`}
+                    className="flex min-w-0 items-center gap-1 text-left text-sm text-text"
+                  >
+                    <span className="truncate">{row.exercise?.name ?? "Unknown"}</span>
+                    <ArrowLeftRight aria-hidden className="size-3 shrink-0 text-muted" />
+                  </button>
                 </div>
                 <div className="truncate text-xs text-muted">
                   {row.exercise
@@ -690,6 +723,18 @@ function TemplateExercises({
             await addTemplateExercise({ templateId: template.id, exerciseId });
           })
         }
+      />
+      <ExercisePicker
+        open={swapping !== null}
+        onClose={() => setSwapping(null)}
+        title={swapping?.exercise ? `Swap ${swapping.exercise.name}` : "Swap exercise"}
+        hint="For this day from now on: every workout to come. Its sets, reps and rest stay."
+        exercises={exercises.filter((e) => e.id !== swapping?.exercise_id)}
+        onPick={(exerciseId) => {
+          const row = swapping;
+          const exercise = exercises.find((e) => e.id === exerciseId);
+          if (row && exercise) swap(row, exercise);
+        }}
       />
     </>
   );

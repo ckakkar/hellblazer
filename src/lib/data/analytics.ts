@@ -203,7 +203,9 @@ export async function getExerciseProgression(
       .from("v_exercise_progression")
       .select("*")
       .eq("exercise_id", exerciseId)
+      // Two workouts on one date go in the order they happened.
       .order("session_date", { ascending: true })
+      .order("session_started_at", { ascending: true })
       .order("session_id", { ascending: true })
       .range(from, to),
   );
@@ -278,7 +280,8 @@ export async function getTopLiftTrends(limit = 4, weeks = 12): Promise<LiftTrend
       top.map((t) => t.exercise_id),
     )
     .gte("session_date", since)
-    .order("session_date", { ascending: true });
+    .order("session_date", { ascending: true })
+    .order("session_started_at", { ascending: true });
   if (error) throw error;
 
   return top.map((t) => {

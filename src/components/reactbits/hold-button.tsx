@@ -6,7 +6,11 @@
  * custom-property prefix is renamed `hold-` (it collided with this app's own
  * `hb-` namespace), and the defaults are the app's destructive style (danger
  * fill on a tinted base, a 1.2 s hold, no glow). Its animation frame loop
- * runs only while a press is held or releasing.
+ * runs only while a press is held or releasing. Two more: `onHold` may
+ * return a promise (or false), and the button only says it's done once that
+ * succeeds, going back to idle when it fails; and assistive technology,
+ * which activates with a click rather than a hold, confirms by activating
+ * twice instead.
  */
 import React, { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { haptic } from '@/lib/haptics';
@@ -34,7 +38,10 @@ export interface HoldButtonProps {
   glow?: boolean;
   resetAfter?: number;
   disabled?: boolean;
-  onHold?: () => void;
+  /** The confirmed action. A promise keeps the done state until it settles;
+   *  a rejection, or false, puts the button back, so it never says "done"
+   *  for work that didn't happen. */
+  onHold?: () => void | boolean | Promise<unknown>;
   onTap?: () => void;
   className?: string;
 }
@@ -119,6 +126,9 @@ const HoldButton: React.FC<HoldButtonProps> = ({
   className = ''
 }) => {
   const [phase, setPhase] = useState<Phase>('idle');
+  // Armed by a first activation from VoiceOver or Switch Control.
+  const [armed, setArmed] = useState(false);
+  const armTimer = useRef(0);
   const [input, setInput] = useState<Input>(null);
   const phaseRef = useRef<Phase>('idle');
   const inputRef = useRef<Input>(null);
@@ -167,13 +177,36 @@ const HoldButton: React.FC<HoldButtonProps> = ({
     go('done', inputRef.current);
     // Destructive by default in this app: the system's warning knock (iOS app).
     haptic('warning');
-    onHold?.();
-    if (resetAfter > 0) {
-      timers.current.reset = window.setTimeout(() => {
-        go('idle');
-        drive(0, releaseTime, EASE_OUT);
-      }, resetAfter);
+    const undo = () => {
+      clearTimers();
+      go('idle');
+      drive(0, releaseTime, EASE_OUT);
+    };
+    const settle = (ok: unknown) => {
+      if (ok === false) return undo();
+      if (resetAfter > 0) timers.current.reset = window.setTimeout(undo, resetAfter);
+    };
+    const result = onHold?.();
+    if (result instanceof Promise) result.then(settle, undo);
+    else settle(result);
+  };
+
+  // A click with no pointer behind it (detail 0) is assistive technology
+  // activating the button: the keys and the pointer have their own paths
+  // (the keys' default is prevented, so they never click). Once arms it,
+  // again within four seconds confirms, the same protection as the hold.
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.detail !== 0 || disabled || phaseRef.current !== 'idle') return;
+    clearTimeout(armTimer.current);
+    if (!armed) {
+      setArmed(true);
+      armTimer.current = window.setTimeout(() => setArmed(false), 4000);
+      return;
     }
+    setArmed(false);
+    gesture.current.start = now() - holdTime;
+    go('holding', null);
+    complete();
   };
 
   const begin = (kind: Input) => {
@@ -345,6 +378,7 @@ const HoldButton: React.FC<HoldButtonProps> = ({
       onKeyDown={handleKeyDown}
       onKeyUp={handleKeyUp}
       onContextMenu={e => e.preventDefault()}
+      onClick={handleClick}
     >
       <style>{STYLE}</style>
       <span
@@ -364,7 +398,10 @@ const HoldButton: React.FC<HoldButtonProps> = ({
         </span>
       </span>
       <span id={hintId} className="absolute h-px w-px overflow-hidden whitespace-nowrap [clip-path:inset(50%)]">
-        Press and hold for {Math.round(holdTime / 100) / 10} seconds to confirm
+        Press and hold for {Math.round(holdTime / 100) / 10} seconds to confirm, or activate twice
+      </span>
+      <span aria-live="polite" className="absolute h-px w-px overflow-hidden whitespace-nowrap [clip-path:inset(50%)]">
+        {armed ? 'Activate again to confirm' : ''}
       </span>
     </button>
   );

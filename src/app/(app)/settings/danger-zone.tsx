@@ -5,6 +5,7 @@ import { Loader2, RotateCcw, Trash2, UserX } from "lucide-react";
 import HoldButton from "@/components/reactbits/hold-button";
 import { resetProgram } from "@/lib/actions/programs";
 import { clearHistory } from "@/lib/actions/sessions";
+import { forgetThisDevice } from "@/lib/sign-out";
 import { deleteAccount } from "@/lib/actions/account";
 import { useAction } from "@/lib/use-action";
 
@@ -20,6 +21,19 @@ export function DangerZone({
 }) {
   const [pending, start] = useAction("finish that");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  // Resolves to whether the work happened, so a hold only says "Restarted"
+  // (or "Wiping") when it did, and springs back when it didn't.
+  const confirmed = (work: () => Promise<unknown>) =>
+    new Promise<boolean>((resolve) =>
+      start(async () => {
+        try {
+          resolve((await work()) !== false);
+        } catch (err) {
+          resolve(false);
+          throw err;
+        }
+      }),
+    );
 
   return (
     <div className="grid grid-cols-1 gap-4">
@@ -35,15 +49,15 @@ export function DangerZone({
           <HoldButton
             size="sm"
             radius={10}
-            backgroundColor="#1c1c1f"
-            fillColor="#f4f2ee"
-            textColor="#f4f2ee"
-            fillTextColor="#000000"
+            backgroundColor="var(--color-surface-2)"
+            fillColor="var(--color-text)"
+            textColor="var(--color-text)"
+            fillTextColor="var(--color-bg)"
             holdTime={1200}
             disabled={pending}
             icon={pending ? <Loader2 className="size-4 animate-spin" /> : <RotateCcw className="size-4" />}
             doneLabel="Restarted"
-            onHold={() => start(async () => void (await resetProgram({ id: activeProgram.id })))}
+            onHold={() => confirmed(() => resetProgram({ id: activeProgram.id }))}
             className="shrink-0"
           >
             Hold to restart
@@ -66,7 +80,7 @@ export function DangerZone({
           disabled={pending}
           icon={pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
           doneLabel="Wiping"
-          onHold={() => start(async () => void (await clearHistory()))}
+          onHold={() => confirmed(() => clearHistory())}
           className="shrink-0"
         >
           Hold to wipe history
@@ -94,11 +108,15 @@ export function DangerZone({
           icon={pending ? <Loader2 className="size-4 animate-spin" /> : <UserX className="size-4" />}
           doneLabel="Deleting"
           onHold={() =>
-            start(async () => {
+            confirmed(async () => {
               setDeleteError(null);
+              // This device lets go of the account first (widgets, Spotlight,
+              // the watch, notifications), while the session still works.
+              await forgetThisDevice();
               // Success redirects away; only a failure comes back.
               const result = await deleteAccount();
               setDeleteError(result.error);
+              return false;
             })
           }
           className="shrink-0"

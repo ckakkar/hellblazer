@@ -31,14 +31,30 @@ export function PwaRegister() {
     // the deploy it now talks to. On a first visit there is no old worker:
     // the fresh one claiming the page also fires controllerchange, and
     // reloading then would just flash the page (or drop a half-filled form).
+    // Not mid-workout, and not with a field being typed in: then it waits
+    // until the page is out of sight (the phone locked, another app), where
+    // a reload interrupts nothing.
     const hadController = Boolean(navigator.serviceWorker.controller);
     let reloading = false;
-    const adoptFreshWorker = () => {
-      if (!hadController || reloading) return;
+    let waiting = false;
+    const busy = () =>
+      window.location.pathname.startsWith("/log/") ||
+      Boolean(document.activeElement?.matches("input, textarea, select, [contenteditable='true']"));
+    const reload = () => {
+      if (reloading) return;
       reloading = true;
       window.location.reload();
     };
+    const adoptFreshWorker = () => {
+      if (!hadController || reloading) return;
+      if (busy()) waiting = true;
+      else reload();
+    };
+    const reloadOutOfSight = () => {
+      if (waiting && document.visibilityState === "hidden") reload();
+    };
     navigator.serviceWorker.addEventListener("controllerchange", adoptFreshWorker);
+    document.addEventListener("visibilitychange", reloadOutOfSight);
 
     const register = () => {
       navigator.serviceWorker.register("/sw.js").then((registration) => {
@@ -55,6 +71,7 @@ export function PwaRegister() {
     return () => {
       window.removeEventListener("load", register);
       navigator.serviceWorker.removeEventListener("controllerchange", adoptFreshWorker);
+      document.removeEventListener("visibilitychange", reloadOutOfSight);
     };
   }, []);
   return null;

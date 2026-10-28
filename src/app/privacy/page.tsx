@@ -40,13 +40,16 @@ export default function PrivacyPage() {
         <h2>Who else sees it</h2>
         <ul>
           <li>
-            <strong>Other lifters</strong> see only your ring name and rank on the leaderboard, and
-            only if you set a ring name.
+            <strong>Other signed-in lifters</strong> see your ring name, your rank and the total
+            weight you&apos;ve lifted on King of the Hill, and only if you set a ring name. Your
+            name, email, measurements and workouts are never shown to anyone else.
           </li>
           <li>
-            <strong>The strength judge:</strong> when you ask for a rank, your training numbers and
-            the profile details it uses (sex, age, height, bodyweight) are sent to DeepSeek&apos;s AI,
-            which decides the rank. Nothing is sent unless you ask.
+            <strong>The strength judge:</strong> when you ask for a rank, a summary of your training is
+            sent to DeepSeek&apos;s AI, which decides the rank: each lift&apos;s name and best numbers,
+            how often and how much you train, your program&apos;s name and week, and the profile
+            details you&apos;ve added (sex, age, height, bodyweight). Never your name or email.
+            Nothing is sent unless you ask.
           </li>
           <li>
             <strong>The services that run Fatty:</strong> Supabase (database and sign-in, hosted in
@@ -74,8 +77,10 @@ export default function PrivacyPage() {
       <section>
         <h2>Cookies and tracking</h2>
         <p>
-          Fatty uses cookies only to keep you signed in. There are no ads, no analytics services and
-          no tracking.
+          Fatty&apos;s cookies keep you signed in and remember your own settings on this device: your
+          units, accent colour, light or dark, and time zone (so &quot;today&quot; is your today). The
+          logger also keeps unsaved sets on your device until they reach the server. There are no
+          ads, no analytics services and no tracking.
         </p>
       </section>
 

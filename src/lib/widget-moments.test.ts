@@ -36,24 +36,27 @@ describe("trainingDays", () => {
 });
 
 describe("latestRecord", () => {
-  const bench = { id: "b", name: "Bench Press", bestWeight: 100, bestReps: 3, estimatedMax: 110, sessions: 20 };
-  const squat = { id: "s", name: "Squat", bestWeight: 140, bestReps: 5, estimatedMax: 163, sessions: 3 };
+  const bench = { id: "b", name: "Bench Press", bestWeight: 100, bestReps: 3, estimatedMax: 110 };
+  const squat = { id: "s", name: "Squat", bestWeight: 140, bestReps: 5, estimatedMax: 163 };
 
-  it("is the newest first-time-at-its-best across lifts", () => {
+  it("is the latest lift to reach its all-time best, on the day it first did", () => {
     const record = latestRecord(
       [bench, squat],
       [
-        { id: "b", points: [{ date: "2026-09-01", e1rm: 105 }, { date: "2026-09-20", e1rm: 110 }, { date: "2026-09-25", e1rm: 110 }] },
-        { id: "s", points: [{ date: "2026-09-10", e1rm: 150 }, { date: "2026-09-18", e1rm: 163.3 }] },
+        { id: "b", date: "2026-09-20", sessionsBefore: 12 },
+        { id: "s", date: "2026-09-18", sessionsBefore: 2 },
       ],
     );
     expect(record).toEqual({ name: "Bench Press", weight: 100, reps: 3, estimatedMax: 110, date: "2026-09-20" });
   });
 
-  it("isn't a lift's first session, or a best from before the trend", () => {
-    expect(latestRecord([{ ...squat, sessions: 1 }], [{ id: "s", points: [{ date: "2026-09-18", e1rm: 163 }] }])).toBeNull();
-    expect(
-      latestRecord([bench], [{ id: "b", points: [{ date: "2026-09-01", e1rm: 100 }, { date: "2026-09-20", e1rm: 104 }] }]),
-    ).toBeNull();
+  it("keeps a best reached long ago on its own date, however often it's matched since", () => {
+    // 100 sessions in, the best was first reached in session 40, in June.
+    expect(latestRecord([bench], [{ id: "b", date: "2026-06-02", sessionsBefore: 39 }])?.date).toBe("2026-06-02");
+  });
+
+  it("doesn't call a lift's first session a record", () => {
+    expect(latestRecord([squat], [{ id: "s", date: "2026-09-18", sessionsBefore: 0 }])).toBeNull();
+    expect(latestRecord([bench], [])).toBeNull();
   });
 });

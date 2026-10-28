@@ -52,6 +52,7 @@ import type { TierKey } from "@/lib/tiers";
 import { cn, fitFigure, selectAllOnFocus } from "@/lib/utils";
 import { randomVictory } from "@/lib/hype";
 import { coachLine, notebookSets } from "@/lib/coach";
+import { isLogged, isStraight, isWork } from "@/lib/set-kinds";
 import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
@@ -94,6 +95,7 @@ import {
   setSessionSuperset,
   swapSessionExercise,
   updateSessionMeta,
+  setExerciseEnded,
 } from "@/lib/actions/sessions";
 
 type SetKind = "drop" | "rest_pause" | null;
@@ -110,7 +112,17 @@ type LocalSet = {
   isWarmup: boolean;
   /** A drop or rest-pause set; null for a plain one. */
   kind: SetKind;
+  /** When it was first logged on this device (epoch ms), kept through edits
+   *  and retries, so a set that only reaches the server later still says
+   *  when it was done. Absent for one that came from the server. */
+  loggedAt?: number;
 };
+
+/** A set as the shared rules count it (set-kinds.ts). */
+const counted = (s: LocalSet) => ({ warmup: s.isWarmup, kind: s.kind, reps: s.reps });
+/** Counts toward the workout's sets and volume: not a warm-up, not a draft. */
+const work = (s: LocalSet) => isWork(counted(s));
+
 type LocalExercise = {
   seId: string;
   exerciseId: string;
@@ -187,7 +199,7 @@ export function SessionLogger({
   session,
   exerciseLibrary,
   lastPerformances,
-  targets,
+  targets: sessionTargets,
   exercisePRs,
   unit,
   fighter,
@@ -204,6 +216,10 @@ export function SessionLogger({
 }) {
   const [, startNav] = useTransition();
   const router = useRouter();
+  // A movement swapped in after sets were logged keeps the one it replaced's
+  // targets; the rest are the session's own.
+  const [carriedTargets, setTargets] = useState<Record<string, SessionTarget>>({});
+  const targets = useMemo(() => ({ ...sessionTargets, ...carriedTargets }), [sessionTargets, carriedTargets]);
   const [finishing, setFinishing] = useState(false);
   // Throwing the workout away: asked once, then gone.
   const [confirmDiscard, setConfirmDiscard] = useState(false);
@@ -315,7 +331,11 @@ export function SessionLogger({
   // Exercises the lifter ended by hand, short of their target or not: the
   // Lock Screen moves on from these (unlike `completed`, which also marks
   // everything already started when a session is reopened).
-  const [endedHere, setEndedHere] = useState<Set<string>>(new Set());
+  // Kept with the workout (session_exercise.ended_at), so the watch, Siri and
+  // a reload agree on what's next.
+  const [endedHere, setEndedHere] = useState<Set<string>>(
+    () => new Set(session.session_exercise.filter((se) => se.ended_at).map((se) => se.id)),
+  );
 
   // Exercises are done in order. An exercise counts as "done" once it's been
   // ended; any exercise that already had logged sets (a resumed session) starts
@@ -403,6 +423,7 @@ export function SessionLogger({
       rpe: set.rpe,
       isWarmup: set.isWarmup,
       kind: set.kind,
+      loggedAt: set.loggedAt,
       updatedAt: nextStamp(),
     }),
     [session.id, unit],
@@ -417,11 +438,22 @@ export function SessionLogger({
     });
   }, []);
 
+  // Every upload under way, so finishing can wait for the last of them.
+  const uploads = useRef<Set<Promise<boolean>>>(new Set());
+  const track = useCallback((upload: Promise<boolean>) => {
+    uploads.current.add(upload);
+    void upload.finally(() => uploads.current.delete(upload));
+    return upload;
+  }, []);
+
+  /** Saves a set. Resolves to whether the server has it (a draft: nothing to save). */
   const persist = useCallback(
-    (seId: string, set: LocalSet, setNumber: number) => {
+    (seId: string, set: LocalSet, setNumber: number): Promise<boolean> => {
+      // No reps yet: a draft, kept on this page until it has one.
+      if (!isLogged(set.reps)) return Promise.resolve(true);
       const write = toQueuedWrite(seId, set, setNumber);
       setInFlight((n) => n + 1);
-      return queueSet(write)
+      return track(queueSet(write)
         .catch(() => undefined)
         .then(() =>
           saveSet({
@@ -433,6 +465,7 @@ export function SessionLogger({
             rpe: write.rpe,
             isWarmup: write.isWarmup,
             kind: write.kind ?? null,
+            loggedAt: write.loggedAt,
           }),
         )
         .then(async () => {
@@ -440,15 +473,17 @@ export function SessionLogger({
           // meanwhile stays on the device until its own upload lands.
           await removeQueuedSet(set.id, write.updatedAt).catch(() => undefined);
           clearFailed(set.id);
+          return true;
         })
         .catch(() => {
           // Keep the device copy and expose the failed upload. The row can now
           // survive a reload, but the lifter still deserves honest sync status.
           setFailed((prev) => new Set(prev).add(set.id));
+          return false;
         })
-        .finally(() => setInFlight((n) => Math.max(0, n - 1)));
+        .finally(() => setInFlight((n) => Math.max(0, n - 1))));
     },
-    [toQueuedWrite, clearFailed],
+    [toQueuedWrite, clearFailed, track],
   );
 
   // Deletes go through the device queue too, as a tombstone, so a set removed
@@ -471,7 +506,7 @@ export function SessionLogger({
       };
       pendingDeletes.current.set(setId, seId);
       setInFlight((n) => n + 1);
-      return queueSet(tombstone)
+      return track(queueSet(tombstone)
         .catch(() => undefined)
         .then(() => deleteSet({ id: setId }))
         .then(async () => {
@@ -480,13 +515,15 @@ export function SessionLogger({
           );
           pendingDeletes.current.delete(setId);
           clearFailed(setId);
+          return true;
         })
         .catch(() => {
           setFailed((prev) => new Set(prev).add(setId));
+          return false;
         })
-        .finally(() => setInFlight((n) => Math.max(0, n - 1)));
+        .finally(() => setInFlight((n) => Math.max(0, n - 1))));
     },
-    [session.id, clearFailed],
+    [session.id, clearFailed, track],
   );
 
   // Restore device-local writes before the lifter touches the screen. Queued
@@ -528,6 +565,7 @@ export function SessionLogger({
               rpe: write.rpe,
               isWarmup: write.isWarmup,
               kind: write.kind ?? null,
+              loggedAt: write.loggedAt,
             };
             const existing = sets.findIndex((set) => set.id === write.id);
             if (existing >= 0) sets[existing] = restored;
@@ -863,7 +901,7 @@ export function SessionLogger({
     setExercises(next);
     const exercise = next.find((ex) => ex.seId === seId);
     const setIndex = exercise?.sets.findIndex((set) => set.id === setId) ?? -1;
-    if (exercise && setIndex >= 0) {
+    if (exercise && setIndex >= 0 && isLogged(exercise.sets[setIndex].reps)) {
       void queueSet(
         toQueuedWrite(seId, exercise.sets[setIndex], setIndex + 1),
       ).catch(() => undefined);
@@ -896,9 +934,13 @@ export function SessionLogger({
   function addSet(seId: string) {
     const ex = ref.current.find((e) => e.seId === seId);
     if (!ex) return;
-    const prev = ex.sets[ex.sets.length - 1];
-    const last = lastFor(ex.exerciseId)?.sets[ex.sets.length];
-    // The first set starts at today's target; the rest copy the one before.
+    // As "same again" (next-set.ts): the last straight set, else today's
+    // target, else the same set last time. A warm-up's or a drop set's
+    // numbers are never the next working set's.
+    const straight = ex.sets.filter((s) => isStraight(counted(s)));
+    const prev = straight.at(-1);
+    const pastSets = lastFor(ex.exerciseId)?.sets;
+    const last = pastSets?.[straight.length] ?? pastSets?.at(-1);
     const target = prev ? null : targetFor(ex);
     const seed: LocalSet = {
       id: crypto.randomUUID(),
@@ -913,7 +955,10 @@ export function SessionLogger({
       rpe: null,
       isWarmup: false,
       kind: null,
+      loggedAt: Date.now(),
     };
+    // A set added to an exercise ended early picks it back up.
+    if (endedHere.has(seId)) resumeExercise(seId);
     const nextNumber = ex.sets.length + 1;
     // `ref.current` is also synced from an effect, which lands a commit behind.
     // Advance it here as well so two "+ set" taps inside the same frame can't
@@ -960,6 +1005,7 @@ export function SessionLogger({
       rpe: null,
       isWarmup: false,
       kind: "drop",
+      loggedAt: Date.now(),
     };
     const next = ref.current.map((e) => (e.seId === seId ? { ...e, sets: [...e.sets, set] } : e));
     ref.current = next;
@@ -1146,12 +1192,16 @@ export function SessionLogger({
       });
   }
 
+  // For this workout only: the template is changed on the Templates page.
+  // Before any set it's the same row with a new movement; with sets logged,
+  // those stay where they were done, and the new movement comes in after.
   function swap(seId: string, newExerciseId: string) {
     const meta = exerciseLibrary.find((e) => e.id === newExerciseId);
     if (!meta) return;
     if (needsConnection("Swapping a movement")) return;
     const before = ref.current.find((e) => e.seId === seId);
     if (!before) return;
+    const hasSets = before.sets.some((s) => isLogged(s.reps));
     const relabel = (exerciseId: string, name: string, primaryMuscle: Muscle) => {
       const next = ref.current.map((e) =>
         e.seId === seId ? { ...e, exerciseId, name, primaryMuscle } : e,
@@ -1160,21 +1210,64 @@ export function SessionLogger({
       setExercises(next);
     };
 
-    relabel(newExerciseId, meta.name, meta.primary_muscle);
-    swapSessionExercise({ sessionExerciseId: seId, newExerciseId }).catch(() => {
-      // The server still has the old movement, and the logged sets belong to
-      // it. Showing the new name would misattribute them.
-      relabel(before.exerciseId, before.name, before.primaryMuscle);
-      showNotice(
-        `Couldn't swap to ${meta.name}. Your sets are still logged under ${before.name}.`,
-      );
+    // Nothing logged yet: shown at once, put back if the server says no.
+    if (!hasSets) relabel(newExerciseId, meta.name, meta.primary_muscle);
+    startNav(async () => {
+      let swapped: Awaited<ReturnType<typeof swapSessionExercise>>;
+      try {
+        swapped = await swapSessionExercise({ sessionExerciseId: seId, newExerciseId });
+      } catch {
+        if (!hasSets) relabel(before.exerciseId, before.name, before.primaryMuscle);
+        showNotice(`Couldn't swap to ${meta.name}. Check your connection and try again.`);
+        return;
+      }
+      if (swapped.lastPerformance) {
+        setAddedLast((prev) => ({ ...prev, [newExerciseId]: swapped.lastPerformance! }));
+      }
+      if (!swapped.split) return;
+      // The old movement keeps its sets and ends here; the new one follows it.
+      const index = ref.current.findIndex((e) => e.seId === seId);
+      const old = ref.current[index];
+      if (!old) return;
+      const next = [
+        ...ref.current.slice(0, index + 1),
+        {
+          seId: swapped.id,
+          exerciseId: newExerciseId,
+          name: meta.name,
+          primaryMuscle: meta.primary_muscle,
+          note: old.note,
+          superset: old.superset,
+          sets: [],
+        },
+        ...ref.current.slice(index + 1),
+      ];
+      ref.current = next;
+      setExercises(next);
+      setTargets((prev) => (prev[seId] ? { ...prev, [swapped.id]: prev[seId] } : prev));
+      setCompleted((prev) => new Set(prev).add(seId));
+      setEndedHere((prev) => new Set(prev).add(seId));
+      setActiveSeId(swapped.id);
     });
   }
 
+  // "Done with this one" is kept with the workout, so a reload, the watch
+  // and Siri move on from it too. Saved quietly: offline, the page still
+  // moves on, and the next save that lands brings the server up to date.
   function endExercise(seId: string) {
     setCompleted((prev) => new Set(prev).add(seId));
     setEndedHere((prev) => new Set(prev).add(seId));
     setActiveSeId(null);
+    if (!isEditing) void setExerciseEnded({ sessionExerciseId: seId, ended: true }).catch(() => undefined);
+  }
+
+  function resumeExercise(seId: string) {
+    setEndedHere((prev) => {
+      const next = new Set(prev);
+      next.delete(seId);
+      return next;
+    });
+    if (!isEditing) void setExerciseEnded({ sessionExerciseId: seId, ended: false }).catch(() => undefined);
   }
 
   /**
@@ -1191,7 +1284,7 @@ export function SessionLogger({
     // The session's average RPE is its Effort rating in the Fitness app.
     const rpes = exercises
       .flatMap((e) => e.sets)
-      .filter((s) => !s.isWarmup && s.rpe != null)
+      .filter((s) => work(s) && s.rpe != null)
       .map((s) => Number(s.rpe));
     const effort = rpes.length
       ? Math.min(10, Math.max(1, Math.round(rpes.reduce((a, b) => a + b, 0) / rpes.length)))
@@ -1206,7 +1299,35 @@ export function SessionLogger({
     );
   }
 
-  /** Returns whether finishing actually started (the slider resets if not). */
+  /**
+   * Every save still waiting (a debounced edit) goes now, and every upload
+   * under way is waited for. Resolves to whether the server has them all.
+   */
+  async function flushSaves(): Promise<boolean> {
+    const now: Promise<boolean>[] = [];
+    for (const [setId, seId] of pendingSaves.current) {
+      const timer = timers.current.get(setId);
+      if (timer) clearTimeout(timer);
+      timers.current.delete(setId);
+      const ex = ref.current.find((e) => e.seId === seId);
+      const idx = ex?.sets.findIndex((s) => s.id === setId) ?? -1;
+      if (ex && idx >= 0) {
+        now.push(persist(seId, ex.sets[idx], idx + 1));
+        checkPR(ex.exerciseId, ex.name, ex.sets[idx]);
+      }
+    }
+    pendingSaves.current.clear();
+    const results = await Promise.all([...uploads.current, ...now]);
+    return results.every(Boolean) && failedRef.current.size === 0;
+  }
+
+  /**
+   * Returns whether finishing actually started (the slider resets if not).
+   * The order matters: every set saved, then the server marks the workout
+   * finished, and only then the victory, the haptic and Apple Health. A
+   * finish that fails leaves the workout as it was, with nothing celebrated
+   * and nothing in Health.
+   */
   function finish(force = false): boolean {
     // Finishing discards the page, so unsaved sets would be gone for good.
     // Retry once and make them confirm rather than losing work silently.
@@ -1217,38 +1338,44 @@ export function SessionLogger({
     }
     // Nothing logged means nothing to finish: it would land in History as an
     // empty bout. A mistaken start is discarded instead.
-    if (!isEditing && !exercises.some((e) => e.sets.length > 0)) {
+    if (!isEditing && !exercises.some((e) => e.sets.some((s) => isLogged(s.reps)))) {
       showNotice("Nothing's logged yet. Log a set to finish, or discard the workout.");
       return false;
     }
     if (needsConnection("Finishing the session")) return false;
     setConfirmFinish(false);
     setFinishing(true);
-    setVictory(isEditing ? "Saved" : randomVictory());
-    haptic("success");
-    rest.skip();
-    saveToHealth();
-    setTimeout(() => {
-      startNav(async () => {
-        try {
-          // Auto-record the live clock unless a duration was typed by hand.
-          await finishSession({
-            sessionId: session.id,
-            durationMin: duration ?? autoDuration,
-          });
-        } catch (err) {
-          // Success arrives as a redirect, which rejects this promise; let
-          // the router have it. Anything else is a real failure.
-          unstable_rethrow(err);
-          setVictory(null);
-          setFinishing(false);
-          setSlideKey((k) => k + 1);
-          showNotice(
-            "Couldn't finish the session. Your sets are safe; try again in a moment.",
-          );
-        }
-      });
-    }, 1700);
+    const failedFinish = (message: string) => {
+      setFinishing(false);
+      setSlideKey((k) => k + 1);
+      showNotice(message);
+    };
+    startNav(async () => {
+      const saved = await flushSaves();
+      if (!saved && !force) {
+        setConfirmFinish(true);
+        failedFinish("A set didn't save, so the workout isn't finished yet. Retry it, or finish without it.");
+        return;
+      }
+      try {
+        // Auto-record the live clock unless a duration was typed by hand.
+        await finishSession({
+          sessionId: session.id,
+          durationMin: duration ?? autoDuration,
+          navigate: false,
+        });
+      } catch (err) {
+        unstable_rethrow(err);
+        failedFinish("Couldn't finish the session. Your sets are safe; try again in a moment.");
+        return;
+      }
+      rest.skip();
+      setVictory(isEditing ? "Saved" : randomVictory());
+      haptic("success");
+      saveToHealth();
+      await new Promise((resolve) => setTimeout(resolve, 1700));
+      router.replace(`/history/${session.id}`);
+    });
     return true;
   }
 
@@ -1270,14 +1397,14 @@ export function SessionLogger({
   }
 
   const totalSets = exercises.reduce(
-    (n, e) => n + e.sets.filter((s) => !s.isWarmup).length,
+    (n, e) => n + e.sets.filter(work).length,
     0,
   );
   const totalForce = exercises.reduce(
     (n, e) =>
       n +
       e.sets
-        .filter((s) => !s.isWarmup)
+        .filter(work)
         .reduce(
           (m, s) => m + (Number(s.weight) || 0) * (Number(s.reps) || 0),
           0,
@@ -1329,13 +1456,15 @@ export function SessionLogger({
   // Log Set button to log as shown.
   const nextSet = (() => {
     if (!current || isEditing) return undefined;
-    const prev = current.sets[current.sets.length - 1];
-    const past = lastFor(current.exerciseId)?.sets[current.sets.length];
-    const target = prev ? null : targetFor(current);
-    const weight = prev ? prev.weight : target ? target.weight : past ? toDisplayWeight(past.weight_kg, unit) : null;
-    const reps = prev ? prev.reps : target ? target.reps : (past?.reps ?? null);
-    if (weight == null || reps == null || reps < 1) return undefined;
-    return { sessionExerciseId: current.seId, weight, reps, label: nextSetLabel(weight, reps, unit) };
+    const plan = plans.find((p) => p.id === current.seId);
+    const same = plan ? sameAgain(plan) : null;
+    if (!same || !isLogged(same.reps)) return undefined;
+    return {
+      sessionExerciseId: current.seId,
+      weight: same.weight,
+      reps: same.reps,
+      label: nextSetLabel(same.weight, same.reps, unit),
+    };
   })();
 
   // Declared after the queue it labels its alert with; functions above that
@@ -1347,7 +1476,7 @@ export function SessionLogger({
   // countdown are dates the system draws from. It outlives this page, since
   // the workout goes on while you look at another tab, and ends when the
   // session is finished (or found abandoned; see WorkoutActivitySync).
-  const currentDone = current ? current.sets.filter((s) => !s.isWarmup).length : 0;
+  const currentDone = current ? current.sets.filter(work).length : 0;
   const activityState = JSON.stringify({
     sessionId: session.id,
     startedAt,
@@ -1538,7 +1667,7 @@ export function SessionLogger({
             {done.length > 0 && (
               <div className="divide-y divide-text/[0.08] border-y border-text/[0.08]">
                 {done.map(({ ex }) => {
-                  const workingSets = ex.sets.filter((s) => !s.isWarmup);
+                  const workingSets = ex.sets.filter(work);
                   const hasPR = ex.sets.some((s) => prSets.has(s.id));
                   return (
                     <button
@@ -1578,7 +1707,7 @@ export function SessionLogger({
               const { ex, i } = current;
               const last = lastFor(ex.exerciseId);
               const target = ex.sets.length === 0 ? targetFor(ex) : null;
-              const today = ex.sets.filter((s) => !s.isWarmup);
+              const today = ex.sets.filter(work);
               return (
                 <div className="rounded-3xl bg-surface p-5">
                   <div className="flex items-baseline justify-between gap-2 text-[13px] text-muted">
@@ -1721,11 +1850,13 @@ export function SessionLogger({
             Save session
           </Button>
         ) : (
-          // A slide, not a tap: finishing ends the workout, and a stray tap
-          // mid-set shouldn't. It resets if finishing can't go ahead.
+          // A slide (or two taps), not one tap: finishing ends the workout,
+          // and a stray tap mid-set shouldn't. It resets if finishing can't
+          // go ahead.
           <SlideCommit
             key={slideKey}
             label="Slide to finish"
+            tapAgainLabel="Tap again to finish"
             doneLabel="Finished"
             errorLabel="Not finished"
             successTextColor="#000000"
@@ -1975,6 +2106,7 @@ function ActiveExerciseModal({
     <Sheet
       open
       onClose={onClose}
+      fill={swapping}
       title={swapping ? "Swap movement" : exercise.name}
       footer={
         swapping ? (
@@ -2018,7 +2150,9 @@ function ActiveExerciseModal({
               />
             </div>
             <p className="mt-2 px-1 text-[13px] text-muted">
-              Picks become this day’s new default going forward.
+              {hasSets
+                ? `For this workout only. Your sets stay on ${exercise.name}, and the new movement comes in after it.`
+                : "For this workout only. To change it for good, swap it in the template."}
             </p>
           </div>
           <ul className="mx-4 mb-4 divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-text/[0.04]">
@@ -2462,6 +2596,7 @@ function SetRow({
             onChange={(v) => onChange({ weight: Number.isNaN(v) ? null : v })}
             step={weightStep}
             precision={2}
+            max={unit === "lb" ? 2000 : 900}
           />
         </div>
         <div>
@@ -2475,6 +2610,7 @@ function SetRow({
             onChange={(v) => onChange({ reps: Number.isNaN(v) ? null : v })}
             step={1}
             precision={0}
+            max={999}
           />
         </div>
       </div>

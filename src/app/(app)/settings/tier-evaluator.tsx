@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { getTier, MAX_RANK } from "@/lib/tiers";
 import { evaluateTier, type EvalResult } from "@/lib/actions/evaluation";
 import { acceptTier, declineTier } from "@/lib/actions/profile";
+import { useAction } from "@/lib/use-action";
 import {
   EVAL_COOLDOWN_DAYS,
   daysUntil,
@@ -37,8 +38,10 @@ export function TierEvaluator({
   evaluatedLabel: string | null;
   gate: EvalGate;
 }) {
-  const [pending, start] = useTransition();
-  const [accepting, startAccept] = useTransition();
+  // Guarded: a dropped connection says what didn't happen instead of
+  // replacing the page, and the busy state always settles.
+  const [pending, start] = useAction("reach the judge");
+  const [accepting, startAccept] = useAction("accept the verdict");
   const [result, setResult] = useState<EvalResult | null>(null);
 
   const current = getTier(currentTierKey);
@@ -52,18 +55,30 @@ export function TierEvaluator({
     });
   }
 
-  // Neither call names a rank: the server acts on the verdict it recorded.
+  // Neither call names a rank: the server acts on the verdict it recorded,
+  // and only the one shown here.
   function accept() {
     if (!result?.ok) return;
+    const { verdictId } = result;
     startAccept(async () => {
-      await acceptTier();
-      setResult(null);
+      const accepted = await acceptTier({ verdictId });
+      setResult(
+        accepted.ok
+          ? null
+          : {
+              ok: false,
+              error: "failed",
+              message: "That verdict is no longer the judge's latest. Your rank is as it was.",
+            },
+      );
     });
   }
 
   function decline() {
+    if (!result?.ok) return;
+    const { verdictId } = result;
     setResult(null);
-    void declineTier().catch(() => undefined);
+    void declineTier({ verdictId }).catch(() => undefined);
   }
 
   const direction =
@@ -75,8 +90,11 @@ export function TierEvaluator({
           : "same"
       : "up";
 
+  // What actually goes (getTrainingProfile): said plainly, before it goes.
+  const sends =
+    "Sends DeepSeek a summary of your training: each lift's bests, how often and how much you train, your program, and your age, sex, height and bodyweight if you've added them. Never your name or email.";
   const gateCopy = gate.unlimited
-    ? "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result: and past the Monster, you can call for one whenever you like, with nothing new on the log."
+    ? `${sends} You choose whether to accept the verdict, and past the Monster you can ask whenever you like.`
     : gate.reason === "no_workout"
       ? "Finish a workout first: the judge rules on logged work, nothing else."
       : gate.reason === "no_new_workout"
@@ -87,49 +105,44 @@ export function TierEvaluator({
             } ${
               gate.nextRunAt && daysUntil(gate.nextRunAt) === 1 ? "day" : "days"
             }: one evaluation every ${EVAL_COOLDOWN_DAYS} days.`
-          : "Sends your full training history to DeepSeek for a verdict. You choose whether to accept the result.";
+          : `${sends} You choose whether to accept the verdict.`;
 
   return (
     <div className="grid grid-cols-1 gap-4">
-      {/* The standing verdict. Who you are (fighter, name, rank) is the page
-          header now, so this card is the judge's reasoning and the ladder. */}
-      <div className="rounded-2xl bg-surface p-5">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted">
-            {current ? `The judge on ${current.name.split(" ")[0]}` : "Unranked"}
-            {/* Past Julius the judge answers on demand: worth saying out loud,
-                it's the reward for clearing the wall. */}
-            {gate.unlimited && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-muted">
-                <InfinityIcon className="size-3" />
-                Unlimited verdicts
-              </span>
-            )}
-          </div>
-          {!current && (
-            <>
-              <div className="font-display mt-1.5 text-[1.75rem] leading-tight text-muted">
-                No rank yet
-              </div>
-              <div className="mt-0.5 text-[15px] text-muted">Ask the judge below.</div>
-            </>
-          )}
-          <TierLadder rank={currentRank} className={current ? "mt-3" : "mt-4"} />
-          {rationale && (
-            <p className="mt-4 text-[15px] leading-[1.5] text-text/80">{rationale}</p>
-          )}
-          {evaluatedLabel && (
-            <p className="mt-2 text-[13px] text-muted">Judged {evaluatedLabel}</p>
+      {/* The standing verdict, on the page: the ladder ruled off, then the
+          judge's words set as a quote, with when they ruled. */}
+      <div className="border-t border-text/[0.12] px-1 pt-4">
+        <div className="flex items-baseline justify-between gap-3 text-[13px] text-muted">
+          <span className="tnum">
+            {current ? `${current.name}, ${currentRank} of ${MAX_RANK}` : "Unranked"}
+          </span>
+          {/* Past Julius the judge answers on demand: worth saying out loud,
+              it's the reward for clearing the wall. */}
+          {gate.unlimited && (
+            <span className="inline-flex shrink-0 items-center gap-1 text-[12px] font-medium">
+              <InfinityIcon className="size-3.5" />
+              Unlimited verdicts
+            </span>
           )}
         </div>
+        <TierLadder rank={currentRank} className="mt-2.5 [&>div]:h-1.5" />
+        {rationale ? (
+          <blockquote className="mt-6 border-l-2 border-accent pl-4">
+            <p className="text-[17px] leading-[1.55] text-text/90">{rationale}</p>
+            {evaluatedLabel && (
+              <footer className="mt-2 text-[13px] text-muted">The judge, {evaluatedLabel}</footer>
+            )}
+          </blockquote>
+        ) : (
+          <p className="mt-5 text-[15px] text-muted">No verdict yet. Ask the judge below.</p>
+        )}
       </div>
 
       <div>
         <Button
           onClick={run}
           disabled={pending || !gate.canRun}
-          size="lg"
-          className="w-full sm:w-auto"
+          className="px-5"
         >
           {pending ? (
             <Loader2 className="size-4 animate-spin" />

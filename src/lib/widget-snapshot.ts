@@ -37,7 +37,7 @@ export async function buildWidgetSnapshot(
   // A year of workouts: this week's numbers, and the streak and calendar.
   const yearStart = format(subWeeks(parseISO(weekStart), 52), "yyyy-MM-dd");
 
-  const [year, program, muscles, stats, trendRows, profile] = await Promise.all([
+  const [year, program, muscles, stats, trendRows, profile, recordRows] = await Promise.all([
     db
       .from("v_session_summary")
       .select("session_date, working_sets")
@@ -86,13 +86,22 @@ export async function buildWidgetSnapshot(
         if (error) throw error;
         return data;
       }),
+    // When each best was first reached, from the whole history (Last PR).
+    db.rpc("lift_record_dates", { p_user: userId }).then(({ data, error }) => {
+      if (error) throw error;
+      return data ?? [];
+    }),
   ]);
   const dates = year.map((s) => s.session_date).filter((d): d is string => Boolean(d));
   const week = year.filter((s) => (s.session_date ?? "") >= weekStart);
   const tier = getTier(profile?.tier);
 
   const progress = program ? await getProgramProgress(program, { supabase: db, timeZone }) : null;
-  const nextTemplate = progress && !progress.isCompleted ? progress.nextDay?.workout_template : null;
+  // Nothing's due from a paused block or one that hasn't started yet.
+  const nextTemplate =
+    progress && !progress.isCompleted && !progress.isPaused && !progress.isUpcoming
+      ? progress.nextDay?.workout_template
+      : null;
 
   // The days /log offers: the active program's, else every template.
   const workouts: NonNullable<WidgetSnapshot["workouts"]> = [];
@@ -141,7 +150,6 @@ export async function buildWidgetSnapshot(
     bestReps: Number(s.best_reps),
     estimatedMax: Math.round(toDisplayWeight(Number(s.best_est_1rm), unit)),
   }));
-  const sessionsLogged = new Map(lifts.map((s) => [s.exercise_id, Number(s.sessions_logged)]));
 
   return {
     nextBout: nextTemplate ? nextTemplate.day_label || nextTemplate.name : null,
@@ -176,8 +184,8 @@ export async function buildWidgetSnapshot(
     streak: { weeks: weekStreak(dates, today, progress?.daysPerWeek ?? null), planned: progress?.daysPerWeek ?? null },
     trainingDays: trainingDays(dates, today),
     record: latestRecord(
-      liftList.map((l) => ({ ...l, sessions: sessionsLogged.get(l.id) ?? 0 })),
-      trendList,
+      liftList,
+      recordRows.map((r) => ({ id: r.exercise_id, date: r.record_date, sessionsBefore: Number(r.sessions_before) })),
     ),
   };
 }

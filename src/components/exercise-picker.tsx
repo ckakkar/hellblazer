@@ -11,11 +11,16 @@ export function ExercisePicker({
   onClose,
   exercises,
   onPick,
+  title = "Add exercise",
+  hint,
 }: {
   open: boolean;
   onClose: () => void;
   exercises: Exercise[];
   onPick: (exerciseId: string) => void;
+  title?: string;
+  /** A line under the search saying what picking one does. */
+  hint?: string;
 }) {
   const [q, setQ] = useState("");
 
@@ -45,7 +50,7 @@ export function ExercisePicker({
   }, [q, exercises]);
 
   return (
-    <Sheet open={open} onClose={close} title="Add exercise">
+    <Sheet open={open} onClose={close} title={title} fill>
       <div className="sticky top-0 z-10 border-b border-border bg-surface p-3">
         <SearchField
           autoFocus={finePointer}
@@ -54,6 +59,7 @@ export function ExercisePicker({
           onValueChange={setQ}
           placeholder="Search exercises…"
         />
+        {hint && <p className="mt-2 px-1 text-[13px] text-muted">{hint}</p>}
       </div>
       <ul className="divide-y divide-border">
         {filtered.map((e) => (

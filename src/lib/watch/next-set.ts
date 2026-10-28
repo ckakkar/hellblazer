@@ -1,6 +1,7 @@
 import type { Unit } from "@/lib/units";
 import type { WatchWorkout } from "@/lib/watch/protocol";
 import { supersetSlots } from "@/lib/supersets";
+import { isStraight, isWork } from "@/lib/set-kinds";
 
 /**
  * Where the next set goes, and with what numbers, wherever it's logged
@@ -22,23 +23,26 @@ export type PlanExercise = {
   last: { weight: number; reps: number }[];
   /** Today's target from those (progression.ts), for the first set. */
   target?: { weight: number; reps: number } | null;
+  /** Ended by hand, kept with the workout (session_exercise.ended_at). */
+  ended?: boolean;
 };
 
-/** The sets that count toward the plan: no warm-ups, no drop sets. */
-const working = (e: PlanExercise) => e.sets.filter((s) => !s.warmup && s.kind !== "drop");
+/** The sets that count toward the plan: straight sets (set-kinds.ts). */
+const working = (e: PlanExercise) => e.sets.filter(isStraight);
 
 /**
  * Its target sets are all in. An exercise without a target never is,
- * unless the lifter ended it (`ended`, the page's "Done with this one").
+ * unless the lifter ended it ("Done with this one": `e.ended` once saved,
+ * or the page's own `ended` set before then).
  */
 export function metTarget(e: PlanExercise, ended?: ReadonlySet<string>): boolean {
-  if (ended?.has(e.id)) return true;
+  if (e.ended || ended?.has(e.id)) return true;
   return e.targetSets != null && working(e).length >= e.targetSets;
 }
 
 /** Finished: its target met, or, without a target, at least one set in. */
 export function isDone(e: PlanExercise, ended?: ReadonlySet<string>): boolean {
-  if (ended?.has(e.id)) return true;
+  if (e.ended || ended?.has(e.id)) return true;
   return e.targetSets == null ? working(e).length > 0 : metTarget(e);
 }
 
@@ -145,9 +149,11 @@ export function activitySummary(
   complete: boolean,
   unit: Unit,
 ) {
-  const sets = workout.exercises.flatMap(working);
+  // Totals count every working set, drops and rest-pause in full; the
+  // plan (and so the next set) only straight ones.
+  const sets = workout.exercises.flatMap((e) => e.sets.filter(isWork));
   const volume = sets.reduce((n, s) => n + s.weight * s.reps, 0);
-  const done = current ? working(current).length : 0;
+  const done = current ? current.sets.filter(isWork).length : 0;
   const numbers = current && !complete ? sameAgain(current) : null;
   const next: NextSet | null =
     current && numbers

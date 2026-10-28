@@ -149,3 +149,48 @@ describe("supersets", () => {
     expect(sameAgain(withDrop)).toEqual({ weight: 100, reps: 8 });
   });
 });
+
+// The review's reproductions (October 2026): every surface counts a set the
+// same way (set-kinds.ts).
+describe("set kinds and drafts", () => {
+  const set = (n: number, weight: number, reps: number, kind?: string, warmup = false) => ({
+    id: `s${n}`,
+    n,
+    weight,
+    reps,
+    warmup,
+    kind: kind ?? null,
+  });
+
+  it("counts a drop set in the workout's totals, not toward the plan", () => {
+    const a = { ...ex("a", 2, 0), sets: [set(1, 100, 8), set(2, 80, 10, "drop")] };
+    const workout = { id: "w", title: "W", startedAt: 0, exercises: [a] };
+    const summary = activitySummary(workout, a, false, "kg");
+    expect(summary.sets).toBe(2);
+    expect(summary.volume).toBe("1,600 kg");
+    expect(isComplete([a])).toBe(false);
+  });
+
+  it("doesn't let a rest-pause set meet a target or set the next numbers", () => {
+    const a = { ...ex("a", 2, 0), sets: [set(1, 100, 8), set(2, 80, 10, "rest_pause")] };
+    expect(isComplete([a])).toBe(false);
+    expect(sameAgain(a)).toEqual({ weight: 100, reps: 8 });
+  });
+
+  it("never counts an empty row (no reps yet) as a set", () => {
+    const a = { ...ex("a", 1, 0), sets: [set(1, 0, 0)] };
+    expect(isComplete([a])).toBe(false);
+    const summary = activitySummary({ id: "w", title: "W", startedAt: 0, exercises: [a] }, a, false, "kg");
+    expect(summary.sets).toBe(0);
+  });
+});
+
+describe("an exercise ended early", () => {
+  it("moves on from it everywhere once it's kept with the workout", () => {
+    const a = { ...ex("a", 3, 1), ended: true };
+    const b = ex("b", 3, 0);
+    expect(exerciseForNextSet([a, b])?.id).toBe("b");
+    // Without the saved flag, the same workout still points at A.
+    expect(exerciseForNextSet([{ ...a, ended: false }, b])?.id).toBe("a");
+  });
+});

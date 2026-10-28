@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getAuthedContext } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getEvalGate, getTrainingProfile } from "@/lib/data/evaluation";
@@ -11,6 +12,9 @@ import { TIERS, MAX_RANK, getTier } from "@/lib/tiers";
 export type EvalResult =
   | {
       ok: true;
+      /** This verdict's id: accepting it names it, so a tab can only accept
+       *  the verdict it shows. */
+      verdictId: string;
       tierKey: string;
       tierName: string;
       rank: number;
@@ -23,9 +27,21 @@ export type EvalResult =
       message: string;
     };
 
+/** What the model must answer with; anything else is a failed run. */
+const verdictSchema = z.object({
+  tier: z.string().max(80),
+  rationale: z.string().max(1200).optional().default(""),
+  highlights: z.array(z.string().max(200)).max(6).optional().default([]),
+});
+
+/** A run still marked in flight after this long has died; the next may go. */
+const IN_FLIGHT_MS = 2 * 60_000;
+/** Even with no cooldown (past Julius), verdicts come at most this often. */
+const MIN_GAP_MS = 60_000;
+
 /**
- * Manually-triggered strength evaluation. Sends the user's full training
- * snapshot to DeepSeek and returns a proposed tier for the user to accept or
+ * Manually-triggered strength evaluation. Sends a summary of the user's
+ * training (getTrainingProfile) to DeepSeek and returns a proposed tier for the user to accept or
  * reject. The verdict is stored server-side as `profile.pending_tier`, and
  * `acceptTier` can only promote what is stored there: the client never names
  * a rank, so it can't award itself one.
@@ -92,11 +108,45 @@ export async function evaluateTier(): Promise<EvalResult> {
     };
   }
 
+  // One evaluation at a time, claimed in the database before the model is
+  // called: two taps, two tabs or a replayed request launch one call, not
+  // several. Past Julius there's no cooldown, but still a minute between
+  // verdicts. The profile row is made first if there isn't one, so a missing
+  // row can't read as a free pass.
+  await svc.from("profile").upsert({ user_id: user.id }, { onConflict: "user_id", ignoreDuplicates: true });
+  const now = Date.now();
+  const { data: claimed, error: claimErr } = await svc
+    .from("profile")
+    .update({ evaluation_started_at: new Date(now).toISOString() })
+    .eq("user_id", user.id)
+    .or(`evaluation_started_at.is.null,evaluation_started_at.lt.${new Date(now - IN_FLIGHT_MS).toISOString()}`)
+    .or(`evaluation_run_at.is.null,evaluation_run_at.lt.${new Date(now - MIN_GAP_MS).toISOString()}`)
+    .select("user_id");
+  if (claimErr || !claimed?.length) {
+    return {
+      ok: false,
+      error: "locked",
+      message: "The judge is already ruling on you. Give it a minute.",
+    };
+  }
+  try {
+    return await judge(user.id, svc, apiKey, gate.unlimited);
+  } finally {
+    await svc.from("profile").update({ evaluation_started_at: null }).eq("user_id", user.id);
+  }
+}
+
+async function judge(
+  userId: string,
+  svc: NonNullable<ReturnType<typeof createServiceClient>>,
+  apiKey: string,
+  unlimited: boolean,
+): Promise<EvalResult> {
   const profile = await getTrainingProfile();
   // Same exemption as the gate above: past Julius an empty log is not a reason
   // to turn someone away. The rank ratchet below still floors the verdict at
   // the rank they hold, so a bare snapshot can't cost them anything.
-  if (profile.totalSessions === 0 && !gate.unlimited) {
+  if (profile.totalSessions === 0 && !unlimited) {
     return {
       ok: false,
       error: "no_data",
@@ -154,9 +204,11 @@ Respond with ONLY a JSON object of exactly this shape:
     2,
   )}`;
 
+  // The timeout covers the whole exchange, the body included: a reply that
+  // starts and then stalls is as dead as one that never starts.
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 45000);
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
     const res = await fetch("https://api.deepseek.com/chat/completions", {
       method: "POST",
       headers: {
@@ -178,7 +230,6 @@ Respond with ONLY a JSON object of exactly this shape:
       }),
       signal: controller.signal,
     });
-    clearTimeout(timeout);
 
     if (!res.ok) {
       // Surface DeepSeek's own reason: a raw status alone hides the cause
@@ -225,19 +276,24 @@ Respond with ONLY a JSON object of exactly this shape:
       };
     }
 
-    // Pull the JSON object out even if it's wrapped in prose or code fences.
+    // Pull the JSON object out even if it's wrapped in prose or code fences,
+    // then hold it to the shape: a model's answer is data to check, not trust.
     const jsonMatch = content.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content) as {
-      tier?: string;
-      rationale?: string;
-      highlights?: string[];
-    };
+    const checked = verdictSchema.safeParse(JSON.parse(jsonMatch ? jsonMatch[0] : content));
+    if (!checked.success) {
+      return {
+        ok: false,
+        error: "failed",
+        message: "The judge's answer came back garbled. Try again.",
+      };
+    }
+    const parsed = checked.data;
 
     // The verdict has to name a fighter on the ladder, by key or by name. An
     // answer that doesn't is a failed run (no verdict, no cooldown spent),
     // never a guess: falling back to a default once made a garbled reply a
     // real, acceptable rank 3.
-    const named = (parsed.tier ?? "").toLowerCase().trim();
+    const named = parsed.tier.toLowerCase().trim();
     const verdict =
       getTier(named) ??
       (named ? TIERS.find((t) => t.name.toLowerCase() === named) : undefined);
@@ -255,17 +311,19 @@ Respond with ONLY a JSON object of exactly this shape:
       tier = currentTier;
     }
 
-    const rationale = parsed.rationale ?? "";
+    const rationale = parsed.rationale;
+    const verdictId = crypto.randomUUID();
 
     // Record the verdict for acceptTier, and start the cooldown. Stamped
     // here, on a delivered verdict rather than on accept, so declining can't
     // buy a free re-roll. Failures above return early and cost nothing.
     const { error: recordErr } = await svc.from("profile").upsert(
       {
-        user_id: user.id,
+        user_id: userId,
         evaluation_run_at: new Date().toISOString(),
         pending_tier: tier.key,
         pending_tier_rationale: rationale.slice(0, 4000),
+        pending_tier_id: verdictId,
       },
       { onConflict: "user_id" },
     );
@@ -281,13 +339,12 @@ Respond with ONLY a JSON object of exactly this shape:
 
     return {
       ok: true,
+      verdictId,
       tierKey: tier.key,
       tierName: tier.name,
       rank: tier.rank,
       rationale,
-      highlights: Array.isArray(parsed.highlights)
-        ? parsed.highlights.slice(0, 4).map(String)
-        : [],
+      highlights: parsed.highlights.slice(0, 4),
     };
   } catch {
     return {
@@ -295,5 +352,7 @@ Respond with ONLY a JSON object of exactly this shape:
       error: "failed",
       message: "Evaluation failed: the judge turned away. Try again.",
     };
+  } finally {
+    clearTimeout(timeout);
   }
 }

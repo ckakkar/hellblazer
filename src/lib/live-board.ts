@@ -1,6 +1,7 @@
 import type { ExercisePR, SessionDetail, SessionTarget } from "@/lib/data/sessions";
 import type { Muscle } from "@/lib/muscles";
 import { slotLabel, supersetSlots } from "@/lib/supersets";
+import { isStraight, isWork } from "@/lib/set-kinds";
 
 /**
  * The iPad's live view of a workout under way on the phone or the watch,
@@ -113,10 +114,10 @@ export function liveBoard(
       record: records.get(s.id) ?? null,
       createdAt: s.created_at,
     }));
-    const working = sets.filter((s) => !s.warmup);
+    const working = sets.filter(isWork);
     for (const s of working) volumeKg += s.weightKg * s.reps;
-    // Drop sets don't count toward the plan, as in the logger.
-    const planned = working.filter((s) => s.kind !== "drop").length;
+    // Drop and rest-pause sets don't use up a planned set (set-kinds.ts).
+    const planned = sets.filter(isStraight).length;
     const target = targets[se.id]?.sets ?? null;
     // Without a target, an exercise is done once the lifter has moved on.
     const movedOn = rows.slice(i + 1).some((later) => later.set.some((s) => !s.is_warmup));

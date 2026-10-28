@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { format, parseISO } from "date-fns";
 import { CheckCircle2, Pause, Play, Radio, Watch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export function ProgramProgressCard({
     totalWeeks,
     isCompleted,
     isPaused,
+    isUpcoming,
     daysPerWeek,
     sessionsThisWeek,
     skipsThisWeek,
@@ -52,7 +54,7 @@ export function ProgramProgressCard({
   const extra = Math.max(0, doneThisWeek - daysPerWeek);
 
   const week =
-    daysPerWeek > 0 && !notStarted ? (
+    daysPerWeek > 0 && !notStarted && !isUpcoming ? (
       <div className="mt-5">
         <div className="flex gap-1.5">
           {Array.from({ length: daysPerWeek }).map((_, i) => (
@@ -81,7 +83,9 @@ export function ProgramProgressCard({
   const nextCount = nextTemplate?.template_exercise.length ?? 0;
   const status = notStarted
     ? "Not started"
-    : isCompleted
+    : isUpcoming && program.start_date
+      ? `Starts ${format(parseISO(program.start_date), "EEE d MMM")}`
+      : isCompleted
       ? "Complete"
       : isPaused
         ? "Paused"

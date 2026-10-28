@@ -13,6 +13,9 @@ export type PendingSetWrite = {
   isWarmup: boolean;
   /** A drop or rest-pause set; null (or absent, if queued by an older build) for a plain one. */
   kind?: "drop" | "rest_pause" | null;
+  /** When the set was first logged on the device (epoch ms), kept through
+   *  replay so a set uploaded late still says when it was done. */
+  loggedAt?: number;
   /** Write stamp from {@link nextStamp}; orders edits to the same set. */
   updatedAt: number;
   /** A queued delete: the set was removed but the server hasn't confirmed it. */

@@ -112,16 +112,16 @@ export async function removeSessionExercise(input: { id: string }) {
 }
 
 /**
- * Swap the movement on a session exercise mid-workout (e.g. seated rows instead
- * of Pendlay rows). Keeps any sets already logged (they re-attribute to the new
- * movement). If the session came from a template, the swap also becomes that
- * day's new default: the matching `template_exercise` (same position + old
- * movement) is updated so the substitution sticks for future sessions.
+ * Swaps a movement for this workout only. The template, and so every
+ * workout to come, is changed on the Templates page, never from here. With
+ * sets already logged, those stay on the movement they were done on: the new
+ * one goes in right after it (swap_session_exercise), and this returns its
+ * row, with the lifter's last performance on it for "last:" and copy-forward.
  */
 export async function swapSessionExercise(input: {
   sessionExerciseId: string;
   newExerciseId: string;
-}) {
+}): Promise<{ id: string; split: boolean; lastPerformance: LastPerformance | null }> {
   const v = z
     .object({
       sessionExerciseId: z.string().uuid(),
@@ -130,39 +130,20 @@ export async function swapSessionExercise(input: {
     .parse(input);
   const { supabase } = await getAuthedContext();
 
-  const { data: se, error: seErr } = await supabase
+  const { data, error } = await supabase.rpc("swap_session_exercise", {
+    p_id: v.sessionExerciseId,
+    p_exercise: v.newExerciseId,
+  });
+  if (error) throw error;
+  const result = z.object({ id: z.string().uuid(), split: z.boolean() }).parse(data);
+  const { data: row } = await supabase
     .from("session_exercise")
-    .select("id, session_id, exercise_id, position")
-    .eq("id", v.sessionExerciseId)
+    .select("session_id")
+    .eq("id", result.id)
     .maybeSingle();
-  if (seErr) throw seErr;
-  if (!se) throw new Error("Session exercise not found");
-  const oldExerciseId = se.exercise_id;
-
-  const { error: upErr } = await supabase
-    .from("session_exercise")
-    .update({ exercise_id: v.newExerciseId })
-    .eq("id", v.sessionExerciseId);
-  if (upErr) throw upErr;
-
-  // Persist the swap into the day's template so it carries forward.
-  const { data: sess } = await supabase
-    .from("session")
-    .select("template_id")
-    .eq("id", se.session_id)
-    .maybeSingle();
-  if (sess?.template_id) {
-    await supabase
-      .from("template_exercise")
-      .update({ exercise_id: v.newExerciseId })
-      .eq("template_id", sess.template_id)
-      .eq("position", se.position)
-      .eq("exercise_id", oldExerciseId);
-  }
-
-  revalidatePath(`/log/${se.session_id}`);
-  revalidatePath("/templates");
-  revalidatePath("/programs");
+  const previous = await getLastPerformances([v.newExerciseId], row?.session_id);
+  if (row) revalidatePath(`/log/${row.session_id}`);
+  return { ...result, lastPerformance: previous[v.newExerciseId] ?? null };
 }
 
 const setSchema = z.object({
@@ -170,12 +151,25 @@ const setSchema = z.object({
   sessionExerciseId: z.string().uuid(),
   setNumber: z.number().int().min(1),
   weightKg: z.number().min(0).max(9999),
-  reps: z.number().int().min(0).max(9999),
+  // At least one rep: a row without one is a draft that stays on the device.
+  reps: z.number().int().min(1).max(999),
   rpe: z.number().min(0).max(10).nullable(),
   isWarmup: z.boolean(),
   /** A drop or rest-pause set; absent from a build before them, which only logs plain ones. */
   kind: z.enum(["drop", "rest_pause"]).nullable().optional(),
+  /** When it was logged on the device (epoch ms), for a set that reaches the
+   *  server late (offline). Becomes its created_at, which heart-rate reads
+   *  line the sets up by. */
+  loggedAt: z.number().int().positive().optional(),
 });
+
+/** A device's clock is trusted for a week back and a few minutes ahead. */
+function plausibleLoggedAt(ms: number | undefined): string | undefined {
+  if (ms === undefined) return undefined;
+  const now = Date.now();
+  if (ms < now - 7 * 24 * 3600_000 || ms > now + 5 * 60_000) return undefined;
+  return new Date(ms).toISOString();
+}
 
 /**
  * Idempotent upsert keyed on a client-generated set id, repeated autosaves of
@@ -185,6 +179,7 @@ const setSchema = z.object({
 export async function saveSet(input: z.input<typeof setSchema>) {
   const v = setSchema.parse(input);
   const { supabase, user } = await getAuthedContext();
+  const loggedAt = plausibleLoggedAt(v.loggedAt);
   const { error } = await supabase.from("set").upsert({
     id: v.id,
     user_id: user.id,
@@ -195,15 +190,32 @@ export async function saveSet(input: z.input<typeof setSchema>) {
     rpe: v.rpe,
     is_warmup: v.isWarmup,
     ...(v.kind !== undefined ? { kind: v.kind } : {}),
+    // The same first-logged time on every save of the set, so editing it
+    // later doesn't move when it happened.
+    ...(loggedAt ? { created_at: loggedAt } : {}),
     is_completed: true,
   });
   if (error) throw error;
 }
 
 /**
+ * "Done with this one" (or picking it back up), kept with the workout so the
+ * watch, Siri and a reload agree on what's next (next-set.ts).
+ */
+export async function setExerciseEnded(input: { sessionExerciseId: string; ended: boolean }) {
+  const v = z.object({ sessionExerciseId: z.string().uuid(), ended: z.boolean() }).parse(input);
+  const { supabase } = await getAuthedContext();
+  const { error } = await supabase
+    .from("session_exercise")
+    .update({ ended_at: v.ended ? new Date().toISOString() : null })
+    .eq("id", v.sessionExerciseId);
+  if (error) throw error;
+}
+
+/**
  * Links a session exercise with the one after it in a superset, or takes it
- * out of its superset (supersets.ts). Like a swap, it becomes the day's
- * default: the template's exercises at the same places follow.
+ * out of its superset (supersets.ts). For this workout only, like a swap:
+ * the template's supersets are set on the Templates page.
  */
 export async function setSessionSuperset(input: { sessionExerciseId: string; link: boolean }) {
   const v = z.object({ sessionExerciseId: z.string().uuid(), link: z.boolean() }).parse(input);
@@ -215,32 +227,19 @@ export async function setSessionSuperset(input: { sessionExerciseId: string; lin
     .maybeSingle();
   if (seErr) throw seErr;
   if (!se) throw new Error("Session exercise not found");
-  const [{ data: rows, error: rowsErr }, { data: sess }] = await Promise.all([
-    supabase
-      .from("session_exercise")
-      .select("id, position, exercise_id, superset")
-      .eq("session_id", se.session_id)
-      .order("position", { ascending: true }),
-    supabase.from("session").select("template_id").eq("id", se.session_id).maybeSingle(),
-  ]);
+  const { data: rows, error: rowsErr } = await supabase
+    .from("session_exercise")
+    .select("id, position, superset")
+    .eq("session_id", se.session_id)
+    .order("position", { ascending: true });
   if (rowsErr) throw rowsErr;
   const list = rows ?? [];
   const changes = supersetChanges(list, list.findIndex((r) => r.id === se.id), v.link);
   for (const change of changes) {
     const { error } = await supabase.from("session_exercise").update({ superset: change.superset }).eq("id", change.id);
     if (error) throw error;
-    const row = list.find((r) => r.id === change.id);
-    if (sess?.template_id && row) {
-      await supabase
-        .from("template_exercise")
-        .update({ superset: change.superset })
-        .eq("template_id", sess.template_id)
-        .eq("position", row.position)
-        .eq("exercise_id", row.exercise_id);
-    }
   }
   revalidatePath(`/log/${se.session_id}`);
-  revalidatePath("/templates");
   return changes;
 }
 
@@ -357,11 +356,15 @@ export async function clearHistory() {
 export async function finishSession(input: {
   sessionId: string;
   durationMin?: number | null;
+  /** False: return once it's recorded, for a caller that shows the finish
+   *  first and navigates itself (the logger). */
+  navigate?: boolean;
 }) {
   const v = z
     .object({
       sessionId: z.string().uuid(),
       durationMin: z.number().int().min(0).max(1000).nullable().optional(),
+      navigate: z.boolean().optional(),
     })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
@@ -391,6 +394,7 @@ export async function finishSession(input: {
   // The iPhone's widgets catch up on their own (a silent push), after the redirect.
   const devices = await widgetDevices(supabase, user.id).catch(() => []);
   after(() => refreshWidgets(devices));
+  if (v.navigate === false) return { ok: true as const };
   redirect(`/history/${v.sessionId}`);
 }
 

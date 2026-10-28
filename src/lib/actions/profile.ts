@@ -12,32 +12,38 @@ export type AcceptTierResult =
   | { ok: true; tierKey: TierKey }
   | { ok: false; error: "no_verdict" | "not_configured" };
 
+const verdictInput = z.object({ verdictId: z.string().uuid() });
+
 /**
- * Accept the judge's latest verdict as the lifter's rank. Takes no rank from
- * the client: it promotes whatever `evaluateTier` recorded in
- * `profile.pending_tier`, which only the server can write. Rank columns are
- * closed to the lifter's own token, so these writes go through the service
- * client, scoped to the caller.
+ * Accept the judge's verdict as the lifter's rank. Takes no rank from the
+ * client: it promotes what `evaluateTier` recorded in `profile.pending_tier`,
+ * which only the server can write, and only the verdict this page showed
+ * (`verdictId`), so a tab can't accept a newer one it never saw. The write
+ * is a compare-and-set on that verdict and on the rank as it was read, so a
+ * promotion that landed meanwhile is never undone. Rank columns are closed
+ * to the lifter's own token, so these writes go through the service client,
+ * scoped to the caller.
  */
-export async function acceptTier(): Promise<AcceptTierResult> {
+export async function acceptTier(input: { verdictId: string }): Promise<AcceptTierResult> {
+  const { verdictId } = verdictInput.parse(input);
   const { user } = await getAuthedContext();
   const svc = createServiceClient();
   if (!svc) return { ok: false, error: "not_configured" };
 
   const { data: profile, error } = await svc
     .from("profile")
-    .select("tier, pending_tier, pending_tier_rationale")
+    .select("tier, pending_tier, pending_tier_rationale, pending_tier_id")
     .eq("user_id", user.id)
     .maybeSingle();
   if (error) throw error;
   const proposed = getTier(profile?.pending_tier);
-  if (!proposed) return { ok: false, error: "no_verdict" };
+  if (!proposed || profile?.pending_tier_id !== verdictId) return { ok: false, error: "no_verdict" };
 
   // The ratchet again, at accept time: a verdict delivered before a later
   // promotion must not undo it.
   const current = getTier(profile?.tier);
   const keepCurrent = current !== null && current.rank > proposed.rank;
-  const { error: upErr } = await svc
+  let write = svc
     .from("profile")
     .update({
       ...(keepCurrent
@@ -49,9 +55,14 @@ export async function acceptTier(): Promise<AcceptTierResult> {
           }),
       pending_tier: null,
       pending_tier_rationale: null,
+      pending_tier_id: null,
     })
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .eq("pending_tier_id", verdictId);
+  write = profile?.tier ? write.eq("tier", profile.tier) : write.is("tier", null);
+  const { data: written, error: upErr } = await write.select("user_id");
   if (upErr) throw upErr;
+  if (!written?.length) return { ok: false, error: "no_verdict" };
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
@@ -59,15 +70,17 @@ export async function acceptTier(): Promise<AcceptTierResult> {
   return { ok: true, tierKey: keepCurrent ? current.key : proposed.key };
 }
 
-/** Turn down the judge's latest verdict: the rank stays as it is. */
-export async function declineTier() {
+/** Turn down the judge's verdict this page showed: the rank stays as it is. */
+export async function declineTier(input: { verdictId: string }) {
+  const { verdictId } = verdictInput.parse(input);
   const { user } = await getAuthedContext();
   const svc = createServiceClient();
   if (!svc) return;
   const { error } = await svc
     .from("profile")
-    .update({ pending_tier: null, pending_tier_rationale: null })
-    .eq("user_id", user.id);
+    .update({ pending_tier: null, pending_tier_rationale: null, pending_tier_id: null })
+    .eq("user_id", user.id)
+    .eq("pending_tier_id", verdictId);
   if (error) throw error;
 }
 

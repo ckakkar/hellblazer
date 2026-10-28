@@ -132,6 +132,17 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
     withNative((api) => api.cancelRestAlert());
   }, []);
 
+  // A rest the lifter changed here goes to the watch too, so the wrist
+  // counts down the same one. Not a rest that came from the watch (or the
+  // Lock Screen, whose own change already went there): applyCommand below
+  // doesn't call this, so nothing echoes.
+  const share = useCallback(
+    (end: number | null, length: number) => {
+      withNative((api) => api.syncRest({ sessionId, endsAt: end ?? undefined, total: length }));
+    },
+    [sessionId],
+  );
+
   // The rest running out. A timeout rather than a tick: nothing here needs
   // to re-render until then. Timers stop while the app is in the background,
   // so a rest that ran out long ago ends quietly on return, no buzz.
@@ -149,24 +160,30 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
   const start = useCallback(
     (seconds?: number) => {
       const length = seconds ?? duration;
-      run(Date.now() + length * 1000, length);
+      const end = Date.now() + length * 1000;
+      run(end, length);
+      share(end, length);
       haptic("tap");
     },
-    [duration, run],
+    [duration, run, share],
   );
 
   const toggle = useCallback(() => {
     if (endsAt !== null) {
       setPausedRemaining(Math.max(1, Math.ceil((endsAt - Date.now()) / 1000)));
       halt();
+      // The watch has no pause: its rest stops until this one resumes.
+      share(null, total);
       return;
     }
     if (pausedRemaining !== null) {
-      run(Date.now() + pausedRemaining * 1000, total);
+      const end = Date.now() + pausedRemaining * 1000;
+      run(end, total);
+      share(end, total);
       return;
     }
     start();
-  }, [endsAt, pausedRemaining, total, halt, run, start]);
+  }, [endsAt, pausedRemaining, total, halt, run, share, start]);
 
   const adjust = useCallback(
     (delta: number) => {
@@ -174,7 +191,9 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
       if (endsAt !== null) {
         const next = Math.max(Date.now() + 1000, endsAt + delta * 1000);
         const left = Math.ceil((next - Date.now()) / 1000);
-        run(next, Math.max(left, total + Math.max(0, delta)));
+        const length = Math.max(left, total + Math.max(0, delta));
+        run(next, length);
+        share(next, length);
         return;
       }
       if (pausedRemaining !== null) {
@@ -191,15 +210,16 @@ export function useRestTimer({ sessionId, label }: { sessionId: string; label?: 
       // A set said to Siri while this page sleeps starts the same rest.
       withNative((api) => api.setRestDefaults({ seconds: next, auto }));
     },
-    [endsAt, pausedRemaining, duration, total, auto, run],
+    [endsAt, pausedRemaining, duration, total, auto, run, share],
   );
 
   const skip = useCallback(() => {
+    if (endsAt !== null) share(null, 0);
     halt();
     setPausedRemaining(null);
     setFinished(false);
     setTotal(duration);
-  }, [duration, halt]);
+  }, [duration, endsAt, halt, share]);
 
   // A rest changed outside the page: the Live Activity's +30s and Skip, the
   // alert's +30s, a set logged on the watch. The app keeps the latest one

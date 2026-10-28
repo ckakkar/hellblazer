@@ -43,9 +43,26 @@ export async function linkPhone() {
   return mint("phone");
 }
 
-/** Revokes one token (a watch's or a phone's): it stops working at once. */
+/**
+ * Revokes one token (a watch's or a phone's): it stops working at once.
+ * Throws when the delete doesn't land, so a caller can try again rather than
+ * forget a token that still works.
+ */
 export async function unlinkWatch(input: { token: string }) {
   const { token } = z.object({ token: z.string().min(32).max(128) }).parse(input);
   const { supabase } = await getAuthedContext();
-  await supabase.from("watch_link").delete().eq("token_hash", hashWatchToken(token));
+  const { error } = await supabase.from("watch_link").delete().eq("token_hash", hashWatchToken(token));
+  if (error) throw error;
+}
+
+/**
+ * Revokes every device token on the account, for a lost phone or watch:
+ * each stops working at once, and a device still in hand links again from
+ * Profile.
+ */
+export async function unlinkAllDevices() {
+  const { supabase, user } = await getAuthedContext();
+  const { error } = await supabase.from("watch_link").delete().eq("user_id", user.id);
+  if (error) throw error;
+  revalidatePath("/settings");
 }
