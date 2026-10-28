@@ -208,7 +208,7 @@ $$;
 -- 2. Bounds -----------------------------------------------------------------
 
 -- (A set's reps floor, 1, lands with the logger that stops saving empty
--- drafts: 20261029090100_set_reps_floor.sql.)
+-- drafts: 20261028214208_set_reps_floor.sql.)
 alter table public.set
   add constraint set_number_range check (set_number between 1 and 999),
   add constraint set_weight_nonnegative check (weight_kg >= 0);
