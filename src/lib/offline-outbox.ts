@@ -1,5 +1,6 @@
 import { getAllQueuedSets, removeQueuedSet, type PendingSetWrite } from "@/lib/offline-set-queue";
 import { replaySet } from "@/lib/actions/sessions";
+import { reportProblem } from "@/lib/report";
 
 /**
  * The device's outbox: sets logged with no signal wait in IndexedDB
@@ -61,8 +62,12 @@ export async function drainOutbox(userId: string, openSession: string | null): P
         loggedAt: w.loggedAt,
         deleted: w.deleted,
       }).catch(() => ({ ok: false as const, permanent: false }));
+      if (!result.ok && result.permanent) reportProblem("outbox-dropped");
       if (result.ok || result.permanent) await removeQueuedSet(w.id, w.updatedAt).catch(() => undefined);
-      else break; // Offline again, or the server's struggling: the next try picks up here.
+      else {
+        reportProblem("outbox-stuck");
+        break;
+      } // Offline again, or the server's struggling: the next try picks up here.
     }
     const left = (await getAllQueuedSets()).filter((w) => mine(w, userId, openSession));
     publish({ waiting: left.length, sending: false });

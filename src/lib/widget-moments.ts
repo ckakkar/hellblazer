@@ -15,18 +15,23 @@ export const CALENDAR_WEEKS = 26;
 
 const monday = (date: string) => format(startOfISOWeek(parseISO(date)), "yyyy-MM-dd");
 
-/** A workout toward the streak: its day, and the program it was started from (null: freeform). */
-export type StreakWorkout = { date: string; programId: string | null };
+/**
+ * A workout toward the streak: its day, the program it was started from
+ * (null: freeform), and that program's days a week when it started (null
+ * from before that was recorded: the program's count now stands in).
+ */
+export type StreakWorkout = { date: string; programId: string | null; planned?: number | null };
 
 /** What a program asked of a week: its days, and the stretches it was paused (yyyy-MM-dd, inclusive). */
 export type StreakPlan = { days: number; paused: { from: string; to: string }[] };
 
 /**
  * Weeks in a row with the plan hit. Each week is held to the plan it was
- * trained under: the program of its latest workout started from one, or the
- * one before it (a week of freeform workouts keeps the plan you were on),
- * and this week to the plan you're on now. So switching plans never rewrites
- * a week already earned; the new target counts from the week you switch. A
+ * trained under: the days a week its latest program workout started with,
+ * or the one before it (a week of freeform workouts keeps the plan you were
+ * on), and this week to the plan you're on now. So neither switching plans
+ * nor editing one's days rewrites a week already earned; the new target
+ * counts from the week it changes. A
  * week under no plan wants one workout. A week its plan was paused for, start
  * to end, is passed over: it neither counts nor breaks the streak. This week
  * counts once it's hit; until then it doesn't break the streak, since it
@@ -42,22 +47,24 @@ export function weekStreak(
   for (const w of workouts) perWeek.set(monday(w.date), (perWeek.get(monday(w.date)) ?? 0) + 1);
   // Workouts from a program, latest first: a week's plan is the first at or before its end.
   const fromPlans = workouts
-    .filter((w): w is { date: string; programId: string } => w.programId !== null)
+    .filter((w): w is StreakWorkout & { programId: string } => w.programId !== null)
     .sort((a, b) => b.date.localeCompare(a.date));
 
   const thisWeek = startOfISOWeek(parseISO(today));
-  const planOf = (week: Date): string | null => {
-    if (week.getTime() === thisWeek.getTime() && current) return current;
+  const planOf = (week: Date): { id: string; planned: number | null } | null => {
+    if (week.getTime() === thisWeek.getTime() && current) return { id: current, planned: null };
     const end = format(addDays(week, 6), "yyyy-MM-dd");
-    return fromPlans.find((w) => w.date <= end)?.programId ?? null;
+    const w = fromPlans.find((x) => x.date <= end);
+    return w ? { id: w.programId, planned: w.planned ?? null } : null;
   };
   const verdict = (week: Date): "hit" | "paused" | "missed" => {
     const key = format(week, "yyyy-MM-dd");
-    const id = planOf(week);
-    const plan = id ? plans.get(id) : undefined;
+    const of = planOf(week);
+    const plan = of ? plans.get(of.id) : undefined;
     const end = format(addDays(week, 6), "yyyy-MM-dd");
     if (plan?.paused.some((p) => p.from <= key && p.to >= end)) return "paused";
-    const need = plan && plan.days > 0 ? plan.days : 1;
+    const days = of?.planned ?? plan?.days ?? 0;
+    const need = days > 0 ? days : 1;
     return (perWeek.get(key) ?? 0) >= need ? "hit" : "missed";
   };
 

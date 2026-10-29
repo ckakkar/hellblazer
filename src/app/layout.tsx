@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { PwaRegister } from "@/components/pwa-register";
 import { BootSplash } from "@/components/boot-splash";
@@ -11,12 +11,15 @@ import { NoticeToast } from "@/components/notice-toast";
 /* One family, two widths. Archivo is variable on width as well as weight, so
    the expanded cut that carries titles and numbers (a broadcast-scoreboard
    width) and the text face are a single file. Replaces a three-face stack
-   (Archivo, IBM Plex Mono, Big Shoulders) and about 90 KB of font. */
-const archivo = Archivo({
+   (Archivo, IBM Plex Mono, Big Shoulders) and about 90 KB of font. The file
+   is in the repo (Latin, both axes; Archivo is under the OFL, licence beside
+   it), so a build doesn't depend on reaching Google Fonts. */
+const archivo = localFont({
+  src: "./fonts/archivo-latin.woff2",
   variable: "--font-archivo",
-  subsets: ["latin"],
-  axes: ["wdth"],
+  weight: "100 900",
   display: "swap",
+  declarations: [{ prop: "font-stretch", value: "62% 125%" }],
 });
 
 const DESCRIPTION =

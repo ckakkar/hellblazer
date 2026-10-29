@@ -32,10 +32,10 @@ import { useAction } from "@/lib/use-action";
 import { showNotice } from "@/lib/notice";
 import { Collapse } from "@/components/ui/collapse";
 
-export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
+export function ExercisesBrowser({ exercises, createName = null }: { exercises: Exercise[]; createName?: string | null }) {
   const [q, setQ] = useState("");
   const [muscle, setMuscle] = useState<string>("all");
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(createName !== null);
   // One how-to open at a time, held here rather than per row so opening a
   // movement in one muscle group closes whatever was open in another.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -125,6 +125,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
       <CreateExerciseSheet
         open={creating}
         onClose={() => setCreating(false)}
+        initialName={createName ?? ""}
       />
     </div>
   );
@@ -239,12 +240,15 @@ function ExerciseRow({
 function CreateExerciseSheet({
   open,
   onClose,
+  initialName = "",
 }: {
   open: boolean;
   onClose: () => void;
+  /** Filled in from a picker's search that found nothing. */
+  initialName?: string;
 }) {
   const [pending, start] = useAction("save the exercise");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const [primary, setPrimary] = useState<Muscle>("chest");
   const [secondary, setSecondary] = useState<Set<Muscle>>(new Set());
   const [mechanic, setMechanic] = useState<string>("");

@@ -215,6 +215,14 @@ describe("who's asking", () => {
     expect(tables.watch_link[0].last_seen_at).toEqual(expect.any(String));
   });
 
+  it("retires a token unused for 90 days", async () => {
+    tables.watch_link[0].last_seen_at = new Date(Date.now() - 91 * 24 * 60 * 60 * 1000).toISOString();
+    const run = vi.fn();
+    expect((await handleWatch(signedIn(), run)).status).toBe(401);
+    expect(run).not.toHaveBeenCalled();
+    expect(tables.watch_link.some((row) => row.id === "link-a")).toBe(false);
+  });
+
   it("ignores a timezone that isn't one, and defaults to kg", async () => {
     const run = vi.fn(async () => ({}));
     await handleWatch(signedIn({ "x-fatty-tz": "Not/AZone" }), run);
@@ -297,6 +305,28 @@ describe("starting and finishing", () => {
       p_program_day_id: day,
       p_date: "2026-09-26",
     });
+  });
+
+  it("tells an offline workout catching up that another one's open, instead of handing it over", async () => {
+    tables.session.push({
+      id: "20000000-0000-4000-8000-000000000009",
+      user_id: A,
+      title: "Open on the phone",
+      template_id: null,
+      finished_at: null,
+      created_at: new Date().toISOString(),
+    });
+    const res = await handleWatch(signedIn(), (ctx) =>
+      startWatchWorkout(ctx, {
+        templateId: "50000000-0000-4000-8000-000000000001",
+        localDate: "2026-09-26",
+        startedAt: Date.now() - 3 * 60 * 60 * 1000,
+      }),
+    );
+    const state = await res.json();
+    expect(state.conflict).toBe(true);
+    expect(state.started).toBeUndefined();
+    expect(db.rpc).not.toHaveBeenCalledWith("start_session", expect.anything());
   });
 
   it("turns start_session's not-found into a 404", async () => {
@@ -508,7 +538,16 @@ describe("starting on the watch with no connection", () => {
     const state = await res.json();
     expect(state.active).toBeNull();
     expect(state.options[0].plan).toEqual([
-      { name: "Bench Press", targetSets: 3, targetReps: "5", restSeconds: 180, last: [], target: null, superset: null },
+      {
+        name: "Bench Press",
+        targetSets: 3,
+        targetReps: "5",
+        restSeconds: 180,
+        last: [],
+        target: null,
+        superset: null,
+        exerciseId: "e1",
+      },
     ]);
   });
 });

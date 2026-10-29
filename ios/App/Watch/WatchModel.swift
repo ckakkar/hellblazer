@@ -587,7 +587,8 @@ final class WatchModel: ObservableObject {
                 Exercise(
                     id: "\(id)-\(item.offset)", name: item.element.name, targetSets: item.element.targetSets,
                     targetReps: item.element.targetReps, restSeconds: item.element.restSeconds, sets: [],
-                    last: item.element.last, target: item.element.target, superset: item.element.superset
+                    last: item.element.last, target: item.element.target, superset: item.element.superset,
+                    exerciseId: item.element.exerciseId
                 )
             }
         )
@@ -605,7 +606,10 @@ final class WatchModel: ObservableObject {
         guard let started = offline else { return true }
         let fresh: WatchState
         do {
-            fresh = try await api.start(started.option, localDate: started.localDate, startedAt: started.workout.startedAt)
+            fresh = try await api.start(
+                started.option, localDate: started.localDate, startedAt: started.workout.startedAt,
+                exercises: started.workout.exercises.compactMap(\.exerciseId)
+            )
         } catch APIError.server(let status) where Self.refusedForGood(status) {
             // The day was deleted since: nothing left to attach the sets to.
             pending.removeAll { $0.sessionId == started.workout.id }
@@ -618,8 +622,15 @@ final class WatchModel: ObservableObject {
             return false
         }
         // The session the start made, even one too old to be the live
-        // workout now (an older server only says the live one).
-        guard let server = fresh.started ?? fresh.active else { return false }
+        // workout now. Never the live one in its place: that's another
+        // workout (open on the phone, say), and these sets aren't its. They
+        // wait here until it's finished or discarded.
+        guard let server = fresh.started else {
+            if fresh.conflict == true {
+                problem = "Another workout is open on your phone. Finish or discard it there, and this one's sets will save."
+            }
+            return false
+        }
 
         // In order where the names agree, else by name.
         var ids: [String: String] = [:]

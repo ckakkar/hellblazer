@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { APPEND } from "@/lib/positions";
 import { after } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -65,17 +66,27 @@ class WatchError extends Error {
  */
 export type DeviceKind = "watch" | "phone";
 
+/** How long a device token lasts unused. */
+const TOKEN_IDLE_MS = 90 * 24 * 60 * 60 * 1000;
+
 async function resolve(db: Svc, request: Request, kind: DeviceKind): Promise<WatchContext | null> {
   const token = bearerToken(request.headers.get("authorization"));
   if (!token) return null;
   const { data: link, error } = await db
     .from("watch_link")
-    .select("id, user_id, last_seen_at")
+    .select("id, user_id, last_seen_at, created_at")
     .eq("token_hash", hashWatchToken(token))
     .eq("kind", kind)
     .maybeSingle();
   if (error) throw error;
   if (!link) return null;
+  // A token left unused for 90 days (a sold or drawer-bound watch) stops
+  // working and goes. A device still in use never gets there, and one that
+  // comes back is linked again by the iPhone app (DeviceSync) on opening.
+  if (Date.now() - Date.parse(link.last_seen_at ?? link.created_at) > TOKEN_IDLE_MS) {
+    await db.from("watch_link").delete().eq("id", link.id);
+    return null;
+  }
   // Settings shows when each watch was last seen; an hour is plenty precise.
   if (!link.last_seen_at || Date.now() - Date.parse(link.last_seen_at) > 60 * 60 * 1000) {
     await db
@@ -184,6 +195,7 @@ async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map
       last: past.map(({ weight, reps }) => ({ weight, reps })),
       target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, ctx.unit),
       superset: row.superset ?? null,
+      exerciseId: row.exercise_id,
     });
     plans.set(row.template_id, list);
   }
@@ -398,7 +410,30 @@ const startSchema = z.object({
   /** When it really began (epoch ms): a workout started offline reaches the
    *  server later. Older watch builds don't send it. */
   startedAt: z.number().optional(),
+  /** An offline workout's movements (library ids, 2.8 on): any the session
+   *  doesn't have (the day changed while the watch was away) are added, so
+   *  their sets have somewhere to go. */
+  exercises: z.array(z.string().uuid()).max(40).optional(),
 });
+
+/** Adds to a session the movements an offline workout had that it lacks. */
+async function addMissingExercises(ctx: WatchContext, sessionId: string, exerciseIds: string[] | undefined) {
+  if (!exerciseIds?.length) return;
+  const { data: have } = await ctx.db
+    .from("session_exercise")
+    .select("exercise_id")
+    .eq("session_id", sessionId)
+    .eq("user_id", ctx.userId);
+  const present = new Set((have ?? []).map((r) => r.exercise_id));
+  for (const exerciseId of new Set(exerciseIds)) {
+    if (present.has(exerciseId)) continue;
+    // One that's gone from the library (or isn't theirs) is skipped; the
+    // watch says which sets had nowhere to go.
+    await ctx.db
+      .from("session_exercise")
+      .insert({ user_id: ctx.userId, session_id: sessionId, exercise_id: exerciseId, position: APPEND });
+  }
+}
 
 /** A time the watch says something happened, if it's believable: in the
  *  last day, and not ahead of the server's clock by more than a minute. */
@@ -429,9 +464,15 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
       .eq("created_at", startedAt)
       .limit(1)
       .maybeSingle();
-    if (made) return { ...(await watchState(ctx)), started: await workoutOf(ctx, made) };
+    if (made) {
+      await addMissingExercises(ctx, made.id, v.exercises);
+      return { ...(await watchState(ctx)), started: await workoutOf(ctx, made) };
+    }
   }
-  if (await activeWorkout(ctx)) return watchState(ctx);
+  // Another workout's open. A start from the watch's list just shows it;
+  // an offline workout catching up is told it wasn't started, so its sets
+  // aren't moved onto that one.
+  if (await activeWorkout(ctx)) return startedAt ? { ...(await watchState(ctx)), conflict: true } : watchState(ctx);
   const { data: sessionId, error } = await ctx.db.rpc("start_session", {
     p_user: ctx.userId,
     ...(v.programDayId ? { p_program_day_id: v.programDayId } : { p_template_id: v.templateId }),
@@ -455,6 +496,7 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
   const { data: made } = sessionId
     ? await ctx.db.from("session").select("id, title, created_at").eq("id", sessionId).eq("user_id", ctx.userId).maybeSingle()
     : { data: null };
+  if (made && startedAt) await addMissingExercises(ctx, made.id, v.exercises);
   const state = await watchState(ctx);
   return made ? { ...state, started: await workoutOf(ctx, made) } : state;
 }

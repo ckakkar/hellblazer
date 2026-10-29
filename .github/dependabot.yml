@@ -1,0 +1,24 @@
+# Dependency updates as pull requests, so a change to what ships (or to what
+# CI runs) is explicit and goes through CI first. The workflows' actions are
+# pinned to commits; this keeps those pins current too.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      # Held back on purpose: eslint-config-next's plugins break on eslint 10,
+      # and typescript-eslint doesn't load TypeScript 7 yet.
+      - dependency-name: eslint
+        update-types: [version-update:semver-major]
+      - dependency-name: typescript
+        update-types: [version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

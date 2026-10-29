@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     loadFonts(),
     supabase
       .from("v_session_summary")
-      .select("session_date, program_id")
+      .select("session_date, program_id, planned_per_week")
       .eq("user_id", user.id)
       .not("finished_at", "is", null)
       .gt("working_sets", 0)
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
     supabase.from("program").select("id, is_active, paused_at, pauses, program_day(id)").eq("user_id", user.id),
   ]);
   const workouts = (history.data ?? []).flatMap((r) =>
-    r.session_date ? [{ date: r.session_date, programId: r.program_id }] : [],
+    r.session_date ? [{ date: r.session_date, programId: r.program_id, planned: r.planned_per_week }] : [],
   );
   const programList = programs.data ?? [];
   const plans = new Map(programList.map((p) => [p.id, streakPlan(p, lastDay)]));

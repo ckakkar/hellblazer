@@ -61,6 +61,14 @@ describe("weekStreak", () => {
     expect(weekStreak(done, "2026-09-28", plans, "four")).toBe(0);
   });
 
+  it("keeps weeks earned before the same program went from three days to five", () => {
+    const plans = new Map([["split", plan(5)]]);
+    const done = ["2026-09-21", "2026-09-14", "2026-09-07"].flatMap((m) =>
+      Array.from({ length: 3 }, () => ({ date: m, programId: "split", planned: 3 })),
+    );
+    expect(weekStreak(done, "2026-09-28", plans, "split")).toBe(3);
+  });
+
   it("passes over a week the plan was paused, without breaking the streak", () => {
     const plans = new Map([["four", plan(4, [{ from: "2026-09-14", to: "2026-09-20" }])]]);
     const done = weeksOf(["2026-09-21", "2026-09-07"], 4, "four");

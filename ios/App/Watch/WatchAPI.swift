@@ -18,6 +18,9 @@ struct WatchState: Codable, Equatable {
     /// From a start: the session it made, however old (an offline workout
     /// that reached the server hours later). Nil from an older server.
     var started: Workout?
+    /// From an offline workout's start: another workout is open, so this
+    /// one wasn't started (and its sets mustn't go to that one).
+    var conflict: Bool?
 
     struct Week: Codable, Equatable {
         /// Monday, yyyy-MM-dd.
@@ -57,6 +60,9 @@ struct Exercise: Codable, Equatable, Identifiable {
     /// Ended by hand ("Done with this one") on any device: done, whatever its
     /// target says. Nil from a server before it.
     var ended: Bool?
+    /// The library exercise, on a workout started offline (from its plan):
+    /// the server puts it back if the day lost it meanwhile.
+    var exerciseId: String?
 
     /// The sets that count toward the plan: plain working sets, as
     /// src/lib/set-kinds.ts has them (no warm-ups, drops or rest-pause).
@@ -103,6 +109,8 @@ struct StartOption: Codable, Equatable, Identifiable {
 
 struct PlanExercise: Codable, Equatable {
     var name: String
+    /// The library exercise. Nil from a server before 2.8.
+    var exerciseId: String?
     var targetSets: Int?
     var targetReps: String?
     var restSeconds: Double?
@@ -150,8 +158,8 @@ struct WatchAPI {
 
     /// `startedAt` (epoch ms) for a workout started offline: the server
     /// dates it from then, not from when the connection came back.
-    func start(_ option: StartOption, localDate: String, startedAt: Double? = nil) async throws -> WatchState {
-        try await send("start", body: StartBody(templateId: option.templateId, programDayId: option.programDayId, localDate: localDate, startedAt: startedAt))
+    func start(_ option: StartOption, localDate: String, startedAt: Double? = nil, exercises: [String]? = nil) async throws -> WatchState {
+        try await send("start", body: StartBody(templateId: option.templateId, programDayId: option.programDayId, localDate: localDate, startedAt: startedAt, exercises: exercises))
     }
 
     func save(_ write: SetWrite) async throws {
@@ -177,6 +185,7 @@ struct WatchAPI {
         var programDayId: String?
         var localDate: String
         var startedAt: Double?
+        var exercises: [String]?
     }
     private struct SetBody: Encodable {
         var id: String

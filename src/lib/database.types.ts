@@ -421,6 +421,7 @@ export type Database = {
           finished_at: string | null
           id: string
           notes: string | null
+          planned_per_week: number | null
           program_day_id: string | null
           program_id: string | null
           template_id: string | null
@@ -434,6 +435,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           notes?: string | null
+          planned_per_week?: number | null
           program_day_id?: string | null
           program_id?: string | null
           template_id?: string | null
@@ -447,6 +449,7 @@ export type Database = {
           finished_at?: string | null
           id?: string
           notes?: string | null
+          planned_per_week?: number | null
           program_day_id?: string | null
           program_id?: string | null
           template_id?: string | null
@@ -733,6 +736,7 @@ export type Database = {
           duration_min: number | null
           exercise_count: number | null
           finished_at: string | null
+          planned_per_week: number | null
           program_day_id: string | null
           program_id: string | null
           session_date: string | null

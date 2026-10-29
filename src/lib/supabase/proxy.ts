@@ -49,7 +49,9 @@ export async function updateSession(request: NextRequest) {
     // Apple fetches this without cookies; the legal pages are for everyone.
     path.startsWith("/.well-known") ||
     path === "/privacy" ||
-    path === "/support";
+    path === "/support" ||
+    // Failure and CSP reports, signed in or not (they carry no account).
+    path === "/api/report";
 
   if (!signedIn && !isPublic) {
     const url = request.nextUrl.clone();

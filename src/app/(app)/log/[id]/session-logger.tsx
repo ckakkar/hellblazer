@@ -62,6 +62,7 @@ import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
 import { createClient } from "@/lib/supabase/client";
+import { reportProblem } from "@/lib/report";
 import { useKeepAwake } from "@/lib/keep-awake";
 import { exerciseForNextSet, nextSetLabel, restsAfter, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
 import { slotLabel, supersetSlots, type SupersetSlot } from "@/lib/supersets";
@@ -458,11 +459,23 @@ export function SessionLogger({
     return upload;
   }, []);
 
-  /** Saves a set. Resolves to whether the server has it (a draft: nothing to save). */
+  // The sets the server has: those the page opened with, and each saved
+  // since. Clearing one's reps makes it a draft again, and a draft isn't a
+  // set, so the server's copy has to go (see persist).
+  const onServer = useRef<Set<string>>(
+    new Set(session.session_exercise.flatMap((se) => se.set.map((s) => s.id))),
+  );
+  const deleteRef = useRef<(seId: string, setId: string) => Promise<boolean>>(async () => true);
+
+  /** Saves a set. Resolves to whether the server has it as the page does (a draft: not at all). */
   const persist = useCallback(
     (seId: string, set: LocalSet, setNumber: number): Promise<boolean> => {
-      // No reps yet: a draft, kept on this page until it has one.
-      if (!isLogged(set.reps)) return Promise.resolve(true);
+      // No reps: a draft, kept on this page until it has some. One the
+      // server already has (its reps just cleared) leaves the server, or it
+      // would keep counting the old reps while the page shows none.
+      if (!isLogged(set.reps)) {
+        return onServer.current.has(set.id) ? deleteRef.current(seId, set.id) : Promise.resolve(true);
+      }
       touched.current.set(set.id, Date.now());
       const write = toQueuedWrite(seId, set, setNumber);
       setInFlight((n) => n + 1);
@@ -485,6 +498,7 @@ export function SessionLogger({
           // Only clears the copy this upload carried. A newer edit queued
           // meanwhile stays on the device until its own upload lands.
           await removeQueuedSet(set.id, write.updatedAt).catch(() => undefined);
+          onServer.current.add(set.id);
           clearFailed(set.id);
           return true;
         })
@@ -492,6 +506,7 @@ export function SessionLogger({
           // Keep the device copy and expose the failed upload. The row can now
           // survive a reload, but the lifter still deserves honest sync status.
           setFailed((prev) => new Set(prev).add(set.id));
+          reportProblem("set-save-failed");
           return false;
         })
         .finally(() => setInFlight((n) => Math.max(0, n - 1))));
@@ -529,6 +544,7 @@ export function SessionLogger({
             () => undefined,
           );
           pendingDeletes.current.delete(setId);
+          onServer.current.delete(setId);
           clearFailed(setId);
           return true;
         })
@@ -540,6 +556,9 @@ export function SessionLogger({
     },
     [session.id, session.user_id, clearFailed, track],
   );
+  useEffect(() => {
+    deleteRef.current = persistDelete;
+  }, [persistDelete]);
 
   // Restore device-local writes before the lifter touches the screen. Queued
   // values win over the older server snapshot, then replay automatically when
@@ -1348,7 +1367,10 @@ export function SessionLogger({
       ];
       ref.current = next;
       setExercises(next);
-      setTargets((prev) => (prev[seId] ? { ...prev, [swapped.id]: prev[seId] } : prev));
+      // The replaced movement's prescription as the page has it (the
+      // session's own, or one carried here already), not only a carried one.
+      const carried = targets[seId];
+      if (carried) setTargets((prev) => ({ ...prev, [swapped.id]: carried }));
       setCompleted((prev) => new Set(prev).add(seId));
       setEndedHere((prev) => new Set(prev).add(seId));
       setActiveSeId(swapped.id);
@@ -1470,6 +1492,7 @@ export function SessionLogger({
         });
       } catch (err) {
         unstable_rethrow(err);
+        reportProblem("finish-failed");
         failedFinish("Couldn't finish the session. Your sets are safe; try again in a moment.");
         return;
       }
@@ -2288,7 +2311,7 @@ function ActiveExerciseModal({
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors active:bg-text/[0.05]"
                 >
                   <div className="min-w-0">
-                    <div className="truncate text-[15px] text-text">{e.name}</div>
+                    <div className="line-clamp-2 text-[15px] text-text">{e.name}</div>
                     <div className="truncate text-[13px] text-muted">
                       {MUSCLE_LABEL[e.primary_muscle]}
                       {e.equipment ? `, ${e.equipment}` : ""}

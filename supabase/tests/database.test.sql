@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(32);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -81,6 +81,54 @@ from public.session_exercise
 where session_id = current_setting('test.session')::uuid
 order by position
 limit 1;
+
+select is(
+  (select program_day_id from public.session where id = current_setting('test.session')::uuid),
+  current_setting('test.day')::uuid,
+  'a start records the program day it was, so the week counts that day'
+);
+select is(
+  (select planned_per_week from public.session where id = current_setting('test.session')::uuid)::int, 2,
+  'and the program''s days a week then, so editing it later can''t rewrite the streak'
+);
+
+-- Hands-free sets: numbered after the last, and a retried id adds nothing.
+select is(
+  public.log_sets(jsonb_build_array(jsonb_build_object(
+    'id', '00000000-0000-4000-8000-0000000000c1',
+    'session_exercise_id', (select id from public.session_exercise
+      where session_id = current_setting('test.session')::uuid order by position limit 1),
+    'weight_kg', 100, 'reps', 5))) -> 0 ->> 'set_number',
+  '2',
+  'log_sets numbers a set after the ones already there'
+);
+select is(
+  public.log_sets(jsonb_build_array(jsonb_build_object(
+    'id', '00000000-0000-4000-8000-0000000000c1',
+    'session_exercise_id', (select id from public.session_exercise
+      where session_id = current_setting('test.session')::uuid order by position limit 1),
+    'weight_kg', 100, 'reps', 5))) -> 0 ->> 'existed',
+  'true',
+  'and a retry with the same id logs nothing new'
+);
+
+-- An append (position -1) lands after the last exercise.
+insert into public.session_exercise (user_id, session_id, exercise_id, position)
+select '00000000-0000-0000-0000-00000000000a', current_setting('test.session')::uuid, exercise_id, -1
+from public.session_exercise where session_id = current_setting('test.session')::uuid order by position limit 1;
+select is(
+  (select max(position) from public.session_exercise where session_id = current_setting('test.session')::uuid), 2,
+  'an append takes the next position, worked out under a lock'
+);
+
+-- Recently deleted: a deleted workout comes back whole.
+select set_config('test.trash', public.trash_session(current_setting('test.session')::uuid)::text, true);
+select public.restore_session(current_setting('test.trash')::uuid);
+select is(
+  (select count(*) from public."set" st join public.session_exercise se on se.id = st.session_exercise_id
+   where se.session_id = current_setting('test.session')::uuid)::int, 2,
+  'a restored workout has its sets back'
+);
 
 insert into public.profile (user_id, display_name) values ('00000000-0000-0000-0000-00000000000a', 'A');
 select set_config(

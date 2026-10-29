@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { Sheet } from "@/components/ui/sheet";
 import { SearchField } from "@/components/ui/search-field";
 import { MUSCLE_LABEL } from "@/lib/muscles";
@@ -85,7 +86,8 @@ export function ExercisePicker({
               className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
             >
               <div className="min-w-0">
-                <div className="truncate text-sm text-text">{e.name}</div>
+                {/* The whole name: variations differ at the end ("…Curl" vs "…Curl, Cable"). */}
+                <div className="line-clamp-2 text-sm text-text">{e.name}</div>
                 <div className="truncate text-xs text-muted">
                   {MUSCLE_LABEL[e.primary_muscle]}
                   {e.equipment ? `, ${e.equipment}` : ""}
@@ -101,6 +103,12 @@ export function ExercisePicker({
         {filtered.length === 0 && (
           <li className="px-4 py-10 text-center text-sm text-muted">
             No exercises match “{q}”.
+            <Link
+              href={`/exercises?new=${encodeURIComponent(q.trim())}`}
+              className="mt-3 block font-medium text-text underline decoration-text/30 underline-offset-4"
+            >
+              Create “{q.trim()}” as your own exercise
+            </Link>
           </li>
         )}
       </ul>

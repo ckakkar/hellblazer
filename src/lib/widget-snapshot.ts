@@ -40,7 +40,7 @@ export async function buildWidgetSnapshot(
   const [year, program, muscles, stats, trendRows, profile, recordRows, plans] = await Promise.all([
     db
       .from("v_session_summary")
-      .select("session_date, working_sets, program_id")
+      .select("session_date, working_sets, program_id, planned_per_week")
       .eq("user_id", userId)
       // A workout is one with sets in it: an empty start isn't training.
       .gt("working_sets", 0)
@@ -195,7 +195,9 @@ export async function buildWidgetSnapshot(
       : null,
     streak: {
       weeks: weekStreak(
-        year.flatMap((s) => (s.session_date ? [{ date: s.session_date, programId: s.program_id }] : [])),
+        year.flatMap((s) =>
+          s.session_date ? [{ date: s.session_date, programId: s.program_id, planned: s.planned_per_week }] : [],
+        ),
         today,
         plans,
         program?.id ?? null,

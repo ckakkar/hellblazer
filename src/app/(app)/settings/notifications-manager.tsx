@@ -46,6 +46,13 @@ function workerRegistration(timeoutMs = 4000): Promise<ServiceWorkerRegistration
   ]);
 }
 
+/** When the daily run (16:00 UTC, vercel.json) lands here: "9:30 pm". */
+function reminderTime(): string {
+  const run = new Date();
+  run.setUTCHours(16, 0, 0, 0);
+  return run.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
 export function NotificationsManager({
   reminderHour,
   vapidPublicKey,
@@ -285,7 +292,8 @@ export function NotificationsManager({
             <div className="min-w-0">
               <div className="text-sm text-text">Daily workout reminder</div>
               <div className="mt-0.5 text-xs text-muted">
-                A once-a-day nudge when a workout is due and not yet logged.
+                A once-a-day nudge when a workout is due and not yet logged, around {reminderTime()}{" "}
+                your time.
               </div>
             </div>
             <Switch
