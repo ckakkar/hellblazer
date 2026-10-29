@@ -26,8 +26,10 @@ import { matchesExercise } from "@/lib/exercise-search";
 import {
   createCustomExercise,
   deleteCustomExercise,
+  restoreCustomExercise,
 } from "@/lib/actions/exercises";
 import { useAction } from "@/lib/use-action";
+import { showNotice } from "@/lib/notice";
 import { Collapse } from "@/components/ui/collapse";
 
 export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
@@ -101,9 +103,13 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
                   deleting={pending}
                   onDelete={() =>
                     start(async () => {
-                      await deleteCustomExercise({ id: e.id });
+                      const { retired } = await deleteCustomExercise({ id: e.id });
+                      if (retired) {
+                        showNotice(`${e.name} is in your workouts, so it's retired instead: kept in History, out of the pickers.`);
+                      }
                     })
                   }
+                  onRestore={() => start(async () => void (await restoreCustomExercise({ id: e.id })))}
                 />
               ))}
             </Card>
@@ -139,12 +145,14 @@ function ExerciseRow({
   onToggle,
   deleting,
   onDelete,
+  onRestore,
 }: {
   exercise: Exercise;
   open: boolean;
   onToggle: () => void;
   deleting: boolean;
   onDelete: () => void;
+  onRestore: () => void;
 }) {
   const guide = getExerciseGuide(e.name);
   const guideId = `guide-${e.id}`;
@@ -196,7 +204,15 @@ function ExerciseRow({
               {e.secondary_muscles.map((m) => MUSCLE_LABEL[m]).join(", ")}
             </span>
           )}
-          {e.user_id && (
+          {e.user_id && e.archived_at ? (
+            // Retired: kept for its history, out of the pickers.
+            <>
+              <Badge>Retired</Badge>
+              <Button variant="ghost" size="sm" disabled={deleting} onClick={onRestore}>
+                Bring back
+              </Button>
+            </>
+          ) : e.user_id ? (
             <>
               <Badge>Custom</Badge>
               <ConfirmIconButton
@@ -206,7 +222,7 @@ function ExerciseRow({
                 onConfirm={onDelete}
               />
             </>
-          )}
+          ) : null}
         </div>
       </div>
       {guide && (

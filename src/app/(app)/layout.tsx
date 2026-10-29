@@ -4,6 +4,7 @@ import { requireSessionUser } from "@/lib/auth";
 import { AppNav } from "@/components/nav/app-nav";
 import { PageTransition } from "@/components/nav/page-transition";
 import { RealtimeSync } from "@/components/realtime-sync";
+import { OfflineOutbox } from "@/components/offline-outbox";
 import { ResumeBanner } from "@/components/resume-banner";
 import { getActiveSession } from "@/lib/data/sessions";
 import { getShellProfile } from "@/lib/data/profile";
@@ -54,6 +55,7 @@ export default async function AppLayout({
       <DeviceSync userId={user.id} unit={unit} accent={accentSwatch(accent)} />
       <PullToRefresh />
       <RealtimeSync userId={user.id} />
+      <OfflineOutbox userId={user.id} />
       <AppNav
         userEmail={user.email}
         identity={{

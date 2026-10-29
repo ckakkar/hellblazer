@@ -45,11 +45,13 @@ export default async function LogPage({
 
   // Only offer the days of the current split (the active program), not every
   // template ever loaded. With no active program, fall back to all templates.
-  // `programDayId` is what makes a start count toward the block. Options built
-  // from the active program carry theirs; anything else is deliberately off-plan.
-  // Which day we attach is immaterial to the rotation (progress counts sessions
-  // per program, not per day), so the first day using a template is fine.
+  // `programDayId` is what makes a start count toward the block, as that day:
+  // each day of the program is its own option, so a template used on two
+  // days of a rotation is offered twice, and starting Day 3 counts as Day 3.
+  // Anything else is deliberately off-plan.
   type Opt = {
+    /** The option's own key: its program day, else its template. */
+    key: string;
     id: string;
     programDayId: string | null;
     name: string;
@@ -66,6 +68,7 @@ export default async function LogPage({
   ) => {
     const exercises = previewExercises(id);
     options.push({
+      key: programDayId ?? id,
       id,
       programDayId,
       name,
@@ -75,13 +78,9 @@ export default async function LogPage({
     });
   };
   if (activeProgress) {
-    const seen = new Set<string>();
     for (const d of activeProgress.program.program_day) {
       const t = d.workout_template;
-      if (t && !seen.has(t.id)) {
-        seen.add(t.id);
-        pushOption(t.id, t.name, t.day_label, d.id);
-      }
+      if (t) pushOption(t.id, t.name, t.day_label, d.id);
     }
   } else {
     for (const t of templates) {
@@ -92,8 +91,16 @@ export default async function LogPage({
 
   // Siri and Spotlight in the iOS app open /log?start=<template id> to begin
   // that day at once. Only a day offered here counts, and a workout already
-  // in progress wins: that's where they land instead.
-  const autoStart = start ? (options.find((o) => o.id === start) ?? null) : null;
+  // in progress wins: that's where they land instead. A template on two
+  // days starts as the first of them not yet done this week.
+  const openDays = new Set(
+    activeProgress?.program.program_day.filter((_, i) => activeProgress.dayStatus[i] === null).map((d) => d.id),
+  );
+  const autoStart = start
+    ? (options.find((o) => o.id === start && o.programDayId && openDays.has(o.programDayId)) ??
+      options.find((o) => o.id === start) ??
+      null)
+    : null;
   if (autoStart && activeSession && !activeSession.stale) {
     redirect(`/log/${activeSession.id}`);
   }

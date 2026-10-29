@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { format, parseISO } from "date-fns";
 
 /** Shared tooltip shell: a raised surface with tabular figures. */
 export function TooltipBox({
@@ -52,3 +53,16 @@ export function axisWidthFor(
   const widest = Math.max(2, ...values.map((v) => format(v).length));
   return Math.max(36, widest * 7 + 16);
 }
+
+/**
+ * Axis labels for a chart keyed by ISO date: "3 Mar", or "Mar 25" once the
+ * points span more than one year, so two 1 Januarys can't be confused.
+ */
+export function dateTick(dates: string[]): (iso: string) => string {
+  const years = new Set(dates.map((d) => d.slice(0, 4)));
+  return (iso) => format(parseISO(iso), years.size > 1 ? "MMM yy" : "d MMM");
+}
+
+/** A point's date in a tooltip or a summary: always with its year. */
+export const fullDate = (iso: string) => format(parseISO(iso), "d MMM yyyy");
+

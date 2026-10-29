@@ -162,6 +162,19 @@ enum VoiceSetLogger {
         return await send(request)
     }
 
+    /// A set command, sent with its own id and tried once more if the reply
+    /// is lost: the server keys the sets on the id, so a set that landed the
+    /// first time isn't logged twice, and the reply says what was logged.
+    private static func logOnce<Reply: Decodable>(_ body: [String: Any]) async -> Result<Reply, CallError> {
+        var body = body
+        body["operationId"] = UUID().uuidString.lowercased()
+        let first: Result<Reply, CallError> = await post("/api/device/set", body)
+        if case .failure(.offline) = first {
+            return await post("/api/device/set", body)
+        }
+        return first
+    }
+
     private static func get<Reply: Decodable>(_ path: String) async -> Result<Reply, CallError> {
         guard let request = WidgetRefresher.deviceRequest(path) else { return .failure(.unlinked) }
         return await send(request)
@@ -193,7 +206,7 @@ enum VoiceSetLogger {
         if let id = request.sessionExerciseId { body["sessionExerciseId"] = id }
 
         let reply: LogReply
-        let result: Result<LogReply, CallError> = await post("/api/device/set", body)
+        let result: Result<LogReply, CallError> = await logOnce(body)
         switch result {
         case .failure(let failure): return failure.spoken
         case .success(let value): reply = value
@@ -272,7 +285,7 @@ enum VoiceSetLogger {
         }
 
         let reply: HeardReply
-        let result: Result<HeardReply, CallError> = await post("/api/device/set", ["heard": runs])
+        let result: Result<HeardReply, CallError> = await logOnce(["heard": runs])
         switch result {
         case .failure(let failure): return failure.spoken
         case .success(let value): reply = value

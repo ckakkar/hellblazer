@@ -219,3 +219,45 @@ export async function getLastPerformances(
   }
   return result;
 }
+
+/** The sessions a lift was done in, for History's lift filter. */
+export async function getSessionIdsWithExercise(exerciseId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const rows = await selectAll((from, to) =>
+    supabase
+      .from("session_exercise")
+      .select("session_id, id")
+      .eq("exercise_id", exerciseId)
+      .order("id")
+      .range(from, to),
+  );
+  return [...new Set(rows.map((r) => r.session_id))];
+}
+
+export type DeletedWorkout = {
+  id: string;
+  title: string | null;
+  date: string;
+  workingSets: number;
+  deletedAt: string;
+};
+
+/** Recently deleted: workouts deleted in the last 30 days, newest deletion first. */
+export async function getDeletedWorkouts(): Promise<DeletedWorkout[]> {
+  const supabase = await createClient();
+  const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase
+    .from("deleted_session")
+    .select("id, title, session_date, working_sets, deleted_at")
+    .gte("deleted_at", since)
+    .order("deleted_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map((d) => ({
+    id: d.id,
+    title: d.title,
+    date: d.session_date,
+    workingSets: d.working_sets,
+    deletedAt: d.deleted_at,
+  }));
+}

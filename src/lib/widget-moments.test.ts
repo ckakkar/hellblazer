@@ -3,27 +3,68 @@ import { latestRecord, trainingDays, weekStreak } from "@/lib/widget-moments";
 
 // 2026-09-28 is a Monday.
 describe("weekStreak", () => {
-  const weeksOf = (mondays: string[], perWeek: number) =>
-    mondays.flatMap((m) => Array.from({ length: perWeek }, () => m));
+  const weeksOf = (mondays: string[], perWeek: number, programId: string | null = null) =>
+    mondays.flatMap((m) => Array.from({ length: perWeek }, () => ({ date: m, programId })));
+  const plan = (days: number, paused: { from: string; to: string }[] = []) => ({ days, paused });
 
   it("counts weeks in a row with the plan hit, not holding this week against it", () => {
-    const dates = weeksOf(["2026-09-21", "2026-09-14", "2026-09-07"], 4);
-    expect(weekStreak(dates, "2026-09-28", 4)).toBe(3);
-    expect(weekStreak([...dates, "2026-09-28", "2026-09-29", "2026-09-30", "2026-10-01"], "2026-10-01", 4)).toBe(4);
+    const plans = new Map([["four", plan(4)]]);
+    const done = weeksOf(["2026-09-21", "2026-09-14", "2026-09-07"], 4, "four");
+    expect(weekStreak(done, "2026-09-28", plans, "four")).toBe(3);
+    expect(weekStreak([...done, ...weeksOf(["2026-09-28"], 4, "four")], "2026-10-01", plans, "four")).toBe(4);
   });
 
   it("stops at a week short of the plan", () => {
-    const dates = [...weeksOf(["2026-09-21"], 4), ...weeksOf(["2026-09-14"], 3), ...weeksOf(["2026-09-07"], 4)];
-    expect(weekStreak(dates, "2026-09-28", 4)).toBe(1);
+    const plans = new Map([["four", plan(4)]]);
+    const done = [
+      ...weeksOf(["2026-09-21"], 4, "four"),
+      ...weeksOf(["2026-09-14"], 3, "four"),
+      ...weeksOf(["2026-09-07"], 4, "four"),
+    ];
+    expect(weekStreak(done, "2026-09-28", plans, "four")).toBe(1);
   });
 
   it("wants one workout a week without a program", () => {
-    expect(weekStreak(["2026-09-24", "2026-09-16"], "2026-09-28", null)).toBe(2);
-    expect(weekStreak([], "2026-09-28", null)).toBe(0);
+    expect(weekStreak(weeksOf(["2026-09-24", "2026-09-16"], 1), "2026-09-28", new Map(), null)).toBe(2);
+    expect(weekStreak([], "2026-09-28", new Map(), null)).toBe(0);
   });
 
   it("is broken by a missed week, even with this one hit", () => {
-    expect(weekStreak(["2026-09-28", "2026-09-16"], "2026-09-28", null)).toBe(1);
+    expect(weekStreak(weeksOf(["2026-09-28", "2026-09-16"], 1), "2026-09-28", new Map(), null)).toBe(1);
+  });
+
+  it("keeps weeks earned on an easier plan after switching to a harder one", () => {
+    const plans = new Map([
+      ["three", plan(3)],
+      ["five", plan(5)],
+    ]);
+    const done = weeksOf(["2026-09-21", "2026-09-14", "2026-09-07"], 3, "three");
+    // Switched to five days this week, nothing logged under it yet.
+    expect(weekStreak(done, "2026-09-28", plans, "five")).toBe(3);
+    // The first week on five days is held to five.
+    expect(weekStreak([...done, ...weeksOf(["2026-09-28"], 3, "five")], "2026-10-04", plans, "five")).toBe(3);
+    expect(weekStreak([...done, ...weeksOf(["2026-09-28"], 5, "five")], "2026-10-04", plans, "five")).toBe(4);
+  });
+
+  it("doesn't hand out past weeks for switching to an easier plan", () => {
+    const plans = new Map([
+      ["five", plan(5)],
+      ["three", plan(3)],
+    ]);
+    const done = weeksOf(["2026-09-21", "2026-09-14"], 3, "five");
+    expect(weekStreak(done, "2026-09-28", plans, "three")).toBe(0);
+  });
+
+  it("holds freeform weeks to the plan you were on", () => {
+    const plans = new Map([["four", plan(4)]]);
+    const done = [...weeksOf(["2026-09-14"], 4, "four"), ...weeksOf(["2026-09-21"], 2)];
+    expect(weekStreak(done, "2026-09-28", plans, "four")).toBe(0);
+  });
+
+  it("passes over a week the plan was paused, without breaking the streak", () => {
+    const plans = new Map([["four", plan(4, [{ from: "2026-09-14", to: "2026-09-20" }])]]);
+    const done = weeksOf(["2026-09-21", "2026-09-07"], 4, "four");
+    expect(weekStreak(done, "2026-09-28", plans, "four")).toBe(2);
   });
 });
 

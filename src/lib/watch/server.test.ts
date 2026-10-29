@@ -23,10 +23,23 @@ vi.mock("next/server", () => ({ after: () => {} }));
 
 /** Just enough of supabase-js's query builder: eq/is filters, reads, writes. */
 function fakeDb(tables: Tables) {
-  const rpc = vi.fn<(name: string, args: Row) => Promise<{ data: unknown; error: unknown }>>(async () => ({
-    data: null,
-    error: null,
-  }));
+  const rpc = vi.fn<(name: string, args: Row) => Promise<{ data: unknown; error: unknown }>>(async (name, args) => {
+    // log_sets as Postgres runs it: numbered after the exercise's last set,
+    // and an id already in comes back as it is.
+    if (name === "log_sets") {
+      const sets = (tables.set ??= []);
+      const out = (args.p_rows as Row[]).map((row) => {
+        const existing = sets.find((s) => s.id === row.id);
+        if (existing) return { id: existing.id, set_number: existing.set_number, existed: true };
+        const n =
+          Math.max(0, ...sets.filter((s) => s.session_exercise_id === row.session_exercise_id).map((s) => Number(s.set_number))) + 1;
+        sets.push({ rpe: null, is_warmup: false, ...row, user_id: args.p_user, set_number: n, is_completed: true });
+        return { id: row.id, set_number: n, existed: false };
+      });
+      return { data: out, error: null };
+    }
+    return { data: null, error: null };
+  });
   function from(table: string) {
     let op: "select" | "update" | "insert" | "delete" = "select";
     let payload: Row | Row[] | undefined;
@@ -360,6 +373,21 @@ describe("logging by voice on the phone", () => {
     expect(tables.set.filter((row) => row.session_exercise_id === ROW)).toHaveLength(1);
   });
 
+  it("logs a retried command once, answering as it did the first time", async () => {
+    const operationId = "40000000-0000-4000-8000-000000000001";
+    const first = await say({ operationId });
+    const again = await say({ operationId });
+    expect(again).toEqual(first);
+    expect(tables.set.filter((row) => row.session_exercise_id === BENCH)).toHaveLength(2);
+  });
+
+  it("gives two commands at once their own numbers", async () => {
+    const [a, b] = await Promise.all([say({ weight: 80, reps: 5 }), say({ weight: 80, reps: 5 })]);
+    const numbers = tables.set.filter((row) => row.session_exercise_id === BENCH).map((row) => row.set_number);
+    expect(new Set(numbers).size).toBe(numbers.length);
+    expect([a, b].every((r) => r.status === "logged")).toBe(true);
+  });
+
   it("takes back the last set", async () => {
     const res = await handleWatch(phone(), undoVoiceSet, "phone");
     expect(await res.json()).toMatchObject({ status: "undone", setId: FIRST, exercise: "Bench Press", weight: 80 });
@@ -422,6 +450,16 @@ describe("logging by voice on the phone", () => {
       expect(tables.set.filter((row) => row.session_exercise_id === BENCH).map((row) => row.set_number)).toEqual([
         1, 2,
       ]);
+    });
+
+    it("logs a retried command's sets once", async () => {
+      const body = {
+        operationId: "40000000-0000-4000-8000-000000000002",
+        heard: [{ exercise: "rows", sets: 3, reps: 8, weight: 60, unit: null, rpe: null, warmup: false }],
+      };
+      const first = await heard(body);
+      expect(await heard(body)).toEqual(first);
+      expect(tables.set.filter((row) => row.session_exercise_id === ROW)).toHaveLength(3);
     });
 
     it("says what it couldn't find, and logs nothing when that's all there was", async () => {

@@ -11,6 +11,8 @@ export type SegmentedOption<T extends string> = { value: T; label: React.ReactNo
  * chosen, by transform alone. `value` null shows no thumb (an optional
  * choice nobody's made). Tabs (`kind="tabs"`) for switching a view, radios
  * for picking a value. In the app, a change ticks like a picker's detent.
+ * The keyboard works as either role promises: one tab stop (the segment
+ * chosen), and the arrow keys, Home and End move the choice along it.
  */
 export function Segmented<T extends string>({
   options,
@@ -33,6 +35,13 @@ export function Segmented<T extends string>({
 }) {
   const index = options.findIndex((o) => o.value === value);
   const tabs = kind === "tabs";
+  const choose = (i: number, from: HTMLElement) => {
+    const o = options[(i + options.length) % options.length];
+    if (o.value !== value) haptic("tick");
+    onChange(o.value);
+    const buttons = from.parentElement?.querySelectorAll<HTMLButtonElement>("button");
+    buttons?.[(i + options.length) % options.length]?.focus();
+  };
   return (
     <div
       role={tabs ? "tablist" : "radiogroup"}
@@ -51,7 +60,7 @@ export function Segmented<T extends string>({
         )}
         style={{ transform: `translateX(${Math.max(0, index) * 100}%)` }}
       />
-      {options.map((o) => {
+      {options.map((o, i) => {
         const on = o.value === value;
         return (
           <button
@@ -62,9 +71,23 @@ export function Segmented<T extends string>({
             aria-checked={tabs ? undefined : on}
             aria-label={o.ariaLabel}
             disabled={disabled}
+            tabIndex={on || (index < 0 && i === 0) ? 0 : -1}
             onClick={() => {
               if (!on) haptic("tick");
               onChange(o.value);
+            }}
+            onKeyDown={(e) => {
+              const step =
+                e.key === "ArrowRight" || e.key === "ArrowDown"
+                  ? 1
+                  : e.key === "ArrowLeft" || e.key === "ArrowUp"
+                    ? -1
+                    : 0;
+              if (step) choose(i + step, e.currentTarget);
+              else if (e.key === "Home") choose(0, e.currentTarget);
+              else if (e.key === "End") choose(options.length - 1, e.currentTarget);
+              else return;
+              e.preventDefault();
             }}
             className={cn(
               "hb-hit min-w-0 truncate rounded-full font-medium transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/40 disabled:opacity-50",

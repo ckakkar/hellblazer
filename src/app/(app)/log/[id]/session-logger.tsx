@@ -16,6 +16,7 @@ import {
   ArrowDownRight,
   ArrowRight,
   Check,
+  ChevronDown,
   CloudOff,
   Flame,
   Heart,
@@ -39,6 +40,8 @@ import { NumberStepper } from "@/components/ui/number-stepper";
 import { Badge } from "@/components/ui/badge";
 import { useGlide } from "@/components/ui/use-glide";
 import { Sheet } from "@/components/ui/sheet";
+import { Collapse } from "@/components/ui/collapse";
+import { getExerciseGuide } from "@/lib/exercise-guides";
 import { Portal } from "@/components/ui/portal";
 import { Input } from "@/components/ui/input";
 import { TitleField } from "@/components/ui/title-field";
@@ -58,6 +61,7 @@ import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { isNativeApp } from "@/lib/native";
+import { createClient } from "@/lib/supabase/client";
 import { useKeepAwake } from "@/lib/keep-awake";
 import { exerciseForNextSet, nextSetLabel, restsAfter, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
 import { slotLabel, supersetSlots, type SupersetSlot } from "@/lib/supersets";
@@ -300,6 +304,7 @@ export function SessionLogger({
         rpe: s.rpe,
       })),
       range: targets[ex.seId]?.reps ?? null,
+      plannedSets: targets[ex.seId]?.sets ?? null,
       lift: {
         equipment: lift?.equipment ?? null,
         mechanic: lift?.mechanic ?? null,
@@ -396,6 +401,11 @@ export function SessionLogger({
   // Every set removed on this page, so a pull of the server's copy that was
   // already in flight can't bring one back (see the watch merge below).
   const deletedHere = useRef<Set<string>>(new Set());
+  // When each set was last changed here, and when an exercise was last added,
+  // removed or swapped here: a pull of the server's copy leaves those alone
+  // for a few seconds, while the server catches up (see the pull below).
+  const touched = useRef<Map<string, number>>(new Map());
+  const lastStructural = useRef(0);
 
   // Save health. `failed` holds the ids of sets the server never accepted, so
   // they can be retried and, crucially, shown.
@@ -416,6 +426,7 @@ export function SessionLogger({
   const toQueuedWrite = useCallback(
     (seId: string, set: LocalSet, setNumber: number): PendingSetWrite => ({
       id: set.id,
+      userId: session.user_id,
       sessionId: session.id,
       sessionExerciseId: seId,
       setNumber,
@@ -427,7 +438,7 @@ export function SessionLogger({
       loggedAt: set.loggedAt,
       updatedAt: nextStamp(),
     }),
-    [session.id, unit],
+    [session.id, session.user_id, unit],
   );
 
   const clearFailed = useCallback((setId: string) => {
@@ -452,6 +463,7 @@ export function SessionLogger({
     (seId: string, set: LocalSet, setNumber: number): Promise<boolean> => {
       // No reps yet: a draft, kept on this page until it has one.
       if (!isLogged(set.reps)) return Promise.resolve(true);
+      touched.current.set(set.id, Date.now());
       const write = toQueuedWrite(seId, set, setNumber);
       setInFlight((n) => n + 1);
       return track(queueSet(write)
@@ -495,6 +507,7 @@ export function SessionLogger({
     (seId: string, setId: string) => {
       const tombstone: PendingSetWrite = {
         id: setId,
+        userId: session.user_id,
         sessionId: session.id,
         sessionExerciseId: seId,
         setNumber: 0,
@@ -506,6 +519,7 @@ export function SessionLogger({
         deleted: true,
       };
       pendingDeletes.current.set(setId, seId);
+      touched.current.set(setId, Date.now());
       setInFlight((n) => n + 1);
       return track(queueSet(tombstone)
         .catch(() => undefined)
@@ -524,7 +538,7 @@ export function SessionLogger({
         })
         .finally(() => setInFlight((n) => Math.max(0, n - 1))));
     },
-    [session.id, clearFailed, track],
+    [session.id, session.user_id, clearFailed, track],
   );
 
   // Restore device-local writes before the lifter touches the screen. Queued
@@ -633,27 +647,46 @@ export function SessionLogger({
     }
   }, [persist, persistDelete]);
 
-  // Sets logged on the Apple Watch go to the server, not into this page's
-  // state. In the app, pick them up when the page comes back to the screen
-  // or the watch says it logged something. Only ever adds sets, and removes
-  // ones that arrived this way and were since undone on the watch: sets from
-  // this page are never touched.
-  const fromWatch = useRef<Set<string>>(new Set());
+  // Another device's changes to this workout: the Apple Watch, Siri, or the
+  // same account in another browser. Pulled when the page comes back to the
+  // screen, when the watch says it logged something, and when the database
+  // says a set or exercise changed. The server's copy is taken only for sets
+  // with nothing pending here (queued, failed, mid-save, or touched in the
+  // last few seconds), so a pull can't undo an edit, resurrect a set deleted
+  // here, or drop one not yet uploaded. An exercise added, removed or swapped
+  // elsewhere can't be merged into a workout in hand: the page says so and
+  // offers a reload.
+  const [changedElsewhere, setChangedElsewhere] = useState(false);
   useEffect(() => {
-    if (!isNativeApp() || isEditing) return;
+    if (isEditing) return;
     let busy = false;
+    let again = false;
     const pull = async () => {
-      if (busy) return;
+      if (busy) {
+        again = true;
+        return;
+      }
       busy = true;
       try {
-        const { finished, sets: remote } = await getSessionSets({ sessionId: session.id });
-        // Finished on the watch: this page is done too.
+        const [{ finished, sets: remote, exercises: remoteExercises }, queued] = await Promise.all([
+          getSessionSets({ sessionId: session.id }),
+          getQueuedSets(session.id).catch(() => [] as PendingSetWrite[]),
+        ]);
+        // Finished elsewhere: this page is done too.
         if (finished) {
           withNative((api) => api.endWorkoutActivity());
           router.replace(`/history/${session.id}`);
           return;
         }
-        const onServer = new Set(remote.map((r) => r.id));
+        const now = Date.now();
+        const pending = new Set(queued.map((w) => w.id));
+        const dirty = (id: string) =>
+          pending.has(id) ||
+          pendingSaves.current.has(id) ||
+          pendingDeletes.current.has(id) ||
+          failedRef.current.has(id) ||
+          now - (touched.current.get(id) ?? 0) < 15_000;
+        const byId = new Map(remote.map((r) => [r.id, r]));
         let changed = false;
         const next = ref.current.map((ex) => {
           const known = new Set(ex.sets.map((s) => s.id));
@@ -666,12 +699,39 @@ export function SessionLogger({
                 !pendingDeletes.current.has(r.id),
             )
             .sort((a, b) => a.setNumber - b.setNumber);
-          const undone = ex.sets.filter((s) => fromWatch.current.has(s.id) && !onServer.has(s.id));
-          if (incoming.length === 0 && undone.length === 0) return ex;
+          let touchedHere = incoming.length > 0;
+          const sets: LocalSet[] = [];
+          for (const s of ex.sets) {
+            const r = byId.get(s.id);
+            if (dirty(s.id) || !isLogged(s.reps)) {
+              sets.push(s);
+            } else if (!r || r.seId !== ex.seId) {
+              // Deleted (or moved) elsewhere.
+              touchedHere = true;
+            } else if (
+              r.weightKg !== s.kg ||
+              r.reps !== s.reps ||
+              r.rpe !== s.rpe ||
+              r.isWarmup !== s.isWarmup ||
+              r.kind !== s.kind
+            ) {
+              touchedHere = true;
+              sets.push({
+                ...s,
+                weight: toDisplayWeight(r.weightKg, unit),
+                kg: r.weightKg,
+                reps: r.reps,
+                rpe: r.rpe,
+                isWarmup: r.isWarmup,
+                kind: r.kind,
+              });
+            } else {
+              sets.push(s);
+            }
+          }
+          if (!touchedHere) return ex;
           changed = true;
-          const sets = ex.sets.filter((s) => !undone.includes(s));
           for (const r of incoming) {
-            fromWatch.current.add(r.id);
             sets.splice(Math.min(r.setNumber - 1, sets.length), 0, {
               id: r.id,
               weight: toDisplayWeight(r.weightKg, unit),
@@ -688,10 +748,22 @@ export function SessionLogger({
           ref.current = next;
           setExercises(next);
         }
+        const local = new Map(ref.current.map((ex) => [ex.seId, ex.exerciseId]));
+        if (
+          now - lastStructural.current > 10_000 &&
+          (remoteExercises.length !== local.size ||
+            remoteExercises.some((e) => local.get(e.id) !== e.exerciseId))
+        ) {
+          setChangedElsewhere(true);
+        }
       } catch {
         // Offline or signed out: the next pull catches up.
       } finally {
         busy = false;
+        if (again) {
+          again = false;
+          void pull();
+        }
       }
     };
     const onVisible = () => {
@@ -699,11 +771,37 @@ export function SessionLogger({
     };
     document.addEventListener("visibilitychange", onVisible);
     const off = onNative("watchChanged", () => void pull());
+
+    // The database's word that something changed, a beat later so a burst
+    // (a whole exercise of sets from Siri) is one pull. This page's own
+    // saves arrive too; their sets are pending or just touched, so they stay.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const soon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => void pull(), 1200);
+    };
+    const supabase = createClient();
+    const channel = supabase.channel(`hb-logger-${session.id}`);
+    for (const table of ["set", "session_exercise"] as const) {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table, filter: `user_id=eq.${session.user_id}` },
+        soon,
+      );
+    }
+    channel.on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "session", filter: `id=eq.${session.id}` },
+      soon,
+    );
+    channel.subscribe();
     return () => {
+      clearTimeout(timer);
       document.removeEventListener("visibilitychange", onVisible);
       off();
+      void supabase.removeChannel(channel);
     };
-  }, [isEditing, router, session.id, unit]);
+  }, [isEditing, router, session.id, session.user_id, unit]);
 
   // Sets taken back outside the page ("Undo my last set" to Siri): gone here
   // too, the same as a delete from this page. The app keeps them until taken.
@@ -1113,7 +1211,9 @@ export function SessionLogger({
       // which would replace the whole logger mid-workout.
       let added: Awaited<ReturnType<typeof addSessionExercise>>;
       try {
+        lastStructural.current = Date.now();
         added = await addSessionExercise({ sessionId: session.id, exerciseId });
+        lastStructural.current = Date.now();
       } catch {
         showNotice(`Couldn't add ${meta.name}. Check your connection and try again.`);
         return;
@@ -1170,6 +1270,7 @@ export function SessionLogger({
     });
     setActiveSeId((cur) => (cur === seId ? null : cur));
 
+    lastStructural.current = Date.now();
     removeSessionExercise({ id: seId })
       .then(() => {
         // Its sets went with it (cascade), so their device copies and any
@@ -1216,7 +1317,9 @@ export function SessionLogger({
     startNav(async () => {
       let swapped: Awaited<ReturnType<typeof swapSessionExercise>>;
       try {
+        lastStructural.current = Date.now();
         swapped = await swapSessionExercise({ sessionExerciseId: seId, newExerciseId });
+        lastStructural.current = Date.now();
       } catch {
         if (!hasSets) relabel(before.exerciseId, before.name, before.primaryMuscle);
         showNotice(`Couldn't swap to ${meta.name}. Check your connection and try again.`);
@@ -1610,6 +1713,28 @@ export function SessionLogger({
         {coach && <p className="mt-3 text-[14px] leading-5 text-text">{coach}</p>}
 
         {/* Save health. Silence here used to mean "saved" and "lost" alike. */}
+        {changedElsewhere && failed.size === 0 && (
+          <div
+            role="status"
+            className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-surface px-4 py-3"
+          >
+            <RefreshCw className="size-4 shrink-0 text-muted" />
+            <span className="min-w-0 flex-1 text-[13px] leading-5 text-text">
+              This workout&apos;s exercises changed on another device.
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={async () => {
+                // Whatever's uploading lands first; the device queue keeps the rest.
+                await Promise.allSettled([...uploads.current]);
+                window.location.reload();
+              }}
+            >
+              Reload
+            </Button>
+          </div>
+        )}
         {failed.size > 0 ? (
           <div
             role="alert"
@@ -2090,9 +2215,11 @@ function ActiveExerciseModal({
   const linksRef = useRef<HTMLDivElement>(null);
   useGlide(actionsRef, exercise.sets.length);
   useGlide(linksRef, `${exercise.sets.length}:${superset.slot ? 1 : 0}`);
+  const guide = getExerciseGuide(exercise.name);
+  const [showGuide, setShowGuide] = useState(false);
 
   const filtered = useMemo(
-    () => exerciseLibrary.filter((e) => e.id !== exercise.exerciseId && matchesExercise(e, q)),
+    () => exerciseLibrary.filter((e) => e.id !== exercise.exerciseId && !e.archived_at && matchesExercise(e, q)),
     [q, exerciseLibrary, exercise.exerciseId],
   );
 
@@ -2197,6 +2324,24 @@ function ActiveExerciseModal({
           {exercise.note && (
             <div className="mb-3 text-[13px] text-muted">{exercise.note}</div>
           )}
+          {guide && (
+            // The library's how-to, without leaving the workout.
+            <div className="mb-3">
+              <button
+                type="button"
+                aria-expanded={showGuide}
+                aria-controls={`guide-${exercise.seId}`}
+                onClick={() => setShowGuide((g) => !g)}
+                className="hb-hit inline-flex items-center gap-1 text-[13px] text-muted transition-colors hover:text-text"
+              >
+                How it&apos;s done
+                <ChevronDown aria-hidden className={cn("size-3.5 transition-transform duration-200", showGuide && "rotate-180")} />
+              </button>
+              <Collapse open={showGuide} id={`guide-${exercise.seId}`}>
+                <p className="mt-2 rounded-xl bg-text/[0.04] px-3.5 py-3 text-[14px] leading-[1.55] text-muted">{guide}</p>
+              </Collapse>
+            </div>
+          )}
 
           {superset.slot && (
             <SupersetLine
@@ -2219,6 +2364,7 @@ function ActiveExerciseModal({
                     key={s.id}
                     label={setLabel(exercise.sets, i)}
                     set={s}
+                    unit={unit}
                     isPR={prSets.has(s.id)}
                     flash={s.id === flashId}
                     onOpen={() => setOpenId(s.id)}
@@ -2228,18 +2374,19 @@ function ActiveExerciseModal({
               const before = exercise.sets.slice(0, editIndex);
               const after = exercise.sets.slice(editIndex + 1);
               return (
-                <div role="table" aria-label="Sets" className="tnum">
+                <div role="group" aria-label="Sets" className="tnum">
                   {exercise.sets.length > 1 && (
-                    <div role="row" className={cn(SET_COLUMNS, "pb-1.5 text-[12px] text-muted")}>
-                      <span role="columnheader">Set</span>
-                      <span role="columnheader" className="text-right">{unit}</span>
-                      <span role="columnheader" className="text-right">Reps</span>
-                      <span role="columnheader" className="text-right">RPE</span>
-                      <span aria-hidden />
+                    // Column heads for the eye; each line's button says it all to a screen reader.
+                    <div aria-hidden className={cn(SET_COLUMNS, "pb-1.5 text-[12px] text-muted")}>
+                      <span>Set</span>
+                      <span className="text-right">{unit}</span>
+                      <span className="text-right">Reps</span>
+                      <span className="text-right">RPE</span>
+                      <span />
                     </div>
                   )}
                   {before.length > 0 && (
-                    <div role="rowgroup" className="mb-2 divide-y divide-text/[0.07] border-y border-text/[0.07]">
+                    <div className="mb-2 divide-y divide-text/[0.07] border-y border-text/[0.07]">
                       {before.map(line)}
                     </div>
                   )}
@@ -2260,7 +2407,7 @@ function ActiveExerciseModal({
                     />
                   )}
                   {after.length > 0 && (
-                    <div role="rowgroup" className="mt-2 divide-y divide-text/[0.07] border-y border-text/[0.07]">
+                    <div className="mt-2 divide-y divide-text/[0.07] border-y border-text/[0.07]">
                       {after.map(line)}
                     </div>
                   )}
@@ -2358,7 +2505,12 @@ function setLabel(sets: LocalSet[], i: number): string {
   return `Set ${sets.slice(0, i + 1).filter((s) => !s.isWarmup && s.kind == null).length}`;
 }
 
-const NEXT_KIND: Record<string, SetKind> = { plain: "drop", drop: "rest_pause", rest_pause: null };
+/** What a set counts for, said once it isn't a plain one (set-kinds.ts). */
+const KIND_NOTE = {
+  warmup: "A warm-up: not counted in your totals or the plan.",
+  drop: "Counts in your totals, not toward the plan's sets.",
+  rest_pause: "Counts in your totals, not toward the plan's sets.",
+} as const;
 
 /**
  * Last session and today's target in two aligned rows, the way a lifter
@@ -2446,41 +2598,51 @@ const SET_COLUMNS = "grid grid-cols-[minmax(0,1fr)_4.5rem_3rem_3rem_1.25rem] ite
 function SetLine({
   label,
   set,
+  unit,
   isPR,
   flash,
   onOpen,
 }: {
   label: string;
   set: LocalSet;
+  unit: Unit;
   isPR?: boolean;
   flash?: boolean;
   onOpen: () => void;
 }) {
+  // A plain button, so it's announced as one: "Set 2, 80 kg by 8 reps, RPE 8, a record. Edit".
+  const spoken = [
+    label,
+    `${trimNum(Number(set.weight) || 0)} ${unit} by ${set.reps ?? 0} ${set.reps === 1 ? "rep" : "reps"}`,
+    set.rpe != null ? `RPE ${set.rpe}` : null,
+    isPR ? "a record" : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <button
       type="button"
-      role="row"
       onClick={onOpen}
-      aria-label={`${label}, ${trimNum(Number(set.weight) || 0)} by ${set.reps ?? 0}. Edit`}
+      aria-label={`${spoken}. Edit`}
       className={cn(
         SET_COLUMNS,
         "hb-hit w-full py-2.5 text-left text-[15px] transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]",
         flash && "hb-set-in",
       )}
     >
-      <span role="cell" className={cn("truncate text-[13px]", set.isWarmup ? "text-warn" : "text-muted")}>
+      <span className={cn("truncate text-[13px]", set.isWarmup ? "text-warn" : "text-muted")}>
         {label}
       </span>
-      <span role="cell" className="text-right text-text">
+      <span className="text-right text-text">
         {set.weight == null ? "–" : trimNum(set.weight)}
       </span>
-      <span role="cell" className="text-right text-text">
+      <span className="text-right text-text">
         {set.reps ?? "–"}
       </span>
-      <span role="cell" className="text-right text-muted">
+      <span className="text-right text-muted">
         {set.rpe ?? ""}
       </span>
-      <span role="cell" className="flex justify-end">
+      <span className="flex justify-end">
         {isPR && <Zap aria-label="Record" className="size-3.5 fill-current text-accent" />}
       </span>
     </button>
@@ -2520,18 +2682,28 @@ function SetRow({
           {set.isWarmup ? (
             label
           ) : (
-            // Tap to change the set's kind: plain, drop, rest-pause.
-            <button
-              type="button"
-              onClick={() => onChange({ kind: NEXT_KIND[set.kind ?? "plain"] })}
-              aria-label={`${label}. Change the set's kind`}
+            // The set's kind, picked by name from the system's own menu:
+            // plain, drop, rest-pause.
+            <span
               className={cn(
-                "-mx-1.5 rounded-full px-1.5 py-0.5 transition-colors active:bg-text/[0.08]",
-                set.kind && "bg-text/[0.07] text-text",
+                "relative -mx-1.5 inline-flex items-center rounded-full transition-colors focus-within:ring-2 focus-within:ring-text/30",
+                set.kind && "bg-text/[0.07]",
               )}
             >
-              {label}
-            </button>
+              <select
+                value={set.kind ?? "plain"}
+                onChange={(e) =>
+                  onChange({ kind: e.target.value === "plain" ? null : (e.target.value as SetKind) })
+                }
+                aria-label={`${label}: set type`}
+                className="hb-hit appearance-none bg-transparent py-0.5 pl-1.5 pr-6 font-semibold text-text focus:outline-none"
+              >
+                <option value="plain">{set.kind ? "Straight set" : label}</option>
+                <option value="drop">Drop set</option>
+                <option value="rest_pause">Rest-pause</option>
+              </select>
+              <ChevronDown aria-hidden className="pointer-events-none absolute right-1.5 size-3.5 text-muted" />
+            </span>
           )}
           {isPR && (
             <span className="inline-flex items-center gap-1 rounded-full bg-accent px-2 py-0.5 text-[11px] font-semibold text-black">
@@ -2542,8 +2714,11 @@ function SetRow({
         </span>
         <div className="flex items-center gap-1">
           <label className="flex items-center gap-1.5 text-[13px] text-muted">
-            RPE
+            <abbr title="Rate of perceived exertion: 10 is nothing left, 8 is two more reps in the tank" className="no-underline">
+              RPE
+            </abbr>
             <input
+              aria-label="RPE, effort out of 10 (optional)"
               type="number"
               onFocus={selectAllOnFocus}
               inputMode="decimal"
@@ -2582,6 +2757,11 @@ function SetRow({
           </button>
         </div>
       </div>
+      {(set.isWarmup || set.kind) && (
+        <p className="-mt-1.5 mb-3 px-0.5 text-[12px] text-muted">
+          {KIND_NOTE[set.isWarmup ? "warmup" : set.kind!]}
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-2">
         <div>
           <div className="mb-1.5 px-1 tnum text-[12px] text-muted">
@@ -2589,7 +2769,7 @@ function SetRow({
           </div>
           <NumberStepper
             size="lg"
-            ariaLabel="weight"
+            ariaLabel={`${label} weight, ${unit}`}
             value={set.weight}
             onChange={(v) => onChange({ weight: Number.isNaN(v) ? null : v })}
             step={weightStep}
@@ -2603,7 +2783,7 @@ function SetRow({
           </div>
           <NumberStepper
             size="lg"
-            ariaLabel="reps"
+            ariaLabel={`${label} reps`}
             value={set.reps}
             onChange={(v) => onChange({ reps: Number.isNaN(v) ? null : v })}
             step={1}

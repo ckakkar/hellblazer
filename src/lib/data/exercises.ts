@@ -25,3 +25,12 @@ export async function getLoggedExercises(): Promise<
     .map((s) => ({ exercise_id: s.exercise_id, exercise_name: s.exercise_name }))
     .sort((a, b) => a.exercise_name.localeCompare(b.exercise_name));
 }
+
+/** The lifter's most-trained lifts, most first: the pickers list them ahead of the rest. */
+export async function getUsualExerciseIds(limit = 8): Promise<string[]> {
+  const stats = await getExerciseStats();
+  return stats
+    .toSorted((a, b) => Number(b.sessions_logged) - Number(a.sessions_logged))
+    .slice(0, limit)
+    .map((s) => s.exercise_id);
+}

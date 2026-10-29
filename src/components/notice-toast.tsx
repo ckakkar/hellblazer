@@ -22,7 +22,11 @@ export function NoticeToast() {
   if (!mounted || !shown) return null;
   return (
     <Portal>
-      <div className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[60] flex justify-center px-4">
+      {/* Stays live over an open sheet (use-modal makes the rest inert). */}
+      <div
+        data-hb-live
+        className="pointer-events-none fixed inset-x-0 top-[calc(env(safe-area-inset-top)+0.75rem)] z-[60] flex justify-center px-4"
+      >
         <div
           key={shown.id}
           role="alert"

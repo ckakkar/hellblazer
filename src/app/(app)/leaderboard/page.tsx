@@ -28,7 +28,7 @@ export default async function LeaderboardPage() {
     <div>
       <PageHeader
         title="King of the Hill"
-        subtitle="Everyone with a ring name, ranked by total volume lifted."
+        subtitle="Everyone with a ring name, ranked by total weight moved: weight × reps on every working set, as each lifter logged it. It rewards showing up, not one big lift."
         stat={
           myPlace > 0
             ? { value: `#${myPlace}`, label: `of ${entries.length}` }

@@ -58,6 +58,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "keepAwake", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setRestDefaults", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recoveryStatus", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "requestRecovery", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recoveryData", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "takeRemovedSets", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "donateWorkoutStart", returnType: CAPPluginReturnPromise),
@@ -213,9 +214,10 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         ])
     }
 
-    /// Shows Apple's Health permission sheet, for everything Fatty saves and
-    /// reads (HealthAccess). It only appears while something's unasked;
-    /// after that, changes happen in the Health app.
+    /// Shows Apple's Health permission sheet for saving to Health: workouts,
+    /// bodyweight and effort, and reading workouts (HealthAccess). Recovery
+    /// asks for its own readings (requestRecovery). It only appears while
+    /// something's unasked; after that, changes happen in the Health app.
     @objc func requestHealth(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
             call.resolve(["available": false])
@@ -301,6 +303,18 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             let ask = await RecoveryReadings.shouldRequest(self.healthStore)
             call.resolve(["available": true, "shouldRequest": ask])
+        }
+    }
+
+    /// Recovery on Home: Health's sheet for sleep, HRV and resting heart rate
+    /// alone, with nothing to write.
+    @objc func requestRecovery(_ call: CAPPluginCall) {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            call.resolve(["available": false])
+            return
+        }
+        healthStore.requestAuthorization(toShare: [], read: HealthAccess.recoveryTypes) { _, _ in
+            call.resolve(["available": true])
         }
     }
 

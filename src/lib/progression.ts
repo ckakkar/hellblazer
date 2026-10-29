@@ -5,8 +5,10 @@ import type { Unit } from "@/lib/units";
  * working sets and the template's rep range. Double progression, the way
  * most programs run it:
  *
- * - every set at the working weight reached the top of the range, and the
- *   last wasn't all-out: add weight, back to the bottom of the range;
+ * - every set at the working weight reached the top of the range, the
+ *   last wasn't all-out, and the day's sets were all done: add weight, back
+ *   to the bottom of the range (a shortened day, two sets of a planned
+ *   three, earns the top of the range again, not more weight);
  * - fell short of the range: hold the weight, aim for the bottom of it;
  * - otherwise: same weight, one more rep than last time's weakest set.
  *
@@ -69,11 +71,14 @@ export function nextTarget({
   range,
   lift,
   unit,
+  plannedSets = null,
 }: {
   last: LastSet[];
   range: string | null;
   lift: Lift;
   unit: Unit;
+  /** The working sets the plan asks for; null without a plan. */
+  plannedSets?: number | null;
 }): Target | null {
   const sets = last.filter((s) => s.reps > 0 && s.weight >= 0);
   if (sets.length === 0) return null;
@@ -94,6 +99,8 @@ export function nextTarget({
   }
   const [lo, hi] = bounds;
   const fewest = Math.min(...working.map((s) => s.reps));
+  const allDone = plannedSets == null || working.length >= plannedSets;
+  if (fewest >= hi && !allOut && !allDone) return same(hi);
   if (fewest >= hi && !allOut) return canAdd ? up(lo) : same(hi + 1);
   if (fewest < lo) return { weight, reps: lo, change: "hold", added: 0 };
   return same(Math.min(hi, fewest + 1));

@@ -1,11 +1,17 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getAuthedContext } from "@/lib/auth";
+import { FRESH_SIGN_IN_MS, getAuthedContext, signedInWithin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { revokeAppleToken } from "@/lib/apple";
 
-export type DeleteAccountResult = { ok: false; error: string };
+export type DeleteAccountResult = { ok: false; error: string; signInAgain?: boolean };
+
+/** Whether deleting the account needs a fresh sign-in first (none in the last ten minutes). */
+export async function deletionNeedsSignIn(): Promise<boolean> {
+  await getAuthedContext();
+  return !(await signedInWithin(FRESH_SIGN_IN_MS));
+}
 
 /**
  * Deletes the signed-in lifter's account and everything in it. Every table
@@ -13,11 +19,16 @@ export type DeleteAccountResult = { ok: false; error: string };
  * removes their sessions, sets, programs, templates, bodyweight, profile,
  * push devices and Apple token in one step.
  *
- * Sign in with Apple is revoked first, as App Store rules require. On
- * success this redirects to the landing page; it only returns on failure.
+ * Only just after signing in again: a session left open on a phone isn't
+ * enough to delete everything. Sign in with Apple is revoked first, as App
+ * Store rules require. On success this redirects to the landing page; it
+ * only returns on failure.
  */
 export async function deleteAccount(): Promise<DeleteAccountResult> {
   const { supabase, user } = await getAuthedContext();
+  if (!(await signedInWithin(FRESH_SIGN_IN_MS))) {
+    return { ok: false, error: "Sign in again to delete your account.", signInAgain: true };
+  }
   const svc = createServiceClient();
   if (!svc) return { ok: false, error: "Account deletion isn't available right now. Try again later." };
 

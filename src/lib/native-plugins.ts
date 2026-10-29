@@ -196,6 +196,8 @@ export interface HellBlazerNative {
   setRestDefaults(options: { seconds: number; auto: boolean }): Promise<void>;
   /** Whether Health's permission sheet still has something to ask. */
   recoveryStatus(): Promise<{ available: boolean; shouldRequest: boolean }>;
+  /** Health's sheet for Recovery's readings alone (2.8 on; before, requestHealth asked for everything). */
+  requestRecovery(): Promise<{ available: boolean }>;
   /** Four weeks of sleep, HRV and resting heart rate, oldest first. */
   recoveryData(): Promise<{ days: RecoveryDay[] }>;
   /** Sets taken back outside the page for this session, handed over once. */

@@ -3,10 +3,12 @@ import Foundation
 import HealthKit
 import WidgetKit
 
-/// What Fatty asks Apple Health for, in one sheet: it saves workouts,
-/// bodyweight and (iOS 18) each workout's effort, and reads sleep, heart
-/// rate variability and resting heart rate for Recovery on Home, plus
-/// workouts, to find the one the watch recorded and rate its effort.
+/// What Fatty asks Apple Health for, a feature at a time, each when it's
+/// turned on. Saving to Health (Profile) saves workouts, bodyweight and (iOS
+/// 18) each workout's effort, and reads workouts, to find the one the watch
+/// recorded and rate its effort. Recovery on Home reads sleep, heart rate
+/// variability and resting heart rate, and nothing else: asking for it
+/// doesn't ask to write anything.
 enum HealthAccess {
     static let bodyMass = HKQuantityType(.bodyMass)
 
@@ -19,11 +21,14 @@ enum HealthAccess {
     }
 
     static var readTypes: Set<HKObjectType> {
+        [HKObjectType.workoutType()]
+    }
+
+    static var recoveryTypes: Set<HKObjectType> {
         [
             HKCategoryType(.sleepAnalysis),
             HKQuantityType(.heartRateVariabilitySDNN),
             HKQuantityType(.restingHeartRate),
-            HKObjectType.workoutType(),
         ]
     }
 }
@@ -106,8 +111,8 @@ enum RecoveryReadings {
     static func shouldRequest(_ store: HKHealthStore) async -> Bool {
         await withCheckedContinuation { continuation in
             store.getRequestStatusForAuthorization(
-                toShare: HealthAccess.shareTypes,
-                read: HealthAccess.readTypes
+                toShare: [],
+                read: HealthAccess.recoveryTypes
             ) { status, _ in
                 continuation.resume(returning: status == .shouldRequest)
             }

@@ -49,14 +49,51 @@ async function deviceToken(): Promise<string> {
   }
 }
 
-/** Whether notifications are on for this phone: permission granted and a token saved. */
-export async function nativePushEnabled(): Promise<boolean> {
-  const { PushNotifications } = await import("@capacitor/push-notifications");
-  const permission = await PushNotifications.checkPermissions();
-  return permission.receive === "granted" && storedToken() !== null;
+/*
+ * Two things ride on one APNs token. Widgets refresh by silent push, which
+ * iOS delivers without asking, so every signed-in phone registers its token
+ * whether or not it allows alerts. Reminders and the recap are alerts: only
+ * when the lifter turned notifications on here and iOS allows them
+ * (`alerts` on the server's copy).
+ */
+const ALERTS_KEY = "hell-blazer:apns-alerts";
+
+function alertsWanted(): boolean {
+  try {
+    const stored = window.localStorage.getItem(ALERTS_KEY);
+    // Builds before 2.8 kept a token only while notifications were on.
+    return stored === null ? storedToken() !== null : stored === "1";
+  } catch {
+    return false;
+  }
 }
 
-/** Asks iOS for permission and registers this phone. Returns a message on failure. */
+function setAlertsWanted(on: boolean) {
+  try {
+    window.localStorage.setItem(ALERTS_KEY, on ? "1" : "0");
+  } catch {
+    // Storage blocked: the server copy is what counts.
+  }
+}
+
+async function alertsAllowed(): Promise<boolean> {
+  const { PushNotifications } = await import("@capacitor/push-notifications");
+  return (await PushNotifications.checkPermissions()).receive === "granted";
+}
+
+/** Saves this phone's token with the account, alerts on or off. */
+async function register(alerts: boolean): Promise<void> {
+  const token = await deviceToken();
+  await registerApnsDevice({ token, timezone: timezone(), alerts });
+  storeToken(token);
+}
+
+/** Whether notifications are on for this phone: asked for here, and allowed by iOS. */
+export async function nativePushEnabled(): Promise<boolean> {
+  return alertsWanted() && (await alertsAllowed());
+}
+
+/** Asks iOS for permission and turns this phone's alerts on. Returns a message on failure. */
 export async function enableNativePush(): Promise<string | null> {
   const { PushNotifications } = await import("@capacitor/push-notifications");
   const permission = await PushNotifications.requestPermissions();
@@ -64,9 +101,8 @@ export async function enableNativePush(): Promise<string | null> {
     return "Notifications are off for Fatty. Turn them on in iOS Settings → Notifications → Fatty.";
   }
   try {
-    const token = await deviceToken();
-    await registerApnsDevice({ token, timezone: timezone() });
-    storeToken(token);
+    await register(true);
+    setAlertsWanted(true);
     return null;
   } catch {
     return `Couldn't register this ${deviceName()} for notifications. Try again.`;
@@ -74,31 +110,28 @@ export async function enableNativePush(): Promise<string | null> {
 }
 
 /**
- * On sign-out: this phone stops getting the account's notifications (its
- * token leaves the account), and the next account starts with them off.
- * iOS's permission stays, so turning them on again is one tap.
+ * On sign-out: this phone leaves the account entirely (its token goes, so
+ * neither alerts nor widget pushes arrive), and the next account starts
+ * with alerts off. iOS's permission stays, so turning them on is one tap.
  */
 export async function forgetNativePush(): Promise<void> {
   const token = storedToken();
   storeToken(null);
+  setAlertsWanted(false);
   if (token) await unregisterApnsDevice({ token });
 }
 
+/** Alerts off. The phone stays registered, so its widgets keep refreshing. */
 export async function disableNativePush(): Promise<void> {
-  const token = storedToken();
-  if (token) await unregisterApnsDevice({ token });
-  storeToken(null);
-  const { PushNotifications } = await import("@capacitor/push-notifications");
-  await PushNotifications.unregister();
+  setAlertsWanted(false);
+  await register(false);
 }
 
 /**
- * On each launch with notifications on: re-register, since APNs can rotate
- * a phone's token, and refresh the server's copy (and its timezone).
+ * On each launch, signed in: register again, since APNs can rotate a
+ * phone's token, and refresh the server's copy (its timezone, and whether
+ * alerts are on, which iOS Settings may have changed since).
  */
 export async function refreshNativePush(): Promise<void> {
-  if (!(await nativePushEnabled())) return;
-  const token = await deviceToken();
-  await registerApnsDevice({ token, timezone: timezone() });
-  storeToken(token);
+  await register(alertsWanted() && (await alertsAllowed()));
 }

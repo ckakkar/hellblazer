@@ -113,7 +113,7 @@ struct NextBoutView: View {
                     Label("Fatty", systemImage: "flame")
                         .font(.caption2.weight(.semibold))
                         .widgetAccentable()
-                    Text(snapshot.nextBout.map { "Next: \($0)" } ?? "No program")
+                    Text(snapshot.nextBout(at: entry.date).map { "Next: \($0)" } ?? (snapshot.nextBout == nil ? "No program" : "Open Fatty for this week"))
                         .font(.headline)
                         .lineLimit(1)
                     Text("\(week.sessionsText) sessions, \(week.sets) sets")
@@ -122,7 +122,7 @@ struct NextBoutView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             case .accessoryInline:
-                Label(snapshot.nextBout.map { "Next: \($0)" } ?? "\(week.sessionsText) sessions this week", systemImage: "flame")
+                Label(snapshot.nextBout(at: entry.date).map { "Next: \($0)" } ?? "\(week.sessionsText) sessions this week", systemImage: "flame")
             case .systemMedium:
                 ZStack {
                     InkBackdrop(ink: entry.ink, clear: entry.clear, strength: 0.75, width: 0.5)
@@ -173,7 +173,7 @@ private struct NextBoutBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             WidgetHeader(title: "Next bout", symbol: "flame.fill")
-            Text(snapshot.nextBout ?? "Pick a program")
+            Text(snapshot.nextBout(at: Date()) ?? (snapshot.nextBout == nil ? "Pick a program" : "Open Fatty for this week"))
                 .font(WidgetStyle.title(titleSize))
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)

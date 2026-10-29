@@ -1,6 +1,5 @@
 "use client";
 
-import { format, parseISO } from "date-fns";
 import {
   Area,
   AreaChart,
@@ -20,6 +19,8 @@ import {
   GRID_STROKE,
   TooltipBox,
   axisWidthFor,
+  dateTick,
+  fullDate,
 } from "./chart-kit";
 
 type Point = { date: string; est1rm: number; volume: number };
@@ -42,8 +43,10 @@ export function OneRepMaxChart({
   unit: Unit;
   height?: number;
 }) {
+  // Keyed by the full date; the axis and tooltip format it (with the year
+  // when it matters), so two sessions a year apart stay two points.
   const chartData = data.map((p) => ({
-    date: format(parseISO(p.date), "d MMM"),
+    date: p.date,
     est1rm: conv(p.est1rm, unit),
   }));
   const recordAt = chartData.reduce((best, d, i) => (d.est1rm > chartData[best].est1rm ? i : best), 0);
@@ -58,8 +61,17 @@ export function OneRepMaxChart({
   // Same clipping trap as the bodyweight chart: a fixed axis pulled left by a
   // negative margin cuts the leading digit off long lb figures.
   const yWidth = axisWidthFor(chartData.map((d) => d.est1rm));
+  const first = chartData[0];
+  const last = chartData[chartData.length - 1];
 
   return (
+    <>
+    {/* The chart in words, for a screen reader: where it started, where it is, the record. */}
+    <p className="sr-only">
+      Estimated max over {chartData.length} {chartData.length === 1 ? "session" : "sessions"}: {trimNum(first.est1rm)} {unit} on{" "}
+      {fullDate(first.date)}, {trimNum(last.est1rm)} {unit} on {fullDate(last.date)}
+      {record ? `, best ${recordLabel} on ${fullDate(record.date)}` : ""}.
+    </p>
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={chartData} margin={{ top: 28, right: 16, bottom: 4, left: 0 }}>
         <defs>
@@ -75,6 +87,7 @@ export function OneRepMaxChart({
           tickLine={false}
           axisLine={{ stroke: "var(--color-border)" }}
           minTickGap={16}
+          tickFormatter={dateTick(chartData.map((d) => d.date))}
         />
         <YAxis
           tick={AXIS_TICK}
@@ -87,7 +100,7 @@ export function OneRepMaxChart({
           cursor={{ stroke: "var(--color-border)" }}
           content={({ active, payload, label }) =>
             active && payload?.length ? (
-              <TooltipBox label={label}>
+              <TooltipBox label={typeof label === "string" ? fullDate(label) : label}>
                 {payload[0].value} {unit} est. 1RM
               </TooltipBox>
             ) : null
@@ -124,6 +137,7 @@ export function OneRepMaxChart({
         )}
       </AreaChart>
     </ResponsiveContainer>
+    </>
   );
 }
 
@@ -135,7 +149,7 @@ export function VolumeBarsChart({
   unit: Unit;
 }) {
   const chartData = data.map((p) => ({
-    date: format(parseISO(p.date), "d MMM"),
+    date: p.date,
     volume: Math.round(unit === "lb" ? kgToLb(p.volume) : p.volume),
   }));
   if (chartData.length === 0)
@@ -143,8 +157,15 @@ export function VolumeBarsChart({
 
   const volTick = (v: number) => (v >= 1000 ? `${v / 1000}k` : `${v}`);
   const yWidth = axisWidthFor(chartData.map((d) => d.volume), volTick);
+  const heaviest = chartData.reduce((a, b) => (b.volume > a.volume ? b : a));
 
   return (
+    <>
+    <p className="sr-only">
+      Volume over {chartData.length} {chartData.length === 1 ? "session" : "sessions"}, the most{" "}
+      {heaviest.volume.toLocaleString()} {unit} on {fullDate(heaviest.date)}, the latest{" "}
+      {chartData[chartData.length - 1].volume.toLocaleString()} {unit} on {fullDate(chartData[chartData.length - 1].date)}.
+    </p>
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
@@ -154,6 +175,7 @@ export function VolumeBarsChart({
           tickLine={false}
           axisLine={{ stroke: "var(--color-border)" }}
           minTickGap={16}
+          tickFormatter={dateTick(chartData.map((d) => d.date))}
         />
         <YAxis
           tick={AXIS_TICK}
@@ -166,7 +188,7 @@ export function VolumeBarsChart({
           cursor={{ fill: "color-mix(in oklab, var(--color-text) 5%, transparent)" }}
           content={({ active, payload, label }) =>
             active && payload?.length ? (
-              <TooltipBox label={label}>
+              <TooltipBox label={typeof label === "string" ? fullDate(label) : label}>
                 {Number(payload[0].value).toLocaleString()} {unit} volume
               </TooltipBox>
             ) : null
@@ -181,5 +203,6 @@ export function VolumeBarsChart({
         />
       </BarChart>
     </ResponsiveContainer>
+    </>
   );
 }

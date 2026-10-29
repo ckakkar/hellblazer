@@ -26,6 +26,7 @@ import { formatVolume } from "@/lib/units";
 import { WidgetSync } from "@/components/native/widget-sync";
 import { RecoveryCard } from "@/components/native/recovery-card";
 import { cn, fitFigure } from "@/lib/utils";
+import { OutboxNote } from "@/components/offline-outbox";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
@@ -182,6 +183,7 @@ export default async function DashboardPage({
   return (
     <div className="space-y-10">
       <WidgetSync />
+      <OutboxNote />
       {/* The hero, and the next workout overlapping its foot: one screen that
           says who you are and what to do next. On a phone Start lands in
           thumb reach; on a desktop the card sits over the poster's lower

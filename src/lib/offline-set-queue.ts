@@ -4,6 +4,9 @@ const STORE = "pending-sets";
 
 export type PendingSetWrite = {
   id: string;
+  /** The account it was logged under (absent from builds before 2.8): only
+   *  that account's outbox replays it (offline-outbox.ts). */
+  userId?: string;
   sessionId: string;
   sessionExerciseId: string;
   setNumber: number;
@@ -125,4 +128,10 @@ export async function getQueuedSets(sessionId: string) {
   return writes.toSorted(
     (a, b) => a.setNumber - b.setNumber || a.updatedAt - b.updatedAt,
   );
+}
+
+/** Every write queued on this device, for every workout: the outbox (offline-outbox.ts). */
+export async function getAllQueuedSets() {
+  if (typeof indexedDB === "undefined") return [] as PendingSetWrite[];
+  return transaction<PendingSetWrite[]>("readonly", (store) => store.getAll());
 }

@@ -7,6 +7,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { getTier, type TierKey } from "@/lib/tiers";
 import { isAcceptedBirthday } from "@/lib/age";
 import type { TablesInsert } from "@/lib/database.types";
+import { nudgeWidgets } from "@/lib/widget-push";
 
 export type AcceptTierResult =
   | { ok: true; tierKey: TierKey }
@@ -63,6 +64,8 @@ export async function acceptTier(input: { verdictId: string }): Promise<AcceptTi
   const { data: written, error: upErr } = await write.select("user_id");
   if (upErr) throw upErr;
   if (!written?.length) return { ok: false, error: "no_verdict" };
+  // The Fighter widget shows the rank.
+  await nudgeWidgets(svc, user.id);
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");

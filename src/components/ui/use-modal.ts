@@ -22,11 +22,39 @@ export function usePresence(open: boolean, exitMs: number): boolean {
   return mounted;
 }
 
+/** The open overlays, innermost last: only the top one answers Escape and Tab. */
+const stack: HTMLElement[] = [];
+/** What this file made inert, so it only ever undoes its own. */
+const madeInert = new Set<HTMLElement>();
+
+/**
+ * Everything on the page but the top overlay goes inert: a screen reader or
+ * a keyboard can't wander out to the page behind, or to the sheet under a
+ * sheet. Overlays portal to <body>, so it's <body>'s other children (the
+ * notice toast, `data-hb-live`, stays live).
+ */
+function syncInert() {
+  const top = stack[stack.length - 1];
+  const topRoot = top ? [...document.body.children].find((c) => c.contains(top)) : undefined;
+  for (const el of [...document.body.children] as HTMLElement[]) {
+    const shouldBe = Boolean(topRoot) && el !== topRoot && el.tagName !== "SCRIPT" && !el.hasAttribute("data-hb-live");
+    if (shouldBe && !el.inert) {
+      el.inert = true;
+      madeInert.add(el);
+    } else if (!shouldBe && madeInert.has(el)) {
+      el.inert = false;
+      madeInert.delete(el);
+    }
+  }
+}
+
 /**
  * Modal behaviour for an open overlay: Escape closes, Tab is trapped inside,
- * the page behind can't scroll (pinned the iOS way), and focus goes back to
- * whatever opened it on close. The overlay itself takes focus rather than
- * its first field, so opening one on a phone doesn't summon the keyboard.
+ * the rest of the page is inert, the page behind can't scroll (pinned the
+ * iOS way), and focus goes back to whatever opened it on close. A sheet
+ * opened from a sheet stacks: only the top one listens, and closing it hands
+ * back to the one below. The overlay itself takes focus rather than its
+ * first field, so opening one on a phone doesn't summon the keyboard.
  */
 export function useModal(
   open: boolean,
@@ -52,7 +80,13 @@ export function useModal(
         ) ?? [],
       ).filter((el) => el.offsetParent !== null);
 
+    const panel = panelRef.current;
+    if (panel) {
+      stack.push(panel);
+      syncInert();
+    }
     const onKey = (e: KeyboardEvent) => {
+      if (panel && stack[stack.length - 1] !== panel) return;
       if (e.key === "Escape") return onCloseRef.current();
       if (e.key !== "Tab") return;
       const items = focusables();
@@ -92,6 +126,10 @@ export function useModal(
 
     return () => {
       document.removeEventListener("keydown", onKey);
+      if (panel) {
+        stack.splice(stack.lastIndexOf(panel), 1);
+        syncInert();
+      }
       Object.assign(style, prev);
       window.scrollTo(0, scrollY);
       if (opener?.isConnected) opener.focus({ preventScroll: true });

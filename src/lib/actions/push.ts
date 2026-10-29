@@ -68,19 +68,22 @@ export async function deletePushSubscription(input: { endpoint: string }) {
 
 /**
  * Store this iPhone's APNs token for the signed-in user. A token belongs to
- * one phone, so it moves to whoever signed in there last.
+ * one phone, so it moves to whoever signed in there last. `alerts`: whether
+ * reminders go to it too, or only the silent pushes that refresh its widgets.
  */
-export async function registerApnsDevice(input: { token: string; timezone?: string | null }) {
+export async function registerApnsDevice(input: { token: string; timezone?: string | null; alerts?: boolean }) {
   const v = z
     .object({
       token: z.string().regex(/^[0-9a-f]{64,200}$/),
       timezone: z.string().max(64).refine(isValidTimeZone, "Not a timezone").nullable().optional(),
+      alerts: z.boolean().optional(),
     })
     .parse(input);
   const { supabase } = await getAuthedContext();
   const { error } = await supabase.rpc("claim_apns_device", {
     p_token: v.token,
     p_timezone: v.timezone ?? undefined,
+    p_alerts: v.alerts ?? true,
   });
   if (error) throw error;
   revalidatePath("/settings");
@@ -141,7 +144,7 @@ export async function sendTestPush(): Promise<TestPushResult> {
       ? supabase.from("push_subscription").select("endpoint, p256dh, auth").eq("user_id", user.id)
       : Promise.resolve({ data: [] as { endpoint: string; p256dh: string; auth: string }[] }),
     ios
-      ? supabase.from("apns_device").select("token").eq("user_id", user.id)
+      ? supabase.from("apns_device").select("token").eq("user_id", user.id).eq("alerts", true)
       : Promise.resolve({ data: [] as { token: string }[] }),
   ]);
   if ((subs?.length ?? 0) + (devices?.length ?? 0) === 0) {

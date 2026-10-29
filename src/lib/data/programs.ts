@@ -8,7 +8,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { getTimeZone } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
-import { countInWeek, pausedDays, readPauses } from "@/lib/program-week";
+import { countedWorkouts, pausedDays, readPauses, weekDays, type DayStatus } from "@/lib/program-week";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
 
@@ -70,6 +70,10 @@ export type ProgramProgress = {
   sessionsThisWeek: number;
   skipsThisWeek: number;
   doneThisWeek: number;
+  /** Each day this week, in the program's order: done, skipped, or open. */
+  dayStatus: DayStatus[];
+  /** Workouts beyond the days (a day done twice, or more than the plan). */
+  extraThisWeek: number;
   weekComplete: boolean;
   nextDay: ProgramDayWithTemplate | null;
   lastAdvance: { kind: "skip" | "session"; label: string } | null;
@@ -121,12 +125,14 @@ export async function getProgramProgress(
     }
   }
 
-  // Count sessions logged AND days skipped this week, and grab the latest of
-  // each: all in one round-trip (the "last" rows drive the roll-back control).
-  let sessionsThisWeek = 0;
-  let skipsThisWeek = 0;
-  let lastSessionRow: { id: string; title: string | null; created_at: string } | null =
-    null;
+  // The week's workouts and skips, each with the day it was, and the latest
+  // of each: all in one round-trip (the "last" rows drive the roll-back
+  // control). Only workouts that count: with sets, and finished (or left
+  // open past the stale clock), so an empty start doesn't use up a day.
+  let dayStatus: DayStatus[] = days.map(() => null);
+  let extraThisWeek = 0;
+  let nextIndex = 0;
+  let lastSessionRow: { id: string | null; title: string | null; created_at: string | null } | null = null;
   let lastSkipRow: { id: string; created_at: string } | null = null;
   if (weekStart && program.start_date) {
     const windowEnd = format(addDays(parseISO(weekStart), 7), "yyyy-MM-dd");
@@ -136,23 +142,28 @@ export async function getProgramProgress(
     const pauses = readPauses(program.pauses);
     const from = format(addDays(parseISO(weekStart), -pausedDays(pauses)), "yyyy-MM-dd");
     const week = { weekStart, pauses, restartedAt: program.restarted_at };
+    const counted = countedWorkouts();
     const [sessionRows, skipRows, lastSession, lastSkip] = await Promise.all([
       supabase
-        .from("session")
-        .select("date, created_at")
+        .from("v_session_summary")
+        .select("session_date, created_at, program_day_id")
         .eq("program_id", program.id)
-        .gte("date", from)
-        .lt("date", windowEnd),
+        .gt("working_sets", 0)
+        .or(counted)
+        .gte("session_date", from)
+        .lt("session_date", windowEnd),
       supabase
         .from("program_skip")
-        .select("date, created_at")
+        .select("date, created_at, program_day_id")
         .eq("program_id", program.id)
         .gte("date", from)
         .lt("date", windowEnd),
       supabase
-        .from("session")
-        .select("id, title, created_at")
+        .from("v_session_summary")
+        .select("session_id, title, created_at")
         .eq("program_id", program.id)
+        .gt("working_sets", 0)
+        .or(counted)
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
@@ -166,25 +177,40 @@ export async function getProgramProgress(
     ]);
     if (sessionRows.error) throw sessionRows.error;
     if (skipRows.error) throw skipRows.error;
-    sessionsThisWeek = countInWeek(sessionRows.data ?? [], week);
-    skipsThisWeek = countInWeek(skipRows.data ?? [], week);
-    lastSessionRow = lastSession.data;
+    const workouts = (sessionRows.data ?? []).flatMap((r) =>
+      r.session_date && r.created_at
+        ? [{ date: r.session_date, created_at: r.created_at, program_day_id: r.program_day_id }]
+        : [],
+    );
+    const result = weekDays(
+      days.map((d) => d.id),
+      workouts,
+      skipRows.data ?? [],
+      week,
+    );
+    dayStatus = result.status;
+    extraThisWeek = result.extra;
+    nextIndex = result.next;
+    lastSessionRow = lastSession.data
+      ? { id: lastSession.data.session_id, title: lastSession.data.title, created_at: lastSession.data.created_at }
+      : null;
     lastSkipRow = lastSkip.data;
   }
 
+  const sessionsThisWeek = dayStatus.filter((d) => d === "done").length;
+  const skipsThisWeek = dayStatus.filter((d) => d === "skipped").length;
   const doneThisWeek = sessionsThisWeek + skipsThisWeek;
   const weekComplete = daysPerWeek > 0 && doneThisWeek >= daysPerWeek;
-  // A finished week always leads into next week's first day. Without the
-  // check, an extra session this week (6 of 5) pointed at day 2.
-  const nextDay =
-    daysPerWeek > 0 ? (weekComplete ? days[0] : days[doneThisWeek]) ?? days[0] : null;
+  // The first day not yet done this week; a finished week leads into next
+  // week's first day.
+  const nextDay = daysPerWeek > 0 ? (days[nextIndex] ?? days[0]) : null;
 
   // The most recent advance (for the "Roll back a day" control): whichever of
   // the latest logged session or latest skip happened last. Uses rows already
   // fetched above, so no extra round-trip.
   let lastAdvance: ProgramProgress["lastAdvance"] = null;
   if (doneThisWeek > 0) {
-    const sessTime = lastSessionRow
+    const sessTime = lastSessionRow?.created_at
       ? new Date(lastSessionRow.created_at).getTime()
       : -1;
     const skipTime = lastSkipRow
@@ -214,6 +240,8 @@ export async function getProgramProgress(
     sessionsThisWeek,
     skipsThisWeek,
     doneThisWeek,
+    dayStatus,
+    extraThisWeek,
     weekComplete,
     nextDay,
     lastAdvance,

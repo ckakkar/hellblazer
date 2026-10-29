@@ -51,7 +51,7 @@ export function LandingArenaHero({ error, deleted }: { error?: string; deleted?:
           )}
           <SignInOptions />
           <p className="mt-3 text-center text-[13px] text-muted sm:text-left">
-            Private to you. Works offline.
+            Private to you. Keeps logging with no signal.
           </p>
         </div>
       </div>

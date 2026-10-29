@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { supersetChanges } from "@/lib/supersets";
+import { APPEND } from "@/lib/positions";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
@@ -11,7 +12,7 @@ import {
   getLastPerformances,
   type LastPerformance,
 } from "@/lib/data/sessions";
-import { refreshWidgets, widgetDevices } from "@/lib/widget-push";
+import { nudgeWidgets, refreshWidgets, widgetDevices } from "@/lib/widget-push";
 import type { TablesUpdate } from "@/lib/database.types";
 
 /**
@@ -77,22 +78,13 @@ export async function addSessionExercise(input: {
     .parse(input);
   const { supabase, user } = await getAuthedContext();
 
-  const { data: last } = await supabase
-    .from("session_exercise")
-    .select("position")
-    .eq("session_id", sessionId)
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const position = (last?.position ?? -1) + 1;
-
   const { data, error } = await supabase
     .from("session_exercise")
     .insert({
       user_id: user.id,
       session_id: sessionId,
       exercise_id: exerciseId,
-      position,
+      position: APPEND,
     })
     .select("id")
     .single();
@@ -199,6 +191,30 @@ export async function saveSet(input: z.input<typeof setSchema>) {
 }
 
 /**
+ * Uploads one write queued on a device (offline-outbox.ts) from outside its
+ * workout's page. Says whether a failure is for good (its workout or
+ * exercise is gone, it isn't this account's, or it breaks a rule), so the
+ * device can let it go, or worth another try (no connection, a busy server).
+ */
+export async function replaySet(
+  input: z.input<typeof setSchema> & { deleted?: boolean },
+): Promise<{ ok: true } | { ok: false; permanent: boolean }> {
+  try {
+    if (input.deleted) {
+      await deleteSet({ id: input.id });
+      return { ok: true };
+    }
+    const parsed = setSchema.safeParse(input);
+    if (!parsed.success) return { ok: false, permanent: true };
+    await saveSet(parsed.data);
+    return { ok: true };
+  } catch (err) {
+    const code = (err as { code?: unknown }).code;
+    return { ok: false, permanent: code === "23503" || code === "23514" || code === "42501" || code === "22P02" };
+  }
+}
+
+/**
  * "Done with this one" (or picking it back up), kept with the workout so the
  * watch, Siri and a reload agree on what's next (next-set.ts).
  */
@@ -235,10 +251,12 @@ export async function setSessionSuperset(input: { sessionExerciseId: string; lin
   if (rowsErr) throw rowsErr;
   const list = rows ?? [];
   const changes = supersetChanges(list, list.findIndex((r) => r.id === se.id), v.link);
-  for (const change of changes) {
-    const { error } = await supabase.from("session_exercise").update({ superset: change.superset }).eq("id", change.id);
-    if (error) throw error;
-  }
+  // Every row that changes, in one transaction.
+  const { error } = await supabase.rpc("apply_superset_changes", {
+    p_table: "session_exercise",
+    p_changes: changes,
+  });
+  if (error) throw error;
   revalidatePath(`/log/${se.session_id}`);
   return changes;
 }
@@ -255,22 +273,23 @@ export type SessionSet = {
 };
 
 /**
- * Every set in a session as the server has it, and whether it's been
- * finished. The logger in the iOS app uses it to pick up sets logged, or a
- * finish, on the Apple Watch.
+ * Every set in a session as the server has it, its exercises, and whether
+ * it's been finished. The logger uses it to pick up what another device did
+ * to the workout: sets logged, changed or deleted on the Apple Watch, Siri
+ * or another phone or browser, and a finish.
  */
 export async function getSessionSets(input: {
   sessionId: string;
-}): Promise<{ finished: boolean; sets: SessionSet[] }> {
+}): Promise<{ finished: boolean; sets: SessionSet[]; exercises: { id: string; exerciseId: string }[] }> {
   const { sessionId } = z.object({ sessionId: z.string().uuid() }).parse(input);
   const { supabase } = await getAuthedContext();
   const { data, error } = await supabase
     .from("session")
-    .select("finished_at, session_exercise(id, set(id, set_number, weight_kg, reps, rpe, is_warmup, kind))")
+    .select("finished_at, session_exercise(id, exercise_id, set(id, set_number, weight_kg, reps, rpe, is_warmup, kind))")
     .eq("id", sessionId)
     .maybeSingle();
   if (error) throw error;
-  if (!data) return { finished: true, sets: [] };
+  if (!data) return { finished: true, sets: [], exercises: [] };
   const sets = data.session_exercise.flatMap((se) =>
     se.set.map((s) => ({
       seId: se.id,
@@ -283,7 +302,11 @@ export async function getSessionSets(input: {
       kind: s.kind === "drop" || s.kind === "rest_pause" ? (s.kind as SessionSet["kind"]) : null,
     })),
   );
-  return { finished: data.finished_at !== null, sets };
+  return {
+    finished: data.finished_at !== null,
+    sets,
+    exercises: data.session_exercise.map((se) => ({ id: se.id, exerciseId: se.exercise_id })),
+  };
 }
 
 export async function deleteSet(input: { id: string }) {
@@ -326,17 +349,39 @@ export async function updateSessionMeta(input: {
   revalidatePath(`/history/${v.sessionId}`);
 }
 
-export async function deleteSession(input: { id: string }) {
-  const { id } = z.object({ id: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
+type Supabase = Awaited<ReturnType<typeof getAuthedContext>>["supabase"];
+
+/**
+ * Deletes a workout. One with sets in it goes to Recently deleted (whole,
+ * restorable for 30 days: trash_session); an empty start just goes.
+ */
+async function removeSession(supabase: Supabase, id: string) {
+  const { data: logged, error: readErr } = await supabase
+    .from("session_exercise")
+    .select("id, set!inner(id)")
+    .eq("session_id", id)
+    .limit(1);
+  if (readErr) throw readErr;
+  if (logged.length > 0) {
+    const { error } = await supabase.rpc("trash_session", { p_session: id });
+    if (error) throw error;
+    return;
+  }
   const { error } = await supabase.from("session").delete().eq("id", id);
   if (error) throw error;
+}
+
+export async function deleteSession(input: { id: string }) {
+  const { id } = z.object({ id: z.string().uuid() }).parse(input);
+  const { supabase, user } = await getAuthedContext();
+  await removeSession(supabase, id);
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/history");
   revalidatePath("/dashboard");
   redirect("/history");
 }
 
-/** Delete every logged session (cascades to exercises + sets). Irreversible. */
+/** Delete every logged session (cascades to exercises + sets), and Recently deleted with them. Irreversible. */
 export async function clearHistory() {
   const { supabase, user } = await getAuthedContext();
   const { error } = await supabase
@@ -344,6 +389,9 @@ export async function clearHistory() {
     .delete()
     .eq("user_id", user.id);
   if (error) throw error;
+  const { error: trashErr } = await supabase.from("deleted_session").delete().eq("user_id", user.id);
+  if (trashErr) throw trashErr;
+  await nudgeWidgets(supabase, user.id);
   // Wipe skips too so the program rotation starts clean with the history.
   await supabase.from("program_skip").delete().eq("user_id", user.id);
   revalidatePath("/history");
@@ -398,12 +446,30 @@ export async function finishSession(input: {
   redirect(`/history/${v.sessionId}`);
 }
 
-/** Abandon an in-progress session from the resume banner (no redirect). */
+/** Delete a workout without leaving the page: discarding one under way, or a swipe in History. */
 export async function discardSession(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
-  const { error } = await supabase.from("session").delete().eq("id", id);
-  if (error) throw error;
+  const { supabase, user } = await getAuthedContext();
+  await removeSession(supabase, id);
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/dashboard");
   revalidatePath("/history");
+}
+
+/** Brings a workout back from Recently deleted, exactly as it was. */
+export async function restoreSession(
+  input: { id: string },
+): Promise<{ ok: true; sessionId: string } | { ok: false; reason: "exercise-missing" }> {
+  const { id } = z.object({ id: z.string().uuid() }).parse(input);
+  const { supabase, user } = await getAuthedContext();
+  const { data, error } = await supabase.rpc("restore_session", { p_id: id });
+  // A custom exercise deleted since: returned, not thrown, so the page can say so.
+  if (error?.message.includes("exercise missing")) return { ok: false, reason: "exercise-missing" };
+  if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  revalidatePath("/progress");
+  revalidatePath("/programs");
+  return { ok: true, sessionId: data };
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getUser } from "@/lib/auth";
+import { FRESH_SIGN_IN_MS, getUser, signedInWithin } from "@/lib/auth";
 import { format, parseISO } from "date-fns";
 import { getUnit, getAccent, getAppearance, getTimeZone, getToday } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
@@ -95,6 +95,7 @@ export default async function ProfilePage({
       appearanceIsLocked(),
       getSessionSummaries(),
     ]);
+  const freshSignIn = await signedInWithin(FRESH_SIGN_IN_MS);
 
   // Formatted here, in the lifter's timezone: a client component formatting
   // the timestamp itself renders differently on the server and the phone.
@@ -315,10 +316,10 @@ export default async function ProfilePage({
             />
           </SettingsGroup>
 
-          <section>
+          <section id="reset" className="scroll-mt-6">
             <h2 className="px-4 pb-2 text-[13px] font-medium text-muted">Reset</h2>
             <div className="rounded-2xl bg-surface p-4">
-              <DangerZone activeProgram={activeProgram} />
+              <DangerZone activeProgram={activeProgram} signInAgain={!freshSignIn} />
             </div>
           </section>
         </aside>
