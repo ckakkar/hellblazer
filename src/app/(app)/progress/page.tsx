@@ -182,6 +182,13 @@ async function ExerciseTab({
         <div className="mt-6">
           <OneRepMaxChart data={points} unit={unit} height={300} />
         </div>
+        {/* From the line to the workouts behind it. */}
+        <Link
+          href={`/history?exercise=${exerciseId}`}
+          className="mt-3 inline-block text-[13px] text-muted underline decoration-text/25 underline-offset-4 hover:text-text"
+        >
+          Every session with {exerciseName}
+        </Link>
       </section>
 
       {/* A lift's personal records are a tale of the tape by any other name, so

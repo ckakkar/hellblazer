@@ -6,7 +6,8 @@ import {
   getExercisePRs,
   sessionTargets,
 } from "@/lib/data/sessions";
-import { getExercises } from "@/lib/data/exercises";
+import { getExercises, getUsualExerciseIds } from "@/lib/data/exercises";
+import { UsualLiftsProvider } from "@/components/usual-lifts";
 import { getUnit } from "@/lib/settings";
 import { getProfile } from "@/lib/data/profile";
 import { getTier } from "@/lib/tiers";
@@ -27,13 +28,14 @@ export default async function LoggerPage({
   searchParams: Promise<{ edit?: string }>;
 }) {
   const [{ id }, { edit }] = await Promise.all([params, searchParams]);
-  const [session, exerciseLibrary, unit, exercisePRs, profile, ipad] = await Promise.all([
+  const [session, exerciseLibrary, unit, exercisePRs, profile, ipad, usual] = await Promise.all([
     getSessionDetail(id),
     getExercises(),
     getUnit(),
     getExercisePRs(id),
     getProfile(),
     isIPadApp(),
+    getUsualExerciseIds(),
   ]);
   // Discarded on the phone while the iPad watched.
   if (!session && ipad) redirect("/dashboard");
@@ -69,14 +71,16 @@ export default async function LoggerPage({
   const targets = sessionTargets(session);
 
   return (
-    <SessionLogger
-      session={session}
-      exerciseLibrary={exerciseLibrary}
-      lastPerformances={lastPerformances}
-      targets={targets}
-      exercisePRs={exercisePRs}
-      unit={unit}
-      fighter={fighter}
-    />
+    <UsualLiftsProvider ids={usual}>
+      <SessionLogger
+        session={session}
+        exerciseLibrary={exerciseLibrary}
+        lastPerformances={lastPerformances}
+        targets={targets}
+        exercisePRs={exercisePRs}
+        unit={unit}
+        fighter={fighter}
+      />
+    </UsualLiftsProvider>
   );
 }

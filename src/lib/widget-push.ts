@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/database.types";
+import { after } from "next/server";
 import { apnsConfigured, sendApnsBackground } from "@/lib/apns";
 
 /**
@@ -21,4 +22,14 @@ export async function widgetDevices(db: SupabaseClient<Database>, userId: string
  */
 export async function refreshWidgets(tokens: string[]) {
   await Promise.all(tokens.map((token) => sendApnsBackground(token, { fatty: "widgets" }).catch(() => null)));
+}
+
+/**
+ * After a change the widgets show (the plan, a deleted or restored workout,
+ * the rank): tells the lifter's iPhones once the response has gone. Never
+ * throws; a phone that misses it catches up when the app next opens.
+ */
+export async function nudgeWidgets(db: SupabaseClient<Database>, userId: string) {
+  const devices = await widgetDevices(db, userId).catch(() => [] as string[]);
+  if (devices.length > 0) after(() => refreshWidgets(devices));
 }

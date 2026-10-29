@@ -97,6 +97,11 @@ export function ConsistencyHeatmap({
   const trained = (slice: DayCell[][]) =>
     slice.flat().filter((c) => !c.future && c.sets > 0).length;
   const trainedYear = trained(weeks);
+  const recent = weeks
+    .flat()
+    .filter((c) => !c.future && c.sets > 0)
+    .slice(-12)
+    .reverse();
   const trained6mo = trained(weeks.slice(OLD));
 
   const monthsMobile = monthGroups(weeks.slice(OLD));
@@ -129,17 +134,34 @@ export function ConsistencyHeatmap({
   return (
     <div className="w-full">
       {/* Month labels: recent 6mo (mobile) / full year (desktop) */}
-      <div className="grid gap-[3px] grid-cols-[1.75rem_repeat(26,minmax(0,1fr))] lg:hidden">
+      <div aria-hidden className="grid gap-[3px] grid-cols-[1.75rem_repeat(26,minmax(0,1fr))] lg:hidden">
         <div />
         {monthsMobile.map(monthCell)}
       </div>
-      <div className="hidden gap-[3px] lg:grid lg:grid-cols-[1.75rem_repeat(52,minmax(0,1fr))]">
+      <div aria-hidden className="hidden gap-[3px] lg:grid lg:grid-cols-[1.75rem_repeat(52,minmax(0,1fr))]">
         <div />
         {monthsDesktop.map(monthCell)}
       </div>
 
+      {/* The calendar in words for a screen reader: the count, and the latest
+          days trained with their sets (the grid itself is drawn for the eye). */}
+      <div className="sr-only">
+        <p>
+          {trainedYear} training {trainedYear === 1 ? "day" : "days"} in the last year.
+        </p>
+        {recent.length > 0 && (
+          <ul aria-label="Latest training days">
+            {recent.map((c) => (
+              <li key={c.key}>
+                {format(c.date, "EEEE d MMMM yyyy")}, {Math.round(c.sets)} {Math.round(c.sets) === 1 ? "set" : "sets"}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       {/* Weekday rail + fluid cell grid */}
-      <div className="mt-1 grid gap-[3px] grid-cols-[1.75rem_repeat(26,minmax(0,1fr))] lg:grid-cols-[1.75rem_repeat(52,minmax(0,1fr))]">
+      <div aria-hidden className="mt-1 grid gap-[3px] grid-cols-[1.75rem_repeat(26,minmax(0,1fr))] lg:grid-cols-[1.75rem_repeat(52,minmax(0,1fr))]">
         {weekdayLabels.map((label, row) => (
           <Fragment key={row}>
             <div className="flex items-center text-[10px] leading-none text-muted">

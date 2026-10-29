@@ -340,7 +340,7 @@ private struct CardTape: View {
             }
             .padding(.top, 10)
             VStack(alignment: .leading, spacing: 3) {
-                if let next = snapshot.nextBout {
+                if let next = snapshot.nextBout(at: Date()) {
                     line("Next bout", next)
                 }
                 if let record = snapshot.record {

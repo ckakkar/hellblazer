@@ -92,7 +92,7 @@ export function TierEvaluator({
 
   // What actually goes (getTrainingProfile): said plainly, before it goes.
   const sends =
-    "Sends DeepSeek a summary of your training: each lift's bests, how often and how much you train, your program, and your age, sex, height and bodyweight if you've added them. Never your name or email.";
+    "The rank is an AI's read of your logged training, not a tested max, and it never goes down. It sends DeepSeek a summary: each lift's bests, how often and how much you train, your program, and your age, sex, height and bodyweight if you've added them. Never your name or email.";
   const gateCopy = gate.unlimited
     ? `${sends} You choose whether to accept the verdict, and past the Monster you can ask whenever you like.`
     : gate.reason === "no_workout"

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, ViewTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { CalendarDays } from "lucide-react";
 import { SearchField } from "@/components/ui/search-field";
@@ -22,13 +23,23 @@ type TemplateOption = { id: string; name: string };
 export function HistoryList({
   sessions,
   templates,
+  lifts,
+  liftId,
+  withLift,
   unit,
 }: {
   sessions: SessionSummary[];
   templates: TemplateOption[];
+  /** Every lift trained, for "with this lift". */
+  lifts: { id: string; name: string }[];
+  /** The lift filtered on (?exercise=), and the sessions it was done in. */
+  liftId: string | null;
+  withLift: string[] | null;
   unit: Unit;
 }) {
+  const router = useRouter();
   const [templateId, setTemplateId] = useState("all");
+  const liftSessions = useMemo(() => (withLift ? new Set(withLift) : null), [withLift]);
   const [q, setQ] = useState("");
 
   // Swipe to delete, as in Mail: the row goes at once, and it's only deleted
@@ -98,6 +109,7 @@ export function HistoryList({
     const s = q.trim().toLowerCase();
     return sessions.filter((sess) => {
       if (sess.session_id && hidden.has(sess.session_id)) return false;
+      if (liftSessions && !liftSessions.has(sess.session_id ?? "")) return false;
       if (templateId === "all") {
         // no-op
       } else if (templateId === "freeform") {
@@ -111,7 +123,7 @@ export function HistoryList({
         (sess.session_date ?? "").includes(s)
       );
     });
-  }, [sessions, templateId, q, hidden]);
+  }, [sessions, templateId, q, hidden, liftSessions]);
 
   if (sessions.length === 0) {
     return (
@@ -164,6 +176,27 @@ export function HistoryList({
             </option>
           ))}
         </Select>
+        {lifts.length > 0 && (
+          // On the server (?exercise=): which sessions had a lift is a read
+          // of their exercises, not something History already holds.
+          <Select
+            value={liftId ?? "all"}
+            onChange={(e) =>
+              router.replace(e.target.value === "all" ? "/history" : `/history?exercise=${e.target.value}`, {
+                scroll: false,
+              })
+            }
+            aria-label="Filter by lift"
+            className="sm:w-56"
+          >
+            <option value="all">Any lift</option>
+            {lifts.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.name}
+              </option>
+            ))}
+          </Select>
+        )}
       </div>
 
       <div className="space-y-8">

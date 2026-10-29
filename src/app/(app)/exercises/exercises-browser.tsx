@@ -26,14 +26,16 @@ import { matchesExercise } from "@/lib/exercise-search";
 import {
   createCustomExercise,
   deleteCustomExercise,
+  restoreCustomExercise,
 } from "@/lib/actions/exercises";
 import { useAction } from "@/lib/use-action";
+import { showNotice } from "@/lib/notice";
 import { Collapse } from "@/components/ui/collapse";
 
-export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
+export function ExercisesBrowser({ exercises, createName = null }: { exercises: Exercise[]; createName?: string | null }) {
   const [q, setQ] = useState("");
   const [muscle, setMuscle] = useState<string>("all");
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating] = useState(createName !== null);
   // One how-to open at a time, held here rather than per row so opening a
   // movement in one muscle group closes whatever was open in another.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -101,9 +103,13 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
                   deleting={pending}
                   onDelete={() =>
                     start(async () => {
-                      await deleteCustomExercise({ id: e.id });
+                      const { retired } = await deleteCustomExercise({ id: e.id });
+                      if (retired) {
+                        showNotice(`${e.name} is in your workouts, so it's retired instead: kept in History, out of the pickers.`);
+                      }
                     })
                   }
+                  onRestore={() => start(async () => void (await restoreCustomExercise({ id: e.id })))}
                 />
               ))}
             </Card>
@@ -119,6 +125,7 @@ export function ExercisesBrowser({ exercises }: { exercises: Exercise[] }) {
       <CreateExerciseSheet
         open={creating}
         onClose={() => setCreating(false)}
+        initialName={createName ?? ""}
       />
     </div>
   );
@@ -139,12 +146,14 @@ function ExerciseRow({
   onToggle,
   deleting,
   onDelete,
+  onRestore,
 }: {
   exercise: Exercise;
   open: boolean;
   onToggle: () => void;
   deleting: boolean;
   onDelete: () => void;
+  onRestore: () => void;
 }) {
   const guide = getExerciseGuide(e.name);
   const guideId = `guide-${e.id}`;
@@ -196,7 +205,15 @@ function ExerciseRow({
               {e.secondary_muscles.map((m) => MUSCLE_LABEL[m]).join(", ")}
             </span>
           )}
-          {e.user_id && (
+          {e.user_id && e.archived_at ? (
+            // Retired: kept for its history, out of the pickers.
+            <>
+              <Badge>Retired</Badge>
+              <Button variant="ghost" size="sm" disabled={deleting} onClick={onRestore}>
+                Bring back
+              </Button>
+            </>
+          ) : e.user_id ? (
             <>
               <Badge>Custom</Badge>
               <ConfirmIconButton
@@ -206,7 +223,7 @@ function ExerciseRow({
                 onConfirm={onDelete}
               />
             </>
-          )}
+          ) : null}
         </div>
       </div>
       {guide && (
@@ -223,12 +240,15 @@ function ExerciseRow({
 function CreateExerciseSheet({
   open,
   onClose,
+  initialName = "",
 }: {
   open: boolean;
   onClose: () => void;
+  /** Filled in from a picker's search that found nothing. */
+  initialName?: string;
 }) {
   const [pending, start] = useAction("save the exercise");
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const [primary, setPrimary] = useState<Muscle>("chest");
   const [secondary, setSecondary] = useState<Set<Muscle>>(new Set());
   const [mechanic, setMechanic] = useState<string>("");

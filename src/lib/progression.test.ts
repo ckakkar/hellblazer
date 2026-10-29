@@ -87,3 +87,20 @@ describe("words", () => {
     expect(targetReason({ weight: 80, reps: 7, change: "same", added: 0 }, "kg")).toBe("one more rep");
   });
 });
+
+describe("a shortened day", () => {
+  const lift = { equipment: "barbell", mechanic: "compound", primaryMuscle: "chest" };
+  it("doesn't add weight when fewer sets were done than planned", () => {
+    expect(
+      nextTarget({ last: [{ weight: 80, reps: 8, rpe: 7 }], range: "6-8", lift, unit: "kg", plannedSets: 3 }),
+    ).toMatchObject({ weight: 80, reps: 8, change: "same" });
+  });
+  it("adds it once every planned set reached the top", () => {
+    const sets = [1, 2, 3].map(() => ({ weight: 80, reps: 8, rpe: 8 }));
+    expect(nextTarget({ last: sets, range: "6-8", lift, unit: "kg", plannedSets: 3 })).toMatchObject({
+      weight: 82.5,
+      reps: 6,
+      change: "up",
+    });
+  });
+});

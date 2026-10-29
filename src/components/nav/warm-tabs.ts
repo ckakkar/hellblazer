@@ -25,6 +25,10 @@ export function useWarmTabs(hrefs: readonly string[]) {
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       if (!window.matchMedia(TAB_BAR).matches) return;
+      // Offline there's nothing to fetch; with Save Data on, the lifter
+      // asked for less of exactly this.
+      const saveData = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData;
+      if (!navigator.onLine || saveData) return;
       for (const href of key.split(" ")) router.prefetch(href, { kind: PrefetchKind.FULL });
     }, TICK_MS);
     return () => window.clearInterval(id);

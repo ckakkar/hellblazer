@@ -7,7 +7,7 @@ import { getUnit } from "@/lib/settings";
 import { kgToLb } from "@/lib/units";
 import { loadFonts } from "@/lib/share-card-fonts";
 import { gatherRecap } from "@/lib/weekly-recap";
-import { weekStreak } from "@/lib/widget-moments";
+import { streakPlan, weekStreak } from "@/lib/widget-moments";
 
 export const dynamic = "force-dynamic";
 
@@ -54,21 +54,27 @@ export async function GET(request: Request) {
   }
   const { supabase, user } = context;
   const lastDay = format(addDays(monday, 6), "yyyy-MM-dd");
-  const [facts, profile, unit, fonts, history] = await Promise.all([
+  const [facts, profile, unit, fonts, history, programs] = await Promise.all([
     gatherRecap(supabase, user.id, week),
     getProfile(),
     getUnit(),
     loadFonts(),
     supabase
       .from("v_session_summary")
-      .select("session_date")
+      .select("session_date, program_id, planned_per_week")
       .eq("user_id", user.id)
       .not("finished_at", "is", null)
+      .gt("working_sets", 0)
       .gte("session_date", format(subWeeks(monday, 52), "yyyy-MM-dd"))
       .lte("session_date", lastDay),
+    supabase.from("program").select("id, is_active, paused_at, pauses, program_day(id)").eq("user_id", user.id),
   ]);
-  const dates = (history.data ?? []).map((r) => r.session_date).filter((d): d is string => Boolean(d));
-  const streak = weekStreak(dates, lastDay, facts.planned);
+  const workouts = (history.data ?? []).flatMap((r) =>
+    r.session_date ? [{ date: r.session_date, programId: r.program_id, planned: r.planned_per_week }] : [],
+  );
+  const programList = programs.data ?? [];
+  const plans = new Map(programList.map((p) => [p.id, streakPlan(p, lastDay)]));
+  const streak = weekStreak(workouts, lastDay, plans, programList.find((p) => p.is_active)?.id ?? null);
   const tier = getTier(profile?.tier);
   const ink = tier ? await inkArt(new URL(request.url).origin, tier.key) : null;
   const display = fonts.display ? "Archivo Expanded" : undefined;

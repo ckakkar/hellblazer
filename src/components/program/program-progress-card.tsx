@@ -42,31 +42,28 @@ export function ProgramProgressCard({
     isPaused,
     isUpcoming,
     daysPerWeek,
-    sessionsThisWeek,
     skipsThisWeek,
     doneThisWeek,
+    dayStatus,
+    extraThisWeek: extra,
     nextDay,
     weekComplete,
   } = progress;
 
   const notStarted = !program.start_date;
   const live = activeSession && !activeSession.stale ? activeSession : null;
-  const extra = Math.max(0, doneThisWeek - daysPerWeek);
 
   const week =
     daysPerWeek > 0 && !notStarted && !isUpcoming ? (
       <div className="mt-5">
-        <div className="flex gap-1.5">
-          {Array.from({ length: daysPerWeek }).map((_, i) => (
+        {/* One mark per day in the program's order: done, skipped, or still to do. */}
+        <div className="flex gap-1.5" aria-hidden>
+          {dayStatus.map((status, i) => (
             <span
               key={i}
               className={cn(
                 "h-1 flex-1 rounded-full",
-                i < sessionsThisWeek
-                  ? "bg-text"
-                  : i < doneThisWeek
-                    ? "bg-text/35"
-                    : "bg-text/[0.1]",
+                status === "done" ? "bg-text" : status === "skipped" ? "bg-text/35" : "bg-text/[0.1]",
               )}
             />
           ))}

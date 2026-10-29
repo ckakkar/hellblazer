@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTemplates } from "@/lib/data/templates";
-import { getExercises } from "@/lib/data/exercises";
+import { getExercises, getUsualExerciseIds } from "@/lib/data/exercises";
+import { UsualLiftsProvider } from "@/components/usual-lifts";
 import { getActiveProgramProgress } from "@/lib/data/programs";
 import { PRESETS } from "@/lib/presets";
 import { TemplatesManager } from "./templates-manager";
@@ -10,10 +11,11 @@ export const metadata: Metadata = { title: "Templates" };
 export const dynamic = "force-dynamic";
 
 export default async function TemplatesPage() {
-  const [templates, exercises, active] = await Promise.all([
+  const [templates, exercises, active, usual] = await Promise.all([
     getTemplates(),
     getExercises(),
     getActiveProgramProgress(),
+    getUsualExerciseIds(),
   ]);
 
   // The active program is "your split": its day-templates, in order.
@@ -27,12 +29,14 @@ export default async function TemplatesPage() {
   }
 
   return (
-    <TemplatesManager
-      templates={templates}
-      exercises={exercises}
-      presets={PRESETS}
-      activeTemplateIds={activeTemplateIds}
-      activeProgramName={active?.program.name ?? null}
-    />
+    <UsualLiftsProvider ids={usual}>
+      <TemplatesManager
+        templates={templates}
+        exercises={exercises}
+        presets={PRESETS}
+        activeTemplateIds={activeTemplateIds}
+        activeProgramName={active?.program.name ?? null}
+      />
+    </UsualLiftsProvider>
   );
 }

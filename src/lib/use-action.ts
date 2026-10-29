@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { unstable_rethrow } from "next/navigation";
 import { showNotice } from "@/lib/notice";
+import { reportProblem } from "@/lib/report";
 
 /**
  * `useTransition` for server actions. Uncaught, a failed action (nearly always
@@ -24,6 +25,7 @@ export function useAction(what: string) {
       } catch (err) {
         unstable_rethrow(err);
         onFail?.();
+        reportProblem("action-failed", what);
         showNotice(
           navigator.onLine
             ? `Couldn't ${what}. Try again in a moment.`

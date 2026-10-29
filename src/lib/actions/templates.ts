@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 import { supersetChanges } from "@/lib/supersets";
+import { APPEND } from "@/lib/positions";
 import { revalidatePath } from "next/cache";
 import { getAuthedContext } from "@/lib/auth";
 import { getPreset } from "@/lib/presets";
@@ -89,20 +90,11 @@ export async function addTemplateExercise(input: {
     .parse(input);
   const { supabase, user } = await getAuthedContext();
 
-  const { data: last } = await supabase
-    .from("template_exercise")
-    .select("position")
-    .eq("template_id", v.templateId)
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const position = (last?.position ?? -1) + 1;
-
   const { error } = await supabase.from("template_exercise").insert({
     user_id: user.id,
     template_id: v.templateId,
     exercise_id: v.exerciseId,
-    position,
+    position: APPEND,
     target_sets: v.targetSets ?? 3,
     target_rep_range: v.targetRepRange ?? null,
   });
@@ -162,10 +154,13 @@ export async function setTemplateSuperset(input: { id: string; link: boolean }) 
     .order("position", { ascending: true });
   if (error) throw error;
   const list = rows ?? [];
-  for (const change of supersetChanges(list, list.findIndex((r) => r.id === row.id), v.link)) {
-    const { error: upErr } = await supabase.from("template_exercise").update({ superset: change.superset }).eq("id", change.id);
-    if (upErr) throw upErr;
-  }
+  // Every row that changes, in one transaction.
+  const changes = supersetChanges(list, list.findIndex((r) => r.id === row.id), v.link);
+  const { error: upErr } = await supabase.rpc("apply_superset_changes", {
+    p_table: "template_exercise",
+    p_changes: changes,
+  });
+  if (upErr) throw upErr;
   revalidatePath("/templates");
 }
 

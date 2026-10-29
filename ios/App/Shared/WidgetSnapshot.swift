@@ -146,6 +146,14 @@ struct WidgetSnapshot: Codable {
         return now >= end
     }
 
+    /// The next workout as of `date`: the snapshot's, while its week lasts.
+    /// Once the week's over, the day it named may well be done (on the watch,
+    /// say, with no push getting through), so the widget doesn't claim one
+    /// until the app looks again.
+    func nextBout(at date: Date) -> String? {
+        isFromPastWeek(now: date) ? nil : nextBout
+    }
+
     /// The streak as of `date`. Once the snapshot's week is over, it holds
     /// through the next week only if that one was hit; after that, nothing
     /// says the weeks since were, until the app looks again.

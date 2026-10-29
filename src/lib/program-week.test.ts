@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blockDate, countInWeek, readPauses } from "./program-week";
+import { blockDate, countInWeek, readPauses, weekDays } from "./program-week";
 
 const row = (date: string, created_at = `${date}T18:00:00Z`) => ({ date, created_at });
 
@@ -54,5 +54,55 @@ describe("readPauses", () => {
       { at: "2026-10-14", days: 5 },
     ]);
     expect(readPauses("x")).toEqual([]);
+  });
+});
+
+describe("weekDays", () => {
+  const week = { weekStart: "2026-10-26", pauses: [], restartedAt: null };
+  const days = ["d1", "d2", "d3"];
+  const entry = (date: string, day: string | null, at = `${date}T09:00:00Z`) => ({
+    date,
+    created_at: at,
+    program_day_id: day,
+  });
+
+  it("counts a workout as the day it was, and offers the first open day next", () => {
+    expect(weekDays(days, [entry("2026-10-26", "d3")], [], week)).toEqual({
+      status: [null, null, "done"],
+      extra: 0,
+      next: 0,
+    });
+  });
+
+  it("covers a skipped day, and a day done after its skip is done", () => {
+    expect(weekDays(days, [], [entry("2026-10-26", "d1")], week).next).toBe(1);
+    expect(
+      weekDays(days, [entry("2026-10-27", "d1")], [entry("2026-10-26", "d1")], week).status,
+    ).toEqual(["done", null, null]);
+  });
+
+  it("calls a day done twice an extra workout, not the next day", () => {
+    expect(weekDays(days, [entry("2026-10-26", "d1"), entry("2026-10-27", "d1")], [], week)).toEqual({
+      status: ["done", null, null],
+      extra: 1,
+      next: 1,
+    });
+  });
+
+  it("fills open days in order with workouts from before days were recorded", () => {
+    expect(weekDays(days, [entry("2026-10-26", "d2"), entry("2026-10-27", null)], [], week).status).toEqual([
+      "done",
+      "done",
+      null,
+    ]);
+  });
+
+  it("leads into next week's first day once every day is in", () => {
+    const all = days.map((d, i) => entry(`2026-10-2${6 + i}`, d));
+    expect(weekDays(days, all, [], week)).toEqual({ status: ["done", "done", "done"], extra: 0, next: 0 });
+  });
+
+  it("leaves out what's outside the week", () => {
+    expect(weekDays(days, [entry("2026-10-25", "d1")], [], week).status).toEqual([null, null, null]);
   });
 });

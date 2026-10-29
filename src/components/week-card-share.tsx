@@ -16,12 +16,16 @@ export function WeekCardShare({ week, open }: { week: string; open?: string | nu
   const router = useRouter();
   const [shown, setShown] = useState<string | null>(open ?? null);
   // A recap link followed while the dashboard is already open changes the
-  // prop, not the mount: open the week it asks for.
+  // prop, not the mount: open the week it asks for. Back to a URL without
+  // one (the back button) closes the card that link opened.
   const [requested, setRequested] = useState<string | null>(open ?? null);
   if ((open ?? null) !== requested) {
-    setRequested(open ?? null);
     if (open) setShown(open);
+    else if (requested && shown === requested) setShown(null);
+    setRequested(open ?? null);
   }
+  // Bumped by Retry, so the same week is drawn again.
+  const [attempt, setAttempt] = useState(0);
   const [card, setCard] = useState<{ week: string; blob: Blob; url: string } | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
   const [sharing, setSharing] = useState(false);
@@ -47,7 +51,7 @@ export function WeekCardShare({ week, open }: { week: string; open?: string | nu
       live = false;
       if (url) URL.revokeObjectURL(url);
     };
-  }, [shown]);
+  }, [shown, attempt]);
 
   const ready = card && card.week === shown ? card : null;
   const broken = failed === shown;
@@ -98,10 +102,22 @@ export function WeekCardShare({ week, open }: { week: string; open?: string | nu
               // eslint-disable-next-line @next/next/no-img-element
               <img src={ready.url} alt="Your week as a fight card" className="size-full object-cover" />
             ) : broken ? (
-              <p className="absolute inset-0 flex items-center justify-center gap-2 px-6 text-center text-[15px] text-muted">
-                <TriangleAlert className="size-4 shrink-0 text-warn" />
-                {"Couldn't draw the card. Check your connection and try again."}
-              </p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center">
+                <p className="flex items-center gap-2 text-[15px] text-muted">
+                  <TriangleAlert className="size-4 shrink-0 text-warn" />
+                  {"Couldn't draw the card."}
+                </p>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    setFailed(null);
+                    setAttempt((n) => n + 1);
+                  }}
+                >
+                  Try again
+                </Button>
+              </div>
             ) : (
               <Loader2 className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 animate-spin text-muted" />
             )}

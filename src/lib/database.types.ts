@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       apns_device: {
         Row: {
+          alerts: boolean
           created_at: string
           id: string
           last_seen_at: string
@@ -24,6 +25,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          alerts?: boolean
           created_at?: string
           id?: string
           last_seen_at?: string
@@ -32,6 +34,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          alerts?: boolean
           created_at?: string
           id?: string
           last_seen_at?: string
@@ -83,8 +86,42 @@ export type Database = {
         }
         Relationships: []
       }
+      deleted_session: {
+        Row: {
+          deleted_at: string
+          id: string
+          payload: Json
+          session_date: string
+          session_id: string
+          title: string | null
+          user_id: string
+          working_sets: number
+        }
+        Insert: {
+          deleted_at?: string
+          id?: string
+          payload: Json
+          session_date: string
+          session_id: string
+          title?: string | null
+          user_id: string
+          working_sets?: number
+        }
+        Update: {
+          deleted_at?: string
+          id?: string
+          payload?: Json
+          session_date?: string
+          session_id?: string
+          title?: string | null
+          user_id?: string
+          working_sets?: number
+        }
+        Relationships: []
+      }
       exercise: {
         Row: {
+          archived_at: string | null
           created_at: string
           default_rep_range: string | null
           equipment: string | null
@@ -96,6 +133,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          archived_at?: string | null
           created_at?: string
           default_rep_range?: string | null
           equipment?: string | null
@@ -107,6 +145,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          archived_at?: string | null
           created_at?: string
           default_rep_range?: string | null
           equipment?: string | null
@@ -116,6 +155,27 @@ export type Database = {
           primary_muscle?: Database["public"]["Enums"]["muscle_group"]
           secondary_muscles?: Database["public"]["Enums"]["muscle_group"][]
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      notification_log: {
+        Row: {
+          created_at: string
+          kind: string
+          period: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          period: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          period?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -361,6 +421,8 @@ export type Database = {
           finished_at: string | null
           id: string
           notes: string | null
+          planned_per_week: number | null
+          program_day_id: string | null
           program_id: string | null
           template_id: string | null
           title: string | null
@@ -373,6 +435,8 @@ export type Database = {
           finished_at?: string | null
           id?: string
           notes?: string | null
+          planned_per_week?: number | null
+          program_day_id?: string | null
           program_id?: string | null
           template_id?: string | null
           title?: string | null
@@ -385,12 +449,21 @@ export type Database = {
           finished_at?: string | null
           id?: string
           notes?: string | null
+          planned_per_week?: number | null
+          program_day_id?: string | null
           program_id?: string | null
           template_id?: string | null
           title?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "session_program_day_id_fkey"
+            columns: ["program_day_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "program_day"
+            referencedColumns: ["id", "user_id"]
+          },
           {
             foreignKeyName: "session_program_id_fkey"
             columns: ["program_id", "user_id"]
@@ -659,9 +732,13 @@ export type Database = {
       }
       v_session_summary: {
         Row: {
+          created_at: string | null
           duration_min: number | null
           exercise_count: number | null
           finished_at: string | null
+          planned_per_week: number | null
+          program_day_id: string | null
+          program_id: string | null
           session_date: string | null
           session_id: string | null
           template_id: string | null
@@ -724,8 +801,12 @@ export type Database = {
       }
     }
     Functions: {
+      apply_superset_changes: {
+        Args: { p_changes: Json; p_table: string }
+        Returns: undefined
+      }
       claim_apns_device: {
-        Args: { p_timezone?: string; p_token: string }
+        Args: { p_alerts?: boolean; p_timezone?: string; p_token: string }
         Returns: undefined
       }
       create_program: {
@@ -802,7 +883,9 @@ export type Database = {
         Args: { p_direction: string; p_id: string }
         Returns: undefined
       }
+      log_sets: { Args: { p_rows: Json; p_user?: string }; Returns: Json }
       purge_abandoned_templates: { Args: never; Returns: number }
+      purge_deleted_sessions: { Args: never; Returns: number }
       recent_records: {
         Args: { p_limit?: number }
         Returns: {
@@ -832,6 +915,11 @@ export type Database = {
         Args: { p_active: boolean; p_id: string; p_today: string }
         Returns: undefined
       }
+      restart_program: {
+        Args: { p_id: string; p_today: string }
+        Returns: undefined
+      }
+      restore_session: { Args: { p_id: string }; Returns: string }
       start_session: {
         Args: {
           p_date?: string
@@ -841,6 +929,7 @@ export type Database = {
         }
         Returns: string
       }
+      trash_session: { Args: { p_session: string }; Returns: string }
       watch_last_performances: {
         Args: {
           p_exclude_session?: string

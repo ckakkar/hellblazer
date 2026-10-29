@@ -7,7 +7,7 @@ import { CHART_HIDDEN_MUSCLES, isWeakPoint, MUSCLE_CHART_ORDER, MUSCLE_LABEL, ty
 import type { WidgetSnapshot } from "@/lib/native-plugins";
 import { toDisplayWeight, type Unit } from "@/lib/units";
 import { getTier, MAX_RANK, TIERS } from "@/lib/tiers";
-import { latestRecord, trainingDays, weekStreak } from "@/lib/widget-moments";
+import { latestRecord, streakPlan, trainingDays, weekStreak } from "@/lib/widget-moments";
 
 /** The most-trained lifts Siri, Spotlight and the Lift Trend widget know about. */
 const MAX_LIFTS = 40;
@@ -37,11 +37,13 @@ export async function buildWidgetSnapshot(
   // A year of workouts: this week's numbers, and the streak and calendar.
   const yearStart = format(subWeeks(parseISO(weekStart), 52), "yyyy-MM-dd");
 
-  const [year, program, muscles, stats, trendRows, profile, recordRows] = await Promise.all([
+  const [year, program, muscles, stats, trendRows, profile, recordRows, plans] = await Promise.all([
     db
       .from("v_session_summary")
-      .select("session_date, working_sets")
+      .select("session_date, working_sets, program_id, planned_per_week")
       .eq("user_id", userId)
+      // A workout is one with sets in it: an empty start isn't training.
+      .gt("working_sets", 0)
       .gte("session_date", yearStart)
       .then(({ data, error }) => {
         if (error) throw error;
@@ -91,6 +93,16 @@ export async function buildWidgetSnapshot(
       if (error) throw error;
       return data ?? [];
     }),
+    // Every program's days and pauses: each week of the streak is held to the
+    // plan it was trained under (weekStreak).
+    db
+      .from("program")
+      .select("id, paused_at, pauses, program_day(id)")
+      .eq("user_id", userId)
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return new Map((data ?? []).map((p) => [p.id, streakPlan(p, today)]));
+      }),
   ]);
   const dates = year.map((s) => s.session_date).filter((d): d is string => Boolean(d));
   const week = year.filter((s) => (s.session_date ?? "") >= weekStart);
@@ -181,7 +193,17 @@ export async function buildWidgetSnapshot(
           image: `/art/fighters/${tier.key}.webp`,
         }
       : null,
-    streak: { weeks: weekStreak(dates, today, progress?.daysPerWeek ?? null), planned: progress?.daysPerWeek ?? null },
+    streak: {
+      weeks: weekStreak(
+        year.flatMap((s) =>
+          s.session_date ? [{ date: s.session_date, programId: s.program_id, planned: s.planned_per_week }] : [],
+        ),
+        today,
+        plans,
+        program?.id ?? null,
+      ),
+      planned: progress?.daysPerWeek ?? null,
+    },
     trainingDays: trainingDays(dates, today),
     record: latestRecord(
       liftList,

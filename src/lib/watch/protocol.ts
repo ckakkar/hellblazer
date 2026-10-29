@@ -31,6 +31,12 @@ export type WatchState = {
    * onto it even when it's too old to be the live one.
    */
   started?: WatchWorkout;
+  /**
+   * From an offline workout's start: another workout is open (on the phone,
+   * say), so this one wasn't started. The watch keeps it and its sets, and
+   * says so, rather than moving them onto the wrong workout.
+   */
+  conflict?: boolean;
 };
 
 export type WatchWeek = {
@@ -106,4 +112,7 @@ export type WatchPlanExercise = {
   target: WatchTarget | null;
   /** Its superset group, as on WatchExercise. */
   superset: number | null;
+  /** The library exercise, so an offline workout can put back one the day
+   *  lost while the watch was away. Absent from a server before 2.8. */
+  exerciseId?: string;
 };

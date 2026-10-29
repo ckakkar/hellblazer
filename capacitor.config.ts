@@ -35,7 +35,9 @@ const config: CapacitorConfig = {
     // Long-pressing a link or button does nothing, as in a native app, instead
     // of popping up Safari's link preview.
     allowsLinkPreview: false,
-    // Lets Safari's Web Inspector attach to TestFlight builds over USB.
+    // Lets Safari's Web Inspector attach over USB. The app turns it back off
+    // in App Store builds (HellBlazerViewController), keeping it for debug
+    // and TestFlight ones.
     webContentsDebuggingEnabled: true,
   },
   plugins: {

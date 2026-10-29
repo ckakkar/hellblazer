@@ -70,6 +70,14 @@ export function WeeklySetsChart({
               </span>
               <span className={cn("tnum text-right text-[13px]", inRange ? "text-text" : "text-muted")}>
                 {r.sets}
+                {/* The band said, not only shaded: under it, in it, or past it. */}
+                <span className="sr-only">
+                  {r.sets < LOW
+                    ? ` sets, under the ${LOW} to ${HIGH} range`
+                    : r.sets > HIGH
+                      ? ` sets, past the ${LOW} to ${HIGH} range`
+                      : ` sets, in the ${LOW} to ${HIGH} range`}
+                </span>
               </span>
             </li>
           );

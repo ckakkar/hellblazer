@@ -15,10 +15,22 @@ class HellBlazerViewController: CAPBridgeViewController {
     override func capacitorDidLoad() {
         bridge?.registerPluginInstance(HellBlazerNativePlugin())
         configureWebView()
+        // Safari's Web Inspector attaches to a debug or TestFlight build, for
+        // finding what went wrong on a phone; never to the App Store's.
+        webView?.isInspectable = Self.inspectable
         NativeRouter.shared.attach(self)
         // Capacitor's bridge just took over the notification center; put the
         // rest alert's handler back in front of it (it forwards the rest).
         RestNotificationDelegate.shared.install()
+    }
+
+    /// A build from Xcode or TestFlight (its receipt is the sandbox's), not the App Store.
+    private static var inspectable: Bool {
+        #if DEBUG
+        return true
+        #else
+        return Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt"
+        #endif
     }
 
     override func viewDidLoad() {

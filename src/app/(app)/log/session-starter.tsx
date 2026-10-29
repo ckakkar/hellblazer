@@ -18,6 +18,8 @@ type TemplateExercisePreview = {
 };
 
 type TemplateOption = {
+  /** Unique per option: a program day (a template can be on two), else the template. */
+  key: string;
   id: string;
   /** Non-null only for days of the active program: this is what makes a start
    *  advance the block. Null options are explicitly off-plan. */
@@ -47,7 +49,7 @@ export function SessionStarter({
   const [openId, setOpenId] = useState<string | null>(null);
 
   function begin(templateId: string | null, programDayId: string | null = null) {
-    setChosen(templateId ?? "freeform");
+    setChosen(programDayId ?? templateId ?? "freeform");
     start(async () => {
       await startSession({
         templateId,
@@ -104,13 +106,13 @@ export function SessionStarter({
           </div>
           <div className="divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-surface">
             {templates.map((t) => {
-              const expanded = openId === t.id;
-              const starting = pending && chosen === t.id;
+              const expanded = openId === t.key;
+              const starting = pending && chosen === t.key;
               return (
-                <div key={t.id}>
+                <div key={t.key}>
                   {/* Tap to preview, not to start. */}
                   <button
-                    onClick={() => setOpenId(expanded ? null : t.id)}
+                    onClick={() => setOpenId(expanded ? null : t.key)}
                     aria-expanded={expanded}
                     className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-text/[0.03]"
                   >

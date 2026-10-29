@@ -80,7 +80,9 @@ export default function PrivacyPage() {
           Fatty&apos;s cookies keep you signed in and remember your own settings on this device: your
           units, accent colour, light or dark, and time zone (so &quot;today&quot; is your today). The
           logger also keeps unsaved sets on your device until they reach the server. There are no
-          ads, no analytics services and no tracking.
+          ads, no analytics services and no tracking. When something in the app fails, it tells the
+          server what kind of failure and on which page, so a bug can be found and fixed; never who
+          you are or anything you logged.
         </p>
       </section>
 

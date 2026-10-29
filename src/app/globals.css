@@ -689,6 +689,49 @@ button,
     translate: 0 12px;
   }
 }
+/* The landing's ladder as a staircase (landing-fighter-roster.tsx): each
+   step as high as its rank (--r). The first time it comes into view, the
+   steps rise from the floor lowest first, each fighter riding up on theirs. */
+.hb-stairs {
+  --step: 0.7rem;
+  --base: 4.5rem;
+}
+@media (min-width: 1024px) {
+  .hb-stairs {
+    --step: 1.35rem;
+    --base: 6.5rem;
+  }
+}
+.hb-stair-step {
+  height: calc(var(--base) + var(--r) * var(--step));
+  transform-origin: bottom;
+}
+.hb-stairs[data-phase="armed"] .hb-stair-step {
+  transform: scaleY(0);
+}
+.hb-stairs[data-phase="armed"] .hb-stair-fighter {
+  opacity: 0;
+}
+.hb-stairs[data-phase="shown"] .hb-stair-step {
+  animation: hb-stair-step 560ms var(--ease-out) both;
+  animation-delay: calc(var(--r) * 70ms);
+}
+.hb-stairs[data-phase="shown"] .hb-stair-fighter {
+  animation: hb-stair-fighter 560ms var(--ease-out) both;
+  animation-delay: calc(var(--r) * 70ms);
+}
+@keyframes hb-stair-step {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes hb-stair-fighter {
+  from {
+    opacity: 0;
+    translate: 0 calc(var(--base) + var(--r) * var(--step));
+  }
+}
+
 .hb-hero-step {
   transform-origin: left center;
   animation: hb-hero-step 420ms var(--ease-out) both;

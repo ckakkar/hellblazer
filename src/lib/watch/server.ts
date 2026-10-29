@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { APPEND } from "@/lib/positions";
 import { after } from "next/server";
 import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -64,17 +66,27 @@ class WatchError extends Error {
  */
 export type DeviceKind = "watch" | "phone";
 
+/** How long a device token lasts unused. */
+const TOKEN_IDLE_MS = 90 * 24 * 60 * 60 * 1000;
+
 async function resolve(db: Svc, request: Request, kind: DeviceKind): Promise<WatchContext | null> {
   const token = bearerToken(request.headers.get("authorization"));
   if (!token) return null;
   const { data: link, error } = await db
     .from("watch_link")
-    .select("id, user_id, last_seen_at")
+    .select("id, user_id, last_seen_at, created_at")
     .eq("token_hash", hashWatchToken(token))
     .eq("kind", kind)
     .maybeSingle();
   if (error) throw error;
   if (!link) return null;
+  // A token left unused for 90 days (a sold or drawer-bound watch) stops
+  // working and goes. A device still in use never gets there, and one that
+  // comes back is linked again by the iPhone app (DeviceSync) on opening.
+  if (Date.now() - Date.parse(link.last_seen_at ?? link.created_at) > TOKEN_IDLE_MS) {
+    await db.from("watch_link").delete().eq("id", link.id);
+    return null;
+  }
   // Settings shows when each watch was last seen; an hour is plenty precise.
   if (!link.last_seen_at || Date.now() - Date.parse(link.last_seen_at) > 60 * 60 * 1000) {
     await db
@@ -181,8 +193,9 @@ async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map
       targetReps: row.target_rep_range,
       restSeconds: row.rest_seconds,
       last: past.map(({ weight, reps }) => ({ weight, reps })),
-      target: targetOf(past, row.target_rep_range, row.exercise, ctx.unit),
+      target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, ctx.unit),
       superset: row.superset ?? null,
+      exerciseId: row.exercise_id,
     });
     plans.set(row.template_id, list);
   }
@@ -296,7 +309,7 @@ async function workoutOf(
           kind: s.kind,
         })),
       last: past.map(({ weight, reps }) => ({ weight, reps })),
-      target: targetOf(past, row.target_rep_range, row.exercise, unit),
+      target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, unit),
       superset: row.superset ?? null,
       ended: row.ended_at != null,
     };
@@ -309,12 +322,14 @@ async function workoutOf(
 function targetOf(
   past: PastSet[],
   range: string | null,
+  plannedSets: number | null,
   exercise: { equipment: string | null; mechanic: string | null; primary_muscle: string | null } | null,
   unit: Unit,
 ): WatchTarget | null {
   const t = nextTarget({
     last: past,
     range,
+    plannedSets,
     lift: {
       equipment: exercise?.equipment ?? null,
       mechanic: exercise?.mechanic ?? null,
@@ -395,7 +410,30 @@ const startSchema = z.object({
   /** When it really began (epoch ms): a workout started offline reaches the
    *  server later. Older watch builds don't send it. */
   startedAt: z.number().optional(),
+  /** An offline workout's movements (library ids, 2.8 on): any the session
+   *  doesn't have (the day changed while the watch was away) are added, so
+   *  their sets have somewhere to go. */
+  exercises: z.array(z.string().uuid()).max(40).optional(),
 });
+
+/** Adds to a session the movements an offline workout had that it lacks. */
+async function addMissingExercises(ctx: WatchContext, sessionId: string, exerciseIds: string[] | undefined) {
+  if (!exerciseIds?.length) return;
+  const { data: have } = await ctx.db
+    .from("session_exercise")
+    .select("exercise_id")
+    .eq("session_id", sessionId)
+    .eq("user_id", ctx.userId);
+  const present = new Set((have ?? []).map((r) => r.exercise_id));
+  for (const exerciseId of new Set(exerciseIds)) {
+    if (present.has(exerciseId)) continue;
+    // One that's gone from the library (or isn't theirs) is skipped; the
+    // watch says which sets had nowhere to go.
+    await ctx.db
+      .from("session_exercise")
+      .insert({ user_id: ctx.userId, session_id: sessionId, exercise_id: exerciseId, position: APPEND });
+  }
+}
 
 /** A time the watch says something happened, if it's believable: in the
  *  last day, and not ahead of the server's clock by more than a minute. */
@@ -426,9 +464,15 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
       .eq("created_at", startedAt)
       .limit(1)
       .maybeSingle();
-    if (made) return { ...(await watchState(ctx)), started: await workoutOf(ctx, made) };
+    if (made) {
+      await addMissingExercises(ctx, made.id, v.exercises);
+      return { ...(await watchState(ctx)), started: await workoutOf(ctx, made) };
+    }
   }
-  if (await activeWorkout(ctx)) return watchState(ctx);
+  // Another workout's open. A start from the watch's list just shows it;
+  // an offline workout catching up is told it wasn't started, so its sets
+  // aren't moved onto that one.
+  if (await activeWorkout(ctx)) return startedAt ? { ...(await watchState(ctx)), conflict: true } : watchState(ctx);
   const { data: sessionId, error } = await ctx.db.rpc("start_session", {
     p_user: ctx.userId,
     ...(v.programDayId ? { p_program_day_id: v.programDayId } : { p_template_id: v.templateId }),
@@ -452,6 +496,7 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
   const { data: made } = sessionId
     ? await ctx.db.from("session").select("id, title, created_at").eq("id", sessionId).eq("user_id", ctx.userId).maybeSingle()
     : { data: null };
+  if (made && startedAt) await addMissingExercises(ctx, made.id, v.exercises);
   const state = await watchState(ctx);
   return made ? { ...state, started: await workoutOf(ctx, made) } : state;
 }
@@ -561,8 +606,40 @@ const voiceSetSchema = z
     reps: z.number().int().min(1).max(999).optional(),
     /** The Lock Screen's Log Set names the exercise it showed. */
     sessionExerciseId: z.string().uuid().optional(),
+    /** The command's own id, the same on every retry of it (2.8 on): the
+     *  set's id, so a retry after a lost reply logs nothing twice. */
+    operationId: z.string().uuid().optional(),
   })
   .refine((v) => (v.weight === undefined) === (v.reps === undefined));
+
+type LoggedSet = { id: string; set_number: number; existed: boolean };
+
+/**
+ * Saves sets through log_sets(): each numbered after the last one on its
+ * exercise under a lock, so two commands at once can't share a number, and
+ * a set whose id is already in comes back as it is, so a retry adds nothing.
+ */
+async function logSets(
+  ctx: WatchContext,
+  rows: {
+    id: string;
+    session_exercise_id: string;
+    weight_kg: number;
+    reps: number;
+    rpe?: number | null;
+    is_warmup?: boolean;
+  }[],
+): Promise<LoggedSet[]> {
+  const { data, error } = await ctx.db.rpc("log_sets", { p_rows: rows, p_user: ctx.userId });
+  if (error) throw error.message.includes("conflict") ? new WatchError(409, "conflict") : error;
+  return (data ?? []) as LoggedSet[];
+}
+
+/** The id of a command's `i`th set: the same on every retry of the command. */
+function operationSetId(operationId: string, i: number): string {
+  const h = createHash("sha256").update(`${operationId}:${i}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${((parseInt(h[16], 16) & 3) | 8).toString(16)}${h.slice(17, 20)}-${h.slice(20, 32)}`;
+}
 
 type Activity = ReturnType<typeof activitySummary>;
 
@@ -608,30 +685,46 @@ function summarize(workout: WatchWorkout, unit: Unit): { complete: boolean; acti
  */
 export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<VoiceSetReply> {
   const v = voiceSetSchema.parse(body ?? {});
-  const workout = await activeWorkout(ctx);
-  if (!workout || workout.exercises.length === 0) return { status: "no-workout" };
+  const found = await activeWorkout(ctx);
+  if (!found || found.exercises.length === 0) return { status: "no-workout" };
+  // A retry of a command that already landed: answered as the first time
+  // was, from the workout as it was before it.
+  const already = v.operationId
+    ? found.exercises.find((e) => e.sets.some((s) => s.id === v.operationId))
+    : undefined;
+  const workout = already
+    ? { ...found, exercises: found.exercises.map((e) => ({ ...e, sets: e.sets.filter((s) => s.id !== v.operationId) })) }
+    : found;
 
   const repeat = v.weight === undefined || v.reps === undefined;
   // Every set's in: "same again" means they think there's one left, so say
   // so rather than add one. Numbers said out loud are an extra set.
   if (repeat && isComplete(workout.exercises)) return { status: "all-done" };
 
-  const exercise = v.sessionExerciseId
-    ? (workout.exercises.find((e) => e.id === v.sessionExerciseId) ?? null)
-    : exerciseForNextSet(workout.exercises);
+  const exercise = already
+    ? (workout.exercises.find((e) => e.id === already.id) ?? null)
+    : v.sessionExerciseId
+      ? (workout.exercises.find((e) => e.id === v.sessionExerciseId) ?? null)
+      : exerciseForNextSet(workout.exercises);
   if (!exercise) return { status: "no-workout" };
-  const numbers = repeat ? sameAgain(exercise) : { weight: v.weight!, reps: v.reps! };
+  const landed = already?.sets.find((s) => s.id === v.operationId);
+  const numbers = landed
+    ? { weight: landed.weight, reps: landed.reps }
+    : repeat
+      ? sameAgain(exercise)
+      : { weight: v.weight!, reps: v.reps! };
   if (!numbers) return { status: "no-numbers", exercise: exercise.name };
 
-  const id = crypto.randomUUID();
-  const setNumber = Math.max(0, ...exercise.sets.map((s) => s.n)) + 1;
-  await saveWatchSet(ctx, {
-    id,
-    sessionExerciseId: exercise.id,
-    setNumber,
-    weight: numbers.weight,
-    reps: numbers.reps,
-  });
+  const id = v.operationId ?? crypto.randomUUID();
+  const [saved] = await logSets(ctx, [
+    {
+      id,
+      session_exercise_id: exercise.id,
+      weight_kg: fromDisplayWeight(numbers.weight, ctx.unit),
+      reps: numbers.reps,
+    },
+  ]);
+  const setNumber = saved?.set_number ?? Math.max(0, ...exercise.sets.map((s) => s.n)) + 1;
 
   const logged = {
     ...exercise,
@@ -727,7 +820,11 @@ export async function spokenWorkout(ctx: WatchContext): Promise<SpokenWorkoutRep
   return { status: "ok", unit: ctx.unit, exercises: workout.exercises.map((e) => e.name) };
 }
 
-const heardSchema = z.object({ heard: z.array(z.unknown()).max(12) });
+const heardSchema = z.object({
+  heard: z.array(z.unknown()).max(12),
+  /** The command's own id, the same on every retry of it (2.8 on). */
+  operationId: z.string().uuid().optional(),
+});
 
 export type HeardSetsReply =
   | { status: "no-workout" }
@@ -756,9 +853,19 @@ export type HeardSetsReply =
  * then saved with their effort and warm-ups.
  */
 export async function logHeardSets(ctx: WatchContext, body: unknown): Promise<HeardSetsReply> {
-  const groups = parseHeard(heardSchema.parse(body ?? {}).heard);
-  const workout = await activeWorkout(ctx);
-  if (!workout || workout.exercises.length === 0) return { status: "no-workout" };
+  const v = heardSchema.parse(body ?? {});
+  const groups = parseHeard(v.heard);
+  const found = await activeWorkout(ctx);
+  if (!found || found.exercises.length === 0) return { status: "no-workout" };
+  // Each set's id comes from the command's, so a retry plans against the
+  // workout as it was before the first try, gets the same sets with the
+  // same ids, and log_sets adds none of them twice.
+  const ids = (i: number) => (v.operationId ? operationSetId(v.operationId, i) : crypto.randomUUID());
+  const mine = new Set(v.operationId ? Array.from({ length: 200 }, (_, i) => operationSetId(v.operationId!, i)) : []);
+  const workout = {
+    ...found,
+    exercises: found.exercises.map((e) => ({ ...e, sets: e.sets.filter((s) => !mine.has(s.id)) })),
+  };
 
   const current = exerciseForNextSet(workout.exercises);
   const { sets, unmatched } = planSpokenSets(
@@ -768,25 +875,20 @@ export async function logHeardSets(ctx: WatchContext, body: unknown): Promise<He
   );
   if (sets.length === 0) return { status: "nothing", unmatched };
 
-  // Session exercise ids come from the lifter's own workout above.
-  const numbers = new Map(workout.exercises.map((e) => [e.id, Math.max(0, ...e.sets.map((s) => s.n))]));
-  const rows = sets.map((s) => {
-    const n = (numbers.get(s.exerciseId) ?? 0) + 1;
-    numbers.set(s.exerciseId, n);
-    return {
-      id: crypto.randomUUID(),
-      user_id: ctx.userId,
+  // Session exercise ids come from the lifter's own workout above; the
+  // numbers come back from log_sets, after whatever's on each exercise.
+  const saved = await logSets(
+    ctx,
+    sets.slice(0, 200).map((s, i) => ({
+      id: ids(i),
       session_exercise_id: s.exerciseId,
-      set_number: n,
       weight_kg: fromDisplayWeight(s.weight, ctx.unit),
       reps: s.reps,
       rpe: s.rpe,
       is_warmup: s.warmup,
-      is_completed: true,
-    };
-  });
-  const { error } = await ctx.db.from("set").insert(rows);
-  if (error) throw error;
+    })),
+  );
+  const rows = saved.map((r, i) => ({ id: r.id, session_exercise_id: sets[i].exerciseId, set_number: r.set_number }));
 
   const after = {
     ...workout,

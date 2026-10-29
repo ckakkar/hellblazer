@@ -83,7 +83,8 @@ export function RecoveryCard() {
     if (!plugin) return;
     try {
       const { api } = await plugin;
-      await api.requestHealth();
+      // Only Recovery's readings; a build before 2.8 has just the one sheet.
+      await api.requestRecovery().catch(() => api.requestHealth());
     } catch {
       // The sheet failed to show; the card stays as it was.
     }

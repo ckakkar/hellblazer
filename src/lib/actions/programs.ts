@@ -7,7 +7,9 @@ import { getAuthedContext } from "@/lib/auth";
 import { getTimeZone, getToday } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
 import type { TablesUpdate } from "@/lib/database.types";
-import { readPauses, type Pause } from "@/lib/program-week";
+import { countedWorkouts, readPauses, type Pause } from "@/lib/program-week";
+import { APPEND } from "@/lib/positions";
+import { nudgeWidgets } from "@/lib/widget-push";
 
 export async function createProgram(input: {
   name: string;
@@ -91,7 +93,7 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
   const v = z
     .object({ id: z.string().uuid(), active: z.boolean() })
     .parse(input);
-  const { supabase } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext();
   // One step (set_active_program), so switching never leaves no program
   // active. Starting a program with no start date begins it today.
   const { error } = await supabase.rpc("set_active_program", {
@@ -100,6 +102,7 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
     p_today: await getToday(),
   });
   if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/programs");
   revalidatePath(`/programs/${v.id}`);
   revalidatePath("/dashboard");
@@ -126,6 +129,7 @@ export async function skipWorkout(input: { programDayId: string }) {
     date: await getToday(),
   });
   if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/programs");
   revalidatePath(`/programs/${pd.program_id}`);
   revalidatePath("/dashboard");
@@ -139,7 +143,7 @@ export async function skipWorkout(input: { programDayId: string }) {
  */
 export async function pauseProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext();
   const { data: p } = await supabase
     .from("program")
     .select("paused_at, start_date")
@@ -151,6 +155,7 @@ export async function pauseProgram(input: { id: string }) {
     .update({ paused_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/programs");
   revalidatePath(`/programs/${id}`);
   revalidatePath("/dashboard");
@@ -165,7 +170,7 @@ export async function pauseProgram(input: { id: string }) {
  */
 export async function resumeProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext();
   const { data: p } = await supabase
     .from("program")
     .select("paused_at, start_date, pauses")
@@ -197,6 +202,7 @@ export async function resumeProgram(input: { id: string }) {
   }
   const { error } = await supabase.from("program").update(patch).eq("id", id);
   if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/programs");
   revalidatePath(`/programs/${id}`);
   revalidatePath("/dashboard");
@@ -204,9 +210,9 @@ export async function resumeProgram(input: { id: string }) {
 }
 
 /**
- * Roll back the most recent advance in the program, undoes the last skip, or
- * discards the last logged session (destructive: that session's sets are
- * removed). Used by the "Roll back a day" control.
+ * Roll back the most recent advance in the program: undoes the last skip, or
+ * deletes the last workout that counted (to Recently deleted, where it can
+ * be restored for 30 days). Used by the "Roll back a day" control.
  */
 export async function rollbackLastDay(input: {
   programId: string;
@@ -214,7 +220,7 @@ export async function rollbackLastDay(input: {
   const { programId } = z
     .object({ programId: z.string().uuid() })
     .parse(input);
-  const { supabase } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext();
 
   const [{ data: lastSkip }, { data: lastSession }] = await Promise.all([
     supabase
@@ -225,16 +231,18 @@ export async function rollbackLastDay(input: {
       .limit(1)
       .maybeSingle(),
     supabase
-      .from("session")
-      .select("id, created_at")
+      .from("v_session_summary")
+      .select("session_id, created_at")
       .eq("program_id", programId)
+      .gt("working_sets", 0)
+      .or(countedWorkouts())
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
   ]);
 
   const skipTime = lastSkip ? new Date(lastSkip.created_at).getTime() : -1;
-  const sessTime = lastSession ? new Date(lastSession.created_at).getTime() : -1;
+  const sessTime = lastSession?.created_at ? new Date(lastSession.created_at).getTime() : -1;
   if (skipTime < 0 && sessTime < 0) return { removed: "none" };
 
   // Only reported once the row is really gone: a refused delete (an error,
@@ -246,13 +254,13 @@ export async function rollbackLastDay(input: {
     if (!data?.length) throw new Error("The skip wasn't removed");
     removed = "skip";
   } else {
-    // Deleting the session cascades its exercises + sets.
-    const { data, error } = await supabase.from("session").delete().eq("id", lastSession!.id).select("id");
+    // To Recently deleted, with its exercises and sets (trash_session).
+    const { error } = await supabase.rpc("trash_session", { p_session: lastSession!.session_id! });
     if (error) throw error;
-    if (!data?.length) throw new Error("The session wasn't removed");
     removed = "session";
   }
 
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/programs");
   revalidatePath(`/programs/${programId}`);
   revalidatePath("/dashboard");
@@ -265,22 +273,14 @@ export async function rollbackLastDay(input: {
 /** Restart the block from week 1 (start date = today). Keeps logged sessions. */
 export async function resetProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
-  // A restart must also clear skips, or old skips (dated today) would advance
+  const { supabase, user } = await getAuthedContext();
+  // A restart clears skips too, or old skips (dated today) would advance
   // the fresh week-1 rotation before it even begins; and it stamps the
-  // moment, so a workout done earlier today doesn't count either.
-  const { error: skipsError } = await supabase.from("program_skip").delete().eq("program_id", id);
-  if (skipsError) throw skipsError;
-  const { error } = await supabase
-    .from("program")
-    .update({
-      start_date: await getToday(),
-      paused_at: null,
-      pauses: [],
-      restarted_at: new Date().toISOString(),
-    })
-    .eq("id", id);
+  // moment, so a workout done earlier today doesn't count either. One
+  // transaction (restart_program), so it can't half happen.
+  const { error } = await supabase.rpc("restart_program", { p_id: id, p_today: await getToday() });
   if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath(`/programs/${id}`);
   revalidatePath("/programs");
   revalidatePath("/dashboard");
@@ -288,9 +288,10 @@ export async function resetProgram(input: { id: string }) {
 
 export async function deleteProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
+  const { supabase, user } = await getAuthedContext();
   const { error } = await supabase.from("program").delete().eq("id", id);
   if (error) throw error;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/programs");
   revalidatePath("/dashboard");
 }
@@ -303,19 +304,12 @@ export async function addProgramDay(input: {
     .object({ programId: z.string().uuid(), templateId: z.string().uuid() })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
-  const { data: last } = await supabase
-    .from("program_day")
-    .select("position")
-    .eq("program_id", v.programId)
-    .order("position", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const position = (last?.position ?? -1) + 1;
   const { error } = await supabase.from("program_day").insert({
     user_id: user.id,
     program_id: v.programId,
     template_id: v.templateId,
-    position,
+    // After the last day, placed under a lock (append_position).
+    position: APPEND,
   });
   if (error) throw error;
   revalidatePath(`/programs/${v.programId}`);
