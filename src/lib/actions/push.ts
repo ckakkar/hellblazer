@@ -131,20 +131,34 @@ export type TestPushResult =
   | { ok: false; error: "not_configured" | "no_subscription" | "send_failed" };
 
 /**
- * Fire a test notification to every device the user has registered: browsers
- * and home-screen PWAs over Web Push, the iOS app over APNs.
+ * Fire a test notification. Given this device (the iPhone's APNs `token`, or
+ * the browser's push `endpoint`), only to it, so success means this device
+ * works; with neither, to every device the account has registered.
  */
-export async function sendTestPush(): Promise<TestPushResult> {
-  const web = pushConfigured();
-  const ios = apnsConfigured();
-  if (!web && !ios) return { ok: false, error: "not_configured" };
+export async function sendTestPush(input: { token?: string; endpoint?: string } = {}): Promise<TestPushResult> {
+  const target = z
+    .object({
+      token: z.string().trim().toLowerCase().max(200).optional(),
+      endpoint: z.string().max(1000).optional(),
+    })
+    .parse(input);
+  const targeted = target.token !== undefined || target.endpoint !== undefined;
+  const web = pushConfigured() && (!targeted || Boolean(target.endpoint));
+  const ios = apnsConfigured() && (!targeted || Boolean(target.token));
+  if (!pushConfigured() && !apnsConfigured()) return { ok: false, error: "not_configured" };
   const { supabase, user } = await getAuthedContext();
   const [{ data: subs }, { data: devices }] = await Promise.all([
     web
-      ? supabase.from("push_subscription").select("endpoint, p256dh, auth").eq("user_id", user.id)
+      ? (() => {
+          const q = supabase.from("push_subscription").select("endpoint, p256dh, auth").eq("user_id", user.id);
+          return target.endpoint ? q.eq("endpoint", target.endpoint) : q;
+        })()
       : Promise.resolve({ data: [] as { endpoint: string; p256dh: string; auth: string }[] }),
     ios
-      ? supabase.from("apns_device").select("token").eq("user_id", user.id).eq("alerts", true)
+      ? (() => {
+          const q = supabase.from("apns_device").select("token").eq("user_id", user.id).eq("alerts", true);
+          return target.token ? q.eq("token", target.token) : q;
+        })()
       : Promise.resolve({ data: [] as { token: string }[] }),
   ]);
   if ((subs?.length ?? 0) + (devices?.length ?? 0) === 0) {

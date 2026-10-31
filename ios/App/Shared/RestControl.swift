@@ -111,15 +111,36 @@ enum RestAlert {
         ])
     }
 
+    /// Bumped by every schedule and cancel: the permission check answers
+    /// later, and by then the rest may have been skipped or moved, so only
+    /// the latest call's alert is ever added.
+    private static var generation = 0
+    private static let lock = NSLock()
+
+    private static func bump() -> Int {
+        lock.lock()
+        defer { lock.unlock() }
+        generation += 1
+        return generation
+    }
+
+    private static func isLatest(_ mine: Int) -> Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return generation == mine
+    }
+
     /// Replaces any pending alert with one at `endsAt`. Asks for permission
     /// the first time. `label` is the exercise, e.g. "Bench Press".
     static func schedule(sessionId: String?, endsAt: Date, label: String?) {
         cancel()
-        let interval = endsAt.timeIntervalSinceNow
-        guard interval >= 1 else { return }
+        let mine = bump()
+        guard endsAt.timeIntervalSinceNow >= 1 else { return }
         let center = UNUserNotificationCenter.current()
         center.requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted else { return }
+            // Skipped, moved or ended while iOS answered, or already over.
+            let interval = endsAt.timeIntervalSinceNow
+            guard granted, isLatest(mine), interval >= 1 else { return }
             let content = UNMutableNotificationContent()
             content.title = "Rest's up"
             content.body = "\(label ?? "Next set"). Time to lift."
@@ -133,6 +154,7 @@ enum RestAlert {
     }
 
     static func cancel() {
+        _ = bump()
         let center = UNUserNotificationCenter.current()
         center.removePendingNotificationRequests(withIdentifiers: [id])
         center.removeDeliveredNotifications(withIdentifiers: [id])

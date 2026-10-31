@@ -66,7 +66,10 @@ function deliver(
       session.close();
       resolve(result);
     };
-    session.on("error", () => finish({ ok: false, gone: false }));
+    session.on("error", (err) => {
+      console.warn(JSON.stringify({ hb: "apns", transport: String(err?.message ?? err).slice(0, 80), type: pushType }));
+      finish({ ok: false, gone: false });
+    });
 
     const req = session.request({
       ":method": "POST",
@@ -78,14 +81,17 @@ function deliver(
       "content-type": "application/json",
     });
     req.setTimeout(10_000, () => {
+      console.warn(JSON.stringify({ hb: "apns", transport: "timeout", type: pushType }));
       req.close();
       finish({ ok: false, gone: false });
     });
 
     let status = 0;
     let text = "";
+    let apnsId = "";
     req.on("response", (headers) => {
       status = Number(headers[":status"]);
+      apnsId = String(headers["apns-id"] ?? "").slice(0, 40);
     });
     req.setEncoding("utf8");
     req.on("data", (chunk: string) => {
@@ -97,6 +103,12 @@ function deliver(
         reason = (JSON.parse(text) as { reason?: string }).reason ?? "";
       } catch {
         // Success responses have no body.
+      }
+      // Why a push didn't go, in the logs (never the token): Apple's status,
+      // its reason ("BadDeviceToken", "ExpiredProviderToken", ...) and the
+      // request's id, to look up with Apple.
+      if (status !== 200) {
+        console.warn(JSON.stringify({ hb: "apns", status, reason: reason.slice(0, 60), type: pushType, id: apnsId }));
       }
       finish({
         ok: status === 200,

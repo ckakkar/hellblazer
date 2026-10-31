@@ -274,7 +274,8 @@ function Spark({
   if (present.length < 3) return null;
   const W = 100;
   const H = 28;
-  const lo = Math.min(...present, usual ?? Infinity);
+  // Bars stand on zero, so a short night looks short; a line can zoom in.
+  const lo = bars ? 0 : Math.min(...present, usual ?? Infinity);
   const hi = Math.max(...present, usual ?? -Infinity);
   const span = hi - lo || 1;
   const x = (i: number) => (values.length === 1 ? W : (i / (values.length - 1)) * W);

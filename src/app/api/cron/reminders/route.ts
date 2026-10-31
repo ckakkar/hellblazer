@@ -60,7 +60,7 @@ async function workoutDue(
   userId: string,
   today: string,
 ): Promise<{ programName: string; nextName: string } | null> {
-  const { data: program } = await svc
+  const { data: program, error: programError } = await svc
     .from("program")
     .select(
       "id, name, start_date, duration_weeks, paused_at, pauses, restarted_at, program_day(id, position, workout_template(name, day_label))",
@@ -70,6 +70,7 @@ async function workoutDue(
     .order("position", { referencedTable: "program_day", ascending: true })
     .maybeSingle();
 
+  if (programError) throw programError;
   if (!program || program.paused_at || !program.start_date) return null;
 
   const start = parseISO(program.start_date);
@@ -119,6 +120,10 @@ async function workoutDue(
       .eq("program_id", program.id)
       .eq("date", today),
   ]);
+
+  // A read that failed isn't "nothing done": that would remind someone
+  // who's trained. The lifter is skipped this run instead (counted failed).
+  for (const r of [sessWeek, skipWeek, sessToday, skipToday]) if (r.error) throw r.error;
 
   const workouts = (sessWeek.data ?? []).flatMap((r) =>
     r.session_date && r.created_at
@@ -277,14 +282,20 @@ export async function GET(request: NextRequest) {
       if (p.reminder_hour != null) {
         const due = await workoutDue(svc, p.user_id, localDate);
         if (due && (await reserve(svc, p.user_id, "reminder", localDate))) {
-          const sent = await send({
-            title: "Time to train",
-            body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
-            url: "/log",
-            tag: "reminder",
-          });
-          if (sent > 0) notified += sent;
-          else await release(svc, p.user_id, "reminder", localDate);
+          // Nothing reached the lifter (every device failed, or sending threw):
+          // the claim goes back, so the next run tries again.
+          let sent = 0;
+          try {
+            sent = await send({
+              title: "Time to train",
+              body: `${due.nextName} is up in ${due.programName}. Climb the ladder.`,
+              url: "/log",
+              tag: "reminder",
+            });
+          } finally {
+            if (sent > 0) notified += sent;
+            else await release(svc, p.user_id, "reminder", localDate);
+          }
         }
       }
 

@@ -62,8 +62,13 @@ const ALERTS_KEY = "hell-blazer:apns-alerts";
 function alertsWanted(): boolean {
   try {
     const stored = window.localStorage.getItem(ALERTS_KEY);
-    // Builds before 2.8 kept a token only while notifications were on.
-    return stored === null ? storedToken() !== null : stored === "1";
+    if (stored !== null) return stored === "1";
+    // Builds before 2.8 kept a token only while notifications were on. Read
+    // once and written down: from here every registration stores a token,
+    // alerts or not, so a token alone is no longer consent.
+    const legacy = storedToken() !== null;
+    setAlertsWanted(legacy);
+    return legacy;
   } catch {
     return false;
   }
@@ -82,10 +87,24 @@ async function alertsAllowed(): Promise<boolean> {
   return (await PushNotifications.checkPermissions()).receive === "granted";
 }
 
-/** Saves this phone's token with the account, alerts on or off. */
-async function register(alerts: boolean): Promise<void> {
+/*
+ * Registrations run one at a time, in the order they were asked for, and
+ * each decides "alerts on?" only once it has the token, right before it
+ * writes. A launch's refresh still waiting on APNs can't then land after
+ * "Enable notifications" with the answer it had before the tap.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+
+function serially<T>(work: () => Promise<T>): Promise<T> {
+  const next = queue.then(work, work);
+  queue = next.catch(() => undefined);
+  return next;
+}
+
+/** Saves this phone's token with the account; `alerts` is asked at the moment of writing. */
+async function register(alerts: () => boolean | Promise<boolean>): Promise<void> {
   const token = await deviceToken();
-  await registerApnsDevice({ token, timezone: timezone(), alerts });
+  await registerApnsDevice({ token, timezone: timezone(), alerts: await alerts() });
   storeToken(token);
 }
 
@@ -102,8 +121,10 @@ export async function enableNativePush(): Promise<string | null> {
     return "Notifications are off for Fatty. Turn them on in iOS Settings → Notifications → Fatty.";
   }
   try {
-    await register(true);
-    setAlertsWanted(true);
+    await serially(async () => {
+      await register(() => true);
+      setAlertsWanted(true);
+    });
     return null;
   } catch {
     return `Couldn't register this ${deviceName()} for notifications. Try again.`;
@@ -116,16 +137,33 @@ export async function enableNativePush(): Promise<string | null> {
  * with alerts off. iOS's permission stays, so turning them on is one tap.
  */
 export async function forgetNativePush(): Promise<void> {
-  const token = storedToken();
-  storeToken(null);
-  setAlertsWanted(false);
-  if (token) await unregisterApnsDevice({ token });
+  await serially(async () => {
+    setAlertsWanted(false);
+    const token = storedToken();
+    if (!token) return;
+    // Off the server first, with one more try. Only then is the token let
+    // go: if both fail, it's kept, so the next sign-in here claims the
+    // phone for that account (alerts off) instead of leaving it on this one.
+    await unregisterApnsDevice({ token }).catch(() => unregisterApnsDevice({ token }));
+    storeToken(null);
+  });
 }
 
-/** Alerts off. The phone stays registered, so its widgets keep refreshing. */
+/**
+ * Alerts off. The phone stays registered, so its widgets keep refreshing.
+ * Off here only once the server has it; a failure throws, and the switch
+ * stays on.
+ */
 export async function disableNativePush(): Promise<void> {
-  setAlertsWanted(false);
-  await register(false);
+  await serially(async () => {
+    await register(() => false);
+    setAlertsWanted(false);
+  });
+}
+
+/** This phone's APNs token, once it has registered: the test notification goes to it alone. */
+export function thisPhoneToken(): string | null {
+  return storedToken();
 }
 
 /**
@@ -134,5 +172,5 @@ export async function disableNativePush(): Promise<void> {
  * alerts are on, which iOS Settings may have changed since).
  */
 export async function refreshNativePush(): Promise<void> {
-  await register(alertsWanted() && (await alertsAllowed()));
+  await serially(() => register(async () => alertsWanted() && (await alertsAllowed())));
 }

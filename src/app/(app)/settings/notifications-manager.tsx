@@ -206,20 +206,35 @@ export function NotificationsManager({
     }
   }
 
+  /** A test to this device alone, so "sent" means this one works. */
   async function test() {
     setBusy(true);
     setMsg(null);
-    const r = await sendTestPush();
-    setBusy(false);
-    setMsg(
-      r.ok
-        ? "Test sent: check your notifications."
-        : r.error === "no_subscription"
-          ? "Enable notifications on this device first."
-          : r.error === "not_configured"
-            ? "Push isn't configured on the server yet."
-            : "Couldn't send the test. Try again.",
-    );
+    try {
+      let target: { token?: string; endpoint?: string } = {};
+      if (isNativeApp()) {
+        const { thisPhoneToken } = await import("@/lib/native-push");
+        target = { token: thisPhoneToken() ?? "" };
+      } else {
+        const reg = await workerRegistration();
+        const sub = reg ? await reg.pushManager.getSubscription() : null;
+        target = { endpoint: sub?.endpoint ?? "" };
+      }
+      const r = await sendTestPush(target);
+      setMsg(
+        r.ok
+          ? `Test sent to this ${deviceName()}: check your notifications.`
+          : r.error === "no_subscription"
+            ? `Enable notifications on this ${deviceName()} first.`
+            : r.error === "not_configured"
+              ? "Push isn't configured on the server yet."
+              : `Couldn't reach this ${deviceName()}. Try again, or turn notifications off and on.`,
+      );
+    } catch {
+      setMsg("Couldn't send the test. Check your connection and try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function changeReminder(on: boolean) {

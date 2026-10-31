@@ -48,7 +48,15 @@ final class RestNotificationDelegate: NSObject, UNUserNotificationCenterDelegate
             let handled: Void? = forward?.userNotificationCenter?(
                 center, didReceive: response, withCompletionHandler: completionHandler
             )
-            if handled == nil { completionHandler() }
+            if handled == nil {
+                // A tap that launched the app, before Capacitor's router is
+                // up to hear it: open the page the push points at here
+                // (NativeRouter waits for the web view).
+                if let url = response.notification.request.content.userInfo["url"] as? String {
+                    NativeRouter.shared.open(path: url)
+                }
+                completionHandler()
+            }
             return
         }
         let sessionId = response.notification.request.content.userInfo["sessionId"] as? String
