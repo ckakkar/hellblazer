@@ -83,6 +83,8 @@ final class WatchModel: ObservableObject {
     /// Every set of the plan is done, and they chose One More Set rather
     /// than End: log on instead of being offered the finish again.
     @Published var keepGoing = false
+    /// Today's Recovery call from the phone (WatchRecovery), kept between launches.
+    @Published private(set) var recovery: WatchRecovery?
 
     private var countdownDone = false
     /// What the complications last redrew for (see updateComplications).
@@ -115,6 +117,7 @@ final class WatchModel: ObservableObject {
         offline = load("offline", as: OfflineWorkout.self)
         pendingFinish = load("pendingFinish", as: PendingFinish.self)
         token = Keychain.token
+        recovery = load("recovery", as: WatchRecovery.self)
         // The last state the server sent, so the workouts to start are there
         // with no connection. Not its workout: that may have ended since,
         // unless it's one started here offline.
@@ -179,6 +182,13 @@ final class WatchModel: ObservableObject {
                 settings = next
                 defaults.set(try? JSONEncoder().encode(next), forKey: "settings")
             }
+        }
+        // After the account check above, which forgets the last one's.
+        if let data = context["recovery"] as? Data,
+           let call = try? JSONDecoder().decode(WatchRecovery.self, from: data),
+           call != recovery {
+            recovery = call
+            save(call, as: "recovery")
         }
         if raw != token {
             Keychain.token = raw
@@ -288,6 +298,8 @@ final class WatchModel: ObservableObject {
         pendingFinish = nil
         save(pendingFinish, as: "pendingFinish")
         save(Optional<WatchState>.none, as: "state")
+        recovery = nil
+        save(Optional<WatchRecovery>.none, as: "recovery")
         clearRest()
         // Whatever's still recording wasn't finished: it doesn't go to Health.
         Task { await recorder.finish(save: false) }

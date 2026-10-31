@@ -33,7 +33,7 @@ import { format, parseISO } from "date-fns";
 import { formatVolume, toDisplayWeight, trimNum, type Unit } from "@/lib/units";
 import { liftStory } from "@/lib/lift-story";
 import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
-import { ProgressControls } from "./progress-controls";
+import { ProgressBody, ProgressShell } from "./progress-controls";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -80,78 +80,78 @@ export default async function ProgressPage({
         stat={{ value: oneRepMaxes.length, label: "tracked lifts" }}
       />
 
-      <ProgressControls
-        tab={tab}
+      <ProgressShell
+        view={{ tab, exercise: selectedExercise, muscle: selectedMuscle }}
         exercises={loggedExercises}
-        selectedExercise={selectedExercise}
-        selectedMuscle={selectedMuscle}
-      />
-
-      {/* On a desktop the page splits: the open lift (or muscle) on the left,
-          the latest records and the ladder beside it, and every lift below in
-          two columns. On a phone the right column dissolves back into the
-          single stack, in the order it always had. */}
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:items-start lg:gap-x-8 lg:gap-y-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
-        <div className="min-w-0">
-          {tab === "exercise" ? (
-            loggedExercises.length === 0 || !selectedExercise ? (
-              <EmptyState
-                icon={<TrendingUp className="size-6" />}
-                title="No logged exercises yet"
-                body="Log some working sets and your 1RM and volume trends will appear here."
-                action={
-                  <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
-                    Start a workout
-                  </Link>
-                }
-              />
-            ) : (
-              <ExerciseTab
-                exerciseId={selectedExercise}
-                exerciseName={
-                  loggedExercises.find((e) => e.exercise_id === selectedExercise)
-                    ?.exercise_name ?? "This lift"
-                }
-                unit={unit}
-              />
-            )
-          ) : (
-            <MuscleTab muscle={selectedMuscle} unit={unit} />
-          )}
-        </div>
-
-        <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
-          {tab === "exercise" && loggedExercises.length > 0 && selectedExercise && (
-            <>
-              {/* The other lifts, quieter: a line each to compare against. */}
-              {trends.length > 1 && (
-                <div className="min-w-0">
-                  <LiftTrends lifts={trends} unit={unit} selected={selectedExercise} />
-                </div>
+      >
+        <ProgressBody>
+          {/* On a desktop the page splits: the open lift (or muscle) on the left,
+              the latest records and the ladder beside it, and every lift below in
+              two columns. On a phone the right column dissolves back into the
+              single stack, in the order it always had. */}
+          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,25rem)] lg:items-start lg:gap-x-8 lg:gap-y-12 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)]">
+            <div className="min-w-0">
+              {tab === "exercise" ? (
+                loggedExercises.length === 0 || !selectedExercise ? (
+                  <EmptyState
+                    icon={<TrendingUp className="size-6" />}
+                    title="No logged exercises yet"
+                    body="Log some working sets and your 1RM and volume trends will appear here."
+                    action={
+                      <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
+                        Start a workout
+                      </Link>
+                    }
+                  />
+                ) : (
+                  <ExerciseTab
+                    exerciseId={selectedExercise}
+                    exerciseName={
+                      loggedExercises.find((e) => e.exercise_id === selectedExercise)
+                        ?.exercise_name ?? "This lift"
+                    }
+                    unit={unit}
+                  />
+                )
+              ) : (
+                <MuscleTab muscle={selectedMuscle} unit={unit} />
               )}
-              <div className="min-w-0">
-                <RecentRecordsSection unit={unit} />
-              </div>
-            </>
-          )}
-          <div className="order-1 min-w-0 lg:order-none">
-            <LadderStanding tierKey={profile?.tier ?? null} />
-          </div>
-        </aside>
+            </div>
 
-        {oneRepMaxes.length > 0 && (
-          <div className="min-w-0 lg:col-span-2">
-            <SectionLabel action={<span className="text-[13px] text-muted">Best estimated 1RM</span>}>
-              All lifts
-            </SectionLabel>
-            <OneRepMaxBoard
-              rows={oneRepMaxes}
-              unit={unit}
-              selected={tab === "exercise" ? selectedExercise : undefined}
-            />
+            <aside className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-10">
+              {tab === "exercise" && loggedExercises.length > 0 && selectedExercise && (
+                <>
+                  {/* The other lifts, quieter: a line each to compare against. */}
+                  {trends.length > 1 && (
+                    <div className="min-w-0">
+                      <LiftTrends lifts={trends} unit={unit} selected={selectedExercise} />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <RecentRecordsSection unit={unit} />
+                  </div>
+                </>
+              )}
+              <div className="order-1 min-w-0 lg:order-none">
+                <LadderStanding tierKey={profile?.tier ?? null} />
+              </div>
+            </aside>
+
+            {oneRepMaxes.length > 0 && (
+              <div className="min-w-0 lg:col-span-2">
+                <SectionLabel action={<span className="text-[13px] text-muted">Best estimated 1RM</span>}>
+                  All lifts
+                </SectionLabel>
+                <OneRepMaxBoard
+                  rows={oneRepMaxes}
+                  unit={unit}
+                  selected={tab === "exercise" ? selectedExercise : undefined}
+                />
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </ProgressBody>
+      </ProgressShell>
     </div>
   );
 }
@@ -179,7 +179,7 @@ async function ExerciseTab({
     <div id="lift" className="grid scroll-mt-24 grid-cols-1 gap-8">
       <section>
         <LiftLead name={exerciseName} points={points} unit={unit} />
-        <div className="mt-6">
+        <div className="hb-chart-draw mt-6">
           <OneRepMaxChart data={points} unit={unit} height={300} />
         </div>
         {/* From the line to the workouts behind it. */}

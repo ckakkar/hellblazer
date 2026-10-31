@@ -34,7 +34,7 @@ export function ChartCard({
         </div>
         {action}
       </div>
-      <div className={cn("min-w-0 flex-1 pb-2 pt-3", bodyClassName)}>{children}</div>
+      <div className={cn("hb-chart-draw min-w-0 flex-1 pb-2 pt-3", bodyClassName)}>{children}</div>
     </section>
   );
 }

@@ -94,6 +94,8 @@ function fakeDb(tables: Tables) {
         atLeast.push([column, value]);
         return builder;
       },
+      // Only "more than zero sets": every fake session has some.
+      gt: () => builder,
       not(column: string, _op: "is", value: unknown) {
         without.push([column, value]);
         return builder;

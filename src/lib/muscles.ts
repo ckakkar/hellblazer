@@ -70,3 +70,18 @@ export const EQUIPMENT_OPTIONS = [
 ] as const;
 
 export const MECHANIC_OPTIONS = ["compound", "isolation"] as const;
+
+/** Sets per muscle from exercises and their sets: the primary muscle counts a set, each secondary half. */
+export function setsPerMuscle(
+  items: { primary: Muscle; secondary: Muscle[]; sets: number }[],
+): { muscle: Muscle; sets: number }[] {
+  const per = new Map<Muscle, number>();
+  for (const it of items) {
+    if (it.sets <= 0) continue;
+    per.set(it.primary, (per.get(it.primary) ?? 0) + it.sets);
+    for (const s of it.secondary) if (s !== it.primary) per.set(s, (per.get(s) ?? 0) + it.sets / 2);
+  }
+  return [...per]
+    .map(([muscle, sets]) => ({ muscle, sets }))
+    .sort((a, b) => b.sets - a.sets || a.muscle.localeCompare(b.muscle));
+}

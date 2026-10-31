@@ -127,6 +127,34 @@ export type RecoveryDay = {
   hrv?: number;
   /** Resting heart rate, bpm. */
   rhr?: number;
+  /** Breaths a minute asleep, the night's average (2.9 on). */
+  rr?: number;
+  /** Walking heart rate average, bpm (2.9 on). */
+  walkHr?: number;
+};
+
+/** A workout in Apple Health from the last week, with its heart rate (2.9 on). */
+export type RecoveryWorkout = {
+  /** Epoch ms. */
+  start: number;
+  end: number;
+  /** "strength", or "other" for any other kind. */
+  kind: string;
+  avgHr?: number;
+  maxHr?: number;
+};
+
+/** What Fatty's log says about the training, for the app's own Recovery call (training-load.ts). */
+export type NativeTrainingLoad = {
+  /** Epoch ms the last heavy session ended, and what it was. */
+  lastHeavyAt: number | null;
+  lastHeavyTitle: string | null;
+  lastHeavySets: number | null;
+  recentSets: number;
+  usualSets: number | null;
+  streakDays: number;
+  /** When the page worked it out, epoch ms. */
+  at: number;
 };
 
 /**
@@ -151,8 +179,10 @@ export type NativeEvents = {
 /** The app's own native plugin (ios/App/App/HellBlazerNativePlugin.swift). */
 export interface HellBlazerNative {
   workoutActivity(state: WorkoutActivityState): Promise<void>;
-  /** Ends the workout's Live Activity, or every one but `except`'s. */
-  endWorkoutActivity(options?: { except?: string }): Promise<void>;
+  /** Ends the workout's Live Activity, or every one but `except`'s.
+   *  `finished` (2.9 on): that workout is over, so a late update from the
+   *  watch can't start its activity again. Earlier builds ignore it. */
+  endWorkoutActivity(options?: { except?: string; finished?: string }): Promise<void>;
   /** `sessionId` lets the alert's +30s and a tap find the workout. */
   scheduleRestAlert(options: { endsAt: number; label?: string; sessionId?: string }): Promise<void>;
   cancelRestAlert(): Promise<void>;
@@ -199,7 +229,9 @@ export interface HellBlazerNative {
   /** Health's sheet for Recovery's readings alone (2.8 on; before, requestHealth asked for everything). */
   requestRecovery(): Promise<{ available: boolean }>;
   /** Four weeks of sleep, HRV and resting heart rate, oldest first. */
-  recoveryData(): Promise<{ days: RecoveryDay[] }>;
+  recoveryData(): Promise<{ days: RecoveryDay[]; workouts?: RecoveryWorkout[] }>;
+  /** The training side of Recovery, so the widget and the watch weigh it in the background (2.9 on). */
+  setTrainingLoad(load: NativeTrainingLoad): Promise<void>;
   /** Sets taken back outside the page for this session, handed over once. */
   takeRemovedSets(options: { sessionId: string }): Promise<{ setIds: string[] }>;
   /** Tells Siri a workout day was started, so it can suggest it next time. */

@@ -21,6 +21,33 @@ struct WatchState: Codable, Equatable {
     /// From an offline workout's start: another workout is open, so this
     /// one wasn't started (and its sets mustn't go to that one).
     var conflict: Bool?
+    /// With no workout on: the lifter at a glance, for the home. Nil from a
+    /// server before 2.9, or mid-workout.
+    var you: You?
+
+    struct You: Codable, Equatable {
+        var rank: Rank?
+        /// Weeks in a row on plan.
+        var streakWeeks: Int
+        /// Working sets a week, the last eight weeks, oldest first: this week last.
+        var weeklySets: [Int]
+        /// Whether each day of this week has a workout, Monday first.
+        var days: [Bool]
+        var last: Last?
+
+        struct Rank: Codable, Equatable {
+            var name: String
+            var rank: Int
+            var of: Int
+        }
+
+        struct Last: Codable, Equatable {
+            var title: String
+            /// yyyy-MM-dd.
+            var date: String
+            var sets: Int
+        }
+    }
 
     struct Week: Codable, Equatable {
         /// Monday, yyyy-MM-dd.
@@ -228,5 +255,44 @@ struct WatchAPI {
         if status == 401 { throw APIError.unlinked }
         guard (200..<300).contains(status) else { throw APIError.server(status) }
         return try JSONDecoder().decode(Response.self, from: data)
+    }
+}
+
+/// Today's Recovery call, worked out on the iPhone from Apple Health and the
+/// training (App/HealthExtras.swift: RecoveryCall, the card on Home's rules)
+/// about every hour, and sent here with the phone's context. The same JSON
+/// as the phone's RecoveryCache.
+struct WatchRecovery: Codable, Equatable {
+    /// The day it's for, yyyy-MM-dd in the phone's calendar.
+    var date: String
+    /// "ready", "steady" or "easy".
+    var verdict: String
+    var headline: String
+    var sleepMin: Double?
+    var hrv: Double?
+    var rhr: Double?
+    var advice: String?
+    var reasons: [String]?
+    /// Two weeks of HRV, oldest first, nil where there's no reading.
+    var hrvTrend: [Double?]?
+    /// When the phone worked it out, epoch seconds.
+    var readAt: Double?
+
+    /// Worked out today, by the phone's calendar here.
+    var isToday: Bool {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return date == formatter.string(from: Date())
+    }
+
+    /// The arrow is the call: up to push, level as planned, down to go lighter.
+    var symbol: String {
+        switch verdict {
+        case "ready": return "arrow.up.right"
+        case "steady": return "arrow.right"
+        default: return "arrow.down.right"
+        }
     }
 }

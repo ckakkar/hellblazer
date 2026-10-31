@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 import WatchKit
 
@@ -100,7 +101,9 @@ struct MessageView: View {
 
 // MARK: Start
 
-/// A tile per workout, the next programmed day first, as in Workout.
+/// The home: today's Recovery call, the next workout, the week so far with
+/// the last eight weeks behind it, every other workout, and the lifter's
+/// rank and streak. Starting a workout stays one tap from the top.
 struct StartView: View {
     @EnvironmentObject private var model: WatchModel
     let state: WatchState
@@ -111,8 +114,18 @@ struct StartView: View {
 
     var body: some View {
         List {
+            if let call = model.recovery, call.isToday {
+                NavigationLink {
+                    RecoveryDetail(call: call)
+                } label: {
+                    RecoveryTile(call: call)
+                }
+            }
             if let next = state.next {
                 tile(next, isNext: true)
+            }
+            if let you = state.you, let week = state.week {
+                WeekTile(week: week, you: you)
             }
             ForEach(others) { option in
                 tile(option, isNext: false)
@@ -122,6 +135,9 @@ struct StartView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .listRowBackground(Color.clear)
+            }
+            if let you = state.you, you.rank != nil || you.streakWeeks > 0 || you.last != nil {
+                YouTile(you: you)
             }
             if let problem = model.problem {
                 Text(problem)
@@ -164,6 +180,252 @@ struct StartView: View {
             .padding(.vertical, 8)
         }
         .disabled(model.starting != nil)
+    }
+}
+
+/// Today's call at a glance: the arrow, the words, two weeks of HRV with
+/// today's point, and the one thing it rests on most.
+private struct RecoveryTile: View {
+    @EnvironmentObject private var model: WatchModel
+    let call: WatchRecovery
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 5) {
+                Image(systemName: call.symbol)
+                    .font(.system(size: 14, weight: .black))
+                    .foregroundStyle(call.verdict == "ready" ? model.accent : .secondary)
+                Text("Recovery")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 2)
+                if let hrv = call.hrv {
+                    Text("\(Int(hrv.rounded())) ms")
+                        .font(.footnote)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Text(call.headline)
+                .font(.system(.headline, design: .rounded))
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            if let trend = call.hrvTrend {
+                TrendLine(values: trend, accent: call.verdict == "ready" ? model.accent : .white)
+                    .frame(height: 30)
+            }
+            if let reason = call.reasons?.first {
+                Text(reason)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+/// A reading over two weeks, no axes: the line, and today's point on it.
+private struct TrendLine: View {
+    let values: [Double?]
+    let accent: Color
+
+    private var points: [(day: Int, value: Double)] {
+        values.enumerated().compactMap { i, v in v.map { (i, $0) } }
+    }
+
+    var body: some View {
+        if points.count >= 3 {
+            Chart {
+                ForEach(points, id: \.day) { p in
+                    LineMark(x: .value("Day", p.day), y: .value("HRV", p.value))
+                        .interpolationMethod(.catmullRom)
+                        .foregroundStyle(Color.white.opacity(0.55))
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round))
+                }
+                if let last = points.last {
+                    PointMark(x: .value("Day", last.day), y: .value("HRV", last.value))
+                        .foregroundStyle(accent)
+                        .symbolSize(30)
+                }
+            }
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .chartXScale(domain: 0...max(1, values.count - 1))
+            .chartYScale(domain: .automatic(includesZero: false))
+            .accessibilityLabel("Heart rate variability, the last two weeks")
+        }
+    }
+}
+
+/// Everything today's call rests on, and what to do about it.
+private struct RecoveryDetail: View {
+    @EnvironmentObject private var model: WatchModel
+    let call: WatchRecovery
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Label(call.headline, systemImage: call.symbol)
+                    .font(.system(.headline, design: .rounded))
+                    .foregroundStyle(call.verdict == "ready" ? model.accent : .primary)
+                if let advice = call.advice {
+                    Text(advice)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+                HStack(alignment: .top, spacing: 8) {
+                    if let sleep = call.sleepMin { reading("Sleep", sleepText(sleep)) }
+                    if let hrv = call.hrv { reading("HRV", "\(Int(hrv.rounded()))") }
+                    if let rhr = call.rhr { reading("Resting", "\(Int(rhr.rounded()))") }
+                }
+                if let trend = call.hrvTrend {
+                    TrendLine(values: trend, accent: model.accent)
+                        .frame(height: 44)
+                }
+                if let reasons = call.reasons, !reasons.isEmpty {
+                    Divider()
+                    ForEach(reasons, id: \.self) { reason in
+                        Text(reason)
+                            .font(.footnote)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                if let readAt = call.readAt {
+                    Text("From your iPhone at \(Date(timeIntervalSince1970: readAt).formatted(date: .omitted, time: .shortened))")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .navigationTitle("Recovery")
+    }
+
+    private func reading(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text(value)
+                .font(.system(.body, design: .rounded).weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func sleepText(_ minutes: Double) -> String {
+        let m = Int(minutes.rounded())
+        return "\(m / 60)h \(String(format: "%02d", m % 60))"
+    }
+}
+
+/// The week so far: a dot for each day trained, the count against the plan,
+/// and the last eight weeks' sets as bars, this week's lit.
+private struct WeekTile: View {
+    @EnvironmentObject private var model: WatchModel
+    let week: WatchState.Week
+    let you: WatchState.You
+
+    private static let letters = ["M", "T", "W", "T", "F", "S", "S"]
+
+    /// Monday first, as the server counts the week.
+    private var todayIndex: Int {
+        (Calendar(identifier: .iso8601).component(.weekday, from: Date()) + 5) % 7
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("This week")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer(minLength: 2)
+                Text(week.planned.map { "\(week.sessions) of \($0)" } ?? "\(week.sessions)")
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+            }
+            HStack(spacing: 0) {
+                ForEach(0..<7, id: \.self) { i in
+                    let trained = i < you.days.count && you.days[i]
+                    VStack(spacing: 2) {
+                        Circle()
+                            .fill(trained ? AnyShapeStyle(model.accent) : AnyShapeStyle(Color.white.opacity(0.15)))
+                            .overlay(Circle().stroke(Color.white.opacity(i == todayIndex ? 0.8 : 0), lineWidth: 1.5))
+                            .frame(width: 10, height: 10)
+                        Text(Self.letters[i])
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(you.days.filter { $0 }.count) days trained this week")
+            if you.weeklySets.contains(where: { $0 > 0 }) {
+                Chart {
+                    ForEach(Array(you.weeklySets.enumerated()), id: \.offset) { i, sets in
+                        BarMark(x: .value("Week", i), y: .value("Sets", sets))
+                            .foregroundStyle(i == you.weeklySets.count - 1 ? AnyShapeStyle(model.accent) : AnyShapeStyle(Color.white.opacity(0.35)))
+                            .cornerRadius(2)
+                    }
+                }
+                .chartXAxis(.hidden)
+                .chartYAxis(.hidden)
+                .frame(height: 34)
+                .accessibilityLabel("Working sets a week, the last eight weeks")
+                Text("\(week.sets) sets this week")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 6)
+    }
+}
+
+/// The lifter: rank, streak, and the last workout.
+private struct YouTile: View {
+    let you: WatchState.You
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let rank = you.rank {
+                Text("Rank \(rank.rank) of \(rank.of)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(rank.name)
+                    .font(.system(.body, design: .rounded).weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            if you.streakWeeks > 0 {
+                Label("\(you.streakWeeks)-week streak", systemImage: "flame.fill")
+                    .font(.footnote)
+            }
+            if let last = you.last {
+                Text("Last: \(last.title), \(when(last.date)), \(last.sets) sets")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// "today", "yesterday" or "Tue".
+    private func when(_ date: String) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let day = formatter.date(from: date) else { return date }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(day) { return "today" }
+        if calendar.isDateInYesterday(day) { return "yesterday" }
+        let out = DateFormatter()
+        out.setLocalizedDateFormatFromTemplate("EEE d MMM")
+        return out.string(from: day)
     }
 }
 

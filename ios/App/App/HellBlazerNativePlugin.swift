@@ -60,6 +60,7 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         CAPPluginMethod(name: "recoveryStatus", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "requestRecovery", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "recoveryData", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setTrainingLoad", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "takeRemovedSets", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "donateWorkoutStart", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "setHealthSync", returnType: CAPPluginReturnPromise),
@@ -128,9 +129,10 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
     }
 
     /// Ends the workout's Live Activity: the session was finished or
-    /// discarded. With `except`, keeps that session's (it's still live).
+    /// discarded. With `except`, keeps that session's (it's still live);
+    /// with `finished`, that session's never comes back (2.9 on).
     @objc func endWorkoutActivity(_ call: CAPPluginCall) {
-        WorkoutActivity.end(except: call.getString("except"))
+        WorkoutActivity.end(except: call.getString("except"), finished: call.getString("finished"))
         WatchBridge.shared.phoneChanged()
         call.resolve()
     }
@@ -306,8 +308,8 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    /// Recovery on Home: Health's sheet for sleep, HRV and resting heart rate
-    /// alone, with nothing to write.
+    /// Recovery on Home: Health's sheet for Recovery's readings alone
+    /// (HealthAccess.recoveryTypes), with nothing to write.
     @objc func requestRecovery(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
             call.resolve(["available": false])
@@ -318,18 +320,37 @@ public class HellBlazerNativePlugin: CAPPlugin, CAPBridgedPlugin {
         }
     }
 
-    /// Recovery on Home: four weeks of sleep, HRV and resting heart rate.
+    /// Recovery on Home: four weeks of sleep, breathing, HRV and resting and
+    /// walking heart rate, and two weeks of workouts with their heart rate.
     @objc func recoveryData(_ call: CAPPluginCall) {
         guard HKHealthStore.isHealthDataAvailable() else {
-            call.resolve(["days": []])
+            call.resolve(["days": [], "workouts": []])
             return
         }
         Task {
-            let days = await RecoveryReadings.read(self.healthStore)
-            call.resolve(["days": days.map(\.dictionary)])
-            // The widget shows the same call as the card.
-            await RecoveryRefresher.refresh(store: self.healthStore, days: days)
+            async let readDays = RecoveryReadings.read(self.healthStore)
+            async let readWorkouts = RecoveryReadings.workouts(self.healthStore)
+            let (days, workouts) = await (readDays, readWorkouts)
+            call.resolve(["days": days.map(\.dictionary), "workouts": workouts.map(\.dictionary)])
+            // The widget and the watch show the same call as the card.
+            await RecoveryRefresher.refresh(store: self.healthStore, days: days, workouts: workouts)
         }
+    }
+
+    /// The training side of Recovery from Home (src/lib/training-load.ts),
+    /// kept for the background refresh, which then makes the card's call.
+    @objc func setTrainingLoad(_ call: CAPPluginCall) {
+        let load = TrainingLoad(
+            lastHeavyAt: call.getDouble("lastHeavyAt"),
+            lastHeavyTitle: call.getString("lastHeavyTitle"),
+            lastHeavySets: call.getInt("lastHeavySets"),
+            recentSets: call.getInt("recentSets") ?? 0,
+            usualSets: call.getDouble("usualSets"),
+            streakDays: call.getInt("streakDays") ?? 0,
+            at: call.getDouble("at") ?? Date().timeIntervalSince1970 * 1000
+        )
+        load.save()
+        call.resolve()
     }
 
     // MARK: Widgets
@@ -670,8 +691,31 @@ enum WorkoutActivity {
         activity.activityState == .active || activity.activityState == .stale
     }
 
+    /// Workouts finished or discarded (on the page, the watch, by Siri). An
+    /// update that arrives after (the watch hasn't heard yet, a send from the
+    /// page already on its way) would otherwise start the activity again,
+    /// asking for a set on a workout that's over. The last few, kept.
+    private static let doneKey = "workoutActivity.done"
+
+    private static func isDone(_ sessionId: String) -> Bool {
+        UserDefaults.standard.stringArray(forKey: doneKey)?.contains(sessionId) ?? false
+    }
+
+    private static func markDone(_ sessionId: String) {
+        var done = UserDefaults.standard.stringArray(forKey: doneKey) ?? []
+        guard !done.contains(sessionId) else { return }
+        done.append(sessionId)
+        UserDefaults.standard.set(Array(done.suffix(20)), forKey: doneKey)
+    }
+
     static func upsert(sessionId: String, startedAt: Date, state incoming: WorkoutActivityAttributes.ContentState) {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+        if isDone(sessionId) {
+            for activity in Activity<WorkoutActivityAttributes>.activities where activity.attributes.sessionId == sessionId {
+                Task { await activity.end(nil, dismissalPolicy: .immediate) }
+            }
+            return
+        }
         // Whoever sends the state (the page, the watch, a set said to Siri),
         // the heart rate is the watch's latest.
         var state = incoming
@@ -716,7 +760,10 @@ enum WorkoutActivity {
         Task { await current.update(content) }
     }
 
-    static func end(except sessionId: String? = nil) {
+    /// `finished`: that workout is over for good (finished or discarded), so
+    /// nothing later starts its activity again.
+    static func end(except sessionId: String? = nil, finished: String? = nil) {
+        if let finished { markDone(finished) }
         for activity in Activity<WorkoutActivityAttributes>.activities
         where activity.attributes.sessionId != sessionId {
             Task { await activity.end(nil, dismissalPolicy: .immediate) }

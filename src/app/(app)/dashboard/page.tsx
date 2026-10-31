@@ -25,6 +25,7 @@ import { ConsistencyHeatmap } from "@/components/charts/consistency-heatmap";
 import { formatVolume } from "@/lib/units";
 import { WidgetSync } from "@/components/native/widget-sync";
 import { RecoveryCard } from "@/components/native/recovery-card";
+import { trainingLoadFromSummaries } from "@/lib/training-load";
 import { cn, fitFigure } from "@/lib/utils";
 import { OutboxNote } from "@/components/offline-outbox";
 
@@ -272,7 +273,7 @@ export default async function DashboardPage({
       )}
 
       {/* iPhone app only, and only once Health has something to say. */}
-      <RecoveryCard />
+      <RecoveryCard load={trainingLoadFromSummaries(summaries, today)} />
 
       {anySession && (
         <>

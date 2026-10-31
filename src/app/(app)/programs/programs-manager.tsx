@@ -21,6 +21,7 @@ import type { ProgramProgress, ProgramWithDays } from "@/lib/data/programs";
 import type { TemplateWithExercises } from "@/lib/data/templates";
 import type { ActiveSession } from "@/lib/data/sessions";
 import type { Preset } from "@/lib/presets";
+import type { PresetBreakdown } from "@/lib/preset-stats";
 import { createProgram, setActiveProgram } from "@/lib/actions/programs";
 import { useAction } from "@/lib/use-action";
 import { useIPadApp } from "@/components/ipad-app";
@@ -33,12 +34,14 @@ export function ProgramsManager({
   activeProgress,
   activeSession,
   presets,
+  presetBreakdowns,
 }: {
   programs: ProgramWithDays[];
   templates: TemplateWithExercises[];
   activeProgress: ProgramProgress | null;
   activeSession: ActiveSession | null;
   presets: Preset[];
+  presetBreakdowns?: Record<string, PresetBreakdown>;
 }) {
   const [pending, start] = useAction("save the change");
   const [creating, setCreating] = useState(false);
@@ -135,7 +138,7 @@ export function ProgramsManager({
         )}
       </div>
 
-      <PresetCarousel presets={presets} />
+      <PresetCarousel presets={presets} breakdowns={presetBreakdowns} />
 
       <CreateProgramSheet
         open={creating}

@@ -1838,6 +1838,98 @@ button,
     opacity: 0;
   }
 }
+/* A bar drawn in from its start as its chart opens: the figure arriving,
+   once. Staggered by --i down a list. */
+.hb-grow-x {
+  transform-origin: left center;
+  animation: hb-grow-x 420ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 35ms + 120ms);
+}
+@keyframes hb-grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb-grow-x {
+    animation: none;
+  }
+}
+/* Charts draw themselves in when they appear (ChartCard and the lift's
+   1RM chart carry .hb-chart-draw): a line is wiped on from its first point
+   to its last, bars rise from the baseline, the radar opens from its middle,
+   the donut fades up. Once, as the figure arrives: switching lift draws the
+   new one, and nothing moves after. Recharts' own animation stays off (it
+   runs JavaScript every frame); these are CSS, and backwards fill leaves no
+   style behind once they've run. */
+.hb-chart-draw .recharts-area,
+.hb-chart-draw .recharts-line {
+  animation: hb-wipe-in 700ms var(--ease-out) 80ms backwards;
+}
+@keyframes hb-wipe-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+.hb-chart-draw .recharts-reference-dot {
+  animation: hb-fade-in 240ms var(--ease-out) 640ms backwards;
+}
+.hb-chart-draw .recharts-bar-rectangle {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: hb-rise 460ms var(--ease-out) 60ms backwards;
+}
+.hb-chart-draw .recharts-radar-polygon,
+.hb-chart-draw .recharts-pie-sector {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: hb-open 520ms var(--ease-out) 60ms backwards;
+}
+@keyframes hb-rise {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes hb-open {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+/* Recovery's two-week lines, drawn on from the left as the card appears. */
+.hb-spark {
+  animation: hb-wipe-in 700ms var(--ease-out) 120ms backwards;
+}
+/* An HTML bar chart's columns (the rep-range weeks), rising in order. */
+.hb-rise {
+  transform-origin: 50% 100%;
+  animation: hb-rise 460ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 30ms + 80ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb-chart-draw .recharts-area,
+  .hb-chart-draw .recharts-line,
+  .hb-chart-draw .recharts-reference-dot,
+  .hb-chart-draw .recharts-bar-rectangle,
+  .hb-chart-draw .recharts-radar-polygon,
+  .hb-chart-draw .recharts-pie-sector,
+  .hb-spark,
+  .hb-rise {
+    animation: none;
+  }
+}
+/* Something that just appeared to say what's happening (a loading line). */
+.hb-fade-in {
+  animation: hb-fade-in 180ms var(--ease-out) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb-fade-in {
+    animation: none;
+  }
+}
 @keyframes hb-rise-in {
   from {
     opacity: 0;
@@ -1960,15 +2052,26 @@ input[type="number"] {
   }
 }
 
-/* WebKit sizes a date field to its own text, not its box: in a narrow grid
-   cell it spills into whatever sits beside it. */
+/* iOS draws a date field as its own native control, sized to that control
+   rather than to the box it's given: with the native look on, width: 100%
+   and min-width: 0 are ignored and it runs past the edge of its card (the
+   bodyweight log did). Without the native look it takes its box like any
+   field; tapping it still opens the system's date picker. */
 input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
   min-width: 0;
+  max-width: 100%;
 }
 input[type="date"]::-webkit-date-and-time-value {
   min-width: 0;
+  margin: 0;
   /* iOS centres it otherwise, whatever the field says. */
   text-align: inherit;
+}
+input[type="date"]::-webkit-datetime-edit {
+  padding: 0;
 }
 
 * {

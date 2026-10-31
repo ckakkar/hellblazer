@@ -4,6 +4,7 @@ import { MUSCLE_LABEL } from "@/lib/muscles";
 import { toDisplayWeight, trimNum, type Unit } from "@/lib/units";
 import type { Exercise1RM } from "@/lib/data/analytics";
 import { cn } from "@/lib/utils";
+import { LinkPending } from "@/components/ui/link-pending";
 
 /**
  * Every logged lift with its all-time best estimated 1RM (Epley), strongest
@@ -67,7 +68,9 @@ export function OneRepMaxBoard({
                 </span>
                 <span className="block text-[12px] text-muted">{unit}</span>
               </span>
-              <ChevronRight className="relative size-4 shrink-0 text-muted/50" />
+              <LinkPending className="relative size-4 shrink-0">
+                <ChevronRight className="relative size-4 shrink-0 text-muted/50" />
+              </LinkPending>
             </Link>
           </li>
         );

@@ -32,11 +32,29 @@ export type WatchState = {
    */
   started?: WatchWorkout;
   /**
+   * With no workout on: the lifter at a glance, for the watch's home (2.9
+   * on): rank, streak, the last eight weeks and this week's days.
+   */
+  you?: WatchYou;
+  /**
    * From an offline workout's start: another workout is open (on the phone,
    * say), so this one wasn't started. The watch keeps it and its sets, and
    * says so, rather than moving them onto the wrong workout.
    */
   conflict?: boolean;
+};
+
+export type WatchYou = {
+  /** The rank fighter's name and place, or null before the first verdict. */
+  rank: { name: string; rank: number; of: number } | null;
+  /** Weeks in a row on plan (weekStreak), this one counting once it's met. */
+  streakWeeks: number;
+  /** Working sets a week, the last eight ISO weeks, oldest first: this week last. */
+  weeklySets: number[];
+  /** Whether each day of this week has a workout, Monday first. */
+  days: boolean[];
+  /** The most recent workout with sets in it. */
+  last: { title: string; date: string; sets: number } | null;
 };
 
 export type WatchWeek = {

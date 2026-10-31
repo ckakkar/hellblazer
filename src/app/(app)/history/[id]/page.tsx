@@ -14,7 +14,9 @@ import { getUnit } from "@/lib/settings";
 import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
-import { MUSCLE_LABEL } from "@/lib/muscles";
+import { MUSCLE_LABEL, setsPerMuscle } from "@/lib/muscles";
+import { isWork } from "@/lib/set-kinds";
+import { MuscleSetBars } from "@/components/charts/muscle-set-bars";
 import { cn, fitFigure } from "@/lib/utils";
 import { DeleteSessionButton } from "./delete-session-button";
 import { ShareCardButton } from "./share-card-button";
@@ -66,6 +68,21 @@ export default async function SessionDetailPage({
       }
     }
   }
+
+  // What the workout trained, as the weekly-sets view counts it.
+  const trained = setsPerMuscle(
+    session.session_exercise.flatMap((se) =>
+      se.exercise
+        ? [
+            {
+              primary: se.exercise.primary_muscle,
+              secondary: se.exercise.secondary_muscles ?? [],
+              sets: se.set.filter((s) => isWork({ warmup: s.is_warmup, kind: s.kind, reps: s.reps })).length,
+            },
+          ]
+        : [],
+    ),
+  );
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -132,6 +149,18 @@ export default async function SessionDetailPage({
 
       {end != null && end > start && (
         <HeartCard sessionId={session.id} start={start} end={end} sets={timedSets} maxHr={maxHr} />
+      )}
+
+      {trained.length > 1 && (
+        <section className="mb-8 border-t-2 border-text/80 pt-3">
+          <h2 className="flex items-baseline justify-between gap-3 px-1">
+            <span className="text-[15px] font-semibold text-text">What it trained</span>
+            <span className="text-[12px] text-muted">working sets, secondary counts half</span>
+          </h2>
+          <div className="mt-3 px-1 lg:max-w-xl">
+            <MuscleSetBars rows={trained} label="sets this workout" />
+          </div>
+        </section>
       )}
 
       {session.notes && (

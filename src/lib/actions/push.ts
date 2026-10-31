@@ -70,11 +70,13 @@ export async function deletePushSubscription(input: { endpoint: string }) {
  * Store this iPhone's APNs token for the signed-in user. A token belongs to
  * one phone, so it moves to whoever signed in there last. `alerts`: whether
  * reminders go to it too, or only the silent pushes that refresh its widgets.
+ * Capacitor spells the token in capitals; it's kept in lower case. It runs
+ * on every launch, and no page shows the devices, so nothing is revalidated.
  */
 export async function registerApnsDevice(input: { token: string; timezone?: string | null; alerts?: boolean }) {
   const v = z
     .object({
-      token: z.string().regex(/^[0-9a-f]{64,200}$/),
+      token: z.string().trim().toLowerCase().regex(/^[0-9a-f]{64,200}$/),
       timezone: z.string().max(64).refine(isValidTimeZone, "Not a timezone").nullable().optional(),
       alerts: z.boolean().optional(),
     })
@@ -86,12 +88,11 @@ export async function registerApnsDevice(input: { token: string; timezone?: stri
     p_alerts: v.alerts ?? true,
   });
   if (error) throw error;
-  revalidatePath("/settings");
 }
 
 /** Forget this iPhone's APNs token (notifications turned off in the app). */
 export async function unregisterApnsDevice(input: { token: string }) {
-  const v = z.object({ token: z.string().max(200) }).parse(input);
+  const v = z.object({ token: z.string().trim().toLowerCase().max(200) }).parse(input);
   const { supabase, user } = await getAuthedContext();
   const { error } = await supabase
     .from("apns_device")
@@ -99,7 +100,6 @@ export async function unregisterApnsDevice(input: { token: string }) {
     .eq("user_id", user.id)
     .eq("token", v.token);
   if (error) throw error;
-  revalidatePath("/settings");
 }
 
 /** Set the local hour (0-23) for the daily workout reminder; null = off. */

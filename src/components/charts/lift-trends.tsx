@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LinkPending } from "@/components/ui/link-pending";
 import { ArrowDownRight, ArrowUpRight } from "lucide-react";
 import type { LiftTrend } from "@/lib/data/analytics";
 import { toDisplayWeight, trimNum, type Unit } from "@/lib/units";
@@ -94,8 +95,10 @@ export function LiftTrends({ lifts, unit, selected }: { lifts: LiftTrend[]; unit
                     )}
                   </span>
                 </span>
-                <span className={open ? "text-text" : "text-muted"}>
-                  <Sparkline values={l.points.map((p) => p.e1rm)} />
+                <span className={cn("flex justify-center", open ? "text-text" : "text-muted")}>
+                  <LinkPending className="size-4">
+                    <Sparkline values={l.points.map((p) => p.e1rm)} />
+                  </LinkPending>
                 </span>
                 <span className="flex items-baseline justify-end gap-1">
                   <span className="font-display text-[1.25rem] leading-none text-text">

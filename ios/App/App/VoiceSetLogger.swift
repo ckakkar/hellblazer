@@ -377,7 +377,7 @@ enum VoiceSetLogger {
             return "You don't have a workout going."
         }
 
-        WorkoutActivity.end()
+        WorkoutActivity.end(finished: sessionId)
         RestAlert.cancel()
         RestControl.post(.init(sessionId: sessionId, endsAt: nil, total: 0, alert: false))
         saveToHealth(reply, sessionId: sessionId)

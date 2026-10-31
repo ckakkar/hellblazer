@@ -136,7 +136,18 @@ final class WatchBridge: NSObject, WCSessionDelegate {
     /// make it forget this account.
     private func context() -> [String: Any] {
         guard !disabled, let token = Keychain.token else { return ["token": ""] }
-        return ["token": token, "settings": defaults.dictionary(forKey: Key.settings) ?? [:]]
+        var context: [String: Any] = ["token": token, "settings": defaults.dictionary(forKey: Key.settings) ?? [:]]
+        // Today's Recovery call, for the watch's home (WatchRecovery there).
+        if let call = RecoveryCache.load(), let data = try? JSONEncoder().encode(call) {
+            context["recovery"] = data
+        }
+        return context
+    }
+
+    /// A new Recovery call (RecoveryRefresher): on to the watch with the
+    /// context, which reaches it even while its app isn't running.
+    func sendRecovery() {
+        pushContext()
     }
 
     private func pushContext() {
@@ -218,7 +229,7 @@ final class WatchBridge: NSObject, WCSessionDelegate {
             applyActivity(activity)
         }
         if let sessionId = message["finished"] as? String {
-            WorkoutActivity.end()
+            WorkoutActivity.end(finished: sessionId)
             RestAlert.cancel()
             RestControl.post(.init(sessionId: sessionId, endsAt: nil, total: 0, alert: false))
         }

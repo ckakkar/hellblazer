@@ -9,7 +9,9 @@ import {
   PROGRAM_SELECT,
   type ProgramWithDays,
 } from "@/lib/data/programs";
-import { format, parseISO, startOfISOWeek } from "date-fns";
+import { addDays, format, parseISO, startOfISOWeek, subWeeks } from "date-fns";
+import { getTier, MAX_RANK } from "@/lib/tiers";
+import { streakPlan, weekStreak } from "@/lib/widget-moments";
 import { dateInTimeZone, isValidTimeZone } from "@/lib/local-date";
 import { fromDisplayWeight, toDisplayWeight, type Unit } from "@/lib/units";
 import { STALE_CLOCK_MS } from "@/lib/workout-clock";
@@ -32,6 +34,7 @@ import type {
   WatchTarget,
   WatchWeek,
   WatchWorkout,
+  WatchYou,
 } from "@/lib/watch/protocol";
 
 type Svc = NonNullable<ReturnType<typeof createServiceClient>>;
@@ -146,16 +149,94 @@ export async function watchState(ctx: WatchContext): Promise<WatchState> {
     thisWeek(ctx),
   ]);
   if (!active) {
-    const [plans, finished] = await Promise.all([
+    const [plans, finished, you] = await Promise.all([
       startPlans(ctx, start.options.map((o) => o.templateId)),
       recentlyFinished(ctx),
+      // The home's extras: a failure here costs those, never starting a workout.
+      watchYou(ctx).catch((err) => {
+        console.error("watch you", err);
+        return undefined;
+      }),
     ]);
     const withPlan = (o: WatchStartOption) => ({ ...o, plan: plans.get(o.templateId) ?? [] });
     start.options = start.options.map(withPlan);
     if (start.next) start.next = withPlan(start.next);
-    return { unit: ctx.unit, active, ...start, week: { ...week, planned }, finished };
+    return { unit: ctx.unit, active, ...start, week: { ...week, planned }, finished, you };
   }
   return { unit: ctx.unit, active, ...start, week: { ...week, planned } };
+}
+
+/**
+ * The lifter at a glance for the watch's home: rank, streak, eight weeks of
+ * sets and this week's days. Only with no workout on (the watch polls far
+ * more often mid-workout, and shows the workout then).
+ */
+async function watchYou(ctx: WatchContext): Promise<WatchYou> {
+  const { db, userId } = ctx;
+  const today = dateInTimeZone(new Date(), ctx.timeZone);
+  const weekStart = startOfISOWeek(parseISO(today));
+  const yearStart = format(subWeeks(weekStart, 52), "yyyy-MM-dd");
+  const [rows, profile, programs] = await Promise.all([
+    db
+      .from("v_session_summary")
+      .select("session_date, title, working_sets, program_id, planned_per_week, created_at")
+      .eq("user_id", userId)
+      .gt("working_sets", 0)
+      .gte("session_date", yearStart)
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data ?? [];
+      }),
+    db
+      .from("profile")
+      .select("tier")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data;
+      }),
+    db
+      .from("program")
+      .select("id, is_active, paused_at, pauses, program_day(id)")
+      .eq("user_id", userId)
+      .then(({ data, error }) => {
+        if (error) throw error;
+        return data ?? [];
+      }),
+  ]);
+  const tier = getTier(profile?.tier);
+  const plans = new Map(programs.map((p) => [p.id, streakPlan(p, today)]));
+  const current = programs.find((p) => p.is_active)?.id ?? null;
+
+  const weekly = Array.from({ length: 8 }, (_, i) => format(subWeeks(weekStart, 7 - i), "yyyy-MM-dd"));
+  const weeklySets = weekly.map((start, i) => {
+    const end = i < 7 ? weekly[i + 1] : format(addDays(weekStart, 7), "yyyy-MM-dd");
+    return rows
+      .filter((r) => r.session_date && r.session_date >= start && r.session_date < end)
+      .reduce((n, r) => n + Number(r.working_sets ?? 0), 0);
+  });
+  const trained = new Set(rows.map((r) => r.session_date));
+  const days = Array.from({ length: 7 }, (_, i) => trained.has(format(addDays(weekStart, i), "yyyy-MM-dd")));
+  const last = rows[0];
+
+  return {
+    rank: tier ? { name: tier.name, rank: tier.rank, of: MAX_RANK } : null,
+    streakWeeks: weekStreak(
+      rows.flatMap((r) =>
+        r.session_date ? [{ date: r.session_date, programId: r.program_id, planned: r.planned_per_week }] : [],
+      ),
+      today,
+      plans,
+      current,
+    ),
+    weeklySets,
+    days,
+    last: last?.session_date
+      ? { title: last.title ?? "Workout", date: last.session_date, sets: Number(last.working_sets ?? 0) }
+      : null,
+  };
 }
 
 /** Sessions finished in the last day: how the watch tells a finish from a discard. */

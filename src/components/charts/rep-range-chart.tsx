@@ -29,8 +29,8 @@ export function RepRangeChart({ weeks }: { weeks: RepRangeWeek[] }) {
         {weeks.map((w, i) => (
           <div key={w.week} className="flex h-full min-w-0 flex-1 flex-col justify-end">
             <div
-              className="flex flex-col-reverse overflow-hidden rounded-md"
-              style={{ height: `${(totals[i] / max) * 100}%` }}
+              className="hb-rise flex flex-col-reverse overflow-hidden rounded-md"
+              style={{ height: `${(totals[i] / max) * 100}%`, "--i": i } as React.CSSProperties}
               title={`${totals[i]} sets`}
             >
               {BANDS.map((b) =>

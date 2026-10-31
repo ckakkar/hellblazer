@@ -35,7 +35,8 @@ async function deviceToken(): Promise<string> {
       const timer = setTimeout(() => reject(new Error("APNs registration timed out")), 15_000);
       void PushNotifications.addListener("registration", (t) => {
         clearTimeout(timer);
-        resolve(t.value);
+        // Capacitor spells it in capitals; the server keeps lower case.
+        resolve(t.value.toLowerCase());
       }).then((h) => handles.push(h));
       void PushNotifications.addListener("registrationError", (e) => {
         clearTimeout(timer);

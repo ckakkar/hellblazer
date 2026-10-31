@@ -693,7 +693,7 @@ export function SessionLogger({
         ]);
         // Finished elsewhere: this page is done too.
         if (finished) {
-          withNative((api) => api.endWorkoutActivity());
+          withNative((api) => api.endWorkoutActivity({ finished: session.id }));
           router.replace(`/history/${session.id}`);
           return;
         }
@@ -986,6 +986,21 @@ export function SessionLogger({
     [unit],
   );
 
+  // Sets logged or changed since they were last held against the bests. A
+  // set counts for Removal once it's done (the next set added, another one
+  // opened, the exercise closed, the workout finished), not while its numbers
+  // are still being typed in: 1 on the way to 100 kg isn't a record, and
+  // neither is 100 kg on the way to 10.
+  const unweighed = useRef(new Map<string, string>());
+  const weighSets = useCallback(() => {
+    for (const [setId, seId] of unweighed.current) {
+      unweighed.current.delete(setId);
+      const ex = ref.current.find((e) => e.seId === seId);
+      const set = ex?.sets.find((s) => s.id === setId);
+      if (ex && set && isLogged(set.reps)) checkPR(ex.exerciseId, ex.name, set);
+    }
+  }, [checkPR]);
+
   function scheduleSave(seId: string, setId: string) {
     const existing = timers.current.get(setId);
     if (existing) clearTimeout(existing);
@@ -999,7 +1014,6 @@ export function SessionLogger({
         const idx = ex.sets.findIndex((s) => s.id === setId);
         if (idx < 0) return;
         void persist(seId, ex.sets[idx], idx + 1);
-        checkPR(ex.exerciseId, ex.name, ex.sets[idx]);
       }, 500),
     );
   }
@@ -1017,6 +1031,7 @@ export function SessionLogger({
     );
     ref.current = next;
     setExercises(next);
+    unweighed.current.set(setId, seId);
     const exercise = next.find((ex) => ex.seId === seId);
     const setIndex = exercise?.sets.findIndex((set) => set.id === setId) ?? -1;
     if (exercise && setIndex >= 0 && isLogged(exercise.sets[setIndex].reps)) {
@@ -1052,6 +1067,8 @@ export function SessionLogger({
   function addSet(seId: string) {
     const ex = ref.current.find((e) => e.seId === seId);
     if (!ex) return;
+    // A new set means the one before is done: that's when it counts.
+    weighSets();
     // As "same again" (next-set.ts): the last straight set, else today's
     // target, else the same set last time. A warm-up's or a drop set's
     // numbers are never the next working set's.
@@ -1087,6 +1104,7 @@ export function SessionLogger({
     ref.current = next;
     setExercises(next);
     setFlashId(seed.id);
+    unweighed.current.set(seed.id, seId);
     void persist(seId, seed, nextNumber);
     // In a superset, straight on to the partner still behind on the round;
     // the rest comes after the round.
@@ -1125,10 +1143,12 @@ export function SessionLogger({
       kind: "drop",
       loggedAt: Date.now(),
     };
+    weighSets();
     const next = ref.current.map((e) => (e.seId === seId ? { ...e, sets: [...e.sets, set] } : e));
     ref.current = next;
     setExercises(next);
     setFlashId(set.id);
+    unweighed.current.set(set.id, seId);
     void persist(seId, set, ex.sets.length + 1);
     haptic("tap");
   }
@@ -1381,6 +1401,7 @@ export function SessionLogger({
   // and Siri move on from it too. Saved quietly: offline, the page still
   // moves on, and the next save that lands brings the server up to date.
   function endExercise(seId: string) {
+    weighSets();
     setCompleted((prev) => new Set(prev).add(seId));
     setEndedHere((prev) => new Set(prev).add(seId));
     setActiveSeId(null);
@@ -1437,12 +1458,10 @@ export function SessionLogger({
       timers.current.delete(setId);
       const ex = ref.current.find((e) => e.seId === seId);
       const idx = ex?.sets.findIndex((s) => s.id === setId) ?? -1;
-      if (ex && idx >= 0) {
-        now.push(persist(seId, ex.sets[idx], idx + 1));
-        checkPR(ex.exerciseId, ex.name, ex.sets[idx]);
-      }
+      if (ex && idx >= 0) now.push(persist(seId, ex.sets[idx], idx + 1));
     }
     pendingSaves.current.clear();
+    weighSets();
     const results = await Promise.all([...uploads.current, ...now]);
     return results.every(Boolean) && failedRef.current.size === 0;
   }
@@ -1624,7 +1643,7 @@ export function SessionLogger({
   useEffect(() => {
     if (isEditing) return;
     if (activityEnded || Date.now() - startedAt > STALE_CLOCK_MS) {
-      withNative((api) => api.endWorkoutActivity());
+      withNative((api) => api.endWorkoutActivity(activityEnded ? { finished: session.id } : {}));
       return;
     }
     const id = window.setTimeout(
@@ -1632,7 +1651,7 @@ export function SessionLogger({
       300,
     );
     return () => window.clearTimeout(id);
-  }, [activityState, activityEnded, isEditing, startedAt]);
+  }, [activityState, activityEnded, isEditing, startedAt, session.id]);
 
   // Mid-workout the phone sits on a bench: it shouldn't lock between sets.
   useKeepAwake(!isEditing && !activityEnded);
@@ -2078,7 +2097,11 @@ export function SessionLogger({
           weightStep={weightStep}
           flashId={flashId}
           prSets={prSets}
-          onClose={() => setActiveSeId(null)}
+          onClose={() => {
+            weighSets();
+            setActiveSeId(null);
+          }}
+          onSettle={weighSets}
           onEnd={() => endExercise(active.seId)}
           onAddSet={() => addSet(active.seId)}
           onUpdateSet={(setId, patch) => updateSet(active.seId, setId, patch)}
@@ -2182,6 +2205,7 @@ function ActiveExerciseModal({
   flashId,
   prSets,
   onClose,
+  onSettle,
   onEnd,
   onAddSet,
   onUpdateSet,
@@ -2208,6 +2232,8 @@ function ActiveExerciseModal({
   flashId: string | null;
   prSets: Set<string>;
   onClose: () => void;
+  /** The set in the editor is done with: it counts for Removal now. */
+  onSettle: () => void;
   onEnd: () => void;
   onAddSet: () => void;
   onUpdateSet: (setId: string, patch: Partial<LocalSet>) => void;
@@ -2390,7 +2416,10 @@ function ActiveExerciseModal({
                     unit={unit}
                     isPR={prSets.has(s.id)}
                     flash={s.id === flashId}
-                    onOpen={() => setOpenId(s.id)}
+                    onOpen={() => {
+                      onSettle();
+                      setOpenId(s.id);
+                    }}
                   />
                 );
               };

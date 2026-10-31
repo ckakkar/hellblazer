@@ -61,3 +61,53 @@ describe("recovery", () => {
     expect(formatSleep(360)).toBe("6h 00m");
   });
 });
+
+describe("recovery with training and the rest of Health", () => {
+  const now = Date.parse("2026-09-29T08:00:00Z");
+  const load = (hoursAgo: number, recentSets = 20, usualSets = 20) => ({
+    lastHeavy: { at: now - hoursAgo * 3_600_000, title: "Lower (Heavy)", sets: 24 },
+    recentSets,
+    usualSets,
+    streakDays: 2,
+  });
+
+  it("holds the records the morning after a heavy session", () => {
+    const r = assessRecovery(weeks({ sleepMin: 460, hrv: 62, rhr: 51 }), { load: load(14), now })!;
+    expect(r.verdict).toBe("steady");
+    expect(r.signals[0]).toMatchObject({ key: "heavy", tone: "fair" });
+    expect(r.signals[0].text).toBe("Last heavy session 14 hours ago: Lower (Heavy), 24 sets");
+  });
+
+  it("is ready once the heavy day is two days back", () => {
+    const r = assessRecovery(weeks({ sleepMin: 460, hrv: 62, rhr: 51 }), { load: load(50), now })!;
+    expect(r.verdict).toBe("ready");
+  });
+
+  it("goes lighter on a training spike and a body that shows it", () => {
+    const r = assessRecovery(weeks({ sleepMin: 460, hrv: 50, rhr: 51 }), { load: load(30, 60, 30), now })!;
+    expect(r.verdict).toBe("easy");
+    expect(r.signals.map((s) => s.key)).toEqual(expect.arrayContaining(["hrv", "load"]));
+  });
+
+  it("reads breathing rate asleep against its usual", () => {
+    const r = assessRecovery(weeks({ sleepMin: 460, hrv: 61, rhr: 52, rr: 16.5 }, { rr: 14.5 }), { now })!;
+    expect(r.rr).toMatchObject({ value: 16.5, usual: 14.5, tone: "poor" });
+    expect(r.verdict).toBe("steady");
+  });
+
+  it("weighs the last workout's heart rate against the ones before", () => {
+    const hour = 3_600_000;
+    const workouts = [
+      { start: now - 20 * hour, end: now - 19 * hour, kind: "strength", avgHr: 142 },
+      ...[3, 4, 5, 6].map((d) => ({ start: now - d * 24 * hour, end: now - d * 24 * hour + hour, kind: "strength", avgHr: 120 })),
+    ];
+    const r = assessRecovery(weeks({ sleepMin: 460, hrv: 61, rhr: 52 }), { workouts, now })!;
+    expect(r.signals.find((s) => s.key === "workoutHr")).toMatchObject({ tone: "poor" });
+  });
+
+  it("keeps two weeks for the trend lines", () => {
+    const r = assessRecovery(weeks({ sleepMin: 460, hrv: 61, rhr: 52 }))!;
+    expect(r.trend.dates).toHaveLength(14);
+    expect(r.trend.hrv.at(-1)).toBe(61);
+  });
+});

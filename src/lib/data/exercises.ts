@@ -2,6 +2,9 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/lib/database.types";
 import { getExerciseStats } from "@/lib/data/exercise-stats";
+import { PRESETS } from "@/lib/presets";
+import { presetBreakdown, type LibraryMuscles, type PresetBreakdown } from "@/lib/preset-stats";
+import type { Muscle } from "@/lib/muscles";
 
 export type Exercise = Database["public"]["Tables"]["exercise"]["Row"];
 
@@ -33,4 +36,21 @@ export async function getUsualExerciseIds(limit = 8): Promise<string[]> {
     .toSorted((a, b) => Number(b.sessions_logged) - Number(a.sessions_logged))
     .slice(0, limit)
     .map((s) => s.exercise_id);
+}
+
+/**
+ * Every starter program's week at a glance (preset-stats.ts), from the shared
+ * library's muscles: what the preview's charts draw.
+ */
+export async function getPresetBreakdowns(): Promise<Record<string, PresetBreakdown>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("exercise")
+    .select("name, primary_muscle, secondary_muscles")
+    .is("user_id", null);
+  if (error) throw error;
+  const library: LibraryMuscles = new Map(
+    (data ?? []).map((e) => [e.name, { primary: e.primary_muscle, secondary: (e.secondary_muscles ?? []) as Muscle[] }]),
+  );
+  return Object.fromEntries(PRESETS.map((p) => [p.id, presetBreakdown(p, library)]));
 }

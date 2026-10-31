@@ -126,9 +126,10 @@ struct RecoveryView: View {
                 Label(call.headline, systemImage: symbol(call.verdict))
                     .font(.headline)
                     .lineLimit(1)
-                Text(summary(call))
+                // Why, when something's off; else the night's numbers.
+                Text(call.verdict != "ready" ? (call.reasons?.first ?? summary(call)) : summary(call))
                     .font(.caption2)
-                    .lineLimit(1)
+                    .lineLimit(2)
             } else {
                 Text(entry.call == nil ? "Connect Health in Fatty" : "Open Fatty for today")
                     .font(.caption)

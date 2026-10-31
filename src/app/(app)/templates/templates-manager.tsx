@@ -27,6 +27,7 @@ import { MUSCLE_LABEL } from "@/lib/muscles";
 import type { Exercise } from "@/lib/data/exercises";
 import type { TemplateWithExercises } from "@/lib/data/templates";
 import type { Preset } from "@/lib/presets";
+import type { PresetBreakdown } from "@/lib/preset-stats";
 import { PresetCarousel } from "@/components/program/preset-carousel";
 import {
   addTemplateExercise,
@@ -53,12 +54,14 @@ export function TemplatesManager({
   templates,
   exercises,
   presets,
+  presetBreakdowns,
   activeTemplateIds,
   activeProgramName,
 }: {
   templates: TemplateWithExercises[];
   exercises: Exercise[];
   presets: Preset[];
+  presetBreakdowns?: Record<string, PresetBreakdown>;
   activeTemplateIds: string[];
   activeProgramName: string | null;
 }) {
@@ -204,7 +207,7 @@ export function TemplatesManager({
       </div>
 
       <div className="mt-10">
-        <PresetCarousel presets={presets} />
+        <PresetCarousel presets={presets} breakdowns={presetBreakdowns} />
       </div>
     </div>
   );
