@@ -95,8 +95,9 @@ export function LiftTrends({ lifts, unit, selected }: { lifts: LiftTrend[]; unit
                     )}
                   </span>
                 </span>
-                <span className={cn("flex justify-center", open ? "text-text" : "text-muted")}>
-                  <LinkPending className="size-4">
+                {/* A block, as the line takes its width from this column. */}
+                <span className={cn("block", open ? "text-text" : "text-muted")}>
+                  <LinkPending className="mx-auto block size-4">
                     <Sparkline values={l.points.map((p) => p.e1rm)} />
                   </LinkPending>
                 </span>
