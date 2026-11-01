@@ -1,6 +1,6 @@
 "use client";
 
-import { useOptimistic, useRef, useState } from "react";
+import { useOptimistic, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeftRight,
   ChevronDown,
@@ -168,7 +168,7 @@ export function TemplatesManager({
                   <div className="flex items-center justify-between gap-2 px-1">
                     <button
                       onClick={() => setShowOthers((v) => !v)}
-                      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-text"
+                      className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition-colors hover:text-text active:text-text"
                     >
                       {showOthers ? (
                         <ChevronUp className="size-4" />
@@ -533,7 +533,7 @@ function TemplateExercises({
                   <button
                     aria-label={`Remove ${row.exercise?.name ?? "exercise"}`}
                     onClick={() => remove(row)}
-                    className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-danger"
+                    className="flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-danger active:text-danger"
                   >
                     <X className="size-5" />
                   </button>
@@ -563,14 +563,14 @@ function TemplateExercises({
                 </span>
                 <label className="flex h-11 items-center gap-1.5 rounded-full bg-surface-2 pl-3.5 pr-1 text-[13px] text-muted">
                   <Timer aria-hidden className="size-3.5 shrink-0" />
-                  <select
-                    defaultValue={row.rest_seconds ?? ""}
-                    aria-label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
-                    onChange={(e) => setRest(row, e.target.value)}
-                    className="h-11 appearance-none rounded-full bg-transparent pr-2.5 text-[13px] text-text focus:outline-none"
+                  <RestPicker
+                    saved={row.rest_seconds}
+                    label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
+                    onPick={(raw) => setRest(row, raw)}
+                    className="h-11 pr-2.5 text-text"
                   >
                     {restOptions}
-                  </select>
+                  </RestPicker>
                 </label>
                 {(slots[i] || i < rows.length - 1) && (
                   <button
@@ -602,21 +602,23 @@ function TemplateExercises({
             >
               <GripVertical className="hidden size-4 shrink-0 text-muted/50 sm:block" />
               <div className="min-w-0 flex-1">
-                <div className="flex min-w-0 items-center gap-1.5">
+                <div className="flex min-w-0 items-start gap-1.5">
                   {slots[i] && (
-                    <span className="tnum shrink-0 rounded bg-text/[0.08] px-1 text-[11px] font-semibold text-text">
+                    <span className="tnum mt-px shrink-0 rounded bg-text/[0.08] px-1 text-[11px] font-semibold text-text">
                       {slotLabel(slots[i])}
                     </span>
                   )}
-                  {/* The name swaps it, as the logger's does. */}
+                  {/* The name swaps it, as the logger's does. Two lines
+                      before it's cut: on an SE the inputs leave it little
+                      room, and "Close-Grip …" didn't say which lift. */}
                   <button
                     type="button"
                     onClick={() => setSwapping(row)}
                     aria-label={`Swap ${row.exercise?.name ?? "exercise"} for another`}
-                    className="flex min-w-0 items-center gap-1 text-left text-sm text-text"
+                    className="flex min-w-0 items-start gap-1 text-left text-sm leading-snug text-text"
                   >
-                    <span className="truncate">{row.exercise?.name ?? "Unknown"}</span>
-                    <ArrowLeftRight aria-hidden className="size-3 shrink-0 text-muted" />
+                    <span className="line-clamp-2 break-words">{row.exercise?.name ?? "Unknown"}</span>
+                    <ArrowLeftRight aria-hidden className="mt-[3px] size-3 shrink-0 text-muted" />
                   </button>
                 </div>
                 <div className="truncate text-xs text-muted">
@@ -630,14 +632,14 @@ function TemplateExercises({
                     select, so iOS gives it its picker wheel. */}
                 <label className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted">
                   <Timer aria-hidden className="size-3 shrink-0" />
-                  <select
-                    defaultValue={row.rest_seconds ?? ""}
-                    aria-label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
-                    onChange={(e) => setRest(row, e.target.value)}
-                    className="min-w-0 appearance-none truncate rounded bg-transparent text-xs text-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-text/25"
+                  <RestPicker
+                    saved={row.rest_seconds}
+                    label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
+                    onPick={(raw) => setRest(row, raw)}
+                    className="rounded"
                   >
                     {restOptions}
-                  </select>
+                  </RestPicker>
                 </label>
                 {/* Supersets: done back to back, resting after the round. */}
                 {(slots[i] || i < rows.length - 1) && (
@@ -753,6 +755,52 @@ function TemplateExercises({
  * Deleting is in the template's editor, not on every row of the list: one
  * tap asks, the second deletes (as Programs does).
  */
+/**
+ * A rest choice that reads at the size of the line it's in. iOS zooms the
+ * page into any control set under 16px, so the select itself is kept at
+ * 16px (the floor in globals.css) and laid invisibly over the words, which
+ * show the choice: tapping still opens the system's picker wheel.
+ */
+function RestPicker({
+  saved,
+  label,
+  onPick,
+  className,
+  children,
+}: {
+  saved: number | null;
+  label: string;
+  onPick: (raw: string) => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  const [picked, setPicked] = useState<string | null>(null);
+  const value = picked ?? (saved == null ? "" : String(saved));
+  return (
+    <span
+      className={cn(
+        "relative inline-flex min-w-0 items-center has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-text/25",
+        className,
+      )}
+    >
+      <span aria-hidden className="truncate">
+        {value === "" ? "Your usual rest" : `${formatRestClock(Number(value))} rest`}
+      </span>
+      <select
+        value={value}
+        aria-label={label}
+        onChange={(e) => {
+          setPicked(e.target.value);
+          onPick(e.target.value);
+        }}
+        className="absolute inset-0 size-full cursor-pointer appearance-none opacity-0"
+      >
+        {children}
+      </select>
+    </span>
+  );
+}
+
 function DeleteTemplate({ id, pending, start }: { id: string; pending: boolean; start: Start }) {
   const [asking, setAsking] = useState(false);
   return asking ? (

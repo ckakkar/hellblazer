@@ -147,11 +147,12 @@ Log a workout, then ask to be judged. The judge (DeepSeek) weighs your real numb
   - a superset's link snapping shut as it's made;
   - the dashboard's sets-per-muscle bars growing from where each muscle stood before your latest workout, once per workout (`charts/week-growth.tsx`).
 
-  Page changes use React's `<ViewTransition>`: tabs crossfade, detail pages slide, a session's title morphs from the list into its page, and the tab highlight travels to where you went. Everything animates transform and opacity only, nothing loops, and `prefers-reduced-motion` shows final frames.
+  Page changes use React's `<ViewTransition>`: tabs crossfade, detail pages slide, a session's title morphs from the list into its page, and the tab highlight travels to where you went. Changing light, dark or the accent crossfades the whole screen. Everything animates transform and opacity only, nothing loops, and `prefers-reduced-motion` shows final frames.
+- **Nothing jumps.** The resume banner renders with the page instead of streaming in after it. What the phone reads after a page draws (Recovery, a workout's heart rate, whether Say it is available) is remembered while the app's open, so going back draws it at once, and the first time it opens its own room by its height (`.hb-arrive`). A swiped-away row closes up before it leaves, so the rows under it glide into its place. A new page always starts at its top (scroll anchoring is off), and Back returns to where you were.
 - **The loader.** Every route loads a competition bar: 25s, 20s, 15s, change plates and collars slide on, and the readout rolls to a true 150 kg. It's zero-JS and paints on the first frame of a navigation.
 - **Built for phones.** Tested on Pro Max (the primary target) down to an iPhone SE:
   - safe-area insets everywhere;
-  - a 16px input floor so iOS never zooms on focus;
+  - a 16px input floor so iOS never zooms on focus, with small pickers (a rest time, a set's type) showing their choice at the size of their line over an invisible full-size select;
   - thumb-reach placement for the actions that matter;
   - drag-to-dismiss sheets;
   - in the iPhone app, native scrolling and gestures (see [iOS app](#ios-app)).

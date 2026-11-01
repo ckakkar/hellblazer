@@ -24,9 +24,6 @@ function urlBase64ToUint8Array(base64String: string) {
 
 type Status = "loading" | "unsupported" | "ios-install" | "ready";
 
-/** The service worker's registration, or null when none turns up in time.
- *  `serviceWorker.ready` alone never settles if registration failed (private
- *  mode, a blocked script), which left this card spinning forever. */
 /** Saves this browser's subscription under the account signed in. */
 function claim(sub: PushSubscription) {
   const json = sub.toJSON();
@@ -39,6 +36,9 @@ function claim(sub: PushSubscription) {
   });
 }
 
+/** The service worker's registration, or null when none turns up in time.
+ *  `serviceWorker.ready` alone never settles if registration failed (private
+ *  mode, a blocked script), which left this card spinning forever. */
 function workerRegistration(timeoutMs = 4000): Promise<ServiceWorkerRegistration | null> {
   return Promise.race([
     navigator.serviceWorker.ready,

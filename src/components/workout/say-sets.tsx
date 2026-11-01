@@ -5,7 +5,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Loader2, Mic, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { hasOnDeviceModel, nativePlugin } from "@/lib/native-plugins";
+import { hasOnDeviceModel, nativePlugin, onDeviceModelKnown } from "@/lib/native-plugins";
 import {
   groupByExercise,
   parseHeard,
@@ -60,7 +60,9 @@ export function SaySets({
   inSheet?: boolean;
 }) {
   const device = useDeviceName();
-  const [ready, setReady] = useState(false);
+  // Known already (it's been asked since the app opened): drawn at once, so
+  // the logger doesn't shift a beat after it opens.
+  const [ready, setReady] = useState(onDeviceModelKnown);
   const [stage, setStage] = useState<Stage>({ at: "closed" });
   const [text, setText] = useState("");
   const [logged, setLogged] = useState<string | null>(null);

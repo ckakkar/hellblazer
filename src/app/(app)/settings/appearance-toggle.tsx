@@ -6,6 +6,7 @@ import { setAppearance } from "@/lib/actions/settings";
 import { useAction } from "@/lib/use-action";
 import { withNative } from "@/lib/native-plugins";
 import type { Appearance } from "@/lib/settings";
+import { crossfadeTheme } from "@/lib/theme-crossfade";
 
 /**
  * Night, paper, or whatever the device is set to. Applies at once (the
@@ -19,8 +20,10 @@ export function AppearanceToggle({ current }: { current: Appearance }) {
 
   function apply(next: Appearance) {
     const root = document.documentElement;
-    if (next === "system") delete root.dataset.theme;
-    else root.dataset.theme = next;
+    crossfadeTheme(() => {
+      if (next === "system") delete root.dataset.theme;
+      else root.dataset.theme = next;
+    });
     withNative(async (api) => api.setAppearance?.({ appearance: next }));
   }
 

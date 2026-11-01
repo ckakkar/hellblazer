@@ -339,8 +339,13 @@ label {
   backdrop-filter: blur(24px) saturate(180%);
   box-shadow: inset 0 -1px 0 0 var(--glass-edge);
 }
+/* Clear at the top, frosted once the page scrolls under it. The resting
+   state is clear: on a page too short to scroll the timeline is inactive and
+   the animation doesn't apply, and a frosted bar with its edge over nothing
+   read as a stray rule. */
 @supports (animation-timeline: scroll()) {
   .hb-topbar::before {
+    opacity: 0;
     animation: hb-topbar linear both;
     animation-timeline: scroll(root);
     animation-range: 0 56px;
@@ -349,6 +354,9 @@ label {
 @keyframes hb-topbar {
   from {
     opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
@@ -374,6 +382,16 @@ label {
     opacity: 1;
     transform: none;
   }
+}
+
+/* No scroll anchoring on the page. Opening a page that shows the loader
+   first, the browser kept an anchor from the page being left and, as the new
+   one arrived, scrolled it to the old page's offset: a session opened from
+   far down History opened 1,400pt down its sets. A new page starts at its
+   top; going back still returns to where the list was (the router keeps
+   that). */
+html {
+  overflow-anchor: none;
 }
 
 /* ── Feel like an app, not a web page ─────────────────────────────────────
@@ -459,6 +477,31 @@ button,
 .hb-collapse > * {
   min-height: 0;
   overflow: hidden;
+}
+/* Something the phone reads after the page has drawn (Recovery, a workout's
+   heart rate) opens its own room the way a disclosure does, instead of
+   shoving everything under it down in one frame. */
+.hb-arrive {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 320ms var(--ease-out),
+    opacity 240ms ease-out 60ms;
+}
+@starting-style {
+  .hb-arrive {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+.hb-arrive > * {
+  min-height: 0;
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hb-arrive {
+    transition: none;
+  }
 }
 
 /* A notice drops in from the top and goes back the way it came. */
@@ -1827,6 +1870,16 @@ button,
 ::view-transition-new(hb-topbar),
 ::view-transition-new(hb-sidebar) {
   animation: none;
+}
+/* Changing appearance: one crossfade of the whole screen, the anchored
+   chrome included, from one ground to the other. */
+html[data-theming] * {
+  view-transition-name: none !important;
+}
+html[data-theming]::view-transition-old(root),
+html[data-theming]::view-transition-new(root) {
+  animation-duration: 300ms;
+  animation-timing-function: var(--ease-out);
 }
 @keyframes hb-fade-in {
   from {

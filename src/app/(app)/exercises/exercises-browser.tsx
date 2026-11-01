@@ -192,7 +192,7 @@ function ExerciseRow({
             onClick={onToggle}
             aria-expanded={open}
             aria-controls={guideId}
-            className="-my-1 min-w-0 flex-1 rounded-lg py-1 text-left transition-colors hover:text-text"
+            className="-my-1 min-w-0 flex-1 rounded-lg py-1 text-left transition-[color,opacity] hover:text-text active:opacity-60"
           >
             {meta}
           </button>

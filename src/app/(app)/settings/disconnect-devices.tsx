@@ -48,7 +48,7 @@ export function DisconnectDevices() {
       }}
       className={cn(
         "inline-flex h-9 items-center gap-2 rounded-xl px-3.5 text-[14px] font-medium transition-colors disabled:opacity-60",
-        armed ? "bg-danger/15 text-danger" : "bg-surface-2 text-text hover:bg-surface-3",
+        armed ? "bg-danger/15 text-danger" : "bg-surface-2 text-text hover:bg-surface-3 active:bg-surface-3",
       )}
     >
       {pending ? <Loader2 className="size-4 animate-spin" /> : <Unplug className="size-4" />}

@@ -73,8 +73,35 @@ export function SwipeRow({
   }, [id, close]);
 
   const act = useCallback(() => {
-    place(-(row.current?.offsetWidth ?? 400), true);
-    onAction();
+    const el = row.current;
+    place(-(el?.offsetWidth ?? 400), true);
+    // Then it closes up, as in Mail, so the rows under it glide into its
+    // place instead of jumping up a row's height in one frame; the list
+    // drops it once it's shut.
+    if (!el || typeof el.animate !== "function" || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onAction();
+      return;
+    }
+    const shut = el.animate([{ height: `${el.offsetHeight}px` }, { height: "0px" }], {
+      duration: 220,
+      delay: 140,
+      easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+      fill: "forwards",
+    });
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      onAction();
+      // Still here a moment later (the delete didn't take): open it again.
+      setTimeout(() => {
+        if (!el.isConnected) return;
+        shut.cancel();
+        place(0, true);
+      }, 1500);
+    };
+    shut.onfinish = finish;
+    shut.oncancel = finish;
   }, [onAction, place]);
 
   function onPointerDown(e: React.PointerEvent) {

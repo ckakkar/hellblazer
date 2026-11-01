@@ -6,15 +6,21 @@ import { cn } from "@/lib/utils";
 import { ACCENTS, type AccentKey } from "@/lib/accents";
 import { setAccent } from "@/lib/actions/settings";
 import { useAction } from "@/lib/use-action";
+import { crossfadeTheme } from "@/lib/theme-crossfade";
 
 export function ThemeSelector({ current }: { current: AccentKey }) {
   const [accent, setLocal] = useState<AccentKey>(current);
   const [, start] = useAction("change the accent");
 
-  // Re-skin the whole app instantly. Everything derives from this attribute.
-  // The server layout will re-render it to the same value once the cookie lands.
+  // Re-skin the whole app at once, as one crossfade. Everything derives from
+  // this attribute. The server layout re-renders it to the same value once
+  // the cookie lands.
   useEffect(() => {
-    document.documentElement.dataset.accent = accent;
+    const root = document.documentElement;
+    if (root.dataset.accent === accent) return;
+    crossfadeTheme(() => {
+      root.dataset.accent = accent;
+    });
   }, [accent]);
 
   function choose(key: AccentKey) {
@@ -43,7 +49,7 @@ export function ThemeSelector({ current }: { current: AccentKey }) {
               "group flex min-w-0 flex-col items-center gap-2 rounded-xl px-1.5 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text/40",
               active
                 ? "bg-text/[0.08] shadow-[inset_0_0_0_1.5px_color-mix(in_oklab,var(--color-text)_55%,transparent)]"
-                : "bg-surface-2/60 hover:bg-surface-2",
+                : "bg-surface-2/60 hover:bg-surface-2 active:bg-surface-2",
             )}
           >
             <span

@@ -41,6 +41,14 @@ export type RecoveryView =
   | { kind: "ready"; recovery: Recovery; readAt: number };
 
 /**
+ * What the card last showed while the app's been open. Coming back to Home
+ * draws it at once from this and reads Health again behind it; without it
+ * the card turned up a beat after the page every visit and pushed the rest
+ * of Home down.
+ */
+let lastView: RecoveryView = { kind: "hidden" };
+
+/**
  * iPhone and iPad app only: whether today's a day to push, from Apple
  * Health's sleep, breathing, heart rate variability and heart rates, and
  * Fatty's own log of the training (src/lib/recovery.ts). Health is read on
@@ -51,7 +59,13 @@ export type RecoveryView =
  * Renders nothing on the website, or in an app build without the readings.
  */
 export function RecoveryCard({ load = null }: { load?: TrainingLoad | null }) {
-  const [view, setView] = useState<RecoveryView>({ kind: "hidden" });
+  const [view, setViewState] = useState<RecoveryView>(() => lastView);
+  // Shown from memory: it's already been seen arriving, so it doesn't again.
+  const [settled] = useState(() => lastView.kind !== "hidden");
+  const setView = useCallback((next: RecoveryView) => {
+    lastView = next;
+    setViewState(next);
+  }, []);
   const loadRef = useRef(load);
   useEffect(() => {
     loadRef.current = load;
@@ -78,7 +92,7 @@ export function RecoveryCard({ load = null }: { load?: TrainingLoad | null }) {
       // An app build from before Recovery: nothing to show.
       setView({ kind: "hidden" });
     }
-  }, []);
+  }, [setView]);
 
   useEffect(() => {
     if (!isNativeApp()) return;
@@ -139,16 +153,27 @@ export function RecoveryCard({ load = null }: { load?: TrainingLoad | null }) {
     setView({ kind: "hidden" });
   }
 
-  return <RecoveryPanel view={view} onConnect={() => void connect()} onHide={hide} />;
+  if (view.kind === "hidden") return null;
+  // Read after the page has drawn, so on first showing it opens its own room.
+  return (
+    <div className={settled ? undefined : "hb-arrive"}>
+      <div>
+        <RecoveryPanel view={view} settled={settled} onConnect={() => void connect()} onHide={hide} />
+      </div>
+    </div>
+  );
 }
 
 /** The card itself, for whatever state RecoveryCard is in. */
 export function RecoveryPanel({
   view,
+  settled = false,
   onConnect,
   onHide,
 }: {
   view: RecoveryView;
+  /** Already seen arriving: the lines are drawn, not drawn in. */
+  settled?: boolean;
   onConnect: () => void;
   onHide: () => void;
 }) {
@@ -212,13 +237,13 @@ export function RecoveryPanel({
         </div>
         <dl className="mt-4 grid grid-cols-[1.2fr_1fr_1fr] divide-x divide-text/[0.06] border-t border-text/[0.06] py-3.5">
           <Cell label="Sleep" reading={recovery.sleep} show={formatSleep}>
-            <Spark values={recovery.trend.sleepMin} usual={recovery.sleep?.usual ?? null} bars label="Sleep, two weeks" />
+            <Spark values={recovery.trend.sleepMin} usual={recovery.sleep?.usual ?? null} bars drawIn={!settled} label="Sleep, two weeks" />
           </Cell>
           <Cell label="HRV" unit="ms" reading={recovery.hrv} show={(v) => String(Math.round(v))}>
-            <Spark values={recovery.trend.hrv} usual={recovery.hrv?.usual ?? null} label="HRV, two weeks" />
+            <Spark values={recovery.trend.hrv} usual={recovery.hrv?.usual ?? null} drawIn={!settled} label="HRV, two weeks" />
           </Cell>
           <Cell label="Resting" unit="bpm" reading={recovery.rhr} show={(v) => String(Math.round(v))}>
-            <Spark values={recovery.trend.rhr} usual={recovery.rhr?.usual ?? null} label="Resting heart rate, two weeks" />
+            <Spark values={recovery.trend.rhr} usual={recovery.rhr?.usual ?? null} drawIn={!settled} label="Resting heart rate, two weeks" />
           </Cell>
         </dl>
         {recovery.signals.length > 0 && (
@@ -263,11 +288,13 @@ function Spark({
   values,
   usual,
   bars = false,
+  drawIn = true,
   label,
 }: {
   values: (number | null)[];
   usual: number | null;
   bars?: boolean;
+  drawIn?: boolean;
   label: string;
 }) {
   const present = values.filter((v): v is number => v != null);
@@ -301,7 +328,7 @@ function Spark({
       preserveAspectRatio="none"
       role="img"
       aria-label={label}
-      className="hb-spark mt-2 block h-7 w-full overflow-visible"
+      className={cn("mt-2 block h-7 w-full overflow-visible", drawIn && "hb-spark")}
     >
       {usual != null && (
         <line

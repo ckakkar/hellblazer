@@ -211,7 +211,8 @@ export default async function SessionDetailPage({
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-text/[0.06]">
+                  {/* Baseline: the smaller set label sits on the figures' line. */}
+                  <tbody className="divide-y divide-text/[0.06] align-baseline">
                     {se.set.map((s, i) => {
                       const est1rm = s.weight_kg * (1 + s.reps / 30);
                       // Plain sets are numbered on their own; the rest say what they are.

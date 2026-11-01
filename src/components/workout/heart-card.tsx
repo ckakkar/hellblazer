@@ -1,7 +1,7 @@
 "use client";
 
 import { useDeviceName } from "@/lib/device";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { HeartPulse, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { fitFigure } from "@/lib/utils";
@@ -89,7 +89,17 @@ export function HeartCard({
   maxHr: number | null;
 }) {
   const device = useDeviceName();
-  const [view, setView] = useState<View>({ at: "hidden" });
+  // Shown from memory when coming back to the same workout; the first time
+  // it opens its own room above the sets (read after the page has drawn).
+  const [view, setViewState] = useState<View>(() => seen.get(sessionId) ?? { at: "hidden" });
+  const [settled] = useState(() => (seen.get(sessionId)?.at ?? "hidden") !== "hidden");
+  const setView = useCallback(
+    (next: View) => {
+      seen.set(sessionId, next);
+      setViewState(next);
+    },
+    [sessionId],
+  );
   const [summary, setSummary] = useState<{ text: string; written: boolean } | null>(null);
   const [reload, setReload] = useState(0);
 
@@ -130,7 +140,7 @@ export function HeartCard({
       live = false;
       if (timer) clearTimeout(timer);
     };
-  }, [sessionId, start, end, sets, maxHr, reload]);
+  }, [sessionId, start, end, sets, maxHr, reload, setView]);
 
   // The summary: kept per session, written again only if the facts change.
   const facts = view.at === "ready" ? heartFacts(view.h, view.usual).join("\n") : null;
@@ -164,34 +174,36 @@ export function HeartCard({
 
   if (view.at === "ask" || view.at === "waiting") {
     return (
-      <section className="mb-8 rounded-2xl bg-surface p-4">
-        <Title />
-        {view.at === "ask" ? (
-          <>
-            <p className="mt-2 text-[15px] leading-[1.5] text-muted">
-              See when this workout pushed you hardest and how fast you recovered between sets, from
-              your Apple Watch. It&apos;s all worked out on this {device}.
+      <Arrive settled={settled}>
+        <section className="mb-8 rounded-2xl bg-surface p-4">
+          <Title />
+          {view.at === "ask" ? (
+            <>
+              <p className="mt-2 text-[15px] leading-[1.5] text-muted">
+                See when this workout pushed you hardest and how fast you recovered between sets, from
+                your Apple Watch. It&apos;s all worked out on this {device}.
+              </p>
+              <Button
+                variant="secondary"
+                className="mt-4 w-full"
+                onClick={() => {
+                  void nativePlugin()
+                    ?.then(({ api }) => api.requestHeartRate())
+                    .then(() => setReload((n) => n + 1))
+                    .catch(() => {});
+                }}
+              >
+                Connect heart rate
+              </Button>
+            </>
+          ) : (
+            <p className="mt-2 flex items-center gap-2 text-[15px] text-muted">
+              <Loader2 className="size-4 animate-spin" />
+              Waiting for your Apple Watch&apos;s heart rate
             </p>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => {
-                void nativePlugin()
-                  ?.then(({ api }) => api.requestHeartRate())
-                  .then(() => setReload((n) => n + 1))
-                  .catch(() => {});
-              }}
-            >
-              Connect heart rate
-            </Button>
-          </>
-        ) : (
-          <p className="mt-2 flex items-center gap-2 text-[15px] text-muted">
-            <Loader2 className="size-4 animate-spin" />
-            Waiting for your Apple Watch&apos;s heart rate
-          </p>
-        )}
-      </section>
+          )}
+        </section>
+      </Arrive>
     );
   }
 
@@ -199,75 +211,90 @@ export function HeartCard({
   const shown = kept ? { text: kept, written: true } : summary;
   const hardest = h.exercises.slice(0, 4);
   return (
-    <section className="mb-8 rounded-2xl bg-surface p-4">
-      <Title />
-      {shown ? (
-        <>
-          <p className="mt-3 text-[15px] leading-[1.5] text-text">{shown.text}</p>
-          {shown.written && <p className="mt-1 text-[13px] text-muted">Written on this {device}.</p>}
-        </>
-      ) : (
-        <div aria-hidden className="mt-3 space-y-2">
-          <div className="h-3.5 w-full animate-pulse rounded-full bg-text/[0.06]" />
-          <div className="h-3.5 w-3/5 animate-pulse rounded-full bg-text/[0.06]" />
-        </div>
-      )}
-
-      <div className="mt-4 grid grid-cols-3 divide-x divide-text/[0.06] rounded-xl bg-text/[0.03] py-3">
-        {[
-          { label: "Average", value: String(h.avg), unit: "bpm" },
-          { label: "Peak", value: String(h.peak), unit: "bpm" },
-          { label: "Load", value: String(h.load), unit: usual.load != null ? `usually ${usual.load}` : "" },
-        ].map((st) => (
-          <div key={st.label} className="@container min-w-0 px-3">
-            <p className="text-[13px] text-muted">{st.label}</p>
-            <p className="mt-1 flex items-baseline gap-1 whitespace-nowrap leading-none">
-              <span className="font-display hb-fit text-text" style={fitFigure(st.value, "1.375rem", "2rem")}>
-                {st.value}
-              </span>
-              {st.unit && <span className="truncate text-[12px] text-muted">{st.unit}</span>}
-            </p>
+    <Arrive settled={settled}>
+      <section className="mb-8 rounded-2xl bg-surface p-4">
+        <Title />
+        {shown ? (
+          <>
+            <p className="mt-3 text-[15px] leading-[1.5] text-text">{shown.text}</p>
+            {shown.written && <p className="mt-1 text-[13px] text-muted">Written on this {device}.</p>}
+          </>
+        ) : (
+          <div aria-hidden className="mt-3 space-y-2">
+            <div className="h-3.5 w-full animate-pulse rounded-full bg-text/[0.06]" />
+            <div className="h-3.5 w-3/5 animate-pulse rounded-full bg-text/[0.06]" />
           </div>
-        ))}
-      </div>
-
-      <HeartChart h={h} start={start} end={end} names={new Map(h.exercises.map((e) => [e.key, e.name]))} />
-
-      <ul className="mt-4 divide-y divide-text/[0.06] overflow-hidden rounded-xl bg-text/[0.03]">
-        {hardest.length > 0 && (
-          <li className="px-3.5 py-3">
-            <p className="text-[13px] text-muted">Hardest exercises, by peak</p>
-            <ol className="mt-1.5 space-y-1">
-              {hardest.map((e) => (
-                <li key={e.key} className="tnum flex items-baseline justify-between gap-3 text-[15px]">
-                  <span className="min-w-0 truncate text-text">{e.name}</span>
-                  <span className="shrink-0 text-muted">{e.peak} bpm</span>
-                </li>
-              ))}
-            </ol>
-          </li>
         )}
-        {h.recovery != null && (
-          <li className="flex items-baseline justify-between gap-3 px-3.5 py-3 text-[15px]">
-            <span className="text-muted">Recovery</span>
-            <span className="tnum text-right text-text">
-              {h.recovery} bpm in a minute
-              {usual.recovery != null && <span className="block text-[13px] text-muted">usually {usual.recovery}</span>}
-            </span>
-          </li>
-        )}
-        {h.restsJudged > 0 && (
-          <li className="flex items-baseline justify-between gap-3 px-3.5 py-3 text-[15px]">
-            <span className="text-muted">Rests cut short</span>
-            <span className="tnum text-text">
-              {h.shortRests} of {h.restsJudged}
-            </span>
-          </li>
-        )}
-      </ul>
 
-      <Zones zones={h.zones} />
-    </section>
+        <div className="mt-4 grid grid-cols-3 divide-x divide-text/[0.06] rounded-xl bg-text/[0.03] py-3">
+          {[
+            { label: "Average", value: String(h.avg), unit: "bpm" },
+            { label: "Peak", value: String(h.peak), unit: "bpm" },
+            { label: "Load", value: String(h.load), unit: usual.load != null ? `usually ${usual.load}` : "" },
+          ].map((st) => (
+            <div key={st.label} className="@container min-w-0 px-3">
+              <p className="text-[13px] text-muted">{st.label}</p>
+              <p className="mt-1 flex items-baseline gap-1 whitespace-nowrap leading-none">
+                <span className="font-display hb-fit text-text" style={fitFigure(st.value, "1.375rem", "2rem")}>
+                  {st.value}
+                </span>
+                {st.unit && <span className="truncate text-[12px] text-muted">{st.unit}</span>}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <HeartChart h={h} start={start} end={end} names={new Map(h.exercises.map((e) => [e.key, e.name]))} />
+
+        <ul className="mt-4 divide-y divide-text/[0.06] overflow-hidden rounded-xl bg-text/[0.03]">
+          {hardest.length > 0 && (
+            <li className="px-3.5 py-3">
+              <p className="text-[13px] text-muted">Hardest exercises, by peak</p>
+              <ol className="mt-1.5 space-y-1">
+                {hardest.map((e) => (
+                  <li key={e.key} className="tnum flex items-baseline justify-between gap-3 text-[15px]">
+                    <span className="min-w-0 truncate text-text">{e.name}</span>
+                    <span className="shrink-0 text-muted">{e.peak} bpm</span>
+                  </li>
+                ))}
+              </ol>
+            </li>
+          )}
+          {h.recovery != null && (
+            <li className="flex items-baseline justify-between gap-3 px-3.5 py-3 text-[15px]">
+              <span className="text-muted">Recovery</span>
+              <span className="tnum text-right text-text">
+                {h.recovery} bpm in a minute
+                {usual.recovery != null && <span className="block text-[13px] text-muted">usually {usual.recovery}</span>}
+              </span>
+            </li>
+          )}
+          {h.restsJudged > 0 && (
+            <li className="flex items-baseline justify-between gap-3 px-3.5 py-3 text-[15px]">
+              <span className="text-muted">Rests cut short</span>
+              <span className="tnum text-text">
+                {h.shortRests} of {h.restsJudged}
+              </span>
+            </li>
+          )}
+        </ul>
+
+        <Zones zones={h.zones} />
+      </section>
+    </Arrive>
+  );
+}
+
+/** What the card last showed, per workout, while the app's been open. */
+const seen = new Map<string, View>();
+
+/** The card's first showing opens by its height (.hb-arrive); from memory it's just there. */
+function Arrive({ settled, children }: { settled: boolean; children: ReactNode }) {
+  if (settled) return children;
+  return (
+    <div className="hb-arrive">
+      <div>{children}</div>
+    </div>
   );
 }
 

@@ -364,6 +364,7 @@ export async function shareNatively(blob: Blob, fileName: string, text?: string)
 }
 
 let readerReady: Promise<boolean> | null = null;
+let readerKnown = false;
 
 /**
  * Whether this iPhone runs Apple's on-device model (15 Pro or newer, iOS 26,
@@ -383,6 +384,13 @@ export function hasOnDeviceModel(): Promise<boolean> {
   readerReady = asking;
   void asking.then((ok) => {
     if (!ok) readerReady = null;
+    else readerKnown = true;
   });
   return asking;
+}
+
+/** Whether the model's already been found on this phone since the app
+ *  opened: what reads with it can draw at once instead of a beat late. */
+export function onDeviceModelKnown(): boolean {
+  return readerKnown;
 }

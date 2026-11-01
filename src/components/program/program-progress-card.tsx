@@ -100,7 +100,7 @@ export function ProgramProgressCard({
           <Link
             href={href}
             transitionTypes={["nav-forward"]}
-            className="min-w-0 truncate text-muted transition-colors hover:text-text"
+            className="min-w-0 truncate text-muted transition-colors hover:text-text active:text-text"
           >
             {program.name}
           </Link>

@@ -88,7 +88,7 @@ export function OnboardingHero({
                 key={p.id}
                 disabled={pending}
                 onClick={() => load(p.id)}
-                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-[13px] text-text transition-colors hover:bg-surface-3 disabled:opacity-45"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3.5 text-[13px] text-text transition-colors hover:bg-surface-3 active:bg-surface-3 disabled:opacity-45"
               >
                 {loadingId === p.id ? <Loader2 className="size-3.5 animate-spin" /> : null}
                 {p.name}

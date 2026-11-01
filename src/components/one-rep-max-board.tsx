@@ -43,7 +43,7 @@ export function OneRepMaxBoard({
               href={`/progress?tab=exercise&exercise=${r.exerciseId}#lift`}
               aria-current={open ? "true" : undefined}
               className={cn(
-                "relative flex items-center gap-3 px-1 py-3 transition-colors hover:bg-text/[0.03]",
+                "relative flex items-center gap-3 px-1 py-3 transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]",
                 open && "lg:shadow-[inset_3px_0_0_var(--color-text)]",
               )}
             >
@@ -58,15 +58,16 @@ export function OneRepMaxBoard({
               <span className="relative min-w-0 flex-1">
                 <span className="block truncate text-[15px] text-text">{r.name}</span>
                 <span className="tnum block truncate text-[13px] text-muted">
-                  {MUSCLE_LABEL[r.primaryMuscle]}, best {trimNum(toDisplayWeight(r.bestWeightKg, unit))}
+                  {MUSCLE_LABEL[r.primaryMuscle]}, best {trimNum(toDisplayWeight(r.bestWeightKg, unit))}{" "}
                   {unit} × {r.bestReps}
                 </span>
               </span>
-              <span className="relative shrink-0 text-right">
-                <span className="font-display block text-[19px] leading-none text-text">
+              {/* The unit beside its figure, as everywhere else. */}
+              <span className="relative flex shrink-0 items-baseline gap-1 whitespace-nowrap">
+                <span className="font-display text-[19px] leading-none text-text">
                   {trimNum(toDisplayWeight(r.bestEst1rm, unit))}
                 </span>
-                <span className="block text-[12px] text-muted">{unit}</span>
+                <span className="text-[12px] text-muted">{unit}</span>
               </span>
               <LinkPending className="relative size-4 shrink-0">
                 <ChevronRight className="relative size-4 shrink-0 text-muted/50" />

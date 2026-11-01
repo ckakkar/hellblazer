@@ -272,7 +272,7 @@ function CreateProgramSheet({
                   onClick={() => toggle(t.id)}
                   className={cn(
                     "flex items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors",
-                    active ? "bg-text/[0.08]" : "bg-surface-2/60 hover:bg-surface-2",
+                    active ? "bg-text/[0.08]" : "bg-surface-2/60 hover:bg-surface-2 active:bg-surface-2",
                   )}
                 >
                   <span

@@ -73,7 +73,7 @@ export function PresetCarousel({
                 setOpenId(p.id);
               }}
               aria-haspopup="dialog"
-              className="flex flex-1 flex-col text-left transition-colors hover:bg-text/[0.02] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/30"
+              className="flex flex-1 flex-col text-left transition-colors hover:bg-text/[0.02] active:bg-text/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/30"
             >
               {/* The style's fighter fronts the card, with the style's name
                   set over the foot of the portrait. */}

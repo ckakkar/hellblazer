@@ -29,7 +29,9 @@ export function NativeBridge() {
 
       const { refreshNativePush } = await import("@/lib/native-push");
       await refreshNativePush().catch(() => {});
-    })();
+    })().catch(() => {
+      // An app build without push: there's nothing to route or refresh.
+    });
 
     return () => {
       cancelled = true;

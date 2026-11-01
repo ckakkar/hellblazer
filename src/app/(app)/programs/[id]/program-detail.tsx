@@ -387,7 +387,7 @@ export function ProgramDetail({
                   });
                   setPicker(false);
                 }}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
               >
                 <div className="min-w-0">
                   <div className="truncate text-sm text-text">{t.name}</div>

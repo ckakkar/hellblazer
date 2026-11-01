@@ -94,7 +94,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
           <button
             onClick={() => setConfirming(false)}
             aria-label="Keep workout"
-            className="hb-hit flex size-9 items-center justify-center rounded-full text-muted hover:text-text"
+            className="hb-hit flex size-9 items-center justify-center rounded-full text-muted hover:text-text active:text-text"
           >
             <X className="size-4" />
           </button>
@@ -116,7 +116,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
           <button
             onClick={() => setConfirming(true)}
             aria-label="Discard workout"
-            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:text-danger"
+            className="flex size-9 shrink-0 items-center justify-center rounded-full text-muted hover:text-danger active:text-danger"
           >
             <X className="size-4" />
           </button>

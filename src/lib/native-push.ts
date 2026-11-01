@@ -33,16 +33,22 @@ async function deviceToken(): Promise<string> {
   try {
     return await new Promise<string>((resolve, reject) => {
       const timer = setTimeout(() => reject(new Error("APNs registration timed out")), 15_000);
+      const fail = (e: unknown) => {
+        clearTimeout(timer);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      };
       void PushNotifications.addListener("registration", (t) => {
         clearTimeout(timer);
         // Capacitor spells it in capitals; the server keeps lower case.
         resolve(t.value.toLowerCase());
-      }).then((h) => handles.push(h));
-      void PushNotifications.addListener("registrationError", (e) => {
-        clearTimeout(timer);
-        reject(new Error(e.error));
-      }).then((h) => handles.push(h));
-      void PushNotifications.register();
+      })
+        .then((h) => handles.push(h))
+        .catch(fail);
+      void PushNotifications.addListener("registrationError", (e) => fail(new Error(e.error)))
+        .then((h) => handles.push(h))
+        .catch(fail);
+      // A refusal here fails now, not after the 15 s wait.
+      PushNotifications.register().catch(fail);
     });
   } finally {
     // Only our own listeners: the tap handler in NativeBridge must survive.

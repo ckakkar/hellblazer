@@ -2735,20 +2735,26 @@ function SetRow({
             label
           ) : (
             // The set's kind, picked by name from the system's own menu:
-            // plain, drop, rest-pause.
+            // plain, drop, rest-pause. The words show the choice and the
+            // select lies invisibly over them (44pt tall): a select is as
+            // wide as its longest option at iOS's 16px floor, which pushed
+            // the delete button past the panel on a 320pt phone.
             <span
               className={cn(
-                "relative -mx-1.5 inline-flex items-center rounded-full transition-colors focus-within:ring-2 focus-within:ring-text/30",
+                "relative -mx-1.5 inline-flex items-center rounded-full py-0.5 pl-1.5 pr-6 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-text/30",
                 set.kind && "bg-text/[0.07]",
               )}
             >
+              <span aria-hidden className="whitespace-nowrap">
+                {set.kind === "drop" ? "Drop set" : set.kind === "rest_pause" ? "Rest-pause" : label}
+              </span>
               <select
                 value={set.kind ?? "plain"}
                 onChange={(e) =>
                   onChange({ kind: e.target.value === "plain" ? null : (e.target.value as SetKind) })
                 }
                 aria-label={`${label}: set type`}
-                className="hb-hit appearance-none bg-transparent py-0.5 pl-1.5 pr-6 font-semibold text-text focus:outline-none"
+                className="absolute inset-x-0 top-1/2 h-11 w-full -translate-y-1/2 cursor-pointer appearance-none opacity-0"
               >
                 <option value="plain">{set.kind ? "Straight set" : label}</option>
                 <option value="drop">Drop set</option>
@@ -2766,11 +2772,17 @@ function SetRow({
         </span>
         <div className="flex items-center gap-1">
           <label className="flex items-center gap-1.5 text-[13px] text-muted">
-            <abbr title="Rate of perceived exertion: 10 is nothing left, 8 is two more reps in the tank" className="no-underline">
+            {/* On a 320pt phone the box says it itself (its placeholder),
+                so a drop set's longer name still fits the row. */}
+            <abbr
+              title="Rate of perceived exertion: 10 is nothing left, 8 is two more reps in the tank"
+              className="no-underline max-[359px]:hidden"
+            >
               RPE
             </abbr>
             <input
               aria-label="RPE, effort out of 10 (optional)"
+              placeholder="RPE"
               type="number"
               onFocus={selectAllOnFocus}
               inputMode="decimal"
@@ -2783,7 +2795,7 @@ function SetRow({
                   rpe: e.target.value === "" ? null : Number(e.target.value),
                 })
               }
-              className="tnum h-9 w-12 rounded-lg bg-text/[0.06] px-1 text-center text-[15px] text-text focus:outline-none focus:ring-2 focus:ring-text/25"
+              className="tnum h-9 w-12 rounded-lg bg-text/[0.06] px-1 text-center text-[15px] text-text placeholder:text-transparent focus:outline-none focus:ring-2 focus:ring-text/25 max-[359px]:placeholder:text-muted/60"
             />
           </label>
           <button

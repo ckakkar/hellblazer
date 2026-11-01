@@ -83,7 +83,7 @@ export function ExercisePicker({
                 onPick(e.id);
                 close();
               }}
-              className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2"
+              className="flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2 active:bg-surface-2"
             >
               <div className="min-w-0">
                 {/* The whole name: variations differ at the end ("…Curl" vs "…Curl, Cable"). */}

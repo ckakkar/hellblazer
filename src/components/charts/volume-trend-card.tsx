@@ -165,7 +165,11 @@ export function VolumeTrendCard({
                 <span className="h-px flex-1 bg-text/[0.06]" />
               </div>
             ))}
+            {/* Keyed by the window: switching it draws the new bars in,
+                rising left to right across a quarter second whatever
+                their number, as the other charts draw their new data. */}
             <div
+              key={range}
               className={cn(
                 "absolute inset-y-0 left-10 right-0 flex items-end",
                 range === "7d" ? "gap-2.5" : range === "30d" ? "gap-[3px]" : "gap-[2px]",
@@ -185,11 +189,14 @@ export function VolumeTrendCard({
                   {p.volume > 0 && (
                     <div
                       className={cn(
-                        "w-full transition-opacity duration-150",
+                        "hb-rise w-full transition-opacity duration-150",
                         range === "7d" ? "max-w-7 rounded-md" : "rounded-[3px]",
                         active == null || active === i ? "bg-text/85" : "bg-text/40",
                       )}
-                      style={{ height: `max(3px, ${(p.volume / top) * 100}%)` }}
+                      style={{
+                        height: `max(3px, ${(p.volume / top) * 100}%)`,
+                        animationDelay: `${Math.round(60 + (i / points.length) * 240)}ms`,
+                      }}
                     />
                   )}
                 </div>
