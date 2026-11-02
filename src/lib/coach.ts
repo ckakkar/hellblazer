@@ -41,6 +41,9 @@ export type CoachInput = {
    *  display unit, its weight in kg, and the lift's best estimated max (kg)
    *  from earlier sessions, if it has any. */
   next: { name: string; targetWeight: number; targetWeightKg: number; targetReps: number; bestEst1rm: number | null } | null;
+  /** Whole weeks since the last workout, when this one comes after a break
+   *  and its targets start lighter for it (progression.ts); else null. */
+  breakWeeks?: number | null;
   unit: Unit;
 };
 
@@ -51,6 +54,10 @@ export function coachLine(input: CoachInput): string | null {
     return records > 0
       ? `Every exercise done, ${records === 1 ? "a record" : `${records} records`} broken. Finish when you're ready.`
       : "Every exercise done. Finish when you're ready.";
+  }
+  // Said until the first exercise is done, so the lighter targets make sense.
+  if (input.breakWeeks && done === 0 && records === 0) {
+    return `First workout in ${input.breakWeeks} weeks: targets are 10% under last time.`;
   }
   if (next && next.bestEst1rm) {
     const reps = repsToBeat(next.targetWeightKg, next.bestEst1rm);

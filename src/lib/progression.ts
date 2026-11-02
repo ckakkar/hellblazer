@@ -13,8 +13,13 @@ import type { Unit } from "@/lib/units";
  * - otherwise: same weight, one more rep than last time's weakest set.
  *
  * Without a range (a freeform lift) it's one more rep than last time's top
- * set, or more weight when that set was easy. The same rules serve the
- * logger, the Lock Screen's Log Set, "same again" to Siri and the watch.
+ * set, or more weight when that set was easy.
+ *
+ * A lift back after three weeks or more off starts about a tenth lighter
+ * (to the nearest jump the gym has) at last time's reps, whatever last time
+ * said: strength fades with time off, and "beat last time" is the wrong
+ * advice then. The same rules serve the logger, the Lock Screen's Log Set,
+ * "same again" to Siri and the watch.
  */
 
 export type LastSet = { weight: number; reps: number; rpe: number | null };
@@ -29,11 +34,31 @@ export type Target = {
   /** Display unit. */
   weight: number;
   reps: number;
-  /** Up: more weight. Same: one more rep. Hold: last time fell short. */
-  change: "up" | "same" | "hold";
+  /** Up: more weight. Same: one more rep. Hold: last time fell short.
+   *  Back: lighter, after a break ({@link BREAK_DAYS}). */
+  change: "up" | "same" | "hold" | "back";
   /** The weight added, display unit (0 unless up). */
   added: number;
+  /** Whole weeks since the lift was last done; set only when it's back after a break. */
+  weeksOff?: number;
 };
+
+/** Days off a lift after which today's target starts lighter. */
+export const BREAK_DAYS = 21;
+/** How much of last time's load (or reps, at bodyweight) a lift comes back at. */
+const EASE = 0.9;
+
+/** Whole days from one calendar date (yyyy-MM-dd) to another. */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 86_400_000);
+}
+
+/** About a tenth off, to the nearest step the gym has (a tie goes lighter), and at least one step. */
+function eased(weight: number, step: number): number {
+  let w = Math.ceil((weight * EASE) / step - 0.5) * step;
+  if (w >= weight) w = weight - step;
+  return Math.round(w * 100) / 100;
+}
 
 const LOWER_BODY = new Set(["quads", "hamstrings", "glutes"]);
 
@@ -72,6 +97,7 @@ export function nextTarget({
   lift,
   unit,
   plannedSets = null,
+  daysOff = null,
 }: {
   last: LastSet[];
   range: string | null;
@@ -79,6 +105,8 @@ export function nextTarget({
   unit: Unit;
   /** The working sets the plan asks for; null without a plan. */
   plannedSets?: number | null;
+  /** Days since last time ({@link daysBetween}); null when not known. */
+  daysOff?: number | null;
 }): Target | null {
   const sets = last.filter((s) => s.reps > 0 && s.weight >= 0);
   if (sets.length === 0) return null;
@@ -93,6 +121,19 @@ export function nextTarget({
   const same = (reps: number): Target => ({ weight, reps, change: "same", added: 0 });
 
   const bounds = parseRange(range);
+  if (daysOff != null && daysOff >= BREAK_DAYS) {
+    const weeksOff = Math.floor(daysOff / 7);
+    const top = Math.max(...working.map((s) => s.reps));
+    const fewest = Math.min(...working.map((s) => s.reps));
+    const lighter = weight > 0 ? eased(weight, step) : 0;
+    if (lighter > 0) {
+      // Last time's reps, inside the range when there is one.
+      const reps = bounds ? Math.min(bounds[1], Math.max(bounds[0], fewest)) : top;
+      return { weight: lighter, reps, change: "back", added: 0, weeksOff };
+    }
+    // Bodyweight, or too light to take a step off: fewer reps instead.
+    return { weight, reps: Math.max(1, Math.round(top * EASE)), change: "back", added: 0, weeksOff };
+  }
   if (!bounds) {
     const top = Math.max(...working.map((s) => s.reps));
     return canAdd && lastRpe != null && lastRpe <= EASY ? up(top) : same(top + 1);
@@ -116,5 +157,6 @@ export function targetLabel(t: Pick<Target, "weight" | "reps">, unit: Unit): str
 export function targetReason(t: Target, unit: Unit): string {
   if (t.change === "up") return `up ${Number.isInteger(t.added) ? t.added : t.added.toFixed(1)} ${unit}`;
   if (t.change === "hold") return "hold the weight";
+  if (t.change === "back") return `10% under, ${t.weeksOff ?? 3} weeks off`;
   return "one more rep";
 }

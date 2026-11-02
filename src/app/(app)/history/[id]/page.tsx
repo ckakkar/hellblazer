@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
 import { ArrowLeft, Pencil } from "lucide-react";
-import { getSessionDetail } from "@/lib/data/sessions";
+import { getActiveSession, getSessionDetail } from "@/lib/data/sessions";
 import { getProfile } from "@/lib/data/profile";
 import { profileAge } from "@/lib/age";
 import { estimatedMaxHr, type TimedSet } from "@/lib/heart-insights";
@@ -15,11 +15,14 @@ import { buttonVariants } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { formatVolume, toDisplayWeight, trimNum } from "@/lib/units";
 import { MUSCLE_LABEL, setsPerMuscle } from "@/lib/muscles";
-import { isWork } from "@/lib/set-kinds";
+import { isLogged, isWork } from "@/lib/set-kinds";
+import { isIPadApp } from "@/lib/surface";
+import { workoutName } from "@/lib/workout-name";
 import { MuscleSetBars } from "@/components/charts/muscle-set-bars";
 import { cn, fitFigure } from "@/lib/utils";
 import { DeleteSessionButton } from "./delete-session-button";
 import { ShareCardButton } from "./share-card-button";
+import { AgainActions } from "./again-actions";
 
 export const metadata: Metadata = { title: "Session" };
 
@@ -31,8 +34,22 @@ export default async function SessionDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [session, unit, profile] = await Promise.all([getSessionDetail(id), getUnit(), getProfile()]);
+  const [session, unit, profile, live, ipad] = await Promise.all([
+    getSessionDetail(id),
+    getUnit(),
+    getProfile(),
+    getActiveSession(),
+    isIPadApp(),
+  ]);
   if (!session) notFound();
+
+  // A finished workout with sets in it can be done again (on the phone, with
+  // nothing else under way) or kept as a template.
+  const done = session.session_exercise.filter((se) => se.set.some((s) => isLogged(s.reps)));
+  const keepable = session.finished_at != null && done.length > 0;
+  const canRepeat = keepable && !ipad && !(live && !live.stale);
+  // Nobody rates sets by default (Settings), so the column shows only when one was.
+  const rated = session.session_exercise.some((se) => se.set.some((s) => s.rpe != null));
 
   // The heart-rate read (iPhone app only): the workout's span and when each
   // set was logged. A session left open for hours wasn't that long a
@@ -147,6 +164,14 @@ export default async function SessionDetailPage({
         ))}
       </div>
 
+      {keepable && (
+        <AgainActions
+          sessionId={session.id}
+          defaultName={session.title ?? workoutName(done.map((se) => se.exercise?.name ?? ""))}
+          canRepeat={canRepeat}
+        />
+      )}
+
       {end != null && end > start && (
         <HeartCard sessionId={session.id} start={start} end={end} sets={timedSets} maxHr={maxHr} />
       )}
@@ -205,7 +230,7 @@ export default async function SessionDetailPage({
                       <th scope="col" className="py-2 pl-1 text-left font-normal">Set</th>
                       <th scope="col" className="w-16 py-2 text-right font-normal">{unit}</th>
                       <th scope="col" className="w-12 py-2 text-right font-normal">Reps</th>
-                      <th scope="col" className="w-11 py-2 text-right font-normal">RPE</th>
+                      {rated && <th scope="col" className="w-11 py-2 text-right font-normal">RPE</th>}
                       <th scope="col" className="w-16 py-2 pr-1 text-right font-normal">
                         <abbr title="Estimated one-rep max (Epley)" className="no-underline">e1RM</abbr>
                       </th>
@@ -236,7 +261,7 @@ export default async function SessionDetailPage({
                           </th>
                           <td className="py-2.5 text-right text-text">{trimNum(toDisplayWeight(s.weight_kg, unit))}</td>
                           <td className="py-2.5 text-right text-text">{s.reps}</td>
-                          <td className="py-2.5 text-right text-muted">{s.rpe ?? ""}</td>
+                          {rated && <td className="py-2.5 text-right text-muted">{s.rpe ?? ""}</td>}
                           <td className="py-2.5 pr-1 text-right text-muted">
                             {s.is_warmup ? "" : trimNum(toDisplayWeight(est1rm, unit))}
                           </td>

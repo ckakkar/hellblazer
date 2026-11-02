@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Loader2, Play, Zap } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { CalendarClock, ChevronDown, Loader2, Play, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { startSession } from "@/lib/actions/sessions";
+import { repeatSession, startSession } from "@/lib/actions/sessions";
+import { PastWorkoutSheet } from "./past-workout-sheet";
 import { todayLocalISO } from "@/lib/local-date";
 import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { cn } from "@/lib/utils";
@@ -30,13 +32,25 @@ type TemplateOption = {
   exercises: TemplateExercisePreview[];
 };
 
+/** A recent workout to do again, as the Log page lists it. */
+type RecentOption = {
+  id: string;
+  name: string;
+  date: string;
+  /** What was done: each exercise with its sets as a lifter writes them. */
+  exercises: { name: string; sets: string }[];
+};
+
 export function SessionStarter({
   templates,
+  recent = [],
   hasActiveProgram = false,
   countsLabel = null,
   autoStart = null,
 }: {
   templates: TemplateOption[];
+  /** The last few workouts, newest first: started again with what was done as the targets. */
+  recent?: RecentOption[];
   /** Drives the "won't touch your block" copy: only meaningful with a program. */
   hasActiveProgram?: boolean;
   /** e.g. "Counts toward Week 3", or null when the block isn't accruing. */
@@ -47,6 +61,16 @@ export function SessionStarter({
   const [pending, start] = useAction("start the workout");
   const [chosen, setChosen] = useState<string | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  // Mounted fresh each time it opens, so its defaults are now's.
+  const [past, setPast] = useState(0);
+  const [pastOpen, setPastOpen] = useState(false);
+
+  function again(sessionId: string) {
+    setChosen(`again:${sessionId}`);
+    start(async () => {
+      await repeatSession({ sessionId, localDate: todayLocalISO() });
+    });
+  }
 
   function begin(templateId: string | null, programDayId: string | null = null) {
     setChosen(programDayId ?? templateId ?? "freeform");
@@ -94,8 +118,92 @@ export function SessionStarter({
     </button>
   );
 
+  const pastRow = (
+    <button
+      disabled={pending}
+      onClick={() => {
+        setPast((k) => k + 1);
+        setPastOpen(true);
+      }}
+      className="flex w-full items-center gap-3 rounded-2xl bg-surface px-4 py-4 text-left transition-colors hover:bg-text/[0.03] active:bg-text/[0.05] disabled:opacity-60"
+    >
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted">
+        <CalendarClock className="size-[18px]" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15px] font-medium text-text">Log a past workout</span>
+        <span className="mt-0.5 block text-[13px] text-muted">One you did without logging it as you went.</span>
+      </span>
+    </button>
+  );
+
   return (
     <div className="space-y-8">
+      {recent.length > 0 && (
+        <section>
+          <h2 className="mb-3 px-1 text-[19px] font-semibold tracking-[-0.02em] text-text">Recent workouts</h2>
+          <div className="divide-y divide-text/[0.06] overflow-hidden rounded-2xl bg-surface">
+            {recent.map((w) => {
+              const key = `again:${w.id}`;
+              const expanded = openId === key;
+              const starting = pending && chosen === key;
+              return (
+                <div key={w.id}>
+                  {/* Tap to see what was done, as for a template. */}
+                  <button
+                    onClick={() => setOpenId(expanded ? null : key)}
+                    aria-expanded={expanded}
+                    className="flex w-full items-center gap-3 px-4 py-3.5 text-left transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-medium text-text">{w.name}</span>
+                      <span className="tnum mt-0.5 block truncate text-[13px] text-muted">
+                        {format(parseISO(w.date), "EEE d MMM")}, {w.exercises.length}{" "}
+                        {w.exercises.length === 1 ? "exercise" : "exercises"}
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "size-[18px] shrink-0 text-muted transition-transform duration-200",
+                        expanded && "rotate-180",
+                      )}
+                    />
+                  </button>
+
+                  <Collapse open={expanded} className="px-4 pb-4">
+                    <ol className="divide-y divide-text/[0.05] rounded-xl bg-surface-2/60">
+                      {w.exercises.map((ex, i) => (
+                        <li key={i} className="flex gap-3 px-3.5 py-2.5">
+                          <span className="tnum w-4 shrink-0 text-right text-[13px] leading-5 text-muted">{i + 1}</span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-[14px] leading-5 text-text">{ex.name}</span>
+                            {ex.sets && <span className="tnum block text-[13px] leading-5 text-muted">{ex.sets}</span>}
+                          </span>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="mt-3 px-1 text-[13px] leading-5 text-muted">
+                      Today&apos;s targets come from what you did last time
+                      {hasActiveProgram ? ". Doesn't count toward your program." : "."}
+                    </p>
+                    <Button
+                      variant="accent"
+                      size="lg"
+                      className="mt-3 w-full"
+                      disabled={pending}
+                      onClick={() => again(w.id)}
+                    >
+                      {starting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
+                      Do it again
+                    </Button>
+                  </Collapse>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {templates.length > 0 && (
         <section>
           <div className="mb-3 flex items-baseline justify-between gap-3 px-1">
@@ -180,10 +288,15 @@ export function SessionStarter({
 
       <section>
         <h2 className="mb-3 px-1 text-[19px] font-semibold tracking-[-0.02em] text-text">
-          {templates.length > 0 ? "Or" : "Freeform"}
+          {templates.length > 0 || recent.length > 0 ? "Or" : "Freeform"}
         </h2>
-        {freeform}
+        <div className="space-y-2">
+          {freeform}
+          {pastRow}
+        </div>
       </section>
+
+      <PastWorkoutSheet key={past} open={pastOpen} onClose={() => setPastOpen(false)} />
     </div>
   );
 }

@@ -6,6 +6,7 @@ import type { Exercise } from "@/lib/data/exercises";
 import { getExerciseStats } from "@/lib/data/exercise-stats";
 import { STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { selectAll } from "@/lib/data/paginate";
+import { isLogged, isStraight } from "@/lib/set-kinds";
 
 export type Session = Database["public"]["Tables"]["session"]["Row"];
 export type SessionExercise =
@@ -218,6 +219,83 @@ export async function getLastPerformances(
     });
   }
   return result;
+}
+
+/**
+ * The date of the last workout with sets in it before this one (yyyy-MM-dd),
+ * or null for a first. The logger says when a workout comes after a break.
+ */
+export async function getLastWorkoutDate(session: { id: string; date: string }): Promise<string | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("v_session_summary")
+    .select("session_date")
+    .neq("session_id", session.id)
+    .lte("session_date", session.date)
+    .gt("working_sets", 0)
+    .order("session_date", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.session_date ?? null;
+}
+
+export type RecentWorkout = {
+  id: string;
+  title: string | null;
+  date: string;
+  /** What was done, in order: the exercises with logged sets. */
+  exercises: {
+    name: string;
+    muscle: Exercise["primary_muscle"] | null;
+    /** Straight sets (not warm-ups, drops or rest-pause), in kg. */
+    sets: { weightKg: number; reps: number }[];
+  }[];
+};
+
+/**
+ * The last few finished workouts that are worth doing again, newest first:
+ * ones with sets in them, and only the latest of any that trained the same
+ * lifts (a circuit done four times shows once). For the Log page.
+ */
+export async function getRecentWorkouts(count = 3): Promise<RecentWorkout[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("session")
+    .select(
+      "id, title, date, created_at, session_exercise(position, exercise_id, exercise(name, primary_muscle), set(set_number, weight_kg, reps, is_warmup, kind))",
+    )
+    .not("finished_at", "is", null)
+    .order("date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(15);
+  if (error) throw error;
+  const seen = new Set<string>();
+  const out: RecentWorkout[] = [];
+  for (const s of data ?? []) {
+    const done = [...s.session_exercise]
+      .sort((a, b) => a.position - b.position)
+      .filter((se) => se.set.some((st) => isLogged(st.reps)));
+    if (done.length === 0) continue;
+    const lifts = [...new Set(done.map((se) => se.exercise_id))].sort().join(",");
+    if (seen.has(lifts)) continue;
+    seen.add(lifts);
+    out.push({
+      id: s.id,
+      title: s.title,
+      date: s.date,
+      exercises: done.map((se) => ({
+        name: se.exercise?.name ?? "Exercise",
+        muscle: se.exercise?.primary_muscle ?? null,
+        sets: [...se.set]
+          .sort((a, b) => a.set_number - b.set_number)
+          .filter((st) => isStraight({ warmup: st.is_warmup, kind: st.kind, reps: st.reps }))
+          .map((st) => ({ weightKg: Number(st.weight_kg), reps: st.reps })),
+      })),
+    });
+    if (out.length >= count) break;
+  }
+  return out;
 }
 
 /** The sessions a lift was done in, for History's lift filter. */

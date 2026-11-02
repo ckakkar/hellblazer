@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { UNIT_COOKIE_NAME, ACCENT_COOKIE_NAME, APPEARANCE_COOKIE_NAME } from "@/lib/settings";
+import { UNIT_COOKIE_NAME, ACCENT_COOKIE_NAME, APPEARANCE_COOKIE_NAME, RPE_COOKIE_NAME } from "@/lib/settings";
 import { ACCENT_KEYS } from "@/lib/accents";
 
 export async function setUnit(input: { unit: "kg" | "lb" }) {
@@ -39,4 +39,16 @@ export async function setAccent(input: { accent: string }) {
     sameSite: "lax",
   });
   revalidatePath("/", "layout");
+}
+
+/** Whether the logger asks for RPE (getShowRpe). */
+export async function setShowRpe(input: { on: boolean }) {
+  const { on } = z.object({ on: z.boolean() }).parse(input);
+  const store = await cookies();
+  store.set(RPE_COOKIE_NAME, on ? "1" : "0", {
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+    sameSite: "lax",
+  });
+  revalidatePath("/log", "layout");
 }

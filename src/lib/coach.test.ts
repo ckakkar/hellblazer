@@ -43,6 +43,14 @@ describe("coachLine", () => {
     expect(coachLine({ ...base, records: 2 })).toBe("2 records broken today.");
   });
 
+  it("says a workout after a break starts lighter, until the first exercise is done", () => {
+    const back = { ...base, done: 0, breakWeeks: 4 };
+    expect(coachLine(back)).toBe("First workout in 4 weeks: targets are 10% under last time.");
+    expect(coachLine({ ...back, done: 1 })).toBeNull();
+    expect(coachLine({ ...back, records: 1 })).toBe("A record broken today.");
+    expect(coachLine({ ...back, breakWeeks: null })).toBeNull();
+  });
+
   it("says when everything's done", () => {
     expect(coachLine({ ...base, done: 5, records: 1 })).toBe("Every exercise done, a record broken. Finish when you're ready.");
   });

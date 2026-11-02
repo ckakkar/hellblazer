@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { FRESH_SIGN_IN_MS, getUser, signedInWithin } from "@/lib/auth";
 import { format, parseISO } from "date-fns";
-import { getUnit, getAccent, getAppearance, getTimeZone, getToday } from "@/lib/settings";
+import { getUnit, getAccent, getAppearance, getShowRpe, getTimeZone, getToday } from "@/lib/settings";
 import { dateInTimeZone } from "@/lib/local-date";
 import { getBodyweightLog } from "@/lib/data/bodyweight";
 import { getSessionSummaries } from "@/lib/data/sessions";
@@ -34,6 +34,7 @@ import { DangerZone } from "./danger-zone";
 import { AppleHealthSettings } from "./apple-health";
 import { AppleWatchSettings } from "./apple-watch";
 import { KeepAwakeRow } from "./keep-awake-row";
+import { RpeRow } from "./rpe-row";
 import { WeeklyRecapRow } from "./weekly-recap-row";
 import { SignOutButton } from "./sign-out-button";
 import { ExportButton } from "./export-button";
@@ -79,7 +80,7 @@ export default async function ProfilePage({
   searchParams: Promise<{ link_error?: string }>;
 }) {
   const { link_error: linkError } = await searchParams;
-  const [user, unit, accent, logs, profile, active, notifications, evalGate, tz, today, appearance, appearanceLocked, summaries] =
+  const [user, unit, accent, logs, profile, active, notifications, evalGate, tz, today, appearance, appearanceLocked, summaries, showRpe] =
     await Promise.all([
       getUser(),
       getUnit(),
@@ -94,6 +95,7 @@ export default async function ProfilePage({
       getAppearance(),
       appearanceIsLocked(),
       getSessionSummaries(),
+      getShowRpe(),
     ]);
   const freshSignIn = await signedInWithin(FRESH_SIGN_IN_MS);
 
@@ -273,6 +275,7 @@ export default async function ProfilePage({
               <ThemeSelector current={accent} />
             </SettingsRow>
             <KeepAwakeRow />
+            <RpeRow initial={showRpe} />
           </SettingsGroup>
 
           <SettingsGroup

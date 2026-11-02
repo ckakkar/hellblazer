@@ -25,7 +25,7 @@ import {
   sameAgain,
 } from "@/lib/watch/next-set";
 import { describeSpokenSets, parseHeard, planSpokenSets } from "@/lib/spoken-sets";
-import { nextTarget } from "@/lib/progression";
+import { daysBetween, nextTarget } from "@/lib/progression";
 import type {
   WatchExercise,
   WatchPlanExercise,
@@ -274,7 +274,7 @@ async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map
       targetReps: row.target_rep_range,
       restSeconds: row.rest_seconds,
       last: past.map(({ weight, reps }) => ({ weight, reps })),
-      target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, ctx.unit),
+      target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, ctx),
       superset: row.superset ?? null,
       exerciseId: row.exercise_id,
     });
@@ -283,7 +283,8 @@ async function startPlans(ctx: WatchContext, templateIds: string[]): Promise<Map
   return plans;
 }
 
-type PastSet = { weight: number; reps: number; rpe: number | null };
+/** A working set last time, with the date of that session (yyyy-MM-dd). */
+type PastSet = { weight: number; reps: number; rpe: number | null; date: string };
 
 /** The previous session's working sets per movement (display unit), for copy-forward. */
 async function lastPerformances(
@@ -305,6 +306,7 @@ async function lastPerformances(
       weight: toDisplayWeight(Number(row.weight_kg), ctx.unit),
       reps: row.reps,
       rpe: row.rpe == null ? null : Number(row.rpe),
+      date: row.session_date,
     });
     last.set(row.exercise_id, list);
   }
@@ -390,7 +392,7 @@ async function workoutOf(
           kind: s.kind,
         })),
       last: past.map(({ weight, reps }) => ({ weight, reps })),
-      target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, unit),
+      target: targetOf(past, row.target_rep_range, row.target_sets, row.exercise, ctx),
       superset: row.superset ?? null,
       ended: row.ended_at != null,
     };
@@ -399,13 +401,13 @@ async function workoutOf(
   return { id: session.id, title: session.title ?? "Workout", startedAt, exercises };
 }
 
-/** Today's numbers for a lift from last time's (progression.ts). */
+/** Today's numbers for a lift from last time's (progression.ts), lighter after a break. */
 function targetOf(
   past: PastSet[],
   range: string | null,
   plannedSets: number | null,
   exercise: { equipment: string | null; mechanic: string | null; primary_muscle: string | null } | null,
-  unit: Unit,
+  ctx: Pick<WatchContext, "unit" | "timeZone">,
 ): WatchTarget | null {
   const t = nextTarget({
     last: past,
@@ -416,7 +418,8 @@ function targetOf(
       mechanic: exercise?.mechanic ?? null,
       primaryMuscle: exercise?.primary_muscle ?? null,
     },
-    unit,
+    unit: ctx.unit,
+    daysOff: past[0] ? daysBetween(past[0].date, dateInTimeZone(new Date(), ctx.timeZone)) : null,
   });
   return t ? { weight: t.weight, reps: t.reps } : null;
 }

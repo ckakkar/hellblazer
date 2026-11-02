@@ -915,6 +915,10 @@ export type Database = {
         Args: { p_active: boolean; p_id: string; p_today: string }
         Returns: undefined
       }
+      repeat_session: {
+        Args: { p_date?: string; p_session: string }
+        Returns: string
+      }
       restart_program: {
         Args: { p_id: string; p_today: string }
         Returns: undefined
@@ -929,6 +933,10 @@ export type Database = {
         }
         Returns: string
       }
+      template_from_session: {
+        Args: { p_name: string; p_session: string }
+        Returns: string
+      }
       trash_session: { Args: { p_session: string }; Returns: string }
       watch_last_performances: {
         Args: {
@@ -940,6 +948,7 @@ export type Database = {
           exercise_id: string
           reps: number
           rpe: number
+          session_date: string
           set_number: number
           weight_kg: number
         }[]

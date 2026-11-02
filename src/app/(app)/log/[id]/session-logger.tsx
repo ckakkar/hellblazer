@@ -66,7 +66,7 @@ import { reportProblem } from "@/lib/report";
 import { useKeepAwake } from "@/lib/keep-awake";
 import { exerciseForNextSet, nextSetLabel, restsAfter, sameAgain, type PlanExercise } from "@/lib/watch/next-set";
 import { slotLabel, supersetSlots, type SupersetSlot } from "@/lib/supersets";
-import { nextTarget, targetLabel, targetReason, type Target } from "@/lib/progression";
+import { BREAK_DAYS, daysBetween, nextTarget, targetLabel, targetReason, type Target } from "@/lib/progression";
 import type { SpokenExercise, SpokenSet } from "@/lib/spoken-sets";
 import { healthSyncOn, onNative, withNative, type WorkoutActivityState } from "@/lib/native-plugins";
 import {
@@ -122,6 +122,9 @@ type LocalSet = {
    *  and retries, so a set that only reaches the server later still says
    *  when it was done. Absent for one that came from the server. */
   loggedAt?: number;
+  /** When the server says it was logged (epoch ms), for one that came from
+   *  it: with loggedAt, when the last set was done. */
+  at?: number;
 };
 
 /** A set as the shared rules count it (set-kinds.ts). */
@@ -156,6 +159,14 @@ type PrBest = { weight: number; est1rm: number; hadHistory: boolean };
 
 /** The stat strip's figures: scale with the phone, and fit their column. */
 const STAT_SIZE = "clamp(1.25rem, 5.4vw, 1.625rem)";
+
+/** Finishing this long after the last set asks whether the workout ended then. */
+const LATE_FINISH_MS = 20 * 60_000;
+
+/** "7:42" (or "19:42"), as the device writes the time. */
+function clockTime(at: number): string {
+  return new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
 
 /**
  * Live connectivity. useSyncExternalStore rather than state+effect so the
@@ -209,6 +220,8 @@ export function SessionLogger({
   exercisePRs,
   unit,
   fighter,
+  showRpe = false,
+  lastWorkoutDate = null,
 }: {
   session: SessionDetail;
   exerciseLibrary: Exercise[];
@@ -219,6 +232,10 @@ export function SessionLogger({
   unit: Unit;
   /** The lifter's rank fighter, who stars in the finish screen. */
   fighter: TierKey;
+  /** Ask for each set's RPE (Settings; off by default). A set with one shows it anyway. */
+  showRpe?: boolean;
+  /** The last workout with sets before this one (yyyy-MM-dd), for "first in N weeks". */
+  lastWorkoutDate?: string | null;
 }) {
   const [, startNav] = useTransition();
   const router = useRouter();
@@ -298,8 +315,11 @@ export function SessionLogger({
   // template's rep range. The first set starts there.
   const targetFor = (ex: { seId: string; exerciseId: string }): Target | null => {
     const lift = liftById.get(ex.exerciseId);
+    const last = lastFor(ex.exerciseId);
     return nextTarget({
-      last: (lastFor(ex.exerciseId)?.sets ?? []).map((s) => ({
+      // Back after weeks off, it starts lighter.
+      daysOff: last ? daysBetween(last.session_date, session.date) : null,
+      last: (last?.sets ?? []).map((s) => ({
         weight: toDisplayWeight(s.weight_kg, unit),
         reps: s.reps,
         rpe: s.rpe,
@@ -331,6 +351,7 @@ export function SessionLogger({
         rpe: s.rpe,
         isWarmup: s.is_warmup,
         kind: s.kind === "drop" || s.kind === "rest_pause" ? (s.kind as SetKind) : null,
+        at: Date.parse(s.created_at),
       })),
     })),
   );
@@ -413,6 +434,8 @@ export function SessionLogger({
   const [failed, setFailed] = useState<Set<string>>(new Set());
   const [inFlight, setInFlight] = useState(0);
   const [confirmFinish, setConfirmFinish] = useState(false);
+  // Finishing long after the last set: when it was, and which answer was picked.
+  const [endAsk, setEndAsk] = useState<{ at: number; force: boolean; chosen?: "then" | "now" } | null>(null);
   // Remounts the finish slider after a failed finish, so it's ready again.
   const [slideKey, setSlideKey] = useState(0);
   const online = useOnline();
@@ -759,6 +782,7 @@ export function SessionLogger({
               rpe: r.rpe,
               isWarmup: r.isWarmup,
               kind: r.kind,
+              at: r.at,
             });
           }
           return { ...ex, sets };
@@ -1422,9 +1446,8 @@ export function SessionLogger({
    * strength-training workout. Only live sessions, and only with a known
    * length: the typed duration, or the clock while it was still running.
    */
-  function saveToHealth() {
+  function saveToHealth(minutes: number | null, endedAt: number | null) {
     if (isEditing || savedToHealth.current || !healthSyncOn()) return;
-    const minutes = duration ?? autoDuration;
     if (!minutes || minutes <= 0) return;
     savedToHealth.current = true;
     const typed = duration;
@@ -1439,7 +1462,7 @@ export function SessionLogger({
     withNative((api) =>
       api.saveWorkout({
         start: startedAt,
-        end: typed != null ? startedAt + typed * 60_000 : Date.now(),
+        end: typed != null ? startedAt + typed * 60_000 : (endedAt ?? Date.now()),
         sessionId: session.id,
         effort,
       }),
@@ -1473,7 +1496,23 @@ export function SessionLogger({
    * finish that fails leaves the workout as it was, with nothing celebrated
    * and nothing in Health.
    */
-  function finish(force = false): boolean {
+  /** When the last set was done (epoch ms), or null with none logged. */
+  function lastSetAt(): number | null {
+    let latest: number | null = null;
+    for (const e of exercises) {
+      for (const st of e.sets) {
+        const at = st.loggedAt ?? st.at;
+        if (isLogged(st.reps) && at && (latest === null || at > latest)) latest = at;
+      }
+    }
+    return latest;
+  }
+
+  /**
+   * `endedAt`: when the workout ended, if not now (the last set), once the
+   * lifter's been asked; null for now; undefined when not yet asked.
+   */
+  function finish(force = false, endedAt?: number | null): boolean {
     // Finishing discards the page, so unsaved sets would be gone for good.
     // Retry once and make them confirm rather than losing work silently.
     if (!force && failed.size > 0) {
@@ -1482,19 +1521,39 @@ export function SessionLogger({
       return false;
     }
     // Nothing logged means nothing to finish: it would land in History as an
-    // empty bout. A mistaken start is discarded instead.
-    if (!isEditing && !exercises.some((e) => e.sets.some((s) => isLogged(s.reps)))) {
-      showNotice("Nothing's logged yet. Log a set to finish, or discard the workout.");
+    // empty bout. A mistaken start is discarded instead (a past workout
+    // logged afterwards too).
+    if (!exercises.some((e) => e.sets.some((s) => isLogged(s.reps)))) {
+      showNotice(
+        isEditing
+          ? "Nothing's logged yet. Log a set to save it, or discard the workout."
+          : "Nothing's logged yet. Log a set to finish, or discard the workout.",
+      );
       return false;
     }
     if (needsConnection("Finishing the session")) return false;
+    // Long after the last set (the phone pocketed, a workout left open), ask
+    // whether it ended then, so the clock doesn't count the time since. A
+    // duration typed by hand says it already.
+    if (!isEditing && endedAt === undefined && duration == null) {
+      const last = lastSetAt();
+      if (last !== null && Date.now() - last > LATE_FINISH_MS) {
+        setConfirmFinish(false);
+        setEndAsk({ at: last, force });
+        return false;
+      }
+    }
     setConfirmFinish(false);
     setFinishing(true);
     const failedFinish = (message: string) => {
       setFinishing(false);
+      setEndAsk(null);
       setSlideKey((k) => k + 1);
       showNotice(message);
     };
+    // Ended at the last set: the time is up to it, not to now.
+    const minutes =
+      duration ?? (endedAt ? Math.max(1, Math.round((endedAt - startedAt) / 60_000)) : autoDuration);
     startNav(async () => {
       const saved = await flushSaves();
       if (!saved && !force) {
@@ -1506,7 +1565,8 @@ export function SessionLogger({
         // Auto-record the live clock unless a duration was typed by hand.
         await finishSession({
           sessionId: session.id,
-          durationMin: duration ?? autoDuration,
+          durationMin: minutes,
+          finishedAt: endedAt ?? null,
           navigate: false,
         });
       } catch (err) {
@@ -1518,7 +1578,7 @@ export function SessionLogger({
       rest.skip();
       setVictory(isEditing ? "Saved" : randomVictory());
       haptic("success");
-      saveToHealth();
+      saveToHealth(minutes, endedAt ?? null);
       await new Promise((resolve) => setTimeout(resolve, 1700));
       router.replace(`/history/${session.id}`);
     });
@@ -1533,7 +1593,7 @@ export function SessionLogger({
     startNav(async () => {
       try {
         await discardSession({ id: session.id });
-        router.replace("/dashboard");
+        router.replace(isEditing ? "/history" : "/dashboard");
       } catch {
         setDiscarding(false);
         setConfirmDiscard(false);
@@ -1567,10 +1627,17 @@ export function SessionLogger({
     const on = currentIndex >= 0 ? exercises[currentIndex] : null;
     const target = on && on.sets.length === 0 ? targetFor(on) : null;
     const best = on ? prBest.current?.get(on.exerciseId) : undefined;
+    // After three weeks or more without a workout, its targets start lighter.
+    const gap = lastWorkoutDate ? daysBetween(lastWorkoutDate, session.date) : null;
+    const breakWeeks =
+      gap !== null && gap >= BREAK_DAYS && exercises.some((e) => targetFor(e)?.change === "back")
+        ? Math.floor(gap / 7)
+        : null;
     return coachLine({
       exercises: exercises.length,
       done: doneCount,
       records: prSets.size,
+      breakWeeks,
       next:
         on && target && best?.hadHistory
           ? {
@@ -1982,7 +2049,40 @@ export function SessionLogger({
         </label>
         {/* `() => finish()` deliberately, not `onClick={finish}`: the latter
             hands the click event in as `force` and skips the unsaved guard. */}
-        {confirmFinish ? (
+        {endAsk ? (
+          <div role="group" aria-label="When the workout ended" className="flex w-full flex-col gap-3">
+            <p className="px-1 text-[15px] leading-5 text-text">
+              Finished at {clockTime(endAsk.at)}, after your last set?
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="lg"
+                className="flex-1"
+                disabled={finishing}
+                onClick={() => {
+                  setEndAsk({ ...endAsk, chosen: "now" });
+                  finish(endAsk.force, null);
+                }}
+              >
+                {finishing && endAsk.chosen === "now" && <Loader2 className="size-4 animate-spin" />}
+                No, just now
+              </Button>
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={finishing}
+                onClick={() => {
+                  setEndAsk({ ...endAsk, chosen: "then" });
+                  finish(endAsk.force, endAsk.at);
+                }}
+              >
+                {finishing && endAsk.chosen === "then" && <Loader2 className="size-4 animate-spin" />}
+                Yes, {clockTime(endAsk.at)}
+              </Button>
+            </div>
+          </div>
+        ) : confirmFinish ? (
           <div className="flex w-full flex-col gap-3">
             <p className="px-1 text-[13px] text-danger">
               {failed.size} {failed.size === 1 ? "change is" : "changes are"}{" "}
@@ -2038,9 +2138,10 @@ export function SessionLogger({
         )}
       </section>
 
-      {/* The way out of a workout started by mistake. Quiet, below the
-          finish, and asked twice: it deletes everything logged here. */}
-      {!isEditing && (
+      {/* The way out of a workout started by mistake (or a past one added
+          and left empty). Quiet, below the finish, and asked twice: it
+          deletes everything logged here. */}
+      {(!isEditing || !exercises.some((e) => e.sets.some((s) => isLogged(s.reps)))) && (
         <div className="mt-3 flex min-h-11 justify-center">
           {confirmDiscard ? (
             <div className="flex w-full items-center gap-2 rounded-2xl bg-surface py-2 pl-4 pr-2">
@@ -2108,6 +2209,7 @@ export function SessionLogger({
           onRemoveSet={(setId) => removeSet(active.seId, setId)}
           onSwap={(newId) => swap(active.seId, newId)}
           onRemoveExercise={() => removeExercise(active.seId)}
+          showRpe={showRpe}
           rest={isEditing ? null : rest}
           sayIt={
             <SaySets
@@ -2212,6 +2314,7 @@ function ActiveExerciseModal({
   onRemoveSet,
   onSwap,
   onRemoveExercise,
+  showRpe,
   rest,
   sayIt,
 }: {
@@ -2240,6 +2343,8 @@ function ActiveExerciseModal({
   onRemoveSet: (setId: string) => void;
   onSwap: (newExerciseId: string) => void;
   onRemoveExercise: () => void;
+  /** Ask for RPE (Settings). */
+  showRpe: boolean;
   /** Live sessions only: the rest countdown, kept in view above End. */
   rest: RestTimerControls | null;
   /** "Say it", on iPhones that can read sets said in words. */
@@ -2248,6 +2353,8 @@ function ActiveExerciseModal({
   const [swapping, setSwapping] = useState(false);
   const [q, setQ] = useState("");
   const hasSets = exercise.sets.length > 0;
+  // The RPE column, for a lifter who rates sets or an exercise with a rated one.
+  const rated = showRpe || exercise.sets.some((s) => s.rpe != null);
   // The set in the editor: the newest, unless an earlier one was tapped. A
   // new set takes the editor back.
   const [openId, setOpenId] = useState<string | null>(null);
@@ -2413,6 +2520,7 @@ function ActiveExerciseModal({
                     key={s.id}
                     label={setLabel(exercise.sets, i)}
                     set={s}
+                    rated={rated}
                     unit={unit}
                     isPR={prSets.has(s.id)}
                     flash={s.id === flashId}
@@ -2429,11 +2537,11 @@ function ActiveExerciseModal({
                 <div role="group" aria-label="Sets" className="tnum">
                   {exercise.sets.length > 1 && (
                     // Column heads for the eye; each line's button says it all to a screen reader.
-                    <div aria-hidden className={cn(SET_COLUMNS, "pb-1.5 text-[12px] text-muted")}>
+                    <div aria-hidden className={cn(rated ? SET_COLUMNS : SET_COLUMNS_UNRATED, "pb-1.5 text-[12px] text-muted")}>
                       <span>Set</span>
                       <span className="text-right">{unit}</span>
                       <span className="text-right">Reps</span>
-                      <span className="text-right">RPE</span>
+                      {rated && <span className="text-right">RPE</span>}
                       <span />
                     </div>
                   )}
@@ -2447,6 +2555,7 @@ function ActiveExerciseModal({
                       key={editing.set.id}
                       label={setLabel(exercise.sets, editing.index)}
                       set={editing.set}
+                      showRpe={showRpe}
                       unit={unit}
                       weightStep={weightStep}
                       flash={editing.set.id === flashId}
@@ -2645,11 +2754,14 @@ function keepSetsTogether(text: string): string {
 
 /** The set table's columns: label, weight, reps, RPE, a marker. */
 const SET_COLUMNS = "grid grid-cols-[minmax(0,1fr)_4.5rem_3rem_3rem_1.25rem] items-center gap-x-2 px-1";
+/** The same without RPE, for a lifter who doesn't rate sets. */
+const SET_COLUMNS_UNRATED = "grid grid-cols-[minmax(0,1fr)_4.5rem_3rem_1.25rem] items-center gap-x-2 px-1";
 
 /** A set already done, as one line of the record. Tap to edit it. */
 function SetLine({
   label,
   set,
+  rated,
   unit,
   isPR,
   flash,
@@ -2657,6 +2769,8 @@ function SetLine({
 }: {
   label: string;
   set: LocalSet;
+  /** Has the RPE column. */
+  rated: boolean;
   unit: Unit;
   isPR?: boolean;
   flash?: boolean;
@@ -2677,7 +2791,7 @@ function SetLine({
       onClick={onOpen}
       aria-label={`${spoken}. Edit`}
       className={cn(
-        SET_COLUMNS,
+        rated ? SET_COLUMNS : SET_COLUMNS_UNRATED,
         "hb-hit w-full py-2.5 text-left text-[15px] transition-colors hover:bg-text/[0.03] active:bg-text/[0.05]",
         flash && "hb-set-in",
       )}
@@ -2691,9 +2805,11 @@ function SetLine({
       <span className="text-right text-text">
         {set.reps ?? "–"}
       </span>
-      <span className="text-right text-muted">
-        {set.rpe ?? ""}
-      </span>
+      {rated && (
+        <span className="text-right text-muted">
+          {set.rpe ?? ""}
+        </span>
+      )}
       <span className="flex justify-end">
         {isPR && <Zap aria-label="Record" className="size-3.5 fill-current text-accent" />}
       </span>
@@ -2704,6 +2820,7 @@ function SetLine({
 function SetRow({
   label,
   set,
+  showRpe,
   unit,
   weightStep,
   flash,
@@ -2714,6 +2831,8 @@ function SetRow({
   /** "Set 2", "Drop set" (setLabel). */
   label: string;
   set: LocalSet;
+  /** Ask for RPE (Settings); a set that has one shows it anyway. */
+  showRpe: boolean;
   unit: Unit;
   weightStep: number;
   flash?: boolean;
@@ -2771,33 +2890,35 @@ function SetRow({
           )}
         </span>
         <div className="flex items-center gap-1">
-          <label className="flex items-center gap-1.5 text-[13px] text-muted">
-            {/* On a 320pt phone the box says it itself (its placeholder),
-                so a drop set's longer name still fits the row. */}
-            <abbr
-              title="Rate of perceived exertion: 10 is nothing left, 8 is two more reps in the tank"
-              className="no-underline max-[359px]:hidden"
-            >
-              RPE
-            </abbr>
-            <input
-              aria-label="RPE, effort out of 10 (optional)"
-              placeholder="RPE"
-              type="number"
-              onFocus={selectAllOnFocus}
-              inputMode="decimal"
-              step={0.5}
-              min={0}
-              max={10}
-              value={set.rpe ?? ""}
-              onChange={(e) =>
-                onChange({
-                  rpe: e.target.value === "" ? null : Number(e.target.value),
-                })
-              }
-              className="tnum h-9 w-12 rounded-lg bg-text/[0.06] px-1 text-center text-[15px] text-text placeholder:text-transparent focus:outline-none focus:ring-2 focus:ring-text/25 max-[359px]:placeholder:text-muted/60"
-            />
-          </label>
+          {(showRpe || set.rpe != null) && (
+            <label className="flex items-center gap-1.5 text-[13px] text-muted">
+              {/* On a 320pt phone the box says it itself (its placeholder),
+                  so a drop set's longer name still fits the row. */}
+              <abbr
+                title="Rate of perceived exertion: 10 is nothing left, 8 is two more reps in the tank"
+                className="no-underline max-[359px]:hidden"
+              >
+                RPE
+              </abbr>
+              <input
+                aria-label="RPE, effort out of 10 (optional)"
+                placeholder="RPE"
+                type="number"
+                onFocus={selectAllOnFocus}
+                inputMode="decimal"
+                step={0.5}
+                min={0}
+                max={10}
+                value={set.rpe ?? ""}
+                onChange={(e) =>
+                  onChange({
+                    rpe: e.target.value === "" ? null : Number(e.target.value),
+                  })
+                }
+                className="tnum h-9 w-12 rounded-lg bg-text/[0.06] px-1 text-center text-[15px] text-text placeholder:text-transparent focus:outline-none focus:ring-2 focus:ring-text/25 max-[359px]:placeholder:text-muted/60"
+              />
+            </label>
+          )}
           <button
             aria-label="Warm-up set"
             aria-pressed={set.isWarmup}

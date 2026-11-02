@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { increment, nextTarget, parseRange, targetLabel, targetReason, type Lift } from "@/lib/progression";
+import { daysBetween, increment, nextTarget, parseRange, targetLabel, targetReason, type Lift } from "@/lib/progression";
 
 const bench: Lift = { equipment: "barbell", mechanic: "compound", primaryMuscle: "chest" };
 const squat: Lift = { equipment: "barbell", mechanic: "compound", primaryMuscle: "quads" };
@@ -102,5 +102,56 @@ describe("a shortened day", () => {
       reps: 6,
       change: "up",
     });
+  });
+});
+
+describe("back after a break", () => {
+  const back = (last: ReturnType<typeof sets>, range: string | null, daysOff: number, lift = bench, unit: "kg" | "lb" = "kg") =>
+    nextTarget({ last, range, lift, unit, daysOff });
+
+  it("counts calendar days", () => {
+    expect(daysBetween("2026-10-01", "2026-10-29")).toBe(28);
+    expect(daysBetween("2026-10-29", "2026-10-29")).toBe(0);
+    // Across the clocks going back.
+    expect(daysBetween("2026-10-20", "2026-11-03")).toBe(14);
+  });
+
+  it("is business as usual under three weeks", () => {
+    expect(back(sets([100, 8], [100, 8]), "6-8", 20)).toMatchObject({ weight: 102.5, change: "up" });
+  });
+
+  it("starts about a tenth lighter at last time's reps, to the gym's steps", () => {
+    expect(back(sets([100, 8], [100, 8]), "6-8", 28)).toEqual({
+      weight: 90,
+      reps: 8,
+      change: "back",
+      added: 0,
+      weeksOff: 4,
+    });
+    // 62.5 × 0.9 = 56.25: the nearest bar load is 55.
+    expect(back(sets([62.5, 10], [62.5, 9]), null, 35)).toMatchObject({ weight: 55, reps: 10, weeksOff: 5 });
+    // Dumbbells go in 2 kg: 24 × 0.9 = 21.6, so 22.
+    expect(back(sets([24, 12]), "10-12", 21, curl)).toMatchObject({ weight: 22, reps: 12, weeksOff: 3 });
+    expect(back(sets([135, 5], [135, 5]), "5", 30, bench, "lb")).toMatchObject({ weight: 120, reps: 5 });
+  });
+
+  it("keeps the reps inside the range", () => {
+    expect(back(sets([80, 5], [80, 4]), "6-8", 25)).toMatchObject({ weight: 72.5, reps: 6 });
+  });
+
+  it("takes at least one step off", () => {
+    // 10 × 0.9 = 9, which rounds back up to 10 on 2.5 kg steps.
+    expect(back(sets([10, 12]), null, 40, bench)).toMatchObject({ weight: 7.5, change: "back" });
+  });
+
+  it("asks for fewer reps at bodyweight, or when there's no step to take off", () => {
+    expect(back(sets([0, 10], [0, 9]), null, 30, pullup)).toMatchObject({ weight: 0, reps: 9, change: "back" });
+    expect(back(sets([2, 15]), null, 30, curl)).toMatchObject({ weight: 2, reps: 14, change: "back" });
+  });
+
+  it("says why", () => {
+    expect(targetReason({ weight: 90, reps: 8, change: "back", added: 0, weeksOff: 4 }, "kg")).toBe(
+      "10% under, 4 weeks off",
+    );
   });
 });

@@ -3,12 +3,13 @@ import { notFound, redirect } from "next/navigation";
 import {
   getSessionDetail,
   getLastPerformances,
+  getLastWorkoutDate,
   getExercisePRs,
   sessionTargets,
 } from "@/lib/data/sessions";
 import { getExercises, getUsualExerciseIds } from "@/lib/data/exercises";
 import { UsualLiftsProvider } from "@/components/usual-lifts";
-import { getUnit } from "@/lib/settings";
+import { getShowRpe, getUnit } from "@/lib/settings";
 import { getProfile } from "@/lib/data/profile";
 import { getTier } from "@/lib/tiers";
 import { SessionLogger } from "./session-logger";
@@ -28,7 +29,7 @@ export default async function LoggerPage({
   searchParams: Promise<{ edit?: string }>;
 }) {
   const [{ id }, { edit }] = await Promise.all([params, searchParams]);
-  const [session, exerciseLibrary, unit, exercisePRs, profile, ipad, usual] = await Promise.all([
+  const [session, exerciseLibrary, unit, exercisePRs, profile, ipad, usual, showRpe] = await Promise.all([
     getSessionDetail(id),
     getExercises(),
     getUnit(),
@@ -36,6 +37,7 @@ export default async function LoggerPage({
     getProfile(),
     isIPadApp(),
     getUsualExerciseIds(),
+    getShowRpe(),
   ]);
   // Discarded on the phone while the iPad watched.
   if (!session && ipad) redirect("/dashboard");
@@ -67,7 +69,10 @@ export default async function LoggerPage({
   const exerciseIds = [
     ...new Set(session.session_exercise.map((se) => se.exercise_id)),
   ];
-  const lastPerformances = await getLastPerformances(exerciseIds, id);
+  const [lastPerformances, lastWorkoutDate] = await Promise.all([
+    getLastPerformances(exerciseIds, id),
+    session.finished_at ? null : getLastWorkoutDate(session),
+  ]);
   const targets = sessionTargets(session);
 
   return (
@@ -80,6 +85,8 @@ export default async function LoggerPage({
         exercisePRs={exercisePRs}
         unit={unit}
         fighter={fighter}
+        showRpe={showRpe}
+        lastWorkoutDate={lastWorkoutDate}
       />
     </UsualLiftsProvider>
   );

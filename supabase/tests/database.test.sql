@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(32);
+select plan(42);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -130,6 +130,40 @@ select is(
   'a restored workout has its sets back'
 );
 
+-- Do it again, and keep it as a template: what was done, as it was done.
+update public.session set finished_at = now() where id = current_setting('test.session')::uuid;
+select set_config('test.again', public.repeat_session(current_setting('test.session')::uuid, current_date)::text, true);
+select isnt(current_setting('test.again'), current_setting('test.session'), 'repeat_session starts a new workout');
+select is(
+  (select count(*) from public.session_exercise where session_id = current_setting('test.again')::uuid)::int, 1,
+  'with only the exercises that were done'
+);
+select is(
+  (select target_sets from public.session_exercise where session_id = current_setting('test.again')::uuid)::int, 2,
+  'planned as many sets as were done'
+);
+select ok(
+  (select program_day_id is null and program_id is null from public.session where id = current_setting('test.again')::uuid),
+  'and off the program'
+);
+select is(
+  public.repeat_session(current_setting('test.session')::uuid, current_date),
+  current_setting('test.again')::uuid,
+  'one workout at a time: another repeat returns the one under way'
+);
+select set_config('test.kept', public.template_from_session(current_setting('test.session')::uuid, ' Kept ')::text, true);
+select is(
+  (select name from public.workout_template where id = current_setting('test.kept')::uuid), 'Kept',
+  'template_from_session makes a template'
+);
+select is(
+  (select string_agg(target_sets::text || 'x' || coalesce(target_rep_range, '-'), ',') from public.template_exercise
+   where template_id = current_setting('test.kept')::uuid),
+  '2x5',
+  'of what was done: its sets, in the workout''s reps'
+);
+delete from public.session where id = current_setting('test.again')::uuid;
+
 insert into public.profile (user_id, display_name) values ('00000000-0000-0000-0000-00000000000a', 'A');
 select set_config(
   'test.se',
@@ -218,10 +252,22 @@ select throws_ok(
   $$select public.start_session(null, null, null, '00000000-0000-0000-0000-00000000000a')$$, 'P0001', 'not allowed',
   'B can''t start a session as A'
 );
+select throws_ok(
+  format('select public.repeat_session(%L)', current_setting('test.session')), 'P0001', 'session not found',
+  'B can''t repeat A''s workout'
+);
+select throws_ok(
+  format('select public.template_from_session(%L, %L)', current_setting('test.session'), 'Mine'), 'P0001', 'session not found',
+  'nor keep it as a template'
+);
 
 -- Signed out ----------------------------------------------------------------
 set local role anon;
 select throws_ok($$select public.start_session()$$, '42501', null, 'anonymous callers can''t start sessions');
+select throws_ok(
+  format('select public.repeat_session(%L)', current_setting('test.session')), '42501', null,
+  'or repeat one'
+);
 
 reset role;
 select is(

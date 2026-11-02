@@ -11,6 +11,7 @@ import {
 const UNIT_COOKIE = "wt_unit";
 const ACCENT_COOKIE = "hb_accent";
 const APPEARANCE_COOKIE = "hb_theme";
+const RPE_COOKIE = "hb_rpe";
 
 /** Night (dark), paper (light), or whichever the device is set to. */
 export type Appearance = "system" | "light" | "dark";
@@ -30,6 +31,14 @@ export async function getAppearance(): Promise<Appearance> {
 export async function getUnit(): Promise<Unit> {
   const store = await cookies();
   return store.get(UNIT_COOKIE)?.value === "lb" ? "lb" : "kg";
+}
+
+/**
+ * Whether the logger asks for each set's RPE: off unless the lifter turns it
+ * on (Settings). A set that has one still shows it everywhere.
+ */
+export async function getShowRpe(): Promise<boolean> {
+  return (await cookies()).get(RPE_COOKIE)?.value === "1";
 }
 
 /** Reads the user's accent-theme preference from a cookie. */
@@ -61,3 +70,4 @@ export async function getToday(): Promise<string> {
 export const UNIT_COOKIE_NAME = UNIT_COOKIE;
 export const ACCENT_COOKIE_NAME = ACCENT_COOKIE;
 export const APPEARANCE_COOKIE_NAME = APPEARANCE_COOKIE;
+export const RPE_COOKIE_NAME = RPE_COOKIE;

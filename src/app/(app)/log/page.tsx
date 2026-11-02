@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { CalendarRange } from "lucide-react";
 import { getTemplates } from "@/lib/data/templates";
 import { getActiveProgramProgress } from "@/lib/data/programs";
-import { getActiveSession } from "@/lib/data/sessions";
+import { getActiveSession, getRecentWorkouts } from "@/lib/data/sessions";
+import { getUnit } from "@/lib/settings";
+import { notebookSets } from "@/lib/coach";
+import { toDisplayWeight } from "@/lib/units";
+import { workoutName } from "@/lib/workout-name";
 import { ProgramProgressCard } from "@/components/program/program-progress-card";
 import { PageHeader, EmptyState } from "@/components/ui/page-header";
 import { buttonVariants } from "@/components/ui/button";
@@ -20,12 +24,14 @@ export default async function LogPage({
 }: {
   searchParams: Promise<{ start?: string }>;
 }) {
-  const [templates, activeProgress, activeSession, { start }, ipad] = await Promise.all([
+  const [templates, activeProgress, activeSession, { start }, ipad, recentWorkouts, unit] = await Promise.all([
     getTemplates(),
     getActiveProgramProgress(),
     getActiveSession(),
     searchParams,
     isIPadApp(),
+    getRecentWorkouts(3),
+    getUnit(),
   ]);
 
   // Nothing starts on an iPad (a widget or Siri can still land here): show
@@ -118,14 +124,33 @@ export default async function LogPage({
 
   const showCard = Boolean(activeProgress && hasProgramNext);
 
+  // The last few workouts, to do again: each with what was done, written as
+  // a lifter writes it ("62.5 kg × 11, 11, 10").
+  const recent = recentWorkouts.map((w) => ({
+    id: w.id,
+    name: w.title ?? workoutName(w.exercises.map((e) => e.name)),
+    date: w.date,
+    exercises: w.exercises.map((e) => ({
+      name: e.name,
+      sets: notebookSets(
+        e.sets.map((st) => ({ weight: toDisplayWeight(st.weightKg, unit), reps: st.reps })),
+        unit,
+      ),
+    })),
+  }));
+
   return (
     <div className={showCard ? "mx-auto max-w-4xl lg:max-w-none" : "mx-auto max-w-4xl"}>
       <PageHeader
         title="Log"
         subtitle={
-          options.length === 0 && !activeProgress
-            ? "Start an empty workout, or pick a program to train from a plan."
-            : "Start your next programmed day, or pick any other."
+          activeProgress
+            ? "Start your next programmed day, or pick any other."
+            : recent.length > 0
+              ? "Do a recent workout again, or start a new one."
+              : options.length === 0
+                ? "Start an empty workout, or pick a program to train from a plan."
+                : "Start a workout from a template, or an empty one."
         }
       />
 
@@ -144,7 +169,7 @@ export default async function LogPage({
 
         {options.length === 0 && !activeProgress ? (
           <div className="grid grid-cols-1 gap-4">
-            <SessionStarter templates={[]} hasActiveProgram={false} countsLabel={null} />
+            <SessionStarter templates={[]} recent={recent} hasActiveProgram={false} countsLabel={null} />
             <EmptyState
               icon={<CalendarRange className="size-6" />}
               title="No program or templates yet"
@@ -159,6 +184,7 @@ export default async function LogPage({
         ) : (
           <SessionStarter
             templates={options}
+            recent={recent}
             hasActiveProgram={Boolean(activeProgress)}
             countsLabel={countsLabel}
             autoStart={

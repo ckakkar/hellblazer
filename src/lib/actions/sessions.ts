@@ -65,6 +65,89 @@ export async function startSession(input: {
 }
 
 /**
+ * Starts a past workout again (repeat_session): the exercises that were done,
+ * in order, with what was done as the targets, so the logger's last time and
+ * progression work as they do for a template day. Off-plan, like any start
+ * that isn't a program day; a workout already under way wins, as for
+ * startSession.
+ */
+export async function repeatSession(input: { sessionId: string; localDate?: string | null }) {
+  const v = z
+    .object({
+      sessionId: z.string().uuid(),
+      localDate: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .optional(),
+    })
+    .parse(input);
+  const { supabase } = await getAuthedContext();
+  const live = await getActiveSession();
+  if (live && !live.stale) redirect(`/log/${live.id}`);
+  const { data: sessionId, error } = await supabase.rpc("repeat_session", {
+    p_session: v.sessionId,
+    ...(v.localDate ? { p_date: v.localDate } : {}),
+  });
+  if (error) throw error;
+  redirect(`/log/${sessionId}`);
+}
+
+/**
+ * Keeps a workout as a template (template_from_session): what was done, as
+ * many sets as were done in the reps they were done in, at the end of the
+ * lifter's templates. The workout itself is untouched.
+ */
+export async function saveSessionAsTemplate(input: { sessionId: string; name: string }): Promise<{ id: string }> {
+  const v = z
+    .object({ sessionId: z.string().uuid(), name: z.string().trim().min(1).max(120) })
+    .parse(input);
+  const { supabase } = await getAuthedContext();
+  const { data, error } = await supabase.rpc("template_from_session", {
+    p_session: v.sessionId,
+    p_name: v.name,
+  });
+  if (error) throw error;
+  revalidatePath("/templates");
+  revalidatePath("/log");
+  return { id: data };
+}
+
+/**
+ * A workout done without logging it live: dated, timed and already over,
+ * so the logger opens it to be filled in (editing, with no clock running),
+ * and Recovery and the week read it as when it happened.
+ */
+export async function logPastSession(input: { date: string; startedAt: number; durationMin: number }) {
+  const v = z
+    .object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      startedAt: z.number().int().positive(),
+      durationMin: z.number().int().min(1).max(600),
+    })
+    .parse(input);
+  const end = v.startedAt + v.durationMin * 60_000;
+  if (end > Date.now() + 60_000) throw new Error("A past workout can't end in the future");
+  if (v.startedAt < Date.now() - 400 * 24 * 3600_000) throw new Error("Too far back");
+  const { supabase, user } = await getAuthedContext();
+  const { data, error } = await supabase
+    .from("session")
+    .insert({
+      user_id: user.id,
+      date: v.date,
+      created_at: new Date(v.startedAt).toISOString(),
+      finished_at: new Date(end).toISOString(),
+      duration_min: v.durationMin,
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+  revalidatePath("/history");
+  revalidatePath("/dashboard");
+  redirect(`/log/${data.id}`);
+}
+
+/**
  * Appends an exercise to the session. Returns the new row id, plus the lifter's
  * last performance on that movement so the logger can show the "last:" target
  * and copy it forward, same as for exercises the session started with.
@@ -270,6 +353,8 @@ export type SessionSet = {
   rpe: number | null;
   isWarmup: boolean;
   kind: "drop" | "rest_pause" | null;
+  /** When it was logged (epoch ms). */
+  at: number;
 };
 
 /**
@@ -285,7 +370,7 @@ export async function getSessionSets(input: {
   const { supabase } = await getAuthedContext();
   const { data, error } = await supabase
     .from("session")
-    .select("finished_at, session_exercise(id, exercise_id, set(id, set_number, weight_kg, reps, rpe, is_warmup, kind))")
+    .select("finished_at, session_exercise(id, exercise_id, set(id, set_number, weight_kg, reps, rpe, is_warmup, kind, created_at))")
     .eq("id", sessionId)
     .maybeSingle();
   if (error) throw error;
@@ -300,6 +385,7 @@ export async function getSessionSets(input: {
       rpe: s.rpe === null ? null : Number(s.rpe),
       isWarmup: s.is_warmup,
       kind: s.kind === "drop" || s.kind === "rest_pause" ? (s.kind as SessionSet["kind"]) : null,
+      at: Date.parse(s.created_at),
     })),
   );
   return {
@@ -404,6 +490,9 @@ export async function clearHistory() {
 export async function finishSession(input: {
   sessionId: string;
   durationMin?: number | null;
+  /** When it ended (epoch ms), if not now: the last set, for a workout
+   *  finished well after it (the logger asks). Kept between its start and now. */
+  finishedAt?: number | null;
   /** False: return once it's recorded, for a caller that shows the finish
    *  first and navigates itself (the logger). */
   navigate?: boolean;
@@ -412,6 +501,7 @@ export async function finishSession(input: {
     .object({
       sessionId: z.string().uuid(),
       durationMin: z.number().int().min(0).max(1000).nullable().optional(),
+      finishedAt: z.number().int().positive().nullable().optional(),
       navigate: z.boolean().optional(),
     })
     .parse(input);
@@ -419,12 +509,17 @@ export async function finishSession(input: {
   // Saving a session reopened to fix it keeps its original finish time.
   const { data: current, error: readErr } = await supabase
     .from("session")
-    .select("finished_at")
+    .select("finished_at, created_at")
     .eq("id", v.sessionId)
     .single();
   if (readErr) throw readErr;
   const patch: TablesUpdate<"session"> = {};
-  if (!current.finished_at) patch.finished_at = new Date().toISOString();
+  if (!current.finished_at) {
+    const at = v.finishedAt
+      ? Math.min(Date.now(), Math.max(Date.parse(current.created_at), v.finishedAt))
+      : Date.now();
+    patch.finished_at = new Date(at).toISOString();
+  }
   if (v.durationMin !== undefined && v.durationMin !== null) {
     patch.duration_min = v.durationMin;
   }
