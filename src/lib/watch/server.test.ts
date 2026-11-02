@@ -331,6 +331,25 @@ describe("starting and finishing", () => {
     expect(db.rpc).not.toHaveBeenCalledWith("start_session", expect.anything());
   });
 
+  it("finds a days-old offline workout again when the reply to its start was lost", async () => {
+    const template = "50000000-0000-4000-8000-000000000001";
+    const startedAt = Date.now() - 48 * 60 * 60 * 1000;
+    db.rpc.mockImplementation(async (name: string) => {
+      if (name !== "start_session") return { data: null, error: null };
+      const id = "20000000-0000-4000-8000-0000000000aa";
+      tables.session.push({ id, user_id: A, title: "Day 1", template_id: template, finished_at: null, created_at: new Date().toISOString() });
+      return { data: id, error: null };
+    });
+    const start = () =>
+      handleWatch(signedIn(), (ctx) => startWatchWorkout(ctx, { templateId: template, localDate: "2026-09-26", startedAt }));
+    const first = await (await start()).json();
+    expect(first.started?.id).toBe("20000000-0000-4000-8000-0000000000aa");
+    // Its start time is the watch's, two days back, so the retry finds it.
+    const retry = await (await start()).json();
+    expect(retry.started?.id).toBe("20000000-0000-4000-8000-0000000000aa");
+    expect(db.rpc.mock.calls.filter(([name]) => name === "start_session")).toHaveLength(1);
+  });
+
   it("turns start_session's not-found into a 404", async () => {
     db.rpc.mockResolvedValueOnce({ data: null, error: { code: "P0001", message: "template not found" } });
     const res = await handleWatch(signedIn(), (ctx) =>

@@ -377,6 +377,7 @@ async function workoutOf(
     const past = last.get(row.exercise_id) ?? [];
     return {
       id: row.id,
+      exerciseId: row.exercise_id,
       name: row.exercise?.name ?? "Exercise",
       targetSets: row.target_sets,
       targetReps: row.target_rep_range,
@@ -519,13 +520,21 @@ async function addMissingExercises(ctx: WatchContext, sessionId: string, exercis
   }
 }
 
-/** A time the watch says something happened, if it's believable: in the
- *  last day, and not ahead of the server's clock by more than a minute. */
-function watchTime(ms: number | undefined): string | null {
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A time the watch says something happened, if it's believable: within
+ *  `maxAge` (a day, by default), and not ahead of the server's clock by more
+ *  than a minute. */
+function watchTime(ms: number | undefined, maxAge = DAY_MS): string | null {
   if (ms === undefined || !Number.isFinite(ms)) return null;
   const now = Date.now();
-  return ms > now - 24 * 60 * 60 * 1000 && ms < now + 60 * 1000 ? new Date(ms).toISOString() : null;
+  return ms > now - maxAge && ms < now + 60 * 1000 ? new Date(ms).toISOString() : null;
 }
+
+/** How far back a workout started offline can still catch up with its own
+ *  start time: the time is what finds it again when a reply is lost, so a
+ *  watch away for days still gets its session back, not a fresh one. */
+const OFFLINE_START_MAX_AGE = 14 * DAY_MS;
 
 /**
  * Starts a session from a template, through the same start_session() the web
@@ -535,7 +544,7 @@ function watchTime(ms: number | undefined): string | null {
  */
 export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promise<WatchState> {
   const v = startSchema.parse(body);
-  const startedAt = watchTime(v.startedAt);
+  const startedAt = watchTime(v.startedAt, OFFLINE_START_MAX_AGE);
   // A workout started offline that reaches the server late, retried: the
   // session it made the first time (its start time is the watch's) is the
   // one, not another. Returned as `started` even if it's too old to be the

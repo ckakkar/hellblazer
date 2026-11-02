@@ -16,6 +16,9 @@ import type { TrainingLoad } from "@/lib/training-load";
  *   - nothing off:                        Ready to push
  *   - one or two off, at most one poor:   Train as planned
  *   - two poor, or three off:             Go lighter
+ * A missing usual is no evidence either way: nothing off, but nothing yet
+ * read against a usual, is "Learning your usual" (train as planned), not
+ * a day for records.
  *
  * ios/App/App/HealthExtras.swift (RecoveryCall) makes the same call for the
  * widget and the watch, hourly in the background: change both together.
@@ -28,6 +31,8 @@ export type Reading = {
   /** The median of the previous four weeks; null with under a week of them. */
   usual: number | null;
   tone: Tone;
+  /** Yesterday's reading, today's not in yet. */
+  yesterday?: boolean;
 };
 
 export type Verdict = "ready" | "steady" | "easy";
@@ -39,6 +44,8 @@ export type Signal = { key: SignalKey; tone: Tone; text: string };
 
 export type Recovery = {
   verdict: Verdict;
+  /** Nothing's off, but no reading has a usual to be read against yet. */
+  learning: boolean;
   headline: string;
   advice: string;
   sleep: Reading | null;
@@ -89,7 +96,7 @@ function latest(days: RecoveryDay[], key: DayKey, allowYesterday: boolean) {
       .slice(0, i)
       .map((d) => d[key])
       .filter((v): v is number => v != null);
-    return { value, usual: median(before) };
+    return { value, usual: median(before), yesterday: i !== last };
   }
   return null;
 }
@@ -164,27 +171,26 @@ function bodySignals(r: Pick<Recovery, "sleep" | "hrv" | "rhr" | "rr" | "walkHr"
   if (r.hrv) {
     const h = r.hrv;
     const pct = h.usual ? round(((h.value - h.usual) / h.usual) * 100) : 0;
+    const v = `HRV ${round(h.value)} ms${h.yesterday ? " yesterday" : ""}`;
     out.push({
       key: "hrv",
       tone: h.tone,
       text:
         h.usual == null
-          ? `HRV ${round(h.value)} ms, still learning your usual`
+          ? `${v}, still learning your usual`
           : Math.abs(pct) < 5
-            ? `HRV ${round(h.value)} ms, right on your usual`
-            : `HRV ${round(h.value)} ms, ${Math.abs(pct)}% ${pct < 0 ? "under" : "over"} your usual ${round(h.usual)}`,
+            ? `${v}, right on your usual`
+            : `${v}, ${Math.abs(pct)}% ${pct < 0 ? "under" : "over"} your usual ${round(h.usual)}`,
     });
   }
   if (r.rhr) {
     const b = r.rhr;
     const over = b.usual == null ? 0 : round(b.value - b.usual);
+    const v = `Resting heart rate ${round(b.value)}${b.yesterday ? " yesterday" : ""}`;
     out.push({
       key: "rhr",
       tone: b.tone,
-      text:
-        b.usual == null || over === 0
-          ? `Resting heart rate ${round(b.value)}`
-          : `Resting heart rate ${round(b.value)}, ${Math.abs(over)} ${over > 0 ? "over" : "under"} your usual`,
+      text: b.usual == null || over === 0 ? v : `${v}, ${Math.abs(over)} ${over > 0 ? "over" : "under"} your usual`,
     });
   }
   if (r.rr) {
@@ -204,7 +210,7 @@ function bodySignals(r: Pick<Recovery, "sleep" | "hrv" | "rhr" | "rr" | "walkHr"
     out.push({
       key: "walkHr",
       tone: b.tone,
-      text: `Walking heart rate ${round(b.value)}, ${round(b.value - (b.usual ?? b.value))} over your usual`,
+      text: `Walking heart rate ${round(b.value)}${b.yesterday ? " yesterday" : ""}, ${round(b.value - (b.usual ?? b.value))} over your usual`,
     });
   }
   return out;
@@ -294,7 +300,11 @@ export function assessRecovery(days: RecoveryDay[], ctx: RecoveryContext = {}): 
   const signals = [...bodySignals(body), ...trainingSignals(ctx, now)];
   const poor = signals.filter((x) => x.tone === "poor").length;
   const fair = signals.filter((x) => x.tone === "fair").length;
-  const verdict: Verdict = poor >= 2 || poor + fair >= 3 ? "easy" : poor + fair > 0 ? "steady" : "ready";
+  const called: Verdict = poor >= 2 || poor + fair >= 3 ? "easy" : poor + fair > 0 ? "steady" : "ready";
+  // Ready means read against a usual and found good, not just nothing to say.
+  const baselined = [body.sleep, body.hrv, body.rhr, body.rr].some((x) => x != null && x.usual != null);
+  const learning = called === "ready" && !baselined;
+  const verdict: Verdict = learning ? "steady" : called;
 
   // Most telling first: what's off, then the rest, body before training.
   const ordered = signals
@@ -330,7 +340,14 @@ export function assessRecovery(days: RecoveryDay[], ctx: RecoveryContext = {}): 
   const recent = days.slice(-TREND_DAYS);
   return {
     verdict,
-    ...copy[verdict],
+    learning,
+    ...(learning
+      ? {
+          headline: "Learning your usual",
+          advice:
+            "Fatty needs about a week of nights with your Apple Watch to know your usual. Until then, train as planned.",
+        }
+      : copy[verdict]),
     ...body,
     signals: ordered,
     trend: {

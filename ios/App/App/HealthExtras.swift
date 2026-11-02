@@ -378,6 +378,11 @@ struct TrainingLoad: Codable {
         guard let data = try? JSONEncoder().encode(self) else { return }
         UserDefaults.standard.set(data, forKey: Self.key)
     }
+
+    /// Signing out: it was that account's training.
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
 }
 
 /// Today's Recovery call from the readings and the training: the same rules,
@@ -399,16 +404,17 @@ enum RecoveryCall {
         return sorted.count % 2 == 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
     }
 
-    /// Today's reading (else yesterday's, when allowed) and the usual before it.
+    /// Today's reading (else yesterday's, when allowed), the usual before
+    /// it, and whether it's yesterday's.
     private static func latest(
         _ days: [RecoveryReadings.Day],
         _ value: (RecoveryReadings.Day) -> Double?,
         allowYesterday: Bool
-    ) -> (value: Double, usual: Double?)? {
+    ) -> (value: Double, usual: Double?, yesterday: Bool)? {
         let last = days.count - 1
         for i in allowYesterday ? [last, last - 1] : [last] where i >= 0 {
             guard let reading = value(days[i]) else { continue }
-            return (reading, median(days[..<i].compactMap(value)))
+            return (reading, median(days[..<i].compactMap(value)), i != last)
         }
         return nil
     }
@@ -476,24 +482,24 @@ enum RecoveryCall {
             ))
         }
         if let hrv {
-            let value = Int(hrv.value.rounded())
-            var text = "HRV \(value) ms, still learning your usual"
+            let reading = "HRV \(Int(hrv.value.rounded())) ms\(hrv.yesterday ? " yesterday" : "")"
+            var text = "\(reading), still learning your usual"
             if let usual = hrv.usual, usual > 0 {
                 let pct = Int(((hrv.value - usual) / usual * 100).rounded())
                 text = abs(pct) < 5
-                    ? "HRV \(value) ms, right on your usual"
-                    : "HRV \(value) ms, \(abs(pct))% \(pct < 0 ? "under" : "over") your usual \(Int(usual.rounded()))"
+                    ? "\(reading), right on your usual"
+                    : "\(reading), \(abs(pct))% \(pct < 0 ? "under" : "over") your usual \(Int(usual.rounded()))"
             }
             signals.append(Signal(tone: hrvTone(hrv.value, hrv.usual), text: text, training: false))
         }
         if let rhr {
-            let value = Int(rhr.value.rounded())
+            let reading = "Resting heart rate \(Int(rhr.value.rounded()))\(rhr.yesterday ? " yesterday" : "")"
             let over = rhr.usual.map { Int((rhr.value - $0).rounded()) } ?? 0
             signals.append(Signal(
                 tone: overTone(rhr.value, rhr.usual, poor: 5, fair: 2),
                 text: over == 0
-                    ? "Resting heart rate \(value)"
-                    : "Resting heart rate \(value), \(abs(over)) \(over > 0 ? "over" : "under") your usual",
+                    ? reading
+                    : "\(reading), \(abs(over)) \(over > 0 ? "over" : "under") your usual",
                 training: false
             ))
         }
@@ -512,7 +518,7 @@ enum RecoveryCall {
             if tone != .good {
                 signals.append(Signal(
                     tone: tone,
-                    text: "Walking heart rate \(Int(walk.value.rounded())), \(Int((walk.value - (walk.usual ?? walk.value)).rounded())) over your usual",
+                    text: "Walking heart rate \(Int(walk.value.rounded()))\(walk.yesterday ? " yesterday" : ""), \(Int((walk.value - (walk.usual ?? walk.value)).rounded())) over your usual",
                     training: false
                 ))
             }
@@ -567,7 +573,11 @@ enum RecoveryCall {
 
         let poor = signals.filter { $0.tone == .poor }.count
         let fair = signals.filter { $0.tone == .fair }.count
-        let verdict = poor >= 2 || poor + fair >= 3 ? "easy" : poor + fair > 0 ? "steady" : "ready"
+        let called = poor >= 2 || poor + fair >= 3 ? "easy" : poor + fair > 0 ? "steady" : "ready"
+        // Ready means read against a usual and found good, not just nothing to say.
+        let baselined = [sleep?.usual, hrv?.usual, rhr?.usual, rr?.usual].contains { $0 != nil }
+        let learning = called == "ready" && !baselined
+        let verdict = learning ? "steady" : called
         let ordered = signals.enumerated()
             .sorted { ($0.element.tone.rawValue, $0.offset) < ($1.element.tone.rawValue, $1.offset) }
             .map(\.element)
@@ -575,9 +585,13 @@ enum RecoveryCall {
         let trainingLed = !off.isEmpty && off.filter(\.training).count * 2 >= off.count
         let heavyBehind = load?.lastHeavyAt.map { nowMs - $0 >= 48 * 3_600_000 } ?? false
 
-        let headline = ["ready": "Ready to push", "steady": "Train as planned", "easy": "Go lighter today"][verdict]!
+        let headline = learning
+            ? "Learning your usual"
+            : ["ready": "Ready to push", "steady": "Train as planned", "easy": "Go lighter today"][verdict]!
         let advice: String
-        switch verdict {
+        switch learning ? "learning" : verdict {
+        case "learning":
+            advice = "Fatty needs about a week of nights with your Apple Watch to know your usual. Until then, train as planned."
         case "ready":
             advice = heavyBehind
                 ? "You've recovered well and the last heavy day is behind you. A good day to go after a record."
@@ -622,7 +636,8 @@ enum RecoveryRefresher {
         days: [RecoveryReadings.Day]? = nil,
         workouts: [RecoveryReadings.Workout]? = nil
     ) async -> Bool {
-        guard HKHealthStore.isHealthDataAvailable() else { return false }
+        // Signed out: nothing for the widget or a watch until someone's in.
+        guard HKHealthStore.isHealthDataAvailable(), WidgetRefresher.linkedUserId != nil else { return false }
         let readings: [RecoveryReadings.Day]
         if let days { readings = days } else { readings = await RecoveryReadings.read(store) }
         let recent: [RecoveryReadings.Workout]

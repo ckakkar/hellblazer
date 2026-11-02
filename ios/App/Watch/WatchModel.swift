@@ -644,10 +644,19 @@ final class WatchModel: ObservableObject {
             return false
         }
 
-        // In order where the names agree, else by name.
+        // By the library exercise first (the server returns it, and put back
+        // any the day lost), so one renamed while the watch was away keeps
+        // its sets; then in order where the names agree, else by name.
         var ids: [String: String] = [:]
         var unmatched = server.exercises
-        for (i, local) in started.workout.exercises.enumerated() {
+        for local in started.workout.exercises {
+            guard let library = local.exerciseId,
+                  let match = unmatched.first(where: { $0.exerciseId == library })
+            else { continue }
+            ids[local.id] = match.id
+            unmatched.removeAll { $0.id == match.id }
+        }
+        for (i, local) in started.workout.exercises.enumerated() where ids[local.id] == nil {
             let inPlace = i < server.exercises.count && server.exercises[i].name == local.name
                 && unmatched.contains { $0.id == server.exercises[i].id }
             guard let match = inPlace ? server.exercises[i] : unmatched.first(where: { $0.name == local.name }) else { continue }

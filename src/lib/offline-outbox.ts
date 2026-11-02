@@ -7,9 +7,12 @@ import { reportProblem } from "@/lib/report";
  * (offline-set-queue.ts). The logger uploads its own workout's as soon as it
  * can; this uploads the rest from anywhere in the app, so a set doesn't sit
  * on the phone because the lifter left that workout's page. Only the signed-in
- * account's writes are sent (and RLS would refuse another's anyway). A write
- * the server refuses for good (its workout deleted since) is let go; anything
- * else stays for the next try.
+ * account's writes are sent, and the server checks each one is still that
+ * account's: signed out or switched mid-way, sending stops with everything
+ * kept. A write from before writes carried their account isn't sent from
+ * here (only its own workout's page, which only its owner can open, sends
+ * it). A write the server refuses for good (its workout deleted since) is let
+ * go; anything else stays for the next try.
  */
 
 export type OutboxState = {
@@ -36,7 +39,7 @@ const EMPTY: OutboxState = { waiting: 0, sending: false };
 export const getServerOutbox = () => EMPTY;
 
 const mine = (w: PendingSetWrite, userId: string, openSession: string | null) =>
-  (w.userId === undefined || w.userId === userId) && w.sessionId !== openSession;
+  w.userId === userId && w.sessionId !== openSession;
 
 let running = false;
 
@@ -51,6 +54,7 @@ export async function drainOutbox(userId: string, openSession: string | null): P
     // Oldest first, so a set and the edit after it land in order.
     for (const w of waiting.toSorted((a, b) => a.updatedAt - b.updatedAt)) {
       const result = await replaySet({
+        userId,
         id: w.id,
         sessionExerciseId: w.sessionExerciseId,
         setNumber: Math.max(1, w.setNumber),
@@ -62,6 +66,8 @@ export async function drainOutbox(userId: string, openSession: string | null): P
         loggedAt: w.loggedAt,
         deleted: w.deleted,
       }).catch(() => ({ ok: false as const, permanent: false }));
+      // Another account now (or none): leave every write where it is.
+      if (!result.ok && "wrongAccount" in result && result.wrongAccount) break;
       if (!result.ok && result.permanent) reportProblem("outbox-dropped");
       if (result.ok || result.permanent) await removeQueuedSet(w.id, w.updatedAt).catch(() => undefined);
       else {

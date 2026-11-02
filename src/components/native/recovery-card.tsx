@@ -15,6 +15,14 @@ const KEY = "hell-blazer:recovery";
 /** Health is read again this often while Home's open, as well as on coming back to it. */
 const REFRESH_MS = 60 * 60 * 1000;
 
+/**
+ * What the card last showed while the app's been open. Coming back to Home
+ * draws it at once from this and reads Health again behind it; without it
+ * the card turned up a beat after the page every visit and pushed the rest
+ * of Home down.
+ */
+let lastView: RecoveryView = { kind: "hidden" };
+
 /** Whether Recovery shows on Home, per device. On unless turned off. */
 export function recoveryOnHome(): boolean {
   try {
@@ -25,6 +33,8 @@ export function recoveryOnHome(): boolean {
 }
 
 export function setRecoveryOnHome(on: boolean) {
+  // Off means off now: Home mustn't draw the last card from memory.
+  if (!on) lastView = { kind: "hidden" };
   try {
     if (on) window.localStorage.removeItem(KEY);
     else window.localStorage.setItem(KEY, "off");
@@ -41,14 +51,6 @@ export type RecoveryView =
   | { kind: "ready"; recovery: Recovery; readAt: number };
 
 /**
- * What the card last showed while the app's been open. Coming back to Home
- * draws it at once from this and reads Health again behind it; without it
- * the card turned up a beat after the page every visit and pushed the rest
- * of Home down.
- */
-let lastView: RecoveryView = { kind: "hidden" };
-
-/**
  * iPhone and iPad app only: whether today's a day to push, from Apple
  * Health's sleep, breathing, heart rate variability and heart rates, and
  * Fatty's own log of the training (src/lib/recovery.ts). Health is read on
@@ -59,12 +61,14 @@ let lastView: RecoveryView = { kind: "hidden" };
  * Renders nothing on the website, or in an app build without the readings.
  */
 export function RecoveryCard({ load = null }: { load?: TrainingLoad | null }) {
-  const [view, setViewState] = useState<RecoveryView>(() => lastView);
+  const [view, setViewState] = useState<RecoveryView>(() => (recoveryOnHome() ? lastView : { kind: "hidden" }));
   // Shown from memory: it's already been seen arriving, so it doesn't again.
   const [settled] = useState(() => lastView.kind !== "hidden");
+  // A read that lands after Recovery was turned off (Settings) shows nothing.
   const setView = useCallback((next: RecoveryView) => {
-    lastView = next;
-    setViewState(next);
+    const shown = recoveryOnHome() ? next : ({ kind: "hidden" } as const);
+    lastView = shown;
+    setViewState(shown);
   }, []);
   const loadRef = useRef(load);
   useEffect(() => {
@@ -73,7 +77,8 @@ export function RecoveryCard({ load = null }: { load?: TrainingLoad | null }) {
 
   const read = useCallback(async (justAsked = false) => {
     const plugin = nativePlugin();
-    if (!plugin || !recoveryOnHome()) return;
+    if (!plugin) return;
+    if (!recoveryOnHome()) return setView({ kind: "hidden" });
     try {
       const { api } = await plugin;
       const status = await api.recoveryStatus();

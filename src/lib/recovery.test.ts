@@ -48,7 +48,31 @@ describe("recovery", () => {
     ];
     const r = assessRecovery(days)!;
     expect(r.hrv).toMatchObject({ usual: null, tone: "good" });
-    expect(r.verdict).toBe("ready");
+    // Nothing read against a usual is no evidence for a record.
+    expect(r).toMatchObject({ verdict: "steady", learning: true, headline: "Learning your usual" });
+  });
+
+  it("won't call one reading with no usual a day to push", () => {
+    const r = assessRecovery([{ date: "2026-09-28", hrv: 55 }])!;
+    expect(r).toMatchObject({ verdict: "steady", learning: true });
+    expect(r.advice).toMatch(/train as planned/);
+    expect(r.signals[0].text).toBe("HRV 55 ms, still learning your usual");
+  });
+
+  it("says when a reading is yesterday's", () => {
+    const r = assessRecovery([
+      { date: "2026-09-27", hrv: 55, rhr: 52 },
+      { date: "2026-09-28", sleepMin: 450 },
+    ])!;
+    expect(r.signals.map((x) => x.text)).toEqual(
+      expect.arrayContaining(["HRV 55 ms yesterday, still learning your usual", "Resting heart rate 52 yesterday"]),
+    );
+  });
+
+  it("still learning, but something's off, is said as it is", () => {
+    const r = assessRecovery([{ date: "2026-09-28", hrv: 55, sleepMin: 5 * 60 }])!;
+    expect(r).toMatchObject({ learning: false });
+    expect(r.verdict).not.toBe("ready");
   });
 
   it("has nothing to say without a reading from today", () => {

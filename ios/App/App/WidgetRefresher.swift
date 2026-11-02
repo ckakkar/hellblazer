@@ -32,12 +32,16 @@ enum WidgetRefresher {
 
     /// Forgets the token (signing out); returns it so the site can revoke it.
     /// The account's snapshot goes too, so the widgets, Siri and Spotlight
-    /// stop showing its lifts, history and rank to whoever's next.
+    /// stop showing its lifts, history and rank to whoever's next, and so do
+    /// the training Home handed over and the Recovery call made with it, so
+    /// the next account's watch never gets them.
     static func unlink() -> String? {
         let token = Keychain.phoneToken
         Keychain.phoneToken = nil
         defaults.removeObject(forKey: Key.userId)
         WidgetSnapshot.clear()
+        TrainingLoad.clear()
+        RecoveryCache.clear()
         WidgetCenter.shared.reloadAllTimelines()
         SpotlightIndex.clear()
         HellBlazerShortcuts.updateAppShortcutParameters()
@@ -68,31 +72,36 @@ enum WidgetRefresher {
         return request
     }
 
-    /// Fetches a fresh snapshot. Calls back with whether it got one.
+    /// Fetches a fresh snapshot. Calls back with whether it got one. The
+    /// answer only counts while the phone still holds the token it was asked
+    /// with: one that lands after signing out, or after signing in as someone
+    /// else, neither redraws the widgets nor unlinks the new account.
     static func refresh(completion: @escaping (Bool) -> Void) {
-        guard let request = deviceRequest("/api/device/snapshot") else {
+        guard let token = Keychain.phoneToken, let request = deviceRequest("/api/device/snapshot") else {
             completion(false)
             return
         }
         URLSession.shared.dataTask(with: request) { data, response, _ in
-            // The token's been revoked (signed out elsewhere, the account
-            // deleted): the account's widgets, Spotlight and shortcuts go,
-            // rather than showing its last snapshot indefinitely.
-            if (response as? HTTPURLResponse)?.statusCode == 401 {
-                DispatchQueue.main.async {
+            DispatchQueue.main.async {
+                guard Keychain.phoneToken == token else {
+                    completion(false)
+                    return
+                }
+                // The token's been revoked (signed out elsewhere, the account
+                // deleted): the account's widgets, Spotlight and shortcuts go,
+                // rather than showing its last snapshot indefinitely.
+                if (response as? HTTPURLResponse)?.statusCode == 401 {
                     _ = unlink()
                     completion(false)
+                    return
                 }
-                return
-            }
-            guard (response as? HTTPURLResponse)?.statusCode == 200,
-                  let data,
-                  let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
-            else {
-                completion(false)
-                return
-            }
-            DispatchQueue.main.async {
+                guard (response as? HTTPURLResponse)?.statusCode == 200,
+                      let data,
+                      let snapshot = try? JSONDecoder().decode(WidgetSnapshot.self, from: data)
+                else {
+                    completion(false)
+                    return
+                }
                 apply(data, snapshot)
                 completion(true)
             }

@@ -163,9 +163,14 @@ async function reserve(svc: Svc, userId: string, kind: "reminder" | "recap", per
   throw error;
 }
 
-/** Gives a claim back when nothing reached the lifter, so the next run tries again. */
+/**
+ * Gives a claim back when nothing reached the lifter, so the next run tries
+ * again. A claim that can't be given back (the database unreachable) is
+ * reported; that notification then waits for the next period.
+ */
 async function release(svc: Svc, userId: string, kind: "reminder" | "recap", period: string) {
-  await svc.from("notification_log").delete().eq("user_id", userId).eq("kind", kind).eq("period", period);
+  const { error } = await svc.from("notification_log").delete().eq("user_id", userId).eq("kind", kind).eq("period", period);
+  if (error) console.error("reminders: couldn't release a claim", kind, error.code);
 }
 
 /** Runs `work` over `items`, `limit` at a time. */
@@ -258,18 +263,28 @@ export async function GET(request: NextRequest) {
       const userSubs = byUser.get(p.user_id) ?? [];
       const userPhones = phonesByUser.get(p.user_id) ?? [];
 
+      // Every device is tried, and one that throws counts as one that
+      // failed: a later device's error can't lose the count of those that
+      // got it (which would give the claim back, and send them it twice).
       const send = async (payload: { title: string; body: string; url: string; tag: string }) => {
         let sent = 0;
         for (const s of userSubs) {
-          const r = await sendPush(s, payload);
-          if (r.ok) sent++;
-          else if (r.gone)
-            await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
+          try {
+            const r = await sendPush(s, payload);
+            if (r.ok) sent++;
+            else if (r.gone) await svc.from("push_subscription").delete().eq("endpoint", s.endpoint);
+          } catch {
+            failed++;
+          }
         }
         for (const d of userPhones) {
-          const r = await sendApns(d.token, payload);
-          if (r.ok) sent++;
-          else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
+          try {
+            const r = await sendApns(d.token, payload);
+            if (r.ok) sent++;
+            else if (r.gone) await svc.from("apns_device").delete().eq("token", d.token);
+          } catch {
+            failed++;
+          }
         }
         return sent;
       };

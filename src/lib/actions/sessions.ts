@@ -275,14 +275,18 @@ export async function saveSet(input: z.input<typeof setSchema>) {
 
 /**
  * Uploads one write queued on a device (offline-outbox.ts) from outside its
- * workout's page. Says whether a failure is for good (its workout or
- * exercise is gone, it isn't this account's, or it breaks a rule), so the
- * device can let it go, or worth another try (no connection, a busy server).
+ * workout's page, for the account it was logged under (`userId`). Signed in
+ * as anyone else, or not at all, nothing is written and the device keeps it
+ * (`wrongAccount`: stop sending). Otherwise says whether a failure is for
+ * good (its workout or exercise is gone, or it breaks a rule), so the device
+ * can let it go, or worth another try (no connection, a busy server).
  */
 export async function replaySet(
-  input: z.input<typeof setSchema> & { deleted?: boolean },
-): Promise<{ ok: true } | { ok: false; permanent: boolean }> {
+  input: z.input<typeof setSchema> & { deleted?: boolean; userId: string },
+): Promise<{ ok: true } | { ok: false; permanent: boolean; wrongAccount?: boolean }> {
   try {
+    const { user } = await getAuthedContext().catch(() => ({ user: null }));
+    if (!user || user.id !== input.userId) return { ok: false, permanent: false, wrongAccount: true };
     if (input.deleted) {
       await deleteSet({ id: input.id });
       return { ok: true };

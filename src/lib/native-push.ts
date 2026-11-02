@@ -150,7 +150,16 @@ export async function forgetNativePush(): Promise<void> {
     // Off the server first, with one more try. Only then is the token let
     // go: if both fail, it's kept, so the next sign-in here claims the
     // phone for that account (alerts off) instead of leaving it on this one.
-    await unregisterApnsDevice({ token }).catch(() => unregisterApnsDevice({ token }));
+    try {
+      await unregisterApnsDevice({ token }).catch(() => unregisterApnsDevice({ token }));
+    } catch (err) {
+      // The server still has the token with alerts on: this phone stops
+      // taking pushes from APNs instead, so nothing arrives while signed
+      // out. The next sign-in registers again (refreshNativePush).
+      const { PushNotifications } = await import("@capacitor/push-notifications");
+      await PushNotifications.unregister().catch(() => undefined);
+      throw err;
+    }
     storeToken(null);
   });
 }

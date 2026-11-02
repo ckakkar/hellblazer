@@ -77,6 +77,9 @@ export type WatchWorkout = {
 export type WatchExercise = {
   /** The session_exercise id: sets are logged against it. */
   id: string;
+  /** The library exercise: an offline workout catching up matches its sets
+   *  by it, so one renamed meanwhile still finds them. */
+  exerciseId?: string;
   name: string;
   targetSets: number | null;
   targetReps: string | null;

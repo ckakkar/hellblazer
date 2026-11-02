@@ -440,6 +440,9 @@ export function SessionLogger({
   const [slideKey, setSlideKey] = useState(0);
   const online = useOnline();
   const wasOffline = useRef(false);
+  // "Done with this one" (or picked back up) that didn't reach the server:
+  // session exercise id → ended. Sent again when the connection's back.
+  const pendingEnds = useRef<Map<string, boolean>>(new Map());
   const failedRef = useRef(failed);
   useEffect(() => {
     failedRef.current = failed;
@@ -482,9 +485,11 @@ export function SessionLogger({
     return upload;
   }, []);
 
-  // The sets the server has: those the page opened with, and each saved
-  // since. Clearing one's reps makes it a draft again, and a draft isn't a
-  // set, so the server's copy has to go (see persist).
+  // The sets the server has, or may have: those the page opened with, and
+  // each one with a save queued, under way or done since. Clearing one's
+  // reps makes it a draft again, and a draft isn't a set, so the server's
+  // copy has to go (see persist), even when the save that would make it is
+  // still on the device or in the air: the delete goes after it, and wins.
   const onServer = useRef<Set<string>>(
     new Set(session.session_exercise.flatMap((se) => se.set.map((s) => s.id))),
   );
@@ -501,6 +506,10 @@ export function SessionLogger({
       }
       touched.current.set(set.id, Date.now());
       const write = toQueuedWrite(seId, set, setNumber);
+      // This save supersedes a delete of the set still pending (its reps
+      // cleared, then typed again).
+      onServer.current.add(set.id);
+      pendingDeletes.current.delete(set.id);
       setInFlight((n) => n + 1);
       return track(queueSet(write)
         .catch(() => undefined)
@@ -541,21 +550,25 @@ export function SessionLogger({
   // offline stays removed after a reload instead of reappearing from the
   // server's copy. Actions run in call order, so an earlier save of the same
   // set can't land after this.
+  const tombstoneOf = useCallback(
+    (seId: string, setId: string): PendingSetWrite => ({
+      id: setId,
+      userId: session.user_id,
+      sessionId: session.id,
+      sessionExerciseId: seId,
+      setNumber: 0,
+      weightKg: 0,
+      reps: 0,
+      rpe: null,
+      isWarmup: false,
+      updatedAt: nextStamp(),
+      deleted: true,
+    }),
+    [session.id, session.user_id],
+  );
   const persistDelete = useCallback(
     (seId: string, setId: string) => {
-      const tombstone: PendingSetWrite = {
-        id: setId,
-        userId: session.user_id,
-        sessionId: session.id,
-        sessionExerciseId: seId,
-        setNumber: 0,
-        weightKg: 0,
-        reps: 0,
-        rpe: null,
-        isWarmup: false,
-        updatedAt: nextStamp(),
-        deleted: true,
-      };
+      const tombstone = tombstoneOf(seId, setId);
       pendingDeletes.current.set(setId, seId);
       touched.current.set(setId, Date.now());
       setInFlight((n) => n + 1);
@@ -577,7 +590,7 @@ export function SessionLogger({
         })
         .finally(() => setInFlight((n) => Math.max(0, n - 1))));
     },
-    [session.id, session.user_id, clearFailed, track],
+    [tombstoneOf, clearFailed, track],
   );
   useEffect(() => {
     deleteRef.current = persistDelete;
@@ -896,6 +909,7 @@ export function SessionLogger({
     if (wasOffline.current) {
       wasOffline.current = false;
       retryFailed();
+      for (const [seId, ended] of pendingEnds.current) sendEnded(seId, ended);
     }
   }, [online, retryFailed]);
 
@@ -1059,9 +1073,15 @@ export function SessionLogger({
     const exercise = next.find((ex) => ex.seId === seId);
     const setIndex = exercise?.sets.findIndex((set) => set.id === setId) ?? -1;
     if (exercise && setIndex >= 0 && isLogged(exercise.sets[setIndex].reps)) {
+      onServer.current.add(setId);
       void queueSet(
         toQueuedWrite(seId, exercise.sets[setIndex], setIndex + 1),
       ).catch(() => undefined);
+    } else if (onServer.current.has(setId)) {
+      // Cleared back to a draft: the device's copy becomes a delete at once,
+      // so a reload (or the outbox) can't bring the old reps back before the
+      // debounced delete below goes.
+      void queueSet(tombstoneOf(seId, setId)).catch(() => undefined);
     }
     scheduleSave(seId, setId);
   }
@@ -1423,13 +1443,23 @@ export function SessionLogger({
 
   // "Done with this one" is kept with the workout, so a reload, the watch
   // and Siri move on from it too. Saved quietly: offline, the page still
-  // moves on, and the next save that lands brings the server up to date.
+  // moves on, and it's sent again once the connection's back.
+  function sendEnded(seId: string, ended: boolean) {
+    pendingEnds.current.set(seId, ended);
+    void setExerciseEnded({ sessionExerciseId: seId, ended })
+      .then(() => {
+        // Only if nothing newer was asked for meanwhile.
+        if (pendingEnds.current.get(seId) === ended) pendingEnds.current.delete(seId);
+      })
+      .catch(() => undefined);
+  }
+
   function endExercise(seId: string) {
     weighSets();
     setCompleted((prev) => new Set(prev).add(seId));
     setEndedHere((prev) => new Set(prev).add(seId));
     setActiveSeId(null);
-    if (!isEditing) void setExerciseEnded({ sessionExerciseId: seId, ended: true }).catch(() => undefined);
+    if (!isEditing) sendEnded(seId, true);
   }
 
   function resumeExercise(seId: string) {
@@ -1438,7 +1468,7 @@ export function SessionLogger({
       next.delete(seId);
       return next;
     });
-    if (!isEditing) void setExerciseEnded({ sessionExerciseId: seId, ended: false }).catch(() => undefined);
+    if (!isEditing) sendEnded(seId, false);
   }
 
   /**
@@ -1460,12 +1490,17 @@ export function SessionLogger({
       ? Math.min(10, Math.max(1, Math.round(rpes.reduce((a, b) => a + b, 0) / rpes.length)))
       : undefined;
     withNative((api) =>
-      api.saveWorkout({
-        start: startedAt,
-        end: typed != null ? startedAt + typed * 60_000 : (endedAt ?? Date.now()),
-        sessionId: session.id,
-        effort,
-      }),
+      api
+        .saveWorkout({
+          start: startedAt,
+          end: typed != null ? startedAt + typed * 60_000 : (endedAt ?? Date.now()),
+          sessionId: session.id,
+          effort,
+        })
+        // Not saved after all: a retried finish may try again.
+        .catch(() => {
+          savedToHealth.current = false;
+        }),
     );
   }
 

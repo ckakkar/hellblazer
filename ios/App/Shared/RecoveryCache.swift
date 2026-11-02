@@ -38,6 +38,11 @@ struct RecoveryCache: Codable {
         UserDefaults(suiteName: WidgetSnapshot.appGroup)?.set(data, forKey: Self.key)
     }
 
+    /// Signing out: the call was made with that account's training.
+    static func clear() {
+        UserDefaults(suiteName: WidgetSnapshot.appGroup)?.removeObject(forKey: key)
+    }
+
     static func dayKey(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
