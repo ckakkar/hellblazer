@@ -96,7 +96,7 @@ export function WelcomeFlow({
       if (!res.ok) {
         setError(
           res.error === "taken"
-            ? "That ring name is already claimed. Try another."
+            ? "That ring name is already claimed. Go back a step and try another."
             : "Something in there didn't look right: check your details.",
         );
         return;
@@ -148,7 +148,7 @@ export function WelcomeFlow({
         <div className="rounded-3xl bg-surface p-5 sm:p-6 lg:bg-transparent lg:p-0">
           <Stepper
             disableStepIndicators={saving}
-            renderFooter={({ isFirstStep, isLastStep, back, next, complete }) => (
+            renderFooter={({ isFirstStep, isLastStep, back, next }) => (
               <div className="flex items-center gap-3">
                 {!isFirstStep && (
                   <Button variant="ghost" onClick={back} disabled={saving}>
@@ -158,11 +158,10 @@ export function WelcomeFlow({
                 <Button
                   className="ml-auto"
                   disabled={saving}
-                  onClick={() => {
-                    if (!isLastStep) return next();
-                    complete();
-                    finish();
-                  }}
+                  // The form stays until the save lands and the dashboard
+                  // takes over: a refusal (a ring name taken) shows here,
+                  // with the fields and Finish still in reach.
+                  onClick={() => (isLastStep ? finish() : next())}
                 >
                   {saving ? (
                     <Loader2 className="size-4 animate-spin" />

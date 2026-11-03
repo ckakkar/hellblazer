@@ -76,7 +76,9 @@ export type ProgramProgress = {
   extraThisWeek: number;
   weekComplete: boolean;
   nextDay: ProgramDayWithTemplate | null;
-  lastAdvance: { kind: "skip" | "session"; label: string } | null;
+  /** The advance "Roll back a day" undoes; its id goes with the request, so
+   *  the server rolls back only this one. */
+  lastAdvance: { kind: "skip" | "session"; id: string; label: string } | null;
   weekStart: string | null;
   endDate: string | null;
 };
@@ -191,10 +193,14 @@ export async function getProgramProgress(
     dayStatus = result.status;
     extraThisWeek = result.extra;
     nextIndex = result.next;
-    lastSessionRow = lastSession.data
-      ? { id: lastSession.data.session_id, title: lastSession.data.title, created_at: lastSession.data.created_at }
-      : null;
-    lastSkipRow = lastSkip.data;
+    // Either read failing leaves no rollback offered, rather than one that
+    // names the wrong advance.
+    if (!lastSession.error && !lastSkip.error) {
+      lastSessionRow = lastSession.data
+        ? { id: lastSession.data.session_id, title: lastSession.data.title, created_at: lastSession.data.created_at }
+        : null;
+      lastSkipRow = lastSkip.data;
+    }
   }
 
   const sessionsThisWeek = dayStatus.filter((d) => d === "done").length;
@@ -216,16 +222,14 @@ export async function getProgramProgress(
     const skipTime = lastSkipRow
       ? new Date(lastSkipRow.created_at).getTime()
       : -1;
-    if (sessTime >= 0 || skipTime >= 0) {
-      lastAdvance =
-        skipTime >= sessTime
-          ? { kind: "skip", label: "a skipped day" }
-          : {
-              kind: "session",
-              label: lastSessionRow?.title
-                ? `“${lastSessionRow.title}”`
-                : "your last logged workout",
-            };
+    if (lastSkipRow && skipTime >= sessTime) {
+      lastAdvance = { kind: "skip", id: lastSkipRow.id, label: "a skipped day" };
+    } else if (lastSessionRow?.id && sessTime >= 0) {
+      lastAdvance = {
+        kind: "session",
+        id: lastSessionRow.id,
+        label: lastSessionRow.title ? `“${lastSessionRow.title}”` : "your last logged workout",
+      };
     }
   }
 

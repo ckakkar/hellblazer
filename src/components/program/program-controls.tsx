@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Pause, Play, Undo2 } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
@@ -9,6 +10,7 @@ import {
   rollbackLastDay,
 } from "@/lib/actions/programs";
 import { useAction } from "@/lib/use-action";
+import { showNotice } from "@/lib/notice";
 
 /** Pause freezes the week counter; resume shifts the block forward to catch up. */
 export function PauseResumeButton({
@@ -65,17 +67,27 @@ export function RollbackButton({
   className,
 }: {
   programId: string;
-  lastAdvance: { kind: "skip" | "session"; label: string };
+  lastAdvance: { kind: "skip" | "session"; id: string; label: string };
   className?: string;
 }) {
   const [pending, start] = useAction("undo the last day");
   const [confirm, setConfirm] = useState(false);
+  const router = useRouter();
   const destructive = lastAdvance.kind === "session";
 
   function run() {
     start(async () => {
-      await rollbackLastDay({ programId });
+      const { removed } = await rollbackLastDay({
+        programId,
+        expected: { kind: lastAdvance.kind, id: lastAdvance.id },
+      });
       setConfirm(false);
+      // Something newer counted since this page loaded: nothing was rolled
+      // back, and the page catches up so the next tap names the right one.
+      if (removed === "changed") {
+        showNotice("Your program changed since this page opened, so nothing was rolled back. Check it and try again.");
+        router.refresh();
+      }
     });
   }
 

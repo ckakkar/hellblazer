@@ -10,6 +10,7 @@ import {
   type EvalGate,
 } from "@/lib/evaluation-rules";
 import { selectAll } from "@/lib/data/paginate";
+import { countedWorkouts } from "@/lib/program-week";
 
 /**
  * Whether the lifter may run a tier evaluation right now.
@@ -133,10 +134,15 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .maybeSingle(),
       // Paged: oldest first, a long history would otherwise lose its newest
       // sessions past the response cap, and the judge would rule on old ones.
+      // Only workouts that count, by the same rule as the gate and the
+      // programs (with sets, and finished or left past the stale clock): an
+      // empty start or the workout under way isn't training history.
       selectAll((from, to) =>
         supabase
           .from("v_session_summary")
           .select("session_date, total_volume, working_sets")
+          .gt("working_sets", 0)
+          .or(countedWorkouts())
           .order("session_date", { ascending: true })
           .order("session_id", { ascending: true })
           .range(from, to),

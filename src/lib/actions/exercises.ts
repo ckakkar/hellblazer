@@ -49,19 +49,14 @@ export async function createCustomExercise(input: {
 /**
  * Deletes a custom exercise, or retires it if it's been trained: its sets
  * keep their name in History and Progress (a deleted movement would take
- * them with it), and it leaves the pickers. Says which happened.
+ * them with it), and it leaves the pickers. A workout in Recently deleted
+ * that used it counts as trained (its copy names the exercise by id, and
+ * restoring it needs the exercise there). Says which happened.
  */
 export async function deleteCustomExercise(input: { id: string }): Promise<{ retired: boolean }> {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase, user } = await getAuthedContext();
-  // RLS already blocks deleting global rows; scope explicitly for clarity.
-  const { error } = await supabase
-    .from("exercise")
-    .delete()
-    .eq("id", id)
-    .eq("user_id", user.id);
-  // 23503: workouts or templates use it.
-  if (error?.code === "23503") {
+  const retire = async () => {
     const { error: retireErr } = await supabase
       .from("exercise")
       .update({ archived_at: new Date().toISOString() })
@@ -70,7 +65,23 @@ export async function deleteCustomExercise(input: { id: string }): Promise<{ ret
     if (retireErr) throw retireErr;
     revalidatePath("/exercises");
     return { retired: true };
-  }
+  };
+  const { data: trashed, error: trashErr } = await supabase
+    .from("deleted_session")
+    .select("id")
+    .eq("user_id", user.id)
+    .filter("payload->exercises", "cs", JSON.stringify([{ exercise_id: id }]))
+    .limit(1);
+  if (trashErr) throw trashErr;
+  if (trashed.length > 0) return retire();
+  // RLS already blocks deleting global rows; scope explicitly for clarity.
+  const { error } = await supabase
+    .from("exercise")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+  // 23503: workouts or templates use it.
+  if (error?.code === "23503") return retire();
   if (error) throw error;
   revalidatePath("/exercises");
   return { retired: false };

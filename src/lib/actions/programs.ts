@@ -212,17 +212,25 @@ export async function resumeProgram(input: { id: string }) {
 /**
  * Roll back the most recent advance in the program: undoes the last skip, or
  * deletes the last workout that counted (to Recently deleted, where it can
- * be restored for 30 days). Used by the "Roll back a day" control.
+ * be restored for 30 days). Used by the "Roll back a day" control, which
+ * names the advance it showed (and asked about): if the newest is another
+ * one now (a workout finished on another device since, say), nothing is
+ * touched and it says so ("changed"), so a workout is never deleted
+ * without being asked about.
  */
 export async function rollbackLastDay(input: {
   programId: string;
-}): Promise<{ removed: "skip" | "session" | "none" }> {
-  const { programId } = z
-    .object({ programId: z.string().uuid() })
+  expected: { kind: "skip" | "session"; id: string };
+}): Promise<{ removed: "skip" | "session" | "none" | "changed" }> {
+  const { programId, expected } = z
+    .object({
+      programId: z.string().uuid(),
+      expected: z.object({ kind: z.enum(["skip", "session"]), id: z.string().uuid() }),
+    })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
 
-  const [{ data: lastSkip }, { data: lastSession }] = await Promise.all([
+  const [{ data: lastSkip, error: skipErr }, { data: lastSession, error: sessErr }] = await Promise.all([
     supabase
       .from("program_skip")
       .select("id, created_at")
@@ -241,21 +249,29 @@ export async function rollbackLastDay(input: {
       .maybeSingle(),
   ]);
 
+  // Not knowing what's newest is no basis for deleting anything.
+  if (skipErr) throw skipErr;
+  if (sessErr) throw sessErr;
   const skipTime = lastSkip ? new Date(lastSkip.created_at).getTime() : -1;
   const sessTime = lastSession?.created_at ? new Date(lastSession.created_at).getTime() : -1;
   if (skipTime < 0 && sessTime < 0) return { removed: "none" };
+  const newest =
+    skipTime >= sessTime
+      ? { kind: "skip" as const, id: lastSkip!.id }
+      : { kind: "session" as const, id: lastSession!.session_id! };
+  if (newest.kind !== expected.kind || newest.id !== expected.id) return { removed: "changed" };
 
   // Only reported once the row is really gone: a refused delete (an error,
   // or RLS matching nothing) throws, and the control says it didn't happen.
   let removed: "skip" | "session";
-  if (skipTime >= sessTime) {
-    const { data, error } = await supabase.from("program_skip").delete().eq("id", lastSkip!.id).select("id");
+  if (newest.kind === "skip") {
+    const { data, error } = await supabase.from("program_skip").delete().eq("id", newest.id).select("id");
     if (error) throw error;
     if (!data?.length) throw new Error("The skip wasn't removed");
     removed = "skip";
   } else {
     // To Recently deleted, with its exercises and sets (trash_session).
-    const { error } = await supabase.rpc("trash_session", { p_session: lastSession!.session_id! });
+    const { error } = await supabase.rpc("trash_session", { p_session: newest.id });
     if (error) throw error;
     removed = "session";
   }

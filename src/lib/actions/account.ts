@@ -5,7 +5,13 @@ import { FRESH_SIGN_IN_MS, getAuthedContext, signedInWithin } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { revokeAppleToken } from "@/lib/apple";
 
-export type DeleteAccountResult = { ok: false; error: string; signInAgain?: boolean };
+export type DeleteAccountResult = {
+  ok: false;
+  error: string;
+  signInAgain?: boolean;
+  /** The sign-in asked for is Sign in with Apple, in the app (its revocation token is missing). */
+  withApple?: boolean;
+};
 
 /** Whether deleting the account needs a fresh sign-in first (none in the last ten minutes). */
 export async function deletionNeedsSignIn(): Promise<boolean> {
@@ -42,6 +48,23 @@ export async function deleteAccount(): Promise<DeleteAccountResult> {
     .eq("user_id", user.id)
     .maybeSingle();
   if (appleErr) return { ok: false, error: "Couldn't delete your account. Try again." };
+  // Linked to Apple, but nothing kept to revoke with (Apple's exchange failed
+  // at sign-in): signing in with Apple again keeps one. Right after such a
+  // sign-in that still kept none, it goes ahead, logged, rather than leave
+  // the account undeletable.
+  const appleIdentity = user.identities?.find((i) => i.provider === "apple");
+  if (!apple?.refresh_token && appleIdentity) {
+    const lastApple = appleIdentity.last_sign_in_at ? Date.parse(appleIdentity.last_sign_in_at) : 0;
+    if (!(Date.now() - lastApple <= FRESH_SIGN_IN_MS)) {
+      return {
+        ok: false,
+        signInAgain: true,
+        withApple: true,
+        error: "Sign in with Apple again first, in the Fatty app, so Fatty can be removed from your Apple ID.",
+      };
+    }
+    console.error("Deleting an Apple-linked account with no Apple token to revoke", user.id);
+  }
   if (apple?.refresh_token) {
     const revoked =
       (await revokeAppleToken(apple.refresh_token)) || (await revokeAppleToken(apple.refresh_token));

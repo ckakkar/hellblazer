@@ -1,6 +1,7 @@
 import { addDays, format, parseISO, startOfISOWeek } from "date-fns";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { MUSCLE_LABEL, WEAK_POINTS } from "@/lib/muscles";
+import { selectAll } from "@/lib/data/paginate";
 
 type Svc = NonNullable<ReturnType<typeof createServiceClient>>;
 
@@ -113,15 +114,22 @@ export async function gatherRecap(svc: Svc, userId: string, weekStart: string): 
   }
   const bests: WeekFacts["bests"] = [];
   if (bestThisWeek.size > 0) {
-    const { data: before, error } = await svc
-      .from("v_exercise_progression")
-      .select("exercise_id, top_weight")
-      .eq("user_id", userId)
-      .in("exercise_id", [...bestThisWeek.keys()])
-      .lt("session_date", weekStart);
-    if (error) throw error;
+    // Every earlier session of those lifts, a page at a time: a long history
+    // runs past one response, and a best left out would make this week's a
+    // false record.
+    const before = await selectAll((from, to) =>
+      svc
+        .from("v_exercise_progression")
+        .select("exercise_id, top_weight")
+        .eq("user_id", userId)
+        .in("exercise_id", [...bestThisWeek.keys()])
+        .lt("session_date", weekStart)
+        .order("exercise_id", { ascending: true })
+        .order("session_id", { ascending: true })
+        .range(from, to),
+    );
     const previous = new Map<string, number>();
-    for (const row of before ?? []) {
+    for (const row of before) {
       if (!row.exercise_id) continue;
       previous.set(row.exercise_id, Math.max(previous.get(row.exercise_id) ?? 0, Number(row.top_weight ?? 0)));
     }

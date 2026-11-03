@@ -19,16 +19,26 @@ const Body = z.object({
 
 /**
  * Keeps Apple's refresh token so account deletion can revoke the app's
- * access, as App Store rules require. Never blocks the sign-in itself.
+ * access, as App Store rules require. Never blocks the sign-in itself; a
+ * failure is logged, and deleting the account later asks for Sign in with
+ * Apple again (deleteAccount), which tries once more.
  */
 async function storeAppleToken(userId: string, authorizationCode: string | undefined) {
   if (!authorizationCode) return;
-  const refreshToken = await exchangeAppleCode(authorizationCode);
-  const svc = createServiceClient();
-  if (!refreshToken || !svc) return;
-  await svc
-    .from("apple_token")
-    .upsert({ user_id: userId, refresh_token: refreshToken, updated_at: new Date().toISOString() });
+  try {
+    const refreshToken = await exchangeAppleCode(authorizationCode);
+    const svc = createServiceClient();
+    if (!refreshToken || !svc) {
+      console.error("apple: no refresh token kept", refreshToken ? "no service client" : "code exchange failed");
+      return;
+    }
+    const { error } = await svc
+      .from("apple_token")
+      .upsert({ user_id: userId, refresh_token: refreshToken, updated_at: new Date().toISOString() });
+    if (error) console.error("apple: couldn't store the refresh token", error.code);
+  } catch (err) {
+    console.error("apple: keeping the refresh token failed", err instanceof Error ? err.name : "error");
+  }
 }
 
 /**

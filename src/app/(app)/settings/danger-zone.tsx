@@ -26,6 +26,8 @@ export function DangerZone({
   const [pending, start] = useAction("finish that");
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [signInAgain, setSignInAgain] = useState(signInFirst);
+  // The sign-in needed is Apple's (its revocation token is missing).
+  const [withApple, setWithApple] = useState(false);
   // Resolves to whether the work happened, so a hold only says "Restarted"
   // (or "Wiping") when it did, and springs back when it didn't.
   const confirmed = (work: () => Promise<unknown>) =>
@@ -132,6 +134,7 @@ export function DangerZone({
               // Success redirects away; only a failure comes back.
               const result = await deleteAccount();
               if (result.signInAgain) setSignInAgain(true);
+              setWithApple(Boolean(result.withApple));
               setDeleteError(result.error);
               return false;
             })
@@ -147,7 +150,9 @@ export function DangerZone({
         // sign-in as ever, back to here, with ten minutes to finish.
         <div className="-mt-1 rounded-xl bg-surface-2/60 p-4">
           <p className="mb-3 text-[13px] leading-5 text-muted">
-            To delete your account, sign in again first. You&apos;ll come back here, with ten minutes to finish.
+            {withApple
+              ? "To delete your account, sign in with Apple again first, in the Fatty app, so it can be removed from your Apple ID. You'll come back here, with ten minutes to finish."
+              : "To delete your account, sign in again first. You'll come back here, with ten minutes to finish."}
           </p>
           <SignInOptions next="/settings#reset" />
         </div>
