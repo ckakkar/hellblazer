@@ -96,8 +96,8 @@ export function AgainActions({
             autoComplete="off"
           />
           <p className="mt-3 px-1 text-[13px] leading-5 text-muted">
-            The exercises you did, in order, each with the sets and reps you did. Change it any time on the
-            Templates page.
+            The exercises you did, in order, with as many sets as you did. Each keeps the rep range the
+            workout planned, or the reps you did where it had none. Change it any time on the Templates page.
           </p>
         </form>
       </Sheet>

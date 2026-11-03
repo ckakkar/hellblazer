@@ -3,6 +3,7 @@ import { unlinkWatch } from "@/lib/actions/watch";
 import { nativePlugin } from "@/lib/native-plugins";
 import { deletePushSubscription } from "@/lib/actions/push";
 import { isNativeApp } from "@/lib/native";
+import { endAccountEpoch } from "@/lib/account-epoch";
 
 /**
  * Sign out, for forms in client components. First this device forgets the
@@ -23,6 +24,8 @@ export async function signOutOfApp() {
  * account. Never throws.
  */
 export async function forgetThisDevice() {
+  // Anything still on its way for this account is stale from here on.
+  endAccountEpoch();
   await forgetPush().catch(() => {});
   const plugin = nativePlugin();
   if (plugin) {

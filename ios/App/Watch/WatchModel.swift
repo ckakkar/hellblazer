@@ -587,8 +587,14 @@ final class WatchModel: ObservableObject {
     }
 
     /// No connection: the workout starts here from the plan the server last
-    /// sent, and reaches the server when the watch does (syncOffline).
+    /// sent, and reaches the server when the watch does (syncOffline). Only
+    /// one at a time: the last one has to reach the server first, or its
+    /// sets would be left pointing at a workout the watch no longer knows.
     private func startOffline(_ option: StartOption) {
+        guard offline == nil else {
+            problem = "Your last workout hasn't reached your iPhone yet. Bring the watch near it, or onto Wi-Fi, so it saves, then start this one."
+            return
+        }
         guard let plan = option.plan, var base = state else { return }
         let id = "offline-\(UUID().uuidString.lowercased())"
         let workout = Workout(
@@ -832,7 +838,10 @@ final class WatchModel: ObservableObject {
         flushing = true
         defer { flushing = false }
         guard await syncOffline(api) else { return false }
-        while let write = pending.first {
+        // A set still on an offline workout's made-up ids has nothing on the
+        // server to land on yet: it stays here rather than be sent, refused
+        // and dropped.
+        while let write = pending.first(where: { !$0.sessionId.hasPrefix("offline-") }) {
             inFlight = write.id
             do {
                 try await api.save(write)

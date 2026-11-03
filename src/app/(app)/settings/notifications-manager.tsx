@@ -1,7 +1,8 @@
 "use client";
 
 import { deviceName, isAppleTouchDevice } from "@/lib/device";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useState } from "react";
+import { useAction } from "@/lib/use-action";
 import { Bell, Loader2, Send, Share, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isNativeApp } from "@/lib/native";
@@ -65,7 +66,8 @@ export function NotificationsManager({
   const [hour, setHour] = useState<number | null>(reminderHour);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [, startSaving] = useTransition();
+  // A failed save says so and puts the switch back (useAction).
+  const [, startSaving] = useAction("change the reminder");
 
   useEffect(() => {
     let cancelled = false;
@@ -239,10 +241,14 @@ export function NotificationsManager({
 
   function changeReminder(on: boolean) {
     const value = on ? 18 : null;
+    const before = hour;
     setHour(value);
-    startSaving(async () => {
-      await setReminderHour({ hour: value });
-    });
+    startSaving(
+      async () => {
+        await setReminderHour({ hour: value });
+      },
+      () => setHour(before),
+    );
   }
 
   if (status === "loading") {

@@ -197,7 +197,7 @@ export interface HellBlazerNative {
     end: number;
     sessionId?: string;
     effort?: number;
-  }): Promise<{ saved: boolean }>;
+  }): Promise<{ saved: boolean; skipped?: string }>;
   saveBodyweight(options: { kg: number; date: number }): Promise<{ saved: boolean }>;
   updateWidget(options: { json: string }): Promise<void>;
   /** The iOS share sheet for a file; `data` is base64. */

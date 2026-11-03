@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { isNativeApp } from "@/lib/native";
+import { healthSyncOn, withNative } from "@/lib/native-plugins";
 
 /** Coming back to the app re-registers at most this often (APNs rotates tokens rarely). */
 const REFRESH_EVERY_MS = 60 * 60 * 1000;
@@ -22,8 +23,16 @@ export function NativeBridge() {
     let removeTap: (() => void) | undefined;
     let cancelled = false;
     let refreshedAt = Date.now();
+    // Workouts Health didn't take before, offered again (health-retry.ts).
+    const retryHealth = () => {
+      if (!healthSyncOn()) return;
+      withNative((api) => import("@/lib/health-retry").then(({ retryHealthSaves }) => retryHealthSaves(api)));
+    };
+    retryHealth();
     const onVisible = () => {
-      if (document.visibilityState !== "visible" || Date.now() - refreshedAt < REFRESH_EVERY_MS) return;
+      if (document.visibilityState !== "visible") return;
+      retryHealth();
+      if (Date.now() - refreshedAt < REFRESH_EVERY_MS) return;
       refreshedAt = Date.now();
       void import("@/lib/native-push").then(({ refreshNativePush }) => refreshNativePush()).catch(() => {});
     };

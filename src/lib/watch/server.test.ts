@@ -277,6 +277,29 @@ describe("logging sets", () => {
     expect(copies[0].reps).toBe(6);
   });
 
+  it("keeps a set's time from an offline workout days back, as its start", async () => {
+    const loggedAt = Date.now() - 10 * 24 * 60 * 60 * 1000;
+    await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set({ loggedAt })));
+    expect(tables.set.find((row) => row.id === set().id)!.created_at).toBe(new Date(loggedAt).toISOString());
+  });
+
+  it("answers a failed read with a retry, not a not-found the watch would give the set up for", async () => {
+    const from = db.from;
+    db.from = ((table: string) =>
+      table === "session_exercise"
+        ? {
+            select: () => ({
+              eq: () => ({
+                eq: () => ({ maybeSingle: async () => ({ data: null, error: { code: "57014", message: "timeout" } }) }),
+              }),
+            }),
+          }
+        : from(table)) as typeof db.from;
+    const res = await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set()));
+    expect(res.status).toBe(500);
+    db.from = from;
+  });
+
   it("won't log into someone else's exercise", async () => {
     const res = await handleWatch(signedIn(), (ctx) => saveWatchSet(ctx, set({ sessionExerciseId: SE_B })));
     expect(res.status).toBe(404);
@@ -360,6 +383,18 @@ describe("starting and finishing", () => {
       }),
     );
     expect(res.status).toBe(404);
+  });
+
+  it("dates a workout finished offline when it ended, not when the finish arrived", async () => {
+    const started = Date.now() - 10 * 24 * 60 * 60 * 1000;
+    tables.session.push({ id: "20000000-0000-4000-8000-0000000000bb", user_id: A, finished_at: null, created_at: new Date(started).toISOString() });
+    await handleWatch(signedIn(), (ctx) =>
+      finishWatchWorkout(ctx, { sessionId: "20000000-0000-4000-8000-0000000000bb", durationMin: 50 }),
+    );
+    expect(tables.session.find((row) => row.id === "20000000-0000-4000-8000-0000000000bb")).toMatchObject({
+      finished_at: new Date(started + 50 * 60_000).toISOString(),
+      duration_min: 50,
+    });
   });
 
   it("won't finish someone else's session", async () => {

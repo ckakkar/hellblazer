@@ -501,22 +501,29 @@ const startSchema = z.object({
   exercises: z.array(z.string().uuid()).max(40).optional(),
 });
 
-/** Adds to a session the movements an offline workout had that it lacks. */
+/**
+ * Adds to a session the movements an offline workout had that it lacks. One
+ * that's gone from the library (or isn't theirs) is skipped, and the watch
+ * says which sets had nowhere to go; any other failure (the database
+ * unreachable) throws, so the start is tried again rather than the watch
+ * taking a movement that's only missing for now as deleted.
+ */
 async function addMissingExercises(ctx: WatchContext, sessionId: string, exerciseIds: string[] | undefined) {
   if (!exerciseIds?.length) return;
-  const { data: have } = await ctx.db
+  const { data: have, error } = await ctx.db
     .from("session_exercise")
     .select("exercise_id")
     .eq("session_id", sessionId)
     .eq("user_id", ctx.userId);
+  if (error) throw error;
   const present = new Set((have ?? []).map((r) => r.exercise_id));
   for (const exerciseId of new Set(exerciseIds)) {
     if (present.has(exerciseId)) continue;
-    // One that's gone from the library (or isn't theirs) is skipped; the
-    // watch says which sets had nowhere to go.
-    await ctx.db
+    const { error: insertError } = await ctx.db
       .from("session_exercise")
       .insert({ user_id: ctx.userId, session_id: sessionId, exercise_id: exerciseId, position: APPEND });
+    // 23503: no such exercise; P0001: check_exercise_owner, another lifter's.
+    if (insertError && insertError.code !== "23503" && insertError.code !== "P0001") throw insertError;
   }
 }
 
@@ -613,12 +620,15 @@ const setSchema = z.object({
 export async function saveWatchSet(ctx: WatchContext, body: unknown): Promise<{ ok: true }> {
   const v = setSchema.parse(body);
   const { db, userId, unit } = ctx;
-  const { data: owner } = await db
+  const { data: owner, error: ownerError } = await db
     .from("session_exercise")
     .select("id")
     .eq("id", v.sessionExerciseId)
     .eq("user_id", userId)
     .maybeSingle();
+  // A failed read is a 500, which the watch retries; only a missing row is
+  // the 404 it gives the set up for.
+  if (ownerError) throw ownerError;
   if (!owner) throw new WatchError(404, "not found");
 
   const row = {
@@ -629,7 +639,8 @@ export async function saveWatchSet(ctx: WatchContext, body: unknown): Promise<{ 
     is_warmup: false,
     is_completed: true,
   };
-  const loggedAt = watchTime(v.loggedAt);
+  // A set from a workout started offline days ago keeps its time, as its start does.
+  const loggedAt = watchTime(v.loggedAt, OFFLINE_START_MAX_AGE);
   // Update, then insert: an upsert on a caller-chosen id could overwrite
   // someone else's set; this only ever touches the caller's own rows.
   const { data: updated, error } = await db
@@ -660,24 +671,49 @@ export async function deleteWatchSet(ctx: WatchContext, body: unknown): Promise<
   return { ok: true };
 }
 
+/** When a workout the watch finished ended (epoch ms), never later than now. */
+async function endedAt(
+  ctx: WatchContext,
+  sessionId: string,
+  createdAt: string,
+  durationMin: number | null | undefined,
+): Promise<number> {
+  const now = Date.now();
+  if (durationMin != null) return Math.min(now, Date.parse(createdAt) + durationMin * 60_000);
+  const { data: last } = await ctx.db
+    .from("session_exercise")
+    .select("set(created_at)")
+    .eq("session_id", sessionId)
+    .eq("user_id", ctx.userId);
+  const times = (last ?? []).flatMap((se) => (se.set ?? []).map((st) => Date.parse(st.created_at)));
+  return times.length > 0 ? Math.min(now, Math.max(...times)) : now;
+}
+
 const finishSchema = z.object({
   sessionId: z.string().uuid(),
   durationMin: z.number().int().min(0).max(1000).nullish(),
 });
 
-/** Finishes the session, as finishSession does on the web. */
+/**
+ * Finishes the session, as finishSession does on the web. It ended when the
+ * watch says (its start plus the duration it sends), not when the finish
+ * reached the server: a workout finished offline days ago is dated then, so
+ * Recovery and the week don't count it as just done. Without a duration (a
+ * workout left running past six hours), it ended at its last set.
+ */
 export async function finishWatchWorkout(ctx: WatchContext, body: unknown): Promise<WatchState> {
   const v = finishSchema.parse(body);
   const { db, userId } = ctx;
-  const { data: current } = await db
+  const { data: current, error: readError } = await db
     .from("session")
-    .select("finished_at")
+    .select("finished_at, created_at")
     .eq("id", v.sessionId)
     .eq("user_id", userId)
     .maybeSingle();
+  if (readError) throw readError;
   if (!current) throw new WatchError(404, "not found");
   const patch: { finished_at?: string; duration_min?: number } = {};
-  if (!current.finished_at) patch.finished_at = new Date().toISOString();
+  if (!current.finished_at) patch.finished_at = new Date(await endedAt(ctx, v.sessionId, current.created_at, v.durationMin)).toISOString();
   if (v.durationMin != null) patch.duration_min = v.durationMin;
   if (Object.keys(patch).length > 0) {
     const { error } = await db
