@@ -25,7 +25,7 @@ export function useAction(what: string) {
       } catch (err) {
         unstable_rethrow(err);
         onFail?.();
-        reportProblem("action-failed", what);
+        reportProblem("action-failed", `${what}: ${failureClass(err)}`);
         showNotice(
           navigator.onLine
             ? `Couldn't ${what}. Try again in a moment.`
@@ -34,4 +34,15 @@ export function useAction(what: string) {
       }
     });
   return [pending, run] as const;
+}
+
+/**
+ * What kind of failure, for the report (never the message: it can carry
+ * the lifter's content). A network error never reached an answer; a server
+ * error has the digest Next gives an error thrown on the server.
+ */
+function failureClass(err: unknown): "network" | "server" | "other" {
+  if (err instanceof TypeError) return "network";
+  if (err && typeof err === "object" && "digest" in err) return "server";
+  return "other";
 }

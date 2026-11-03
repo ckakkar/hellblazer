@@ -14,22 +14,35 @@ export async function getUser(): Promise<User | null> {
   return user;
 }
 
+/** Who's signed in, as the page shell needs them: from the session's verified token. */
+export type SessionUser = {
+  id: string;
+  email?: string;
+  user_metadata: Record<string, unknown>;
+};
+
 /**
- * Fast identity read from the already-validated session cookie, no auth-server
- * round-trip. Safe for the app layout because the proxy verifies every
- * request's token with getClaims() (refreshing + gating unauth traffic) and RLS validates
- * the JWT signature on every query. Use for display/identity, not as a gate on
- * its own.
+ * Fast identity read for the app layout: the session token's claims,
+ * verified against the project's cached public key (ES256), with no round
+ * trip to the Auth server. The proxy has already verified (and if need be
+ * refreshed) the same token for this request, and RLS checks it again on
+ * every query. Not getSession(): its user isn't verified, and Supabase
+ * warns in the server log on every request that reads it. Use for display
+ * and identity, not as a gate on its own.
  */
-export async function getSessionUser(): Promise<User | null> {
+export async function getSessionUser(): Promise<SessionUser | null> {
   const supabase = await createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-  return session?.user ?? null;
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  return {
+    id: claims.sub,
+    email: typeof claims.email === "string" ? claims.email : undefined,
+    user_metadata: (claims.user_metadata ?? {}) as Record<string, unknown>,
+  };
 }
 
-export async function requireSessionUser(): Promise<User> {
+export async function requireSessionUser(): Promise<SessionUser> {
   const user = await getSessionUser();
   if (!user) redirect("/");
   return user;

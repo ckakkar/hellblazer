@@ -9,6 +9,8 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    // The local mock preview's build (dev-mocks/), git-ignored.
+    ".next-mock/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

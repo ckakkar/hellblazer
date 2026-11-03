@@ -93,17 +93,14 @@ import {
 } from "@/lib/offline-set-queue";
 import {
   addSessionExercise,
-  deleteSet,
   discardSession,
   finishSession,
-  getSessionSets,
   removeSessionExercise,
-  saveSet,
   setSessionSuperset,
   swapSessionExercise,
   updateSessionMeta,
-  setExerciseEnded,
 } from "@/lib/actions/sessions";
+import { deleteSetNow, failureCode, readSessionSets, saveSetNow, setEndedNow } from "@/lib/logger-sync";
 
 type SetKind = "drop" | "rest_pause" | null;
 type LocalSet = {
@@ -163,6 +160,8 @@ const STAT_SIZE = "clamp(1.25rem, 5.4vw, 1.625rem)";
 
 /** Finishing this long after the last set asks whether the workout ended then. */
 const LATE_FINISH_MS = 20 * 60_000;
+/** How long a save that didn't land waits before trying again by itself. */
+const RETRY_DELAYS_MS = [3_000, 8_000, 20_000, 45_000];
 
 /** "7:42" (or "19:42"), as the device writes the time. */
 function clockTime(at: number): string {
@@ -538,17 +537,20 @@ export function SessionLogger({
       return track(queueSet(write)
         .catch(() => undefined)
         .then(() =>
-          saveSet({
-            id: write.id,
-            sessionExerciseId: write.sessionExerciseId,
-            setNumber: write.setNumber,
-            weightKg: write.weightKg,
-            reps: write.reps,
-            rpe: write.rpe,
-            isWarmup: write.isWarmup,
-            kind: write.kind ?? null,
-            loggedAt: write.loggedAt,
-          }),
+          saveSetNow(
+            {
+              id: write.id,
+              sessionExerciseId: write.sessionExerciseId,
+              setNumber: write.setNumber,
+              weightKg: write.weightKg,
+              reps: write.reps,
+              rpe: write.rpe,
+              isWarmup: write.isWarmup,
+              kind: write.kind ?? null,
+              loggedAt: write.loggedAt,
+            },
+            session.user_id,
+          ),
         )
         .then(async () => {
           // Only clears the copy this upload carried. A newer edit queued
@@ -560,22 +562,22 @@ export function SessionLogger({
           resendEndsRef.current();
           return true;
         })
-        .catch(() => {
+        .catch((err: unknown) => {
           // Keep the device copy and expose the failed upload. The row can now
           // survive a reload, but the lifter still deserves honest sync status.
           setFailed((prev) => new Set(prev).add(set.id));
-          reportProblem("set-save-failed");
+          reportProblem("set-save-failed", failureCode(err));
           return false;
         })
         .finally(() => setInFlight((n) => Math.max(0, n - 1))));
     },
-    [toQueuedWrite, clearFailed, track],
+    [toQueuedWrite, clearFailed, track, session.user_id],
   );
 
   // Deletes go through the device queue too, as a tombstone, so a set removed
   // offline stays removed after a reload instead of reappearing from the
-  // server's copy. Actions run in call order, so an earlier save of the same
-  // set can't land after this.
+  // server's copy. Writes to one set go in the order they were made
+  // (logger-sync.ts), so an earlier save of it can't land after this.
   const tombstoneOf = useCallback(
     (seId: string, setId: string): PendingSetWrite => ({
       id: setId,
@@ -601,7 +603,7 @@ export function SessionLogger({
       setInFlight((n) => n + 1);
       return track(queueSet(tombstone)
         .catch(() => undefined)
-        .then(() => deleteSet({ id: setId }))
+        .then(() => deleteSetNow(setId))
         .then(async () => {
           await removeQueuedSet(setId, tombstone.updatedAt).catch(
             () => undefined,
@@ -757,7 +759,7 @@ export function SessionLogger({
       busy = true;
       try {
         const [{ finished, sets: remote, exercises: remoteExercises }, queued] = await Promise.all([
-          getSessionSets({ sessionId: session.id }),
+          readSessionSets(session.id),
           getQueuedSets(session.id).catch(() => [] as PendingSetWrite[]),
         ]);
         // Finished elsewhere: this page is done too.
@@ -863,11 +865,27 @@ export function SessionLogger({
 
     // The database's word that something changed, a beat later so a burst
     // (a whole exercise of sets from Siri) is one pull. This page's own
-    // saves arrive too; their sets are pending or just touched, so they stay.
+    // writes come back too: a row it just wrote isn't news, so it doesn't
+    // send the page to read the whole workout again after every set.
     let timer: ReturnType<typeof setTimeout> | undefined;
     const soon = () => {
       clearTimeout(timer);
       timer = setTimeout(() => void pull(), 1200);
+    };
+    const ownEcho = (row: { id?: unknown } | undefined) => {
+      const id = typeof row?.id === "string" ? row.id : null;
+      if (!id) return false;
+      const now = Date.now();
+      return (
+        pendingSaves.current.has(id) ||
+        pendingDeletes.current.has(id) ||
+        deletedHere.current.has(id) ||
+        now - (touched.current.get(id) ?? 0) < 15_000
+      );
+    };
+    const onRow = (payload: { new?: { id?: unknown }; old?: { id?: unknown } }) => {
+      if (ownEcho(payload.new) || ownEcho(payload.old)) return;
+      soon();
     };
     const supabase = createClient();
     const channel = supabase.channel(`hb-logger-${session.id}`);
@@ -875,7 +893,7 @@ export function SessionLogger({
       channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table, filter: `user_id=eq.${session.user_id}` },
-        soon,
+        onRow,
       );
     }
     channel.on(
@@ -946,6 +964,33 @@ export function SessionLogger({
     }
   }, [online, retryFailed]);
 
+  // A save that didn't land while the phone says it's online (a connection
+  // that dropped mid-request, a signal that came and went) tries again by
+  // itself, a little later each time, and as soon as the app is back in
+  // front: the lifter shouldn't have to find a button between sets.
+  const hasFailed = failed.size > 0;
+  useEffect(() => {
+    if (!hasFailed || !online) return;
+    let attempt = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        if (document.visibilityState === "visible") retryFailed();
+        attempt += 1;
+        schedule();
+      }, RETRY_DELAYS_MS[Math.min(attempt, RETRY_DELAYS_MS.length - 1)]);
+    };
+    schedule();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") retryFailed();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [hasFailed, online, retryFailed]);
+
   // Flush debounced saves when the tab is hidden/closed/unmounted.
   useEffect(() => {
     const flush = () => {
@@ -998,10 +1043,22 @@ export function SessionLogger({
     return true;
   }
 
-  // Tick the workout clock once a second while the logger is open.
+  // The workout's minutes, for what reads them here (the duration to save,
+  // the stale cutoff). Checked once a second but kept, so the page only
+  // re-renders when the minute (or staleness) changes: re-rendering the
+  // whole logger every second made typing a set stutter. The seconds on
+  // screen tick in LiveClock alone.
   useEffect(() => {
     if (isEditing) return;
-    const tick = () => setElapsed(Date.now() - startedAt);
+    const tick = () => {
+      const now = Date.now() - startedAt;
+      setElapsed((prev) =>
+        Math.round(prev / 60_000) === Math.round(now / 60_000) &&
+        prev <= STALE_CLOCK_MS === now <= STALE_CLOCK_MS
+          ? prev
+          : now,
+      );
+    };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
@@ -1481,7 +1538,8 @@ export function SessionLogger({
   function sendEnded(seId: string, ended: boolean): Promise<boolean> {
     pendingEnds.current.set(seId, ended);
     storeEnds();
-    return setExerciseEnded({ sessionExerciseId: seId, ended })
+    touched.current.set(seId, Date.now());
+    return setEndedNow(seId, ended)
       .then(() => {
         // Only if nothing newer was asked for meanwhile.
         if (pendingEnds.current.get(seId) === ended) {
@@ -1679,6 +1737,8 @@ export function SessionLogger({
       rest.skip();
       pendingEnds.current.clear();
       storeEnds();
+      // The time it took, to the second, for the victory screen.
+      if (!isEditing) setElapsed(Date.now() - startedAt);
       setVictory(isEditing ? "Saved" : randomVictory());
       haptic("success");
       saveToHealth(minutes, endedAt ?? null);
@@ -1881,11 +1941,13 @@ export function SessionLogger({
           <div
             className="@container min-w-0 pr-3"
             title="Workout time"
-            aria-label={`Time ${timeLabel}`}
+            aria-label={`Time ${clockLive && !victory ? `${elapsedMin} min` : timeLabel}`}
           >
             <dt className="text-[12px] text-muted">Time</dt>
             <dd className="mt-1 flex h-[1.5rem] items-end whitespace-nowrap leading-none">
-              {clockLive || duration ? (
+              {clockLive && !victory ? (
+                <LiveClock startedAt={startedAt} />
+              ) : clockLive || duration ? (
                 <span
                   className={cn("font-display hb-fit", clockLive ? "text-accent-ink" : "text-text")}
                   style={fitFigure(timeLabel, STAT_SIZE)}
@@ -1959,7 +2021,7 @@ export function SessionLogger({
                 didn&apos;t save.
               </strong>{" "}
               {online
-                ? "Saved on this device. Retry the upload when you're ready."
+                ? "Saved on this device, and trying again."
                 : "Saved on this device. They'll upload when you reconnect."}
             </span>
             <Button size="sm" variant="secondary" onClick={retryFailed} disabled={inFlight > 0 || !online}>
@@ -2393,6 +2455,23 @@ export function SessionLogger({
         />
       )}
     </div>
+  );
+}
+
+/** The workout clock's figure, ticking once a second on its own. */
+function LiveClock({ startedAt }: { startedAt: number }) {
+  const [now, setNow] = useState(startedAt);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+  const label = formatElapsed(now - startedAt);
+  return (
+    <span className="font-display hb-fit text-accent-ink" style={fitFigure(label, STAT_SIZE)}>
+      {label}
+    </span>
   );
 }
 

@@ -242,9 +242,10 @@ export function AppNav({
   const pathname = usePathname();
   const ipad = useIPadApp();
   const tabs = ipad ? IPAD_BOTTOM_NAV : BOTTOM_NAV;
-  useWarmTabs(tabs.map((item) => item.href));
   // While a workout is under way, every "start one" control resumes it.
   const live = useLiveWorkout();
+  // Mid-workout the Log tab is the logger itself: nothing to warm there.
+  useWarmTabs(tabs.filter((item) => !(live && item.href === "/log")).map((item) => item.href));
   const resume = (item: NavItem): NavItem =>
     live && item.href === "/log"
       ? { ...item, href: `/log/${live}`, label: "Resume workout", icon: Play }
@@ -298,7 +299,7 @@ export function AppNav({
               <Link
                 key={item.href}
                 href={target.href}
-                prefetch
+                prefetch={false}
                 aria-label={target.label}
                 className="flex items-center justify-center"
               >
@@ -316,7 +317,7 @@ export function AppNav({
             <Link
               key={item.href}
               href={item.href}
-              prefetch
+              prefetch={false}
               onClick={(e) => scrollToTopIfHere(e, item.href, pathname)}
               aria-current={active ? "page" : undefined}
               className={cn(

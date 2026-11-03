@@ -14,6 +14,7 @@ import {
 } from "@/lib/data/sessions";
 import { nudgeWidgets, refreshWidgets, widgetDevices } from "@/lib/widget-push";
 import type { TablesUpdate } from "@/lib/database.types";
+import { setRow, setWriteSchema, type SetWrite } from "@/lib/set-write";
 
 /**
  * Create a session and open the logger. A session can come from a program day
@@ -221,55 +222,15 @@ export async function swapSessionExercise(input: {
   return { ...result, lastPerformance: previous[v.newExerciseId] ?? null };
 }
 
-const setSchema = z.object({
-  id: z.string().uuid(),
-  sessionExerciseId: z.string().uuid(),
-  setNumber: z.number().int().min(1),
-  weightKg: z.number().min(0).max(9999),
-  // At least one rep: a row without one is a draft that stays on the device.
-  reps: z.number().int().min(1).max(999),
-  rpe: z.number().min(0).max(10).nullable(),
-  isWarmup: z.boolean(),
-  /** A drop or rest-pause set; absent from a build before them, which only logs plain ones. */
-  kind: z.enum(["drop", "rest_pause"]).nullable().optional(),
-  /** When it was logged on the device (epoch ms), for a set that reaches the
-   *  server late (offline). Becomes its created_at, which heart-rate reads
-   *  line the sets up by. */
-  loggedAt: z.number().int().positive().optional(),
-});
-
-/** A device's clock is trusted for a week back and a few minutes ahead. */
-function plausibleLoggedAt(ms: number | undefined): string | undefined {
-  if (ms === undefined) return undefined;
-  const now = Date.now();
-  if (ms < now - 7 * 24 * 3600_000 || ms > now + 5 * 60_000) return undefined;
-  return new Date(ms).toISOString();
-}
-
 /**
  * Idempotent upsert keyed on a client-generated set id, repeated autosaves of
  * the same row can't create duplicates. Deliberately does NOT revalidate: the
  * logger owns its own state, this just persists.
  */
-export async function saveSet(input: z.input<typeof setSchema>) {
-  const v = setSchema.parse(input);
+export async function saveSet(input: SetWrite) {
+  const v = setWriteSchema.parse(input);
   const { supabase, user } = await getAuthedContext();
-  const loggedAt = plausibleLoggedAt(v.loggedAt);
-  const { error } = await supabase.from("set").upsert({
-    id: v.id,
-    user_id: user.id,
-    session_exercise_id: v.sessionExerciseId,
-    set_number: v.setNumber,
-    weight_kg: v.weightKg,
-    reps: v.reps,
-    rpe: v.rpe,
-    is_warmup: v.isWarmup,
-    ...(v.kind !== undefined ? { kind: v.kind } : {}),
-    // The same first-logged time on every save of the set, so editing it
-    // later doesn't move when it happened.
-    ...(loggedAt ? { created_at: loggedAt } : {}),
-    is_completed: true,
-  });
+  const { error } = await supabase.from("set").upsert(setRow(v, user.id));
   if (error) throw error;
 }
 
@@ -282,7 +243,7 @@ export async function saveSet(input: z.input<typeof setSchema>) {
  * can let it go, or worth another try (no connection, a busy server).
  */
 export async function replaySet(
-  input: z.input<typeof setSchema> & { deleted?: boolean; userId: string },
+  input: SetWrite & { deleted?: boolean; userId: string },
 ): Promise<{ ok: true } | { ok: false; permanent: boolean; wrongAccount?: boolean }> {
   try {
     const { user } = await getAuthedContext().catch(() => ({ user: null }));
@@ -291,7 +252,7 @@ export async function replaySet(
       await deleteSet({ id: input.id });
       return { ok: true };
     }
-    const parsed = setSchema.safeParse(input);
+    const parsed = setWriteSchema.safeParse(input);
     if (!parsed.success) return { ok: false, permanent: true };
     await saveSet(parsed.data);
     return { ok: true };
@@ -299,20 +260,6 @@ export async function replaySet(
     const code = (err as { code?: unknown }).code;
     return { ok: false, permanent: code === "23503" || code === "23514" || code === "42501" || code === "22P02" };
   }
-}
-
-/**
- * "Done with this one" (or picking it back up), kept with the workout so the
- * watch, Siri and a reload agree on what's next (next-set.ts).
- */
-export async function setExerciseEnded(input: { sessionExerciseId: string; ended: boolean }) {
-  const v = z.object({ sessionExerciseId: z.string().uuid(), ended: z.boolean() }).parse(input);
-  const { supabase } = await getAuthedContext();
-  const { error } = await supabase
-    .from("session_exercise")
-    .update({ ended_at: v.ended ? new Date().toISOString() : null })
-    .eq("id", v.sessionExerciseId);
-  if (error) throw error;
 }
 
 /**
@@ -346,57 +293,6 @@ export async function setSessionSuperset(input: { sessionExerciseId: string; lin
   if (error) throw error;
   revalidatePath(`/log/${se.session_id}`);
   return changes;
-}
-
-export type SessionSet = {
-  seId: string;
-  id: string;
-  setNumber: number;
-  weightKg: number;
-  reps: number;
-  rpe: number | null;
-  isWarmup: boolean;
-  kind: "drop" | "rest_pause" | null;
-  /** When it was logged (epoch ms). */
-  at: number;
-};
-
-/**
- * Every set in a session as the server has it, its exercises, and whether
- * it's been finished. The logger uses it to pick up what another device did
- * to the workout: sets logged, changed or deleted on the Apple Watch, Siri
- * or another phone or browser, and a finish.
- */
-export async function getSessionSets(input: {
-  sessionId: string;
-}): Promise<{ finished: boolean; sets: SessionSet[]; exercises: { id: string; exerciseId: string }[] }> {
-  const { sessionId } = z.object({ sessionId: z.string().uuid() }).parse(input);
-  const { supabase } = await getAuthedContext();
-  const { data, error } = await supabase
-    .from("session")
-    .select("finished_at, session_exercise(id, exercise_id, set(id, set_number, weight_kg, reps, rpe, is_warmup, kind, created_at))")
-    .eq("id", sessionId)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return { finished: true, sets: [], exercises: [] };
-  const sets = data.session_exercise.flatMap((se) =>
-    se.set.map((s) => ({
-      seId: se.id,
-      id: s.id,
-      setNumber: s.set_number,
-      weightKg: Number(s.weight_kg),
-      reps: s.reps,
-      rpe: s.rpe === null ? null : Number(s.rpe),
-      isWarmup: s.is_warmup,
-      kind: s.kind === "drop" || s.kind === "rest_pause" ? (s.kind as SessionSet["kind"]) : null,
-      at: Date.parse(s.created_at),
-    })),
-  );
-  return {
-    finished: data.finished_at !== null,
-    sets,
-    exercises: data.session_exercise.map((se) => ({ id: se.id, exerciseId: se.exercise_id })),
-  };
 }
 
 export async function deleteSet(input: { id: string }) {
