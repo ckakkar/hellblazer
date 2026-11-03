@@ -1794,55 +1794,50 @@ button,
 
 /* ── Route transitions ────────────────────────────────────────────────────
    React's <ViewTransition> drives these (see PageTransition). Moving between
-   tabs crossfades with a short rise: same app, different room. Going into a
-   detail slides forward, coming back slides back. The chrome is anchored so
-   only content moves. */
+   tabs, the old page leaves and the new one rises in: same app, different
+   room. Going into a detail slides forward, coming back slides back. The
+   chrome is anchored so only content moves.
+   One page at a time: the old one is gone (a quick linear fade) before the
+   new one starts to show. Overlapped, the two pages showed through each
+   other for a moment, a double exposure of two unrelated screens. */
 ::view-transition {
   pointer-events: none;
 }
-::view-transition-old(.hb-page),
-::view-transition-new(.hb-page) {
-  animation-timing-function: var(--ease-out);
-}
 ::view-transition-old(.hb-page) {
-  animation: 140ms var(--ease-out) both hb-fade-out;
+  animation: 90ms linear both hb-fade-out;
 }
 ::view-transition-new(.hb-page) {
-  animation: 260ms var(--ease-out) 60ms both hb-rise-in;
+  animation: 220ms var(--ease-out) 80ms both hb-rise-in;
 }
 ::view-transition-old(.nav-forward) {
   --hb-slide: -48px;
   animation:
-    160ms var(--ease-out) both hb-fade-out,
-    340ms var(--ease-in-out) both hb-slide-out;
+    100ms linear both hb-fade-out,
+    300ms var(--ease-in-out) both hb-slide-out;
 }
 ::view-transition-new(.nav-forward) {
   --hb-slide: 48px;
   animation:
-    240ms var(--ease-out) 90ms both hb-fade-in,
-    340ms var(--ease-in-out) both hb-slide-in;
+    220ms var(--ease-out) 90ms both hb-fade-in,
+    300ms var(--ease-in-out) both hb-slide-in;
 }
 ::view-transition-old(.nav-back) {
   --hb-slide: 48px;
   animation:
-    160ms var(--ease-out) both hb-fade-out,
-    340ms var(--ease-in-out) both hb-slide-out;
+    100ms linear both hb-fade-out,
+    300ms var(--ease-in-out) both hb-slide-out;
 }
 ::view-transition-new(.nav-back) {
   --hb-slide: -48px;
   animation:
-    240ms var(--ease-out) 90ms both hb-fade-in,
-    340ms var(--ease-in-out) both hb-slide-in;
+    220ms var(--ease-out) 90ms both hb-fade-in,
+    300ms var(--ease-in-out) both hb-slide-in;
 }
-/* The loader steps aside for the page it was holding the place of. */
+/* The loader gives way to the page it was holding the place of at once:
+   the page is already on screen under it, so any fade of the loader showed
+   the barbell over the page. */
 ::view-transition-old(.hb-loader-out) {
-  animation: 180ms var(--ease-out) both hb-loader-out;
-}
-@keyframes hb-loader-out {
-  to {
-    opacity: 0;
-    transform: scale(0.97);
-  }
+  display: none;
 }
 ::view-transition-group(.hb-morph) {
   animation-duration: 340ms;
