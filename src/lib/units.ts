@@ -28,9 +28,13 @@ export function toDisplayBodyweight(kg: number, unit: Unit): number {
   return Math.round(raw * 10) / 10;
 }
 
-/** Convert a value the user typed in their display unit back to canonical kg. */
+/**
+ * Convert a value the user typed in their display unit back to canonical kg,
+ * to the hundredth the database keeps (numeric(6,2)): what's saved is then
+ * what's read back, and 297.5 lb still shows as 297.5 lb.
+ */
 export function fromDisplayWeight(value: number, unit: Unit): number {
-  return unit === "lb" ? lbToKg(value) : value;
+  return unit === "lb" ? Math.round(lbToKg(value) * 100) / 100 : value;
 }
 
 /** Trim trailing ".0" for clean mono display. */

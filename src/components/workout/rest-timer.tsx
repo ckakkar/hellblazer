@@ -457,8 +457,8 @@ export function RestTimerBar({ timer }: { timer: RestTimerControls }) {
       {(running || paused) && (
         <span
           aria-hidden
-          className="absolute bottom-0 left-0 h-0.5 bg-accent/70 transition-[width] duration-300"
-          style={{ width: `${progress}%` }}
+          className="absolute inset-x-0 bottom-0 h-0.5 origin-left bg-accent/70 transition-transform duration-300 ease-linear"
+          style={{ transform: `scaleX(${progress / 100})` }}
         />
       )}
     </div>

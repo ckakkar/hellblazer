@@ -1,5 +1,6 @@
 "use client";
 
+import { sendAgainIfDropped } from "@/lib/action-retry";
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { CalendarClock, ChevronDown, Loader2, Play, Zap } from "lucide-react";
@@ -68,18 +69,20 @@ export function SessionStarter({
   function again(sessionId: string) {
     setChosen(`again:${sessionId}`);
     start(async () => {
-      await repeatSession({ sessionId, localDate: todayLocalISO() });
+      await sendAgainIfDropped(() => repeatSession({ sessionId, localDate: todayLocalISO() }));
     });
   }
 
   function begin(templateId: string | null, programDayId: string | null = null) {
     setChosen(programDayId ?? templateId ?? "freeform");
     start(async () => {
-      await startSession({
-        templateId,
-        programDayId,
-        localDate: todayLocalISO(),
-      });
+      await sendAgainIfDropped(() =>
+        startSession({
+          templateId,
+          programDayId,
+          localDate: todayLocalISO(),
+        }),
+      );
     });
   }
 

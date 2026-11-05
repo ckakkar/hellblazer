@@ -60,6 +60,7 @@ import { matchesExercise } from "@/lib/exercise-search";
 import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
+import { useNow } from "@/components/resume-banner";
 import { isNativeApp } from "@/lib/native";
 import { createClient } from "@/lib/supabase/client";
 import { reportProblem } from "@/lib/report";
@@ -101,6 +102,7 @@ import {
   updateSessionMeta,
 } from "@/lib/actions/sessions";
 import { deleteSetNow, failureCode, readSessionSets, saveSetNow, setEndedNow } from "@/lib/logger-sync";
+import { sendAgainIfDropped } from "@/lib/action-retry";
 
 type SetKind = "drop" | "rest_pause" | null;
 type LocalSet = {
@@ -270,7 +272,9 @@ export function SessionLogger({
 
   // Live workout clock: ticks from when the session was started (created_at).
   const startedAt = new Date(session.created_at).getTime();
-  const [elapsed, setElapsed] = useState(0);
+  // From the first render (the server's clock in the page's HTML), so a
+  // workout left open for hours never shows as live for a moment.
+  const [elapsed, setElapsed] = useState(() => Date.now() - startedAt);
   const elapsedMin = Math.max(1, Math.round(elapsed / 60000));
   // Reopening a finished session to fix it is not a workout in progress: no
   // live badge, no running clock, and saving keeps its logged duration. A
@@ -758,14 +762,15 @@ export function SessionLogger({
       }
       busy = true;
       try {
-        const [{ finished, sets: remote, exercises: remoteExercises }, queued] = await Promise.all([
+        const [{ finished, gone, sets: remote, exercises: remoteExercises }, queued] = await Promise.all([
           readSessionSets(session.id),
           getQueuedSets(session.id).catch(() => [] as PendingSetWrite[]),
         ]);
-        // Finished elsewhere: this page is done too.
+        // Finished elsewhere: this page is done too. Discarded there, it
+        // has no page in History to go to.
         if (finished) {
-          withNative((api) => api.endWorkoutActivity({ finished: session.id }));
-          router.replace(`/history/${session.id}`);
+          withNative((api) => api.endWorkoutActivity(gone ? {} : { finished: session.id }));
+          router.replace(gone ? "/dashboard" : `/history/${session.id}`);
           return;
         }
         const now = Date.now();
@@ -1722,12 +1727,14 @@ export function SessionLogger({
       }
       try {
         // Auto-record the live clock unless a duration was typed by hand.
-        await finishSession({
-          sessionId: session.id,
-          durationMin: minutes,
-          finishedAt: endedAt ?? null,
-          navigate: false,
-        });
+        await sendAgainIfDropped(() =>
+          finishSession({
+            sessionId: session.id,
+            durationMin: minutes,
+            finishedAt: endedAt ?? null,
+            navigate: false,
+          }),
+        );
       } catch (err) {
         unstable_rethrow(err);
         reportProblem("finish-failed");
@@ -1942,6 +1949,7 @@ export function SessionLogger({
             className="@container min-w-0 pr-3"
             title="Workout time"
             aria-label={`Time ${clockLive && !victory ? `${elapsedMin} min` : timeLabel}`}
+            suppressHydrationWarning
           >
             <dt className="text-[12px] text-muted">Time</dt>
             <dd className="mt-1 flex h-[1.5rem] items-end whitespace-nowrap leading-none">
@@ -2202,6 +2210,7 @@ export function SessionLogger({
               value={duration ?? ""}
               onChange={(e) => setDuration(e.target.value === "" ? null : Number(e.target.value))}
               placeholder={autoDuration != null ? String(autoDuration) : "–"}
+              suppressHydrationWarning
               title={
                 autoDuration != null
                   ? "Tracked from the workout clock. Type to override."
@@ -2458,18 +2467,11 @@ export function SessionLogger({
   );
 }
 
-/** The workout clock's figure, ticking once a second on its own. */
+/** The workout clock's figure, ticking once a second on its own (useNow). */
 function LiveClock({ startedAt }: { startedAt: number }) {
-  const [now, setNow] = useState(startedAt);
-  useEffect(() => {
-    const tick = () => setNow(Date.now());
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
-  }, []);
-  const label = formatElapsed(now - startedAt);
+  const label = formatElapsed(useNow() - startedAt);
   return (
-    <span className="font-display hb-fit text-accent-ink" style={fitFigure(label, STAT_SIZE)}>
+    <span className="font-display hb-fit text-accent-ink" style={fitFigure(label, STAT_SIZE)} suppressHydrationWarning>
       {label}
     </span>
   );

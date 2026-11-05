@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { appearanceLockedAgent, isIPadAppAgent } from "./surface";
+import { appearanceLockedAgent, isIPadAppAgent, isNativeAppAgent } from "./surface";
 
 const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
 const ipad = "Mozilla/5.0 (iPad; CPU OS 26_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+
+describe("isNativeAppAgent", () => {
+  it("is the iPhone or iPad app, not Safari", () => {
+    expect(isNativeAppAgent(`${iphone} Fatty Fatty-appearance`)).toBe(true);
+    expect(isNativeAppAgent(`${ipad} Fatty`)).toBe(true);
+    expect(isNativeAppAgent(iphone)).toBe(false);
+    expect(isNativeAppAgent(`${iphone} FattyBrowser`)).toBe(false);
+  });
+});
 
 describe("isIPadAppAgent", () => {
   it("is the iPad app only", () => {

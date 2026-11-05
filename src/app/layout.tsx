@@ -7,6 +7,8 @@ import { TimezoneSync } from "@/components/timezone-sync";
 import { NativeShell } from "@/components/native/native-shell";
 import { getAccent, getAppearance, getTimeZone } from "@/lib/settings";
 import { NoticeToast } from "@/components/notice-toast";
+import { InAppProvider } from "@/components/in-app";
+import { isNativeAppRequest } from "@/lib/surface";
 
 /* One family, two widths. Archivo is variable on width as well as weight, so
    the expanded cut that carries titles and numbers (a broadcast-scoreboard
@@ -99,7 +101,12 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [accent, timeZone, appearance] = await Promise.all([getAccent(), getTimeZone(), getAppearance()]);
+  const [accent, timeZone, appearance, inApp] = await Promise.all([
+    getAccent(),
+    getTimeZone(),
+    getAppearance(),
+    isNativeAppRequest(),
+  ]);
   return (
     <html
       lang="en"
@@ -116,7 +123,7 @@ export default async function RootLayout({
             first frame of a cold PWA start, then lifts itself once the app is
             up; a browser tab never sees it. */}
         <BootSplash />
-        {children}
+        <InAppProvider value={inApp}>{children}</InAppProvider>
         {/* What an action that didn't go through says (useAction). */}
         <NoticeToast />
       </body>

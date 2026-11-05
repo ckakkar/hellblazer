@@ -11,31 +11,45 @@ import { cn } from "@/lib/utils";
 import { useAction } from "@/lib/use-action";
 
 /**
- * The workout's running clock, ticking once a second. Null until mounted (the
- * server and the phone would disagree on the time), and for a session left
- * open so long it isn't a workout any more.
+ * Now, once a second. The first value is the clock where it renders: the
+ * server's, in the page's HTML, so a workout's time is there from the first
+ * paint instead of appearing (or reading 0:00) until the page wakes up. Text
+ * made from it sits in an element with `suppressHydrationWarning`: the
+ * phone's clock is a moment on from the server's, and the first tick puts it
+ * right.
  */
-export function useElapsed(startedAt: string): string | null {
-  const [now, setNow] = useState<number | null>(null);
+export function useNow(): number {
+  const [now, setNow] = useState(Date.now);
   useEffect(() => {
     const tick = () => setNow(Date.now());
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
   }, []);
-  if (now === null) return null;
-  const ms = now - new Date(startedAt).getTime();
-  return ms >= 0 && ms <= STALE_CLOCK_MS ? formatElapsed(ms) : null;
+  return now;
 }
 
-/** The running clock as text, in the accent ink; nothing until it's mounted. */
+/**
+ * The workout's running clock, ticking once a second (see useNow), or null
+ * for a session left open so long it isn't a workout any more.
+ */
+export function useElapsed(startedAt: string): string | null {
+  const ms = useNow() - new Date(startedAt).getTime();
+  // A phone whose clock runs a little behind the server's reads 0:00, not
+  // nothing: the page has the same shape on both.
+  return ms <= STALE_CLOCK_MS ? formatElapsed(ms) : null;
+}
+
+/** The running clock as text, in the accent ink. */
 export function WorkoutClock({ startedAt, prefix }: { startedAt: string; prefix?: string }) {
   const elapsed = useElapsed(startedAt);
   if (!elapsed) return null;
   return (
     <>
       {prefix}
-      <span className="text-accent-ink">{elapsed}</span>
+      <span className="text-accent-ink" suppressHydrationWarning>
+        {elapsed}
+      </span>
     </>
   );
 }
@@ -71,7 +85,10 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
         <div className="tnum truncate text-[13px] text-muted">
           {elapsed ? (
             <>
-              <span className="text-accent-ink">{elapsed}</span>, {session.workingSets}{" "}
+              <span className="text-accent-ink" suppressHydrationWarning>
+                {elapsed}
+              </span>
+              , {session.workingSets}{" "}
               {session.workingSets === 1 ? "set" : "sets"} logged
             </>
           ) : (

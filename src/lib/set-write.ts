@@ -66,6 +66,8 @@ export type SessionSet = {
 
 export type SessionSets = {
   finished: boolean;
+  /** No row: discarded (on the watch, another device). */
+  gone?: boolean;
   sets: SessionSet[];
   exercises: { id: string; exerciseId: string }[];
 };
@@ -94,7 +96,7 @@ type SessionSetsRow = {
 
 /** A session's sets as the logger holds them. No row: it's gone, so it's over. */
 export function toSessionSets(data: SessionSetsRow | null): SessionSets {
-  if (!data) return { finished: true, sets: [], exercises: [] };
+  if (!data) return { finished: true, gone: true, sets: [], exercises: [] };
   const sets = data.session_exercise.flatMap((se) =>
     se.set.map((s): SessionSet => ({
       seId: se.id,

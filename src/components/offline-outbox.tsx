@@ -1,13 +1,11 @@
 "use client";
 
+import { useInApp } from "@/components/in-app";
 import { useEffect, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { CloudOff, Loader2 } from "lucide-react";
 import { drainOutbox, getOutbox, getServerOutbox, subscribeOutbox } from "@/lib/offline-outbox";
 import { useDeviceName } from "@/lib/device";
-import { isNativeApp } from "@/lib/native";
-
-const never = () => () => {};
 
 /** The workout open on screen, whose logger uploads its own sets. */
 const openSession = (path: string) => path.match(/^\/log\/([0-9a-f-]{36})/)?.[1] ?? null;
@@ -40,7 +38,7 @@ export function OfflineOutbox({ userId }: { userId: string }) {
 export function OutboxNote() {
   const { waiting, sending } = useSyncExternalStore(subscribeOutbox, getOutbox, getServerOutbox);
   const name = useDeviceName();
-  const device = useSyncExternalStore(never, isNativeApp, () => false) ? name : "device";
+  const device = useInApp() ? name : "device";
   if (waiting === 0) return null;
   const sets = `${waiting} ${waiting === 1 ? "set" : "sets"}`;
   return (

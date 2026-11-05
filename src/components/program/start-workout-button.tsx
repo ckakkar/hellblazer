@@ -1,5 +1,6 @@
 "use client";
 
+import { sendAgainIfDropped } from "@/lib/action-retry";
 import { Loader2, Play } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { startSession } from "@/lib/actions/sessions";
@@ -36,11 +37,13 @@ export function StartWorkoutButton({
       disabled={pending}
       onClick={() =>
         start(async () => {
-          await startSession({
-            programDayId,
-            templateId,
-            localDate: todayLocalISO(),
-          });
+          await sendAgainIfDropped(() =>
+            startSession({
+              programDayId,
+              templateId,
+              localDate: todayLocalISO(),
+            }),
+          );
         })
       }
     >

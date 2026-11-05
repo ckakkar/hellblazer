@@ -185,6 +185,7 @@ export function LiveView({
                   <span
                     className={cn("font-display hb-fit", st.live ? "text-accent" : "text-text")}
                     style={fitFigure(st.value, "var(--stat-max)", st.unit ? "1.5rem" : "0px")}
+                    suppressHydrationWarning={st.live}
                   >
                     {st.value}
                   </span>

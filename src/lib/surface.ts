@@ -31,6 +31,16 @@ export const appearanceIsLocked = cache(async function appearanceIsLocked(): Pro
   return appearanceLockedAgent((await headers()).get("user-agent") ?? "");
 });
 
+/** The iPhone or iPad app (its web view adds "Fatty" to the user agent). */
+export function isNativeAppAgent(userAgent: string): boolean {
+  return /\bFatty\b/.test(userAgent);
+}
+
+/** Whether this request comes from the iPhone or iPad app. Cached per request. */
+export const isNativeAppRequest = cache(async function isNativeAppRequest(): Promise<boolean> {
+  return isNativeAppAgent((await headers()).get("user-agent") ?? "");
+});
+
 /** Whether this request comes from the iPad app. Cached per request. */
 export const isIPadApp = cache(async function isIPadApp(): Promise<boolean> {
   return isIPadAppAgent((await headers()).get("user-agent") ?? "");

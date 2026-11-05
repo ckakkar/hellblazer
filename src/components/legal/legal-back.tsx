@@ -1,12 +1,9 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useInApp } from "@/components/in-app";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, Flame } from "lucide-react";
-import { isNativeApp } from "@/lib/native";
-
-const noop = () => () => {};
 
 /**
  * Top of the Privacy and Support pages. On the website, the brand, linking
@@ -15,7 +12,7 @@ const noop = () => () => {};
  */
 export function LegalBack() {
   const router = useRouter();
-  const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
+  const inApp = useInApp();
   if (inApp) {
     return (
       <button

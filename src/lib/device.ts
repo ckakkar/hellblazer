@@ -1,4 +1,5 @@
 import { useSyncExternalStore } from "react";
+import { useIPadApp } from "@/components/ipad-app";
 
 /**
  * An iPad, in the app or in Safari. Safari on an iPad asks for desktop sites
@@ -25,7 +26,11 @@ export function deviceName(): DeviceName {
 
 const never = () => () => {};
 
-/** {@link deviceName} for a render: iPhone on the server and the first paint. */
+/**
+ * {@link deviceName} for a render. On the server and the first paint, the
+ * iPad app's pages (known from the request, isIPadApp) say iPad.
+ */
 export function useDeviceName(): DeviceName {
-  return useSyncExternalStore(never, deviceName, () => "iPhone");
+  const ipad = useIPadApp();
+  return useSyncExternalStore(never, deviceName, () => (ipad ? "iPad" : "iPhone"));
 }

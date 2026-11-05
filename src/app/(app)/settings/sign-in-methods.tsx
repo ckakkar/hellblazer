@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useInApp } from "@/components/in-app";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { SettingsGroup, SettingsRow } from "@/components/ui/settings-list";
 import { createClient } from "@/lib/supabase/client";
-import { isNativeApp } from "@/lib/native";
 import { linkErrorMessage, PROVIDER_NAME, type Provider } from "@/lib/auth-providers";
-
-const noop = () => () => {};
 
 export type SignInMethod = { connected: boolean; email: string | null };
 
@@ -26,7 +24,7 @@ export function SignInMethods({
   /** An error code from a website link attempt that came back through /auth/callback. */
   linkError?: string;
 }) {
-  const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
+  const inApp = useInApp();
   const router = useRouter();
   const [busy, setBusy] = useState<Provider | null>(null);
   const [msg, setMsg] = useState<string | null>(linkError ? linkErrorMessage(linkError, "google") : null);

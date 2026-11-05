@@ -1,10 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { resendDroppedActions } from "@/lib/action-retry";
-
-// Before anything can call a server action: this mounts on every page.
-resendDroppedActions();
 
 /**
  * Registers production offline/push support without letting dev chunks go stale.

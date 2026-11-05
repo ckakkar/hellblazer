@@ -89,6 +89,6 @@ describe("toSessionSets", () => {
   });
 
   it("takes a workout that's gone as over", () => {
-    expect(toSessionSets(null)).toEqual({ finished: true, sets: [], exercises: [] });
+    expect(toSessionSets(null)).toEqual({ finished: true, gone: true, sets: [], exercises: [] });
   });
 });

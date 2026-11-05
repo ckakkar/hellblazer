@@ -1,14 +1,12 @@
 "use client";
 
+import { useInApp } from "@/components/in-app";
 import { useDeviceName } from "@/lib/device";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { SettingsGroup, SettingsRow } from "@/components/ui/settings-list";
-import { isNativeApp } from "@/lib/native";
 import { healthSyncOn, nativePlugin, setHealthSync, withNative } from "@/lib/native-plugins";
 import { Switch } from "@/components/ui/switch";
 import { recoveryOnHome, setRecoveryOnHome } from "@/components/native/recovery-card";
-
-const noop = () => () => {};
 
 /**
  * iPhone and iPad app only: the Apple Health switches. Saving: finished workouts
@@ -18,7 +16,7 @@ const noop = () => () => {};
  * Renders nothing on the website.
  */
 export function AppleHealthSettings() {
-  const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
+  const inApp = useInApp();
   const device = useDeviceName();
   if (!inApp) return null;
   return (

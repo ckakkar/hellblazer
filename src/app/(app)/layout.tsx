@@ -11,7 +11,7 @@ import { getTier } from "@/lib/tiers";
 import { NativeBridge } from "@/components/native/native-bridge";
 import { PullToRefresh } from "@/components/native/pull-to-refresh";
 import { WorkoutActivitySync } from "@/components/native/workout-activity-sync";
-import { LiveWorkoutSync } from "@/components/live-workout-sync";
+import { LiveWorkoutProvider } from "@/components/live-workout-provider";
 import { DeviceSync } from "@/components/native/device-sync";
 import { getAccent, getUnit } from "@/lib/settings";
 import { accentSwatch } from "@/lib/accents";
@@ -48,9 +48,19 @@ export default async function AppLayout({
         ? meta.name
         : null;
   const tier = getTier(shell.tier);
+  const live =
+    activeSession && !activeSession.stale
+      ? {
+          id: activeSession.id,
+          title: activeSession.title,
+          startedAt: activeSession.startedAt,
+          workingSets: activeSession.workingSets,
+        }
+      : null;
 
   return (
     <IPadAppProvider value={ipad}>
+    <LiveWorkoutProvider value={live}>
     <div className="relative isolate min-h-dvh">
       {/* Arena light: the accent, faint, from above. Static, and it scrolls
           away with the page; the home and profile heroes cover it. */}
@@ -80,13 +90,13 @@ export default async function AppLayout({
             it's zero in a browser. */}
         <main className="hb-ptr-content mx-auto w-full max-w-5xl px-4 min-[400px]:px-5 pt-[calc(env(safe-area-inset-top)+3.75rem)] pb-[calc(env(safe-area-inset-bottom)+7.5rem)] sm:px-6 md:pt-[calc(env(safe-area-inset-top)+2.5rem)] md:pb-[calc(env(safe-area-inset-bottom)+4rem)] lg:max-w-[80rem] lg:px-12">
           <WorkoutActivitySync activeSessionId={activeSession?.id ?? null} />
-          <LiveWorkoutSync session={activeSession && !activeSession.stale ? activeSession : null} />
           {/* The iPad has no banner: its sidebar shows the workout under way. */}
           {activeSession && !ipad && <ResumeBanner session={activeSession} />}
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
     </div>
+    </LiveWorkoutProvider>
     </IPadAppProvider>
   );
 }

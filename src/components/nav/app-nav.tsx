@@ -129,7 +129,11 @@ function SidebarLiveCard({ live, here }: { live: LiveWorkout; here: boolean }) {
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-medium text-text">{live.title ?? "Workout"}</p>
           <p className="tnum truncate text-[13px] text-muted">
-            {elapsed ? <span className="text-accent-ink">{elapsed}</span> : "In progress"}, {sets}
+            {elapsed ? (
+              <span className="text-accent-ink" suppressHydrationWarning>
+                {elapsed}
+              </span>
+            ) : "In progress"}, {sets}
           </p>
         </div>
         {/* Discarding the workout you're looking at would pull the page out
@@ -175,7 +179,11 @@ function SidebarWatchLive({ live, here }: { live: LiveWorkout; here: boolean }) 
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-medium text-text">{live.title ?? "Workout"}</p>
           <p className="tnum truncate text-[13px] text-muted">
-            {elapsed ? <span className="text-accent-ink">{elapsed}</span> : "Live"}, {sets}
+            {elapsed ? (
+              <span className="text-accent-ink" suppressHydrationWarning>
+                {elapsed}
+              </span>
+            ) : "Live"}, {sets}
           </p>
         </div>
       </div>

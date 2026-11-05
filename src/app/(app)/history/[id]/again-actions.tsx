@@ -1,5 +1,6 @@
 "use client";
 
+import { sendAgainIfDropped } from "@/lib/action-retry";
 import { useState } from "react";
 import Link from "next/link";
 import { Check, CopyPlus, Loader2, Play } from "lucide-react";
@@ -48,7 +49,7 @@ export function AgainActions({
         <Button
           variant="accent"
           disabled={starting}
-          onClick={() => start(() => repeatSession({ sessionId, localDate: todayLocalISO() }))}
+          onClick={() => start(() => sendAgainIfDropped(() => repeatSession({ sessionId, localDate: todayLocalISO() })))}
         >
           {starting ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
           Do it again

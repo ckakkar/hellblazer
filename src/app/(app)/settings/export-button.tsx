@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useInApp } from "@/components/in-app";
+import { useState } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { isNativeApp } from "@/lib/native";
 
-const noop = () => () => {};
 const buttonClass =
   "inline-flex h-9 items-center gap-2 rounded-xl bg-surface-2 px-3.5 text-[14px] font-medium text-text transition-colors hover:bg-surface-3 active:bg-surface-3 disabled:opacity-60";
 
@@ -14,7 +13,7 @@ const buttonClass =
  * instead (Save to Files, AirDrop, Mail).
  */
 export function ExportButton() {
-  const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
+  const inApp = useInApp();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 

@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
+import { useInAppOr } from "@/components/in-app";
 import { SettingsRow } from "@/components/ui/settings-list";
 import { Switch } from "@/components/ui/switch";
 import { canKeepAwake, keepAwakeOn, setKeepAwake } from "@/lib/keep-awake";
 import { useIPadApp } from "@/components/ipad-app";
-
-const noop = () => () => {};
 
 /**
  * Keeps the screen on while a workout's open (useKeepAwake in the logger),
@@ -14,7 +13,7 @@ const noop = () => () => {};
  * the browser can't do it.
  */
 export function KeepAwakeRow() {
-  const supported = useSyncExternalStore(noop, canKeepAwake, () => false);
+  const supported = useInAppOr(canKeepAwake);
   const [on, setOn] = useState(true);
   const ipad = useIPadApp();
 

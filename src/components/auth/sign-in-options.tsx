@@ -1,19 +1,16 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { isNativeApp } from "@/lib/native";
+import { useInApp } from "@/components/in-app";
 import { AppleSignIn } from "@/components/auth/apple-sign-in";
 import { GoogleSignIn } from "@/components/auth/google-sign-in";
 
-const noop = () => () => {};
-
 /**
- * Google everywhere; Apple too inside the iOS app, listed first. The server
- * renders the website's version, and the app swaps Apple in on hydration.
+ * Google everywhere; Apple too inside the iOS app, listed first (the server
+ * knows the app from its user agent, so Apple is there from the first paint).
  * `webNote` is said on the website only (where there's no Apple button).
  */
 export function SignInOptions({ next, webNote }: { next?: string; webNote?: React.ReactNode }) {
-  const inApp = useSyncExternalStore(noop, isNativeApp, () => false);
+  const inApp = useInApp();
   if (!inApp)
     return (
       <>
