@@ -3,7 +3,7 @@ import { ViewTransition } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { ArrowLeft, Pencil, Radio } from "lucide-react";
 import { getActiveSession, getSessionDetail } from "@/lib/data/sessions";
 import { getProfile } from "@/lib/data/profile";
 import { profileAge } from "@/lib/age";
@@ -127,14 +127,22 @@ export default async function SessionDetailPage({
             sessionId={session.id}
             title={session.title ?? "Session"}
           />
-          {/* `edit`: on an iPad, /log/[id] is otherwise the live view. */}
-          <Link
-            href={`/log/${session.id}?edit`}
-            className={buttonVariants({ variant: "secondary", size: "sm" })}
-          >
-            <Pencil className="size-4" />
-            Edit
-          </Link>
+          {/* `edit`: on an iPad, /log/[id] is otherwise the live view. A
+              workout still under way is only watched there. */}
+          {ipad && !session.finished_at ? (
+            <Link href={`/log/${session.id}`} className={buttonVariants({ variant: "secondary", size: "sm" })}>
+              <Radio className="size-4" />
+              Watch live
+            </Link>
+          ) : (
+            <Link
+              href={`/log/${session.id}?edit`}
+              className={buttonVariants({ variant: "secondary", size: "sm" })}
+            >
+              <Pencil className="size-4" />
+              Edit
+            </Link>
+          )}
           <DeleteSessionButton sessionId={session.id} />
           </div>
         }

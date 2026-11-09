@@ -44,9 +44,10 @@ export default async function LoggerPage({
   if (!session) notFound();
 
   // The iPad watches a workout; it doesn't log one. A finished workout is
-  // edited from its session page (`?edit`), as on the phone.
+  // edited from its session page (`?edit`), as on the phone; one still under
+  // way is only watched, `?edit` or not.
   const fighter = getTier(profile?.tier)?.key ?? "ohma";
-  if (ipad && edit === undefined) {
+  if (ipad && (edit === undefined || !session.finished_at)) {
     if (boardIsOver(session.finished_at)) redirect(`/history/${id}`);
     const exerciseIds = [...new Set(session.session_exercise.map((se) => se.exercise_id))];
     const last = await getLastPerformances(exerciseIds, id);

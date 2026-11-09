@@ -1794,6 +1794,17 @@ export function SessionLogger({
 
   const currentIndex = exercises.findIndex((e) => !completed.has(e.seId));
   const active = exercises.find((e) => e.seId === activeSeId) ?? null;
+  // The exercise the sheet shows: the open one, and after it's closed the one
+  // it was showing, so the sheet slides away (Sheet's exit) instead of being
+  // pulled out of the page at once. `n` counts openings, so each one starts
+  // a fresh sheet. Updated only when the sheet opens or closes, never per set.
+  const [sheet, setSheet] = useState<{ id: string; n: number; open: boolean } | null>(null);
+  if (activeSeId !== null && (sheet?.id !== activeSeId || !sheet.open)) {
+    setSheet({ id: activeSeId, n: (sheet?.n ?? 0) + 1, open: true });
+  } else if (activeSeId === null && sheet?.open) {
+    setSheet({ ...sheet, open: false });
+  }
+  const sheetEx = sheet ? (exercises.find((e) => e.seId === sheet.id) ?? null) : null;
   const doneCount = exercises.filter((e) => completed.has(e.seId)).length;
   // One observation about this workout, from its numbers, or nothing.
   const coach = (() => {
@@ -2358,20 +2369,21 @@ export function SessionLogger({
       />
 
       {/* Active-exercise logging modal */}
-      {active && (
+      {sheet && sheetEx && (
         <ActiveExerciseModal
-          key={active.seId}
-          exercise={active}
+          key={`${sheet.id}:${sheet.n}`}
+          open={sheet.open}
+          exercise={sheetEx}
           exerciseLibrary={exerciseLibrary}
-          lastPerformance={lastFor(active.exerciseId) ?? null}
-          target={targetFor(active)}
+          lastPerformance={lastFor(sheetEx.exerciseId) ?? null}
+          target={targetFor(sheetEx)}
           superset={(() => {
-            const i = exercises.findIndex((e) => e.seId === active.seId);
+            const i = exercises.findIndex((e) => e.seId === sheetEx.seId);
             return { slot: slots[i], index: i, exercises };
           })()}
-          onLink={(link) => linkSuperset(active.seId, link)}
-          linkedNow={linkedId === active.seId}
-          onAddDrop={() => addDropSet(active.seId)}
+          onLink={(link) => linkSuperset(sheetEx.seId, link)}
+          linkedNow={linkedId === sheetEx.seId}
+          onAddDrop={() => addDropSet(sheetEx.seId)}
           unit={unit}
           weightStep={weightStep}
           flashId={flashId}
@@ -2381,19 +2393,19 @@ export function SessionLogger({
             setActiveSeId(null);
           }}
           onSettle={weighSets}
-          onEnd={() => endExercise(active.seId)}
-          onAddSet={() => addSet(active.seId)}
-          onUpdateSet={(setId, patch) => updateSet(active.seId, setId, patch)}
-          onRemoveSet={(setId) => removeSet(active.seId, setId)}
-          onSwap={(newId) => swap(active.seId, newId)}
-          onRemoveExercise={() => removeExercise(active.seId)}
+          onEnd={() => endExercise(sheetEx.seId)}
+          onAddSet={() => addSet(sheetEx.seId)}
+          onUpdateSet={(setId, patch) => updateSet(sheetEx.seId, setId, patch)}
+          onRemoveSet={(setId) => removeSet(sheetEx.seId, setId)}
+          onSwap={(newId) => swap(sheetEx.seId, newId)}
+          onRemoveExercise={() => removeExercise(sheetEx.seId)}
           showRpe={showRpe}
           rest={isEditing ? null : rest}
           sayIt={
             <SaySets
               inSheet
               exercises={spokenExercises}
-              current={active.seId}
+              current={sheetEx.seId}
               unit={unit}
               onLog={logSpokenSets}
             />
@@ -2487,6 +2499,7 @@ function ActiveExerciseModal({
   lastPerformance,
   target,
   superset,
+  open,
   onLink,
   linkedNow,
   onAddDrop,
@@ -2514,6 +2527,8 @@ function ActiveExerciseModal({
   /** Where it sits among the session's exercises, and its superset if any. */
   superset: { slot: SupersetSlot | null; index: number; exercises: LocalExercise[] };
   /** Joins it with the exercise after it (true), or takes it out of its superset. */
+  /** Whether it's open: false while it slides away after closing. */
+  open: boolean;
   onLink: (link: boolean) => void;
   /** The superset was made a moment ago: its line snaps in. */
   linkedNow?: boolean;
@@ -2569,7 +2584,7 @@ function ActiveExerciseModal({
 
   return (
     <Sheet
-      open
+      open={open}
       onClose={onClose}
       fill={swapping}
       title={swapping ? "Swap movement" : exercise.name}
