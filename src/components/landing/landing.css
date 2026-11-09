@@ -1,0 +1,170 @@
+/*
+ * The landing (src/app/page.tsx): the hero, the rounds' numerals and the
+ * finale's edges. The scroll-motion kit (src/components/reactbits/
+ * scroll-motion.css) and the climb (landing-climb.css) carry their own.
+ *
+ * Every rule here leaves the page readable as written: the base styles are
+ * the final state, the opening moves run once on load, and the scroll-driven
+ * ones only where the browser has scroll timelines and motion isn't reduced.
+ * Transform and opacity only, so it all runs on the compositor.
+ */
+
+/* An outline numeral in bone (the rounds), the accent's being for the ladder. */
+.lp-outline {
+  color: transparent;
+  -webkit-text-stroke: 1.25px color-mix(in srgb, var(--color-text) 45%, transparent);
+}
+
+.lp-hero {
+  min-height: 100svh;
+}
+
+/* On a desktop the portrait fades out leftward under the type. */
+.lp-hero-edge,
+.lp-finale-edge {
+  background: linear-gradient(to right, var(--color-bg) 0%, color-mix(in srgb, var(--color-bg) 60%, transparent) 18%, transparent 46%);
+}
+
+.lp-hero-shade {
+  opacity: 0;
+}
+
+.lp-hero-cue-fill {
+  transform: scaleX(0.25);
+}
+
+/* Opening: the portrait settles in, the headline sets itself (SplitText),
+   then his number and the way in rise into place. Once, on load. */
+@media (prefers-reduced-motion: no-preference) {
+  .lp-hero-in {
+    animation: lp-art-in 1200ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .lp-hero-rank-in {
+    animation: lp-rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) 420ms both;
+  }
+  .lp-hero-up {
+    animation: lp-rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) 480ms both;
+  }
+}
+
+@keyframes lp-art-in {
+  from {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes lp-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+/* Leaving the poster is the walkout starting: the camera pushes into him,
+   the headline splits apart, his number flies up and the poster goes dark
+   into the climb. Scrubbed by the page's scroll over the first screen. */
+@supports (animation-timeline: scroll()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .lp-hero-push,
+    .lp-hero-shade,
+    .lp-hero-rank,
+    .lp-hero-split-l,
+    .lp-hero-split-r,
+    .lp-hero-copy,
+    .lp-hero-cue,
+    .lp-hero-cue-fill {
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 100svh;
+    }
+    .lp-hero-push {
+      animation-name: lp-push;
+    }
+    .lp-hero-shade {
+      animation-name: lp-shade;
+      animation-range: 10svh 100svh;
+    }
+    .lp-hero-rank {
+      animation-name: lp-rank-out;
+      animation-range: 0 70svh;
+    }
+    .lp-hero-split-l {
+      animation-name: lp-split-l;
+      animation-range: 4svh 80svh;
+    }
+    .lp-hero-split-r {
+      animation-name: lp-split-r;
+      animation-range: 4svh 80svh;
+    }
+    .lp-hero-copy {
+      animation-name: lp-copy-out;
+      animation-range: 0 55svh;
+    }
+    .lp-hero-cue {
+      animation-name: lp-fade-out;
+      animation-range: 20svh 45svh;
+    }
+    .lp-hero-cue-fill {
+      animation-name: lp-cue-fill;
+      animation-range: 0 45svh;
+    }
+  }
+}
+
+@keyframes lp-push {
+  to {
+    transform: scale(1.24) translateY(-5%);
+  }
+}
+
+@keyframes lp-shade {
+  to {
+    opacity: 0.86;
+  }
+}
+
+@keyframes lp-rank-out {
+  to {
+    opacity: 0;
+    transform: translateY(-36%) scale(1.6);
+  }
+}
+
+@keyframes lp-split-l {
+  to {
+    opacity: 0;
+    transform: translateX(-24%);
+  }
+}
+
+@keyframes lp-split-r {
+  to {
+    opacity: 0;
+    transform: translateX(28%);
+  }
+}
+
+@keyframes lp-copy-out {
+  to {
+    opacity: 0;
+    transform: translateY(-56px);
+  }
+}
+
+@keyframes lp-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes lp-cue-fill {
+  from {
+    transform: scaleX(0.25);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
