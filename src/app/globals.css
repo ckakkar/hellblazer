@@ -1756,7 +1756,9 @@ button,
   animation: 90ms linear both hb-fade-out;
 }
 ::view-transition-new(.hb-page) {
-  animation: 220ms var(--ease-out) 80ms both hb-rise-in;
+  /* Starts as the old page's fade ends (90ms), not before: at 80ms both
+     showed for a moment. */
+  animation: 220ms var(--ease-out) 90ms both hb-rise-in;
 }
 ::view-transition-old(.nav-forward) {
   --hb-slide: -48px;
@@ -1767,7 +1769,7 @@ button,
 ::view-transition-new(.nav-forward) {
   --hb-slide: 48px;
   animation:
-    220ms var(--ease-out) 90ms both hb-fade-in,
+    220ms var(--ease-out) 100ms both hb-fade-in,
     300ms var(--ease-in-out) both hb-slide-in;
 }
 ::view-transition-old(.nav-back) {
@@ -1779,7 +1781,7 @@ button,
 ::view-transition-new(.nav-back) {
   --hb-slide: -48px;
   animation:
-    220ms var(--ease-out) 90ms both hb-fade-in,
+    220ms var(--ease-out) 100ms both hb-fade-in,
     300ms var(--ease-in-out) both hb-slide-in;
 }
 /* The loader gives way to the page it was holding the place of at once:
