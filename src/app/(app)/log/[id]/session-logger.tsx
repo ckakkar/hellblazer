@@ -371,16 +371,32 @@ export function SessionLogger({
   );
 
   // Exercises are done in order. An exercise counts as "done" once it's been
-  // ended; any exercise that already had logged sets (a resumed session) starts
-  // done so you pick up where you left off.
-  const [completed, setCompleted] = useState<Set<string>>(
-    () =>
-      new Set(
-        session.session_exercise
-          .filter((se) => se.set.length > 0)
-          .map((se) => se.id),
-      ),
-  );
+  // ended. Picking a workout back up (a reload, the app reopened), what's
+  // behind you is done and what you were in the middle of isn't: done is
+  // ended by hand, its planned sets all logged, or left behind for a later
+  // exercise that has sets. The last one worked on (with its superset
+  // partners) stays open until its plan is met. Every exercise with a set
+  // used to start done, so one set into four sent the logger to the next.
+  const [completed, setCompleted] = useState<Set<string>>(() => {
+    const rows = session.session_exercise;
+    let last = -1;
+    rows.forEach((se, i) => {
+      if (se.set.length > 0) last = i;
+    });
+    const lastGroup = last >= 0 ? rows[last].superset : null;
+    return new Set(
+      rows
+        .filter((se, i) => {
+          if (se.ended_at) return true;
+          if (se.set.length === 0) return false;
+          const planned = targets[se.id]?.sets ?? null;
+          const straight = se.set.filter((s) => isStraight({ warmup: s.is_warmup, kind: s.kind, reps: s.reps })).length;
+          if (planned != null && straight >= planned) return true;
+          return !(i === last || (lastGroup != null && se.superset === lastGroup));
+        })
+        .map((se) => se.id),
+    );
+  });
 
   // Prior all-time working-set bests per exercise, for the Removal PR callout.
   // Seeded from previous sessions (DB), then folded with any sets already logged
@@ -1677,7 +1693,17 @@ export function SessionLogger({
    * `endedAt`: when the workout ended, if not now (the last set), once the
    * lifter's been asked; null for now; undefined when not yet asked.
    */
-  function finish(force = false, endedAt?: number | null): boolean {
+  /**
+   * Finishes the workout; false when it didn't start (nothing logged, a set
+   * unsaved, the late-finish question asked). `settle` hears when the server
+   * has the finish (or that it failed), so the slider says "Finished" only
+   * then, not while the request is still on its way.
+   */
+  function finish(
+    force = false,
+    endedAt?: number | null,
+    settle?: { resolve: () => void; reject: (reason: unknown) => void },
+  ): boolean {
     // Finishing discards the page, so unsaved sets would be gone for good.
     // Retry once and make them confirm rather than losing work silently.
     if (!force && failed.size > 0) {
@@ -1724,6 +1750,7 @@ export function SessionLogger({
       if (!saved && !force) {
         setConfirmFinish(true);
         failedFinish("A set didn't save, so the workout isn't finished yet. Retry it, or finish without it.");
+        settle?.reject(new Error("unsaved sets"));
         return;
       }
       try {
@@ -1740,8 +1767,10 @@ export function SessionLogger({
         unstable_rethrow(err);
         reportProblem("finish-failed");
         failedFinish("Couldn't finish the session. Your sets are safe; try again in a moment.");
+        settle?.reject(err);
         return;
       }
+      settle?.resolve();
       rest.skip();
       pendingEnds.current.clear();
       storeEnds();
@@ -2320,9 +2349,11 @@ export function SessionLogger({
             height={56}
             holdMs={0}
             disabled={finishing}
-            onConfirm={() => {
-              if (!finish()) throw new Error("Finish didn't start");
-            }}
+            onConfirm={() =>
+              new Promise<void>((resolve, reject) => {
+                if (!finish(false, undefined, { resolve, reject })) reject(new Error("Finish didn't start"));
+              })
+            }
           />
         )}
       </section>
