@@ -66,3 +66,21 @@ Local changes, beyond the list above:
 Only SlideCommit needs `motion`, and it's used in the logger, which loads
 `motion` for CountUp anyway. HoldButton's frame loop runs only while a press is
 held; FuseButton's fuse is a Web Animation.
+
+## Landing scroll kit (November 2026)
+
+`split-text`, `scroll-float`, `scroll-reveal`, `scroll-stack` (with
+`ScrollStackItem`) and `scroll-expand` are native CSS rebuilds of the React
+Bits ideas: no motion/GSAP import, scroll listener, observer or animation
+frame loop. All are server-renderable. Headline characters use
+`Intl.Segmenter` graphemes inside unbreakable words; statement text animates
+whole words. A single `sr-only` text copy stays available to assistive tech,
+including on generic/paragraph elements; the visual spans are aria-hidden.
+
+`scroll-motion.css` supplies the readable final states. Scroll rules require
+both view-timeline support and no reduced-motion preference. Float uses its
+own entry-to-cover timeline, Reveal lights words across cover 15–55%, Stack
+scopes a next-card timeline to each deck, and Expand clips one frame across
+cover 12–52%. SplitText is a once-only 420ms entrance, default 28ms stagger.
+Stacks become plain columns on screens at most 699px high. Use a contrasting
+card background on each ScrollStackItem; its height stays content-driven.
