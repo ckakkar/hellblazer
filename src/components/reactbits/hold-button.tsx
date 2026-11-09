@@ -46,7 +46,8 @@ export interface HoldButtonProps {
   className?: string;
 }
 
-type Phase = 'idle' | 'holding' | 'done';
+/** `working`: the hold is complete and `onHold`'s promise hasn't settled yet. */
+type Phase = 'idle' | 'holding' | 'working' | 'done';
 type Input = 'pointer' | 'key' | null;
 
 interface Motion {
@@ -96,7 +97,7 @@ const STYLE = `
 .hold-root{transform:none!important;transition:background-color 160ms ease,box-shadow var(--hold-release) ease!important}
 .hold-fill{clip-path:inset(0)!important;opacity:0;transition:opacity var(--hold-release) ease!important}
 .hold-crest{display:none}
-.hold-root[data-phase=holding] .hold-fill,.hold-root[data-phase=done] .hold-fill{opacity:1;transition:opacity var(--hold-hold) linear!important}
+.hold-root[data-phase=holding] .hold-fill,.hold-root[data-phase=working] .hold-fill,.hold-root[data-phase=done] .hold-fill{opacity:1;transition:opacity var(--hold-hold) linear!important}
 .hold-pulse{animation:none!important}
 .hold-label>span{filter:none!important;transition:opacity 200ms ease!important}
 }`;
@@ -106,10 +107,12 @@ const HoldButton: React.FC<HoldButtonProps> = ({
   doneLabel = 'Deleted',
   icon = null,
   doneIcon = null,
-  backgroundColor = 'rgb(239 83 80 / 0.12)',
-  fillColor = '#ef5350',
-  textColor = '#ef5350',
-  fillTextColor = '#000000',
+  // The theme's danger, so paper gets its own darker red (night's #ef5350
+  // was 3:1 on paper's tint), with the ground's colour on the fill.
+  backgroundColor = 'color-mix(in srgb, var(--color-danger) 12%, transparent)',
+  fillColor = 'var(--color-danger)',
+  textColor = 'var(--color-danger)',
+  fillTextColor = 'var(--color-bg)',
   size = 'md',
   radius = 14,
   fillDirection = 'right',
@@ -174,8 +177,8 @@ const HoldButton: React.FC<HoldButtonProps> = ({
     if (phaseRef.current !== 'holding') return;
     if (now() - gesture.current.start < holdTime - 50) return;
     clearTimers();
-    go('done', inputRef.current);
-    // Destructive by default in this app: the system's warning knock (iOS app).
+    // Destructive by default in this app: the system's warning knock (iOS
+    // app), for the hold itself.
     haptic('warning');
     const undo = () => {
       clearTimers();
@@ -184,11 +187,16 @@ const HoldButton: React.FC<HoldButtonProps> = ({
     };
     const settle = (ok: unknown) => {
       if (ok === false) return undo();
+      // Done only now: it said "Restarted" while the request was still on its
+      // way, and a failure then took back a success already shown.
+      go('done', inputRef.current);
       if (resetAfter > 0) timers.current.reset = window.setTimeout(undo, resetAfter);
     };
     const result = onHold?.();
-    if (result instanceof Promise) result.then(settle, undo);
-    else settle(result);
+    if (result instanceof Promise) {
+      go('working', inputRef.current);
+      result.then(settle, undo);
+    } else settle(result);
   };
 
   // A click with no pointer behind it (detail 0) is assistive technology
@@ -364,6 +372,7 @@ const HoldButton: React.FC<HoldButtonProps> = ({
       disabled={disabled}
       className={`hold-root group relative isolate m-0 inline-grid cursor-pointer touch-manipulation select-none place-items-center border-0 font-medium leading-none tracking-[0.01em] outline-none [-webkit-tap-highlight-color:transparent] [-webkit-touch-callout:none] [background:var(--hold-bg)] [border-radius:var(--hold-radius)] [color:var(--hold-text)] shadow-[inset_0_1px_0_color-mix(in oklab, var(--color-text) 6%, transparent)] [transition:transform_160ms_var(--hold-ease-out),background-color_160ms_ease,box-shadow_var(--hold-release)_var(--hold-ease-out)] [@media(hover:hover)_and_(pointer:fine)]:enabled:hover:[background:color-mix(in_srgb,var(--hold-bg)_92%,#fff)] data-[phase=holding]:data-[input=pointer]:[transform:scale(var(--hold-press))] data-[glow=true]:data-[phase=holding]:shadow-[${GLOW}] data-[glow=true]:data-[phase=done]:shadow-[${GLOW}] data-[glow=true]:data-[phase=holding]:[transition:transform_160ms_var(--hold-ease-out),background-color_160ms_ease,box-shadow_var(--hold-hold)_linear] focus-visible:[outline:2px_solid_var(--hold-fill)] focus-visible:outline-offset-[3px] disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 contrast-more:[outline:1px_solid_var(--hold-text)] ${SIZES[size] || SIZES.md}${className ? ` ${className}` : ''}`}
       data-phase={phase}
+      aria-busy={phase === "working" || undefined}
       data-input={input ?? undefined}
       data-direction={direction}
       data-glow={glow ? 'true' : undefined}
