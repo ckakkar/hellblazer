@@ -40,8 +40,8 @@ function createSession(
 
 describe("live-board edge cases", () => {
   describe("draft sets and working sets counting", () => {
-    it.fails(
-      "SUSPECTED BUG: liveBoard includes draft sets (reps = null) in total workingSets count",
+    it(
+      "leaves a draft (no reps) out of the board's working sets, as the exercises do",
       () => {
         // Input: session with 1 valid working set (80kg x 5) and 1 draft set (80kg x null)
         // Actual output: b.workingSets is 2, while b.exercises[0].workingSets is 1

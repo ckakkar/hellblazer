@@ -27,8 +27,10 @@ export function notebookSets(sets: { weight: number; reps: number }[], unit: Uni
 /** Reps at `weightKg` that would beat a best estimated max (Epley), or null. */
 export function repsToBeat(weightKg: number, bestEst1rm: number): number | null {
   if (!(weightKg > 0) || !(bestEst1rm > 0)) return null;
-  // weight × (1 + reps / 30) > best  ⇔  reps > 30 × (best / weight − 1)
-  const reps = Math.floor(30 * (bestEst1rm / weightKg - 1)) + 1;
+  // weight × (1 + reps / 30) > best  ⇔  reps > 30 × (best / weight − 1).
+  // The nudge keeps a tie a tie: 120 / 100 − 1 is 0.19999… in floating
+  // point, which floored to 5 and promised that 6 reps (exactly 120) beat it.
+  const reps = Math.floor(30 * (bestEst1rm / weightKg - 1) + 1e-9) + 1;
   return reps >= 1 ? reps : 1;
 }
 

@@ -81,8 +81,8 @@ describe("coach edge cases", () => {
       expect(repsToBeat(130, 120)).toBe(1);
     });
 
-    it.fails(
-      "SUSPECTED BUG: repsToBeat floating point truncation causes ties to be reported as beating the best",
+    it(
+      "a tie isn't a record: at 100 kg against a best of 120, it takes 7 reps (6 only ties)",
       () => {
         // Input: weightKg = 100, bestEst1rm = 120
         // Actual output: 6

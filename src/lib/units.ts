@@ -34,7 +34,7 @@ export function toDisplayBodyweight(kg: number, unit: Unit): number {
  * what's read back, and 297.5 lb still shows as 297.5 lb.
  */
 export function fromDisplayWeight(value: number, unit: Unit): number {
-  return unit === "lb" ? Math.round(lbToKg(value) * 100) / 100 : value;
+  return Math.round((unit === "lb" ? lbToKg(value) : value) * 100) / 100;
 }
 
 /** Trim trailing ".0" for clean mono display. */

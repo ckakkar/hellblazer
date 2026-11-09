@@ -81,7 +81,7 @@ export function liveBoard(
   const records = new Map<string, "weight" | "e1rm">();
   const logged = rows
     .flatMap((se) => se.set.map((s) => ({ se, s })))
-    .filter(({ s }) => !s.is_warmup)
+    .filter(({ s }) => isWork({ warmup: s.is_warmup, reps: s.reps }))
     .sort((a, b) => a.s.created_at.localeCompare(b.s.created_at));
   for (const { se, s } of logged) {
     const w = Number(s.weight_kg);
