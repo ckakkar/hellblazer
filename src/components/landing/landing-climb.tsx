@@ -21,7 +21,7 @@ export function LandingClimb() {
       <div className="climb-stage">
         <div className="climb-heading">
           <h2 id="climb-title">The climb</h2>
-          <span>Ten ranks. Earn every one.</span>
+          <span>Ten fighters, bottom rung first.</span>
         </div>
         <div className="climb-intro">
           <span className="climb-intro-zero font-display" aria-hidden="true">0</span>

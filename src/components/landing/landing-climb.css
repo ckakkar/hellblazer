@@ -33,9 +33,14 @@
     .climb-intro p { position: relative; z-index: 1; font-size: clamp(3rem, 12vw, 8rem); letter-spacing: -.055em; }
     .climb-intro-zero { position: absolute; top: 12%; right: -2%; display: block; color: transparent; -webkit-text-stroke: 1px rgb(from var(--color-text) r g b / .18); font-size: clamp(19rem, 85vw, 58rem); line-height: 1; }
     .climb-scenes { position: absolute; inset: 0; display: block; }
-    .climb-scene { --hit-end: calc(var(--r) + .86); position: absolute; inset: 0; pointer-events: none; animation: climb-scene linear both; animation-timeline: --climb; animation-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .98) * 100% / 11); }
+    .climb-scene { --hit-end: calc(var(--r) + .86); --scene-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .98) * 100% / 11); position: absolute; inset: 0; pointer-events: none; animation: climb-scene linear both; animation-timeline: --climb; animation-range: var(--scene-range); }
+    /* The summit stays black like every other rung: its accent is its step. */
     .climb-summit { --hit-end: 11; animation-name: climb-summit; }
-    .climb-summit::before { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 34%, rgb(var(--accent-rgb) / .25), transparent 64%); content: ""; }
+    /* A scene's words are also hidden outside its stretch, so a name can't
+       linger as a ghost under the next fighter's. Only the words: hiding the
+       portraits too made each one repaint as it came back (dropped frames). */
+    .climb-scene .climb-copy { animation: climb-scene-shown linear both; animation-timeline: --climb; animation-range: var(--scene-range); }
+    .climb-summit .climb-copy { animation-name: climb-summit-shown; }
     .climb-portrait { position: absolute; z-index: 1; top: 10%; right: -8%; width: 108%; height: 70%; animation: climb-portrait linear both; animation-timeline: --climb; animation-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .8) * 100% / 11); }
     .climb-number-window { position: absolute; z-index: 2; top: 12%; left: 3%; display: block; height: .95em; overflow: clip; color: transparent; -webkit-text-stroke: 1px rgb(from var(--color-text) r g b / .3); font-size: clamp(12rem, 68vw, 28rem); line-height: .95; }
     .climb-number { display: block; transform: translateY(-50%); animation: climb-number linear both; animation-timeline: --climb; animation-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .22) * 100% / 11); }
@@ -88,6 +93,8 @@
 @keyframes climb-intro-out { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: hidden; } }
 @keyframes climb-scene { 0% { opacity: 0; } 11%, 89% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes climb-summit { 0% { opacity: 0; } 11%, 100% { opacity: 1; } }
+@keyframes climb-scene-shown { 0%, 100% { visibility: hidden; } .01%, 99.99% { visibility: visible; } }
+@keyframes climb-summit-shown { 0% { visibility: hidden; } .01%, 100% { visibility: visible; } }
 @keyframes climb-portrait { from { transform: scale(1.06); } 30%, to { transform: scale(1); } }
 @keyframes climb-number { from { transform: translateY(0); } to { transform: translateY(-50%); } }
 @keyframes climb-hit { 0%, 100% { visibility: hidden; } .001%, 99.999% { visibility: visible; } }

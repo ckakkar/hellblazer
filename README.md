@@ -71,7 +71,7 @@ The twist: your training gets **judged**. An AI judge reads your full history an
 
 | Route | What's there |
 |-------|--------------|
-| `/` | Landing page and sign-in (Google; Apple too in the iPhone app); the ladder's fighters as a swipeable roster. Signed-in visitors go straight to the dashboard. |
+| `/` | Landing page and sign-in (Google; Apple too in the iPhone app), told by the scroll: the summit fighter's poster, the ladder climbed rank by rank (each fighter's file opens from it), the three rounds as a deck, and the bottom rung to start from. Scroll-driven CSS only; reduced motion gets every section still. Signed-in visitors go straight to the dashboard. |
 | `/welcome` | First-run setup: name, ring name, and the details that calibrate the judge (birthday, sex, height, bodyweight). |
 | `/dashboard` | Your rank as a full-bleed fight poster, the **next bout** from your program with Start in thumb reach (Skip comes with an undo), this week against last week, a consistency heatmap, sets per muscle against the 10-20 set range, a 7D / 30D / 1Y volume chart, and recent sessions. |
 | `/log` → `/log/[id]` | Start your next programmed day, a recent workout again, any other day, or an empty session, or log a past workout afterwards; then the set logger. |
