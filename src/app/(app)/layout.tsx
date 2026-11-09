@@ -60,7 +60,7 @@ export default async function AppLayout({
 
   return (
     <IPadAppProvider value={ipad}>
-    <LiveWorkoutProvider value={live}>
+    <LiveWorkoutProvider value={live} read={activeSession}>
     <div className="relative isolate min-h-dvh">
       {/* Arena light: the accent, faint, from above. Static, and it scrolls
           away with the page; the home and profile heroes cover it. */}

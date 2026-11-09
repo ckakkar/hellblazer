@@ -1779,7 +1779,7 @@ export function SessionLogger({
   );
   // The nav's count of this workout's sets (the sidebar, and the phone's
   // resume banner on the next page) is this one: saves don't reach the layout.
-  useReportLiveSets(session.id, totalSets);
+  useReportLiveSets(session.id, totalSets, !isEditing);
   const totalForce = exercises.reduce(
     (n, e) =>
       n +

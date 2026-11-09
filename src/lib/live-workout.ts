@@ -16,17 +16,18 @@ export type LiveWorkout = Pick<ActiveSession, "id" | "title" | "startedAt" | "wo
 export const LiveWorkoutContext = createContext<LiveWorkout | null>(null);
 
 /**
- * The logger's own count of its workout's sets, against the layout's read it
- * was made beside (`base`). The logger saves sets straight to the database,
- * which the layout doesn't hear about, and moving between pages doesn't read
- * the layout again: the count it read on loading (the sidebar's, the resume
- * banner's) said "0 sets" with seven logged. The logger's count stands in
- * until the layout reads the workout again.
+ * The logger's own count of its workout's sets, against the layout's read of
+ * the session it was made beside (`base`: a new object each time the layout
+ * reads it, a workout left open for hours included). The logger saves sets
+ * straight to the database, which the layout doesn't hear about, and moving
+ * between pages doesn't read the layout again: the count it read on loading
+ * (the sidebar's, the resume banner's) said "0 sets" with seven logged. The
+ * logger's count stands in until the layout reads the workout again.
  */
-export type LiveSetsReport = { id: string; sets: number; base: LiveWorkout | null };
+export type LiveSetsReport = { id: string; sets: number; base: object | null };
 
 export const LiveSetsContext = createContext<{
-  base: LiveWorkout | null;
+  base: object | null;
   report: (report: LiveSetsReport) => void;
 }>({ base: null, report: () => {} });
 
@@ -43,10 +44,12 @@ export function useLiveWorkout(): string | null {
   return useLiveSession()?.id ?? null;
 }
 
-/** For the logger: the working sets in the workout it has open. */
-export function useReportLiveSets(id: string, sets: number) {
+/** For the logger: the working sets in the workout it has open (`on`: one under way, not a past one being edited). */
+export function useReportLiveSets(id: string, sets: number, on: boolean) {
   const { base, report } = useContext(LiveSetsContext);
-  useEffect(() => report({ id, sets, base }), [id, sets, base, report]);
+  useEffect(() => {
+    if (on) report({ id, sets, base });
+  }, [on, id, sets, base, report]);
 }
 
 /** A workout's working sets as this page knows them: the logger's count, else `server`'s. */

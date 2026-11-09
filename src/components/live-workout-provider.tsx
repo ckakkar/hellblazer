@@ -12,16 +12,25 @@ import {
 /**
  * Hands the layout's answer to "is a workout under way?" to the nav, with
  * the logger's count of its sets in place of the layout's while that's the
- * newer one (LiveSetsReport): made beside this same read of the layout.
+ * newer one (LiveSetsReport): made beside this same read of the session
+ * (`read`, the layout's getActiveSession, a forgotten one included).
  */
-export function LiveWorkoutProvider({ value, children }: { value: LiveWorkout | null; children: React.ReactNode }) {
+export function LiveWorkoutProvider({
+  value,
+  read,
+  children,
+}: {
+  value: LiveWorkout | null;
+  read: object | null;
+  children: React.ReactNode;
+}) {
   const [report, setReport] = useState<LiveSetsReport | null>(null);
-  const logged = report && report.base === value ? report : null;
+  const logged = report && report.base === read ? report : null;
   const live = useMemo(
     () => (value && logged?.id === value.id ? { ...value, workingSets: logged.sets } : value),
     [value, logged],
   );
-  const reporter = useMemo(() => ({ base: value, report: setReport }), [value]);
+  const reporter = useMemo(() => ({ base: read, report: setReport }), [read]);
   return (
     <LiveSetsContext value={reporter}>
       <LoggedSetsContext value={logged}>
