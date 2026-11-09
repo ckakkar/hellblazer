@@ -8,7 +8,7 @@ import React, {
   type HTMLAttributes,
   type ReactNode,
 } from "react";
-import { AnimatePresence, motion, type Variants } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -147,6 +147,10 @@ interface StepContentWrapperProps {
   className?: string;
 }
 
+/** Reduced motion: every step change lands at once (Motion's own animations
+    don't hear the CSS override). */
+const INSTANT = { duration: 0 } as const;
+
 function StepContentWrapper({
   isCompleted,
   currentStep,
@@ -154,13 +158,14 @@ function StepContentWrapper({
   children,
   className = "",
 }: StepContentWrapperProps) {
+  const reduce = useReducedMotion();
   const [parentHeight, setParentHeight] = useState<number>(0);
 
   return (
     <motion.div
       style={{ position: "relative", overflow: "hidden" }}
       animate={{ height: isCompleted ? 0 : parentHeight }}
-      transition={{ type: "spring", duration: 0.4 }}
+      transition={reduce ? INSTANT : { type: "spring", duration: 0.4 }}
       className={className}
     >
       <AnimatePresence initial={false} mode="sync" custom={direction}>
@@ -189,6 +194,7 @@ function SlideTransition({
   direction,
   onHeightReady,
 }: SlideTransitionProps) {
+  const reduce = useReducedMotion();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
@@ -203,7 +209,7 @@ function SlideTransition({
       initial="enter"
       animate="center"
       exit="exit"
-      transition={{ duration: 0.4 }}
+      transition={reduce ? INSTANT : { duration: 0.4 }}
       style={{ position: "absolute", left: 0, right: 0, top: 0 }}
     >
       {children}
@@ -234,6 +240,7 @@ function StepIndicator({
   onClickStep,
   disableStepIndicators = false,
 }: StepIndicatorProps) {
+  const reduce = useReducedMotion();
   const status =
     currentStep === step
       ? "active"
@@ -271,7 +278,7 @@ function StepIndicator({
             color: "var(--color-bg)",
           },
         }}
-        transition={{ duration: 0.3 }}
+        transition={reduce ? INSTANT : { duration: 0.3 }}
         className="tnum flex size-8 items-center justify-center rounded-full text-[13px] font-semibold"
       >
         {status === "complete" ? (
@@ -287,6 +294,7 @@ function StepIndicator({
 }
 
 function StepConnector({ isComplete }: { isComplete: boolean }) {
+  const reduce = useReducedMotion();
   const lineVariants: Variants = {
     incomplete: { width: 0 },
     complete: { width: "100%" },
@@ -299,13 +307,14 @@ function StepConnector({ isComplete }: { isComplete: boolean }) {
         variants={lineVariants}
         initial={false}
         animate={isComplete ? "complete" : "incomplete"}
-        transition={{ duration: 0.4 }}
+        transition={reduce ? INSTANT : { duration: 0.4 }}
       />
     </div>
   );
 }
 
 function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
+  const reduce = useReducedMotion();
   return (
     <svg
       {...props}
@@ -317,7 +326,7 @@ function CheckIcon(props: React.SVGProps<SVGSVGElement>) {
       <motion.path
         initial={{ pathLength: 0 }}
         animate={{ pathLength: 1 }}
-        transition={{ delay: 0.1, type: "tween", ease: "easeOut", duration: 0.3 }}
+        transition={reduce ? INSTANT : { delay: 0.1, type: "tween", ease: "easeOut", duration: 0.3 }}
         strokeLinecap="round"
         strokeLinejoin="round"
         d="M5 13l4 4L19 7"
