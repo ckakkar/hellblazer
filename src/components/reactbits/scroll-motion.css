@@ -1,0 +1,75 @@
+@layer components {
+  .rb-split-text > .sr-only, .rb-scroll-float > .sr-only, .rb-scroll-reveal > .sr-only { user-select: none; }
+  .rb-motion-word { display: inline-block; white-space: nowrap; }
+  .rb-motion-char { display: inline-block; }
+  .rb-scroll-stack { position: relative; }
+  .rb-stack-slot { position: relative; min-width: 0; }
+  .rb-stack-surface { position: relative; transform-origin: center top; }
+  .rb-stack-surface::after { position: absolute; inset: 0; z-index: 2; border-radius: inherit; background: var(--color-bg); content: ""; opacity: 0; pointer-events: none; }
+  .rb-stack-content { position: relative; min-width: 0; }
+  .rb-scroll-expand { position: relative; display: grid; min-width: 0; }
+  .rb-expand-frame { position: relative; display: grid; min-width: 0; min-height: inherit; overflow: clip; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rb-split-text .rb-motion-char {
+    animation: rb-text-rise 420ms cubic-bezier(.16, 1, .3, 1) both;
+    animation-delay: calc(var(--motion-delay, 0ms) + var(--motion-i) * var(--motion-step, 28ms));
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .rb-scroll-float { view-timeline: --rb-float block; }
+    .rb-scroll-float .rb-motion-char {
+      animation: rb-text-rise linear both;
+      animation-timeline: --rb-float;
+      animation-range: entry calc(var(--motion-i) * 70% / var(--motion-count)) cover calc(30% + var(--motion-i) * 15% / var(--motion-count));
+    }
+    .rb-scroll-reveal { view-timeline: --rb-reveal block; }
+    .rb-scroll-reveal .rb-reveal-word {
+      animation: rb-word-light linear both;
+      animation-timeline: --rb-reveal;
+      animation-range: cover calc(15% + var(--motion-i) * 40% / var(--motion-count)) cover calc(15% + (var(--motion-i) + 1) * 40% / var(--motion-count));
+    }
+    .rb-scroll-stack { padding-bottom: 18svh; }
+    .rb-stack-slot {
+      position: sticky;
+      top: calc(4.5rem + var(--stack-i) * .875rem);
+      margin-bottom: 12svh;
+      view-timeline-axis: block;
+    }
+    .rb-stack-slot[data-covered] > .rb-stack-surface {
+      animation: rb-card-settle linear both;
+      animation-timeline: var(--stack-next);
+      animation-range: entry 30% entry 100%;
+    }
+    .rb-stack-slot[data-covered] > .rb-stack-surface::after {
+      animation: rb-card-dim linear both;
+      animation-timeline: var(--stack-next);
+      animation-range: entry 30% entry 100%;
+    }
+    @media (max-height: 699px) {
+      .rb-scroll-stack { padding-bottom: 0; }
+      .rb-stack-slot { position: relative; top: auto; margin-bottom: 2rem; }
+      .rb-stack-slot[data-covered] > .rb-stack-surface,
+      .rb-stack-slot[data-covered] > .rb-stack-surface::after { animation: none; }
+    }
+    .rb-scroll-expand { view-timeline: --rb-expand block; }
+    .rb-expand-frame {
+      --expand-inset: 8%;
+      animation: rb-frame-open linear both;
+      animation-timeline: --rb-expand;
+      animation-range: cover 12% cover 52%;
+    }
+    @media (min-width: 1024px) {
+      .rb-expand-frame { --expand-inset: 15%; }
+    }
+  }
+}
+
+@keyframes rb-text-rise { from { transform: translateY(.6em); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes rb-word-light { from { opacity: var(--motion-dim, .16); } to { opacity: 1; } }
+@keyframes rb-card-settle { to { transform: scale(max(.86, calc(1 - var(--stack-after) * .035))); } }
+@keyframes rb-card-dim { to { opacity: min(.4, calc(var(--stack-after) * .12)); } }
+@keyframes rb-frame-open { from { clip-path: inset(0 var(--expand-inset) round 1.5rem); } to { clip-path: inset(0 0 round 0); } }

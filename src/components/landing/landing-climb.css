@@ -1,0 +1,97 @@
+@layer components {
+  .climb { position: relative; background: var(--color-bg); color: var(--color-text); }
+  .climb-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: 2rem 5vw 1rem; }
+  .climb-heading h2 { font-size: 1.125rem; font-weight: 700; }
+  .climb-heading > span { max-width: 11rem; font-size: .8125rem; color: var(--color-muted); text-align: right; }
+  .climb-intro { padding: 0 5vw 2rem; }
+  .climb-intro p { font-size: clamp(2rem, 9vw, 4rem); line-height: .98; }
+  .climb-intro-note { display: block; margin-top: 1.25rem; color: var(--color-muted); font-size: .9375rem; }
+  .climb-intro-zero, .climb-scenes, .climb-rail, .climb-floor { display: none; }
+  .climb-directory { padding: 0 5vw 3rem; }
+  .climb-fallback-note { padding: 0 5vw 3rem; color: var(--color-muted); font-size: .9375rem; }
+  .climb-directory-title { margin-bottom: 1.5rem; font-size: .9375rem; color: var(--color-muted); }
+  .climb-roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 1.5rem .75rem; padding: 0; list-style: none; }
+  .climb-roster-button { display: block; width: 100%; text-align: left; }
+  .climb-roster-button:focus-visible, .climb-file:focus-visible { outline: 2px solid var(--color-text); outline-offset: 5px; }
+  .climb-roster-art { position: relative; display: block; aspect-ratio: 3/4; overflow: clip; }
+  .climb-roster-name { display: block; min-height: 2.25em; margin-top: .5rem; font-size: clamp(.875rem, 4vw, 1.25rem); line-height: 1.05; }
+  .climb-roster-epithet { display: block; min-height: 2.75em; margin-top: .375rem; color: var(--color-muted); font-size: .75rem; line-height: 1.3; }
+  .climb-roster-step { display: block; height: calc(2rem + var(--r) * .45rem); margin-top: .75rem; padding: .5rem; border-top: 2px solid rgb(from var(--color-text) r g b / .6); background: linear-gradient(rgb(from var(--color-text) r g b / .09), transparent); font-size: 2rem; line-height: 1; }
+  .climb-roster-summit { border-color: rgb(var(--accent-rgb)); color: rgb(var(--accent-rgb)); background: linear-gradient(rgb(var(--accent-rgb) / .2), transparent); }
+  @media (min-width: 744px) { .climb-roster { grid-template-columns: repeat(5, minmax(0, 1fr)); } .climb-roster-name { font-size: 1rem; } }
+  @media (min-width: 1024px) { .climb-roster { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: .75rem; } .climb-roster-step { height: calc(3rem + var(--r) * 1rem); } }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .climb-fallback-note { display: none; }
+    .climb { height: 826svh; view-timeline: --climb block; }
+    .climb-stage { position: sticky; top: 0; height: 100svh; min-height: 0; overflow: clip; isolation: isolate; }
+    .climb-heading { position: absolute; inset: 0 0 auto; z-index: 12; padding-top: max(2rem, env(safe-area-inset-top)); }
+    .climb-heading h2 { font-size: clamp(1.125rem, 2vw, 1.5rem); }
+    .climb-intro { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 0 6vw 9rem; animation: climb-intro-out linear both; animation-timeline: --climb; animation-range: contain 5% contain calc(100% / 11); }
+    .climb-intro p { position: relative; z-index: 1; font-size: clamp(3rem, 12vw, 8rem); letter-spacing: -.055em; }
+    .climb-intro-zero { position: absolute; top: 12%; right: -2%; display: block; color: transparent; -webkit-text-stroke: 1px rgb(from var(--color-text) r g b / .18); font-size: clamp(19rem, 85vw, 58rem); line-height: 1; }
+    .climb-scenes { position: absolute; inset: 0; display: block; }
+    .climb-scene { --hit-end: calc(var(--r) + .86); position: absolute; inset: 0; pointer-events: none; animation: climb-scene linear both; animation-timeline: --climb; animation-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .98) * 100% / 11); }
+    .climb-summit { --hit-end: 11; animation-name: climb-summit; }
+    .climb-summit::before { position: absolute; inset: 0; background: radial-gradient(ellipse at 72% 34%, rgb(var(--accent-rgb) / .25), transparent 64%); content: ""; }
+    .climb-portrait { position: absolute; z-index: 1; top: 10%; right: -8%; width: 108%; height: 70%; animation: climb-portrait linear both; animation-timeline: --climb; animation-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .8) * 100% / 11); }
+    .climb-number-window { position: absolute; z-index: 2; top: 12%; left: 3%; display: block; height: .95em; overflow: clip; color: transparent; -webkit-text-stroke: 1px rgb(from var(--color-text) r g b / .3); font-size: clamp(12rem, 68vw, 28rem); line-height: .95; }
+    .climb-number { display: block; transform: translateY(-50%); animation: climb-number linear both; animation-timeline: --climb; animation-range: contain calc((var(--r) - .12) * 100% / 11) contain calc((var(--r) + .22) * 100% / 11); }
+    .climb-number > span { display: block; }
+    .climb-copy { position: absolute; z-index: 3; right: 5vw; bottom: 11rem; left: 6vw; }
+    .climb-rank { margin-bottom: .75rem; font-size: .875rem; color: var(--color-muted); }
+    .climb-copy h3 { max-width: 11ch; font-size: clamp(2.25rem, 10vw, 4.75rem); line-height: .94; letter-spacing: -.045em; text-wrap: balance; }
+    .climb-epithet { margin-top: .75rem; color: var(--color-muted); font-size: clamp(.9375rem, 3.6vw, 1.25rem); }
+    .climb-file { pointer-events: auto; display: inline-flex; align-items: center; justify-content: space-between; gap: 2.5rem; min-height: 44px; margin-top: .5rem; border-bottom: 1px solid rgb(from var(--color-text) r g b / .35); color: var(--color-text); font-size: .8125rem; animation: climb-hit linear both; animation-timeline: --climb; animation-range: contain calc(var(--r) * 100% / 11) contain calc(var(--hit-end) * 100% / 11); }
+    .climb-file > span { font-size: 1.125rem; }
+    .climb-rail { position: absolute; top: 18%; bottom: 12rem; left: 2.5vw; z-index: 5; display: block; width: 1px; background: rgb(from var(--color-text) r g b / .15); }
+    .climb-rail > span { display: block; width: 100%; height: 100%; transform-origin: top; background: var(--color-text); animation: climb-progress linear both; animation-timeline: --climb; animation-range: contain 0% contain 100%; }
+    .climb-floor { position: absolute; z-index: 6; right: 6vw; bottom: max(1.5rem, env(safe-area-inset-bottom)); left: 6vw; display: block; }
+    .climb-staircase { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); align-items: end; gap: .35rem; height: 5.25rem; }
+    .climb-step { height: calc(.5rem + var(--r) * .475rem); }
+    .climb-step-rise { position: relative; display: block; width: 100%; height: 100%; transform-origin: bottom; border-top: 1px solid rgb(from var(--color-text) r g b / .5); background: linear-gradient(rgb(from var(--color-text) r g b / .12), transparent); animation: climb-step-rise linear both; animation-timeline: --climb; animation-range: contain calc(var(--r) * 100% / 11) contain calc((var(--r) + .32) * 100% / 11); }
+    .climb-step-light { position: absolute; inset: -1px 0 0; border-top: 2px solid rgb(var(--accent-rgb)); background: linear-gradient(rgb(var(--accent-rgb) / .75), rgb(var(--accent-rgb) / .08)); animation: climb-step-light linear both; animation-timeline: --climb; animation-range: contain calc(var(--r) * 100% / 11) contain calc((var(--r) + 1) * 100% / 11); }
+    .climb-step-number { position: absolute; top: .5rem; left: 0; width: 100%; color: var(--color-text); text-align: center; font-size: .625rem; }
+    .climb-step-summit .climb-step-light { animation-name: climb-step-summit; }
+    .climb-floor-note { margin-top: 1rem; color: var(--color-muted); font-size: .8125rem; }
+    /* A real ordered directory remains available to virtual-cursor users.
+       Tabbing into it reveals a visible grid before focus can be hidden. */
+    .climb-directory { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip-path: inset(50%); padding: 0; white-space: nowrap; }
+    .climb-directory:focus-within { position: fixed; inset: 1rem; z-index: 60; width: auto; height: auto; max-height: calc(100svh - 2rem); margin: 0; overflow: auto; clip-path: none; padding: 1.5rem; background: var(--color-bg); border: 1px solid var(--color-border); white-space: normal; }
+    .climb-directory:focus-within .climb-roster { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    @media (min-width: 744px) { .climb-directory:focus-within .climb-roster { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+    @media (max-height: 700px) {
+      .climb-copy { bottom: 8.5rem; }
+      .climb-copy h3 { font-size: clamp(2rem, 9vw, 3.5rem); }
+      .climb-staircase { height: 3.75rem; }
+      .climb-step { height: calc(.4rem + var(--r) * .335rem); }
+      .climb-floor { bottom: 1rem; }
+      .climb-file { margin-top: 0; }
+      .climb-rank { margin-bottom: .5rem; }
+    }
+    @media (min-width: 1024px) {
+      .climb-copy { right: auto; bottom: 13rem; width: 50%; }
+      .climb-copy h3 { font-size: clamp(3.5rem, 5.5vw, 6.5rem); }
+      .climb-portrait { top: 3%; right: -2%; width: 62%; height: 88%; }
+      .climb-number-window { top: 15%; left: 5%; font-size: clamp(17rem, 31vw, 33rem); }
+      .climb-staircase { gap: .75rem; height: 7.5rem; }
+      .climb-step { height: calc(.75rem + var(--r) * .675rem); }
+      .climb-step-number { top: .75rem; font-size: .8125rem; }
+      .climb-floor-note { font-size: .9375rem; }
+      .climb-rail { bottom: 14rem; }
+    }
+  }
+}
+
+@keyframes climb-intro-out { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: hidden; } }
+@keyframes climb-scene { 0% { opacity: 0; } 11%, 89% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes climb-summit { 0% { opacity: 0; } 11%, 100% { opacity: 1; } }
+@keyframes climb-portrait { from { transform: scale(1.06); } 30%, to { transform: scale(1); } }
+@keyframes climb-number { from { transform: translateY(0); } to { transform: translateY(-50%); } }
+@keyframes climb-hit { 0%, 100% { visibility: hidden; } .001%, 99.999% { visibility: visible; } }
+@keyframes climb-progress { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes climb-step-rise { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes climb-step-light { 0%, 100% { opacity: 0; } .01%, 85% { opacity: 1; } }
+@keyframes climb-step-summit { from { opacity: 0; } 10%, to { opacity: 1; } }

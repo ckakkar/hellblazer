@@ -1,10 +1,10 @@
+import type { CSSProperties } from "react";
 import type { MotionTextProps } from "./scroll-text-types";
+import { motionTextParts } from "./split-text";
+import "./scroll-motion.css";
 
-/**
- * React Bits' ScrollFloat, on a CSS view timeline: each character floats up
- * into place as the line scrolls into view, scrubbed by the scroll.
- * STUB: renders the text; the partner builds the motion.
- */
-export function ScrollFloat({ text, as: As = "h2", className }: MotionTextProps) {
-  return <As className={className}>{text}</As>;
+/** A headline floats up, grapheme by grapheme, on its own view timeline. */
+export function ScrollFloat({ text, as: As = "h2", className = "" }: MotionTextProps) {
+  const { parts, count } = motionTextParts(text, "char");
+  return <As className={`rb-scroll-float ${className}`} style={{ "--motion-count": count } as CSSProperties}><span className="sr-only">{text}</span>{parts}</As>;
 }
