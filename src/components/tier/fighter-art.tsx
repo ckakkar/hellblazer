@@ -12,6 +12,8 @@ type FighterArtProps = {
   className?: string;
   imageClassName?: string;
   priority?: boolean;
+  /** The image's `sizes`, when the art is drawn smaller (or larger) than its variant's usual width. */
+  sizes?: string;
   /** Decorative by default: the surrounding copy names the role of the art. */
   alt?: string;
   /** "corner" fades the left and bottom edges (art beside text); "bottom"
@@ -35,17 +37,19 @@ export function FighterArt({
   className,
   imageClassName,
   priority = false,
+  sizes: sizesOverride,
   alt = "",
   fade = "corner",
 }: FighterArtProps) {
   const art = FIGHTER_ART[fighterKey];
   const focus = { "--fx": `${art.face.x}%`, "--fy": `${art.face.y}%` } as React.CSSProperties;
   const sizes =
-    variant === "thumbnail"
+    sizesOverride ??
+    (variant === "thumbnail"
       ? "56px"
       : variant === "hero"
         ? "(max-width: 744px) 100vw, 640px"
-        : "(max-width: 744px) 72vw, 420px";
+        : "(max-width: 744px) 72vw, 420px");
 
   return (
     <figure
