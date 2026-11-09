@@ -61,6 +61,7 @@ import { SessionDate } from "./session-date";
 import { haptic } from "@/lib/haptics";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { useNow } from "@/components/resume-banner";
+import { useReportLiveSets } from "@/lib/live-workout";
 import { isNativeApp } from "@/lib/native";
 import { createClient } from "@/lib/supabase/client";
 import { reportProblem } from "@/lib/report";
@@ -1776,6 +1777,9 @@ export function SessionLogger({
     (n, e) => n + e.sets.filter(work).length,
     0,
   );
+  // The nav's count of this workout's sets (the sidebar, and the phone's
+  // resume banner on the next page) is this one: saves don't reach the layout.
+  useReportLiveSets(session.id, totalSets);
   const totalForce = exercises.reduce(
     (n, e) =>
       n +

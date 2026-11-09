@@ -9,6 +9,7 @@ import type { ActiveSession } from "@/lib/data/sessions";
 import { formatElapsed, STALE_CLOCK_MS } from "@/lib/workout-clock";
 import { cn } from "@/lib/utils";
 import { useAction } from "@/lib/use-action";
+import { useLiveSetCount } from "@/lib/live-workout";
 
 /**
  * Now, once a second. The first value is the clock where it renders: the
@@ -59,6 +60,7 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
   const [pending, start] = useAction("discard the workout");
   const [confirming, setConfirming] = useState(false);
   const elapsed = useElapsed(session.startedAt);
+  const sets = useLiveSetCount(session.id, session.workingSets);
 
   // Don't nag while you're already in that workout.
   if (pathname === `/log/${session.id}`) return null;
@@ -88,12 +90,11 @@ export function ResumeBanner({ session }: { session: ActiveSession }) {
               <span className="text-accent-ink" suppressHydrationWarning>
                 {elapsed}
               </span>
-              , {session.workingSets}{" "}
-              {session.workingSets === 1 ? "set" : "sets"} logged
+              , {sets} {sets === 1 ? "set" : "sets"} logged
             </>
           ) : (
             <>
-              In progress, {session.workingSets} {session.workingSets === 1 ? "set" : "sets"} logged
+              In progress, {sets} {sets === 1 ? "set" : "sets"} logged
             </>
           )}
         </div>
