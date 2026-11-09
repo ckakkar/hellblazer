@@ -2062,6 +2062,10 @@ input[type="date"] {
   display: block;
   min-width: 0;
   max-width: 100%;
+  /* Safari draws a block date field's value at its top, above the middle
+     where the text fields beside it sit (the bodyweight log's date rode
+     high). A line as tall as the field (Input's h-11) centres it. */
+  line-height: 2.75rem;
 }
 input[type="date"]::-webkit-date-and-time-value {
   min-width: 0;

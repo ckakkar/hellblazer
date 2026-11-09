@@ -15,7 +15,19 @@ export function DeleteSessionButton({ sessionId }: { sessionId: string }) {
       disabled={pending}
       icon={pending ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
       doneLabel="Deleting"
-      onHold={() => start(async () => void (await deleteSession({ id: sessionId })))}
+      // A promise that settles with the delete, so the hold says "Deleting"
+      // only once it went through, and goes back to idle if it didn't.
+      onHold={() =>
+        new Promise<boolean>((resolve) =>
+          start(
+            async () => {
+              await deleteSession({ id: sessionId });
+              resolve(true);
+            },
+            () => resolve(false),
+          ),
+        )
+      }
     >
       Hold to delete
     </HoldButton>
