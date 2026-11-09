@@ -342,6 +342,11 @@ async function MuscleTab({
           icon={<TrendingUp className="size-6" />}
           title={`No ${MUSCLE_LABEL[muscle]} work logged yet`}
           body="Log sets that train this muscle and its weekly trend, volume and stats will show up here."
+          action={
+            <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
+              Start a workout
+            </Link>
+          }
         />
       )}
 

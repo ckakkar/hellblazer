@@ -1,5 +1,7 @@
 "use client";
 
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { MUSCLE_LABEL, type Muscle } from "@/lib/muscles";
 import { formatVolume, type Unit } from "@/lib/units";
@@ -35,6 +37,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
   return (
     <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
       <div className="relative h-[220px] w-[220px] shrink-0">
+        <DeferredChart height={220}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
@@ -66,6 +69,7 @@ export function MuscleVolumeDonut({ data, unit }: { data: Row[]; unit: Unit }) {
             />
           </PieChart>
         </ResponsiveContainer>
+        </DeferredChart>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-[12px] font-medium text-muted">
             Total

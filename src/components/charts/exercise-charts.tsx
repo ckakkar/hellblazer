@@ -1,5 +1,7 @@
 "use client";
 
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
 import {
   Area,
   AreaChart,
@@ -72,6 +74,7 @@ export function OneRepMaxChart({
       {fullDate(first.date)}, {trimNum(last.est1rm)} {unit} on {fullDate(last.date)}
       {record ? `, best ${recordLabel} on ${fullDate(record.date)}` : ""}.
     </p>
+    <DeferredChart height={height}>
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={chartData} margin={{ top: 28, right: 16, bottom: 4, left: 0 }}>
         <defs>
@@ -137,6 +140,7 @@ export function OneRepMaxChart({
         )}
       </AreaChart>
     </ResponsiveContainer>
+    </DeferredChart>
     </>
   );
 }
@@ -166,6 +170,7 @@ export function VolumeBarsChart({
       {heaviest.volume.toLocaleString()} {unit} on {fullDate(heaviest.date)}, the latest{" "}
       {chartData[chartData.length - 1].volume.toLocaleString()} {unit} on {fullDate(chartData[chartData.length - 1].date)}.
     </p>
+    <DeferredChart height={260}>
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={chartData} margin={{ top: 8, right: 12, bottom: 4, left: 0 }}>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
@@ -203,6 +208,7 @@ export function VolumeBarsChart({
         />
       </BarChart>
     </ResponsiveContainer>
+    </DeferredChart>
     </>
   );
 }

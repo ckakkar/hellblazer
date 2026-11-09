@@ -1,5 +1,7 @@
 "use client";
 
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
 import {
   PolarAngleAxis,
   PolarGrid,
@@ -27,6 +29,7 @@ export function MuscleBalanceRadar({ data }: { data: Row[] }) {
   }
 
   return (
+    <DeferredChart height={320}>
     <ResponsiveContainer width="100%" height={320}>
       <RadarChart data={chartData} outerRadius="72%" margin={{ top: 8, bottom: 8 }}>
         <PolarGrid stroke="var(--color-border)" />
@@ -54,5 +57,6 @@ export function MuscleBalanceRadar({ data }: { data: Row[] }) {
         />
       </RadarChart>
     </ResponsiveContainer>
+    </DeferredChart>
   );
 }

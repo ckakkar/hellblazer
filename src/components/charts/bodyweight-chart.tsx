@@ -1,5 +1,7 @@
 "use client";
 
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
 import { format, parseISO } from "date-fns";
 import {
   Area,
@@ -34,6 +36,7 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
   const yWidth = axisWidthFor(axis.ticks, (v) => trimNum(v));
 
   return (
+    <DeferredChart height={200}>
     <ResponsiveContainer width="100%" height={200}>
       <AreaChart data={data} margin={{ top: 8, right: 10, bottom: 4, left: 0 }}>
         <defs>
@@ -81,5 +84,6 @@ export function BodyweightChart({ logs, unit }: { logs: Log[]; unit: Unit }) {
         />
       </AreaChart>
     </ResponsiveContainer>
+    </DeferredChart>
   );
 }

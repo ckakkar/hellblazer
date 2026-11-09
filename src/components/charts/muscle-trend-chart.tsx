@@ -1,5 +1,7 @@
 "use client";
 
+import { DeferredChart } from "@/components/charts/deferred-chart";
+
 import { format, parseISO } from "date-fns";
 import {
   Bar,
@@ -43,6 +45,7 @@ export function MuscleTrendChart({
   const barColor = accent ? "var(--color-text)" : "var(--color-surface-2)";
 
   return (
+    <DeferredChart height={280}>
     <ResponsiveContainer width="100%" height={280}>
       <ComposedChart data={chartData} margin={{ top: 8, right: 4, bottom: 4, left: -12 }}>
         <CartesianGrid stroke={GRID_STROKE} strokeOpacity={0.4} vertical={false} />
@@ -105,5 +108,6 @@ export function MuscleTrendChart({
         />
       </ComposedChart>
     </ResponsiveContainer>
+    </DeferredChart>
   );
 }
