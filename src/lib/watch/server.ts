@@ -557,13 +557,14 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
   // one, not another. Returned as `started` even if it's too old to be the
   // live workout, so the watch can move its sets over either way.
   if (startedAt) {
-    const { data: made } = await ctx.db
+    const { data: made, error } = await ctx.db
       .from("session")
       .select("id, title, created_at")
       .eq("user_id", ctx.userId)
       .eq("created_at", startedAt)
       .limit(1)
       .maybeSingle();
+    if (error) throw error;
     if (made) {
       await addMissingExercises(ctx, made.id, v.exercises);
       return { ...(await watchState(ctx)), started: await workoutOf(ctx, made) };
@@ -573,29 +574,31 @@ export async function startWatchWorkout(ctx: WatchContext, body: unknown): Promi
   // an offline workout catching up is told it wasn't started, so its sets
   // aren't moved onto that one.
   if (await activeWorkout(ctx)) return startedAt ? { ...(await watchState(ctx)), conflict: true } : watchState(ctx);
-  const { data: sessionId, error } = await ctx.db.rpc("start_session", {
+  // The live-workout check and offline start time are applied under the
+  // same database lock as phone starts. A phone that starts between the
+  // check above and this call must never become this offline workout.
+  const { data: sessionId, error } = await ctx.db.rpc("start_watch_session", {
     p_user: ctx.userId,
     ...(v.programDayId ? { p_program_day_id: v.programDayId } : { p_template_id: v.templateId }),
     p_date: v.localDate,
+    ...(startedAt ? { p_started_at: startedAt } : {}),
   });
   if (error) {
     // start_session raises "… not found" for a day or template that isn't theirs.
     throw error.code === "P0001" ? new WatchError(404, "not found") : error;
   }
-  // Started offline: the session began when the watch says, not now, so its
-  // clock (and the heart-rate read later) line up. Only a session this call
-  // just opened; one that was already under way keeps its own.
-  if (startedAt && sessionId) {
-    await ctx.db
-      .from("session")
-      .update({ created_at: startedAt })
-      .eq("id", sessionId)
-      .eq("user_id", ctx.userId)
-      .gte("created_at", new Date(Date.now() - 60_000).toISOString());
+  if (!sessionId) {
+    if (startedAt) return { ...(await watchState(ctx)), conflict: true };
+    throw new Error("Start returned no session");
   }
-  const { data: made } = sessionId
-    ? await ctx.db.from("session").select("id, title, created_at").eq("id", sessionId).eq("user_id", ctx.userId).maybeSingle()
-    : { data: null };
+  const { data: made, error: readError } = await ctx.db
+    .from("session")
+    .select("id, title, created_at")
+    .eq("id", sessionId)
+    .eq("user_id", ctx.userId)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!made) throw new Error("Started session unavailable");
   if (made && startedAt) await addMissingExercises(ctx, made.id, v.exercises);
   const state = await watchState(ctx);
   return made ? { ...state, started: await workoutOf(ctx, made) } : state;
@@ -680,11 +683,12 @@ async function endedAt(
 ): Promise<number> {
   const now = Date.now();
   if (durationMin != null) return Math.min(now, Date.parse(createdAt) + durationMin * 60_000);
-  const { data: last } = await ctx.db
+  const { data: last, error } = await ctx.db
     .from("session_exercise")
     .select("set(created_at)")
     .eq("session_id", sessionId)
     .eq("user_id", ctx.userId);
+  if (error) throw error;
   const times = (last ?? []).flatMap((se) => (se.set ?? []).map((st) => Date.parse(st.created_at)));
   return times.length > 0 ? Math.min(now, Math.max(...times)) : now;
 }
@@ -716,11 +720,13 @@ export async function finishWatchWorkout(ctx: WatchContext, body: unknown): Prom
   if (!current.finished_at) patch.finished_at = new Date(await endedAt(ctx, v.sessionId, current.created_at, v.durationMin)).toISOString();
   if (v.durationMin != null) patch.duration_min = v.durationMin;
   if (Object.keys(patch).length > 0) {
-    const { error } = await db
+    let write = db
       .from("session")
       .update(patch)
       .eq("id", v.sessionId)
       .eq("user_id", userId);
+    if (patch.finished_at) write = write.is("finished_at", null);
+    const { error } = await write;
     if (error) throw error;
   }
   // The iPhone's widgets catch up on their own (a silent push).
@@ -813,7 +819,7 @@ function summarize(workout: WatchWorkout, unit: Unit): { complete: boolean; acti
  * picks it up when it next looks.
  */
 export async function logVoiceSet(ctx: WatchContext, body: unknown): Promise<VoiceSetReply> {
-  const v = voiceSetSchema.parse(body ?? {});
+  const v = voiceSetSchema.parse(body);
   const found = await activeWorkout(ctx);
   if (!found || found.exercises.length === 0) return { status: "no-workout" };
   // A retry of a command that already landed: answered as the first time

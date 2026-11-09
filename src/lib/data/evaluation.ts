@@ -33,10 +33,11 @@ import { countedWorkouts } from "@/lib/program-week";
 export async function getEvalGate(): Promise<EvalGate> {
   const supabase = await createClient();
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from("profile")
     .select("evaluation_run_at, tier")
     .maybeSingle();
+  if (profileError) throw profileError;
   const lastRunAt = profile?.evaluation_run_at ?? null;
   const unlimited = hasUnlimitedEvaluations(profile?.tier);
 
@@ -53,6 +54,8 @@ export async function getEvalGate(): Promise<EvalGate> {
     qualifying(),
     lastRunAt ? qualifying().gt("finished_at", lastRunAt) : null,
   ]);
+  if (totalRes.error) throw totalRes.error;
+  if (newRes?.error) throw newRes.error;
 
   const totalWorkouts = totalRes.count ?? 0;
   const newWorkouts = lastRunAt ? (newRes?.count ?? 0) : totalWorkouts;
@@ -169,6 +172,10 @@ export async function getTrainingProfile(): Promise<TrainingProfile> {
         .select("sex, birth_date, birth_year, height_cm")
         .maybeSingle(),
     ]);
+
+  if (bwRes.error) throw bwRes.error;
+  if (programRes.error) throw programRes.error;
+  if (profileRes.error) throw profileRes.error;
 
   const sessions = sessionsRes;
   const totalSessions = sessions.length;

@@ -23,7 +23,13 @@ vi.mock("next/server", () => ({ after: () => {} }));
 
 /** Just enough of supabase-js's query builder: eq/is filters, reads, writes. */
 function fakeDb(tables: Tables) {
+  const failures: { table: string; op: string }[] = [];
   const rpc = vi.fn<(name: string, args: Row) => Promise<{ data: unknown; error: unknown }>>(async (name, args) => {
+    if (name === "start_watch_session") {
+      const id = "20000000-0000-4000-8000-0000000000ee";
+      tables.session.push({ id, user_id: args.p_user, finished_at: null, created_at: args.p_started_at ?? new Date().toISOString() });
+      return { data: id, error: null };
+    }
     // log_sets as Postgres runs it: numbered after the exercise's last set,
     // and an id already in comes back as it is.
     if (name === "log_sets") {
@@ -55,6 +61,11 @@ function fakeDb(tables: Tables) {
       without.every(([column, value]) => (row[column] ?? null) !== value) &&
       atLeast.every(([column, value]) => String(row[column] ?? "") >= value);
     const run = (): { data: unknown; error: { code: string; message: string } | null } => {
+      const failed = failures.findIndex((f) => f.table === table && f.op === op);
+      if (failed >= 0) {
+        failures.splice(failed, 1);
+        return { data: null, error: { code: "57014", message: "private database timeout" } };
+      }
       if (op === "select") return { data: rows().filter(matches), error: null };
       if (op === "update") {
         const hit = rows().filter(matches);
@@ -126,7 +137,7 @@ function fakeDb(tables: Tables) {
     };
     return builder;
   }
-  return { from, rpc };
+  return { from, rpc, failNext: (table: string, op = "select") => failures.push({ table, op }) };
 }
 
 const A = "00000000-0000-4000-8000-00000000000a";
@@ -178,6 +189,7 @@ const {
   spokenWorkout,
   watchState,
 } = await import("./server");
+const { POST: deviceSet } = await import("@/app/api/device/set/route");
 
 function request(headers: Record<string, string> = {}) {
   return new Request("https://example.test/api/watch/x", { headers });
@@ -319,13 +331,94 @@ describe("logging sets", () => {
 });
 
 describe("starting and finishing", () => {
-  it("starts through start_session for the token's lifter", async () => {
+  const TEMPLATE = "50000000-0000-4000-8000-000000000001";
+
+  it("retries a failed offline-start lookup without creating another workout", async () => {
+    db.failNext("session");
+    const res = await handleWatch(signedIn(), (ctx) =>
+      startWatchWorkout(ctx, { templateId: TEMPLATE, localDate: "2026-11-08", startedAt: Date.now() - 2 * 86400_000 }),
+    );
+    expect({ status: res.status, body: await res.json() }).toEqual({ status: 500, body: { error: "failed" } });
+    expect(db.rpc).not.toHaveBeenCalled();
+    expect(tables.session).toHaveLength(2);
+  });
+
+  it("retries when the session made by a start cannot be read", async () => {
+    db.rpc.mockImplementation(async () => {
+      db.failNext("session");
+      return { data: SESSION_A, error: null };
+    });
+    const res = await handleWatch(signedIn(), (ctx) =>
+      startWatchWorkout(ctx, { templateId: TEMPLATE, localDate: "2026-11-08" }),
+    );
+    expect({ status: res.status, body: await res.json() }).toEqual({ status: 500, body: { error: "failed" } });
+  });
+
+  it("keeps an offline workout separate when the phone starts during the request", async () => {
+    const phoneStart = new Date().toISOString();
+    const startedAt = Date.now() - 2 * 86400_000;
+    const PHONE = "20000000-0000-4000-8000-0000000000cc";
+    db.rpc.mockImplementation(async (name) => {
+      tables.session.push({ id: PHONE, user_id: A, title: "Phone workout", finished_at: null, created_at: phoneStart });
+      // The atomic wrapper detects the phone's start under the same lock;
+      // start_session alone instead hands the phone's session back.
+      return { data: name === "start_watch_session" ? null : PHONE, error: null };
+    });
+    const res = await handleWatch(signedIn(), (ctx) =>
+      startWatchWorkout(ctx, { templateId: TEMPLATE, localDate: "2026-11-07", startedAt }),
+    );
+    expect({ status: res.status, body: await res.json() }).toMatchObject({
+      status: 200,
+      body: { conflict: true, active: { id: PHONE, startedAt: Date.parse(phoneStart) } },
+    });
+    expect(tables.session.find((s) => s.id === PHONE)?.created_at).toBe(phoneStart);
+    expect(tables.session_exercise).toHaveLength(2);
+  });
+
+  it("does not mistake another lifter's matching offline start time for its own", async () => {
+    const startedAt = Date.now() - 2 * 86400_000;
+    tables.session.find((s) => s.id === SESSION_B)!.created_at = new Date(startedAt).toISOString();
+    db.rpc.mockImplementation(async () => {
+      tables.session.push({ id: "20000000-0000-4000-8000-0000000000dd", user_id: A, finished_at: null, created_at: new Date(startedAt).toISOString() });
+      return { data: "20000000-0000-4000-8000-0000000000dd", error: null };
+    });
+    const res = await handleWatch(signedIn(), (ctx) =>
+      startWatchWorkout(ctx, { templateId: TEMPLATE, localDate: "2026-11-07", startedAt }),
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).started?.id).toBe("20000000-0000-4000-8000-0000000000dd");
+    expect(tables.session.find((s) => s.id === SESSION_B)?.finished_at).toBeNull();
+  });
+
+  it("leaves a workout unfinished when its last-set time cannot be read", async () => {
+    const current = tables.session.find((s) => s.id === SESSION_A)!;
+    current.finished_at = null;
+    current.created_at = new Date(Date.now() - 2 * 86400_000).toISOString();
+    db.failNext("session_exercise");
+    const res = await handleWatch(signedIn(), (ctx) => finishWatchWorkout(ctx, { sessionId: SESSION_A }));
+    expect({ status: res.status, body: await res.json() }).toEqual({ status: 500, body: { error: "failed" } });
+    expect(current.finished_at).toBeNull();
+  });
+
+  it("keeps the first finish time and duration when two devices finish together", async () => {
+    const current = tables.session.find((s) => s.id === SESSION_A)!;
+    const started = Date.now() - 3600_000;
+    current.finished_at = null;
+    current.created_at = new Date(started).toISOString();
+    const replies = await Promise.all([45, 50].map((durationMin) =>
+      handleWatch(signedIn(), (ctx) => finishWatchWorkout(ctx, { sessionId: SESSION_A, durationMin })),
+    ));
+    expect(replies.map((r) => r.status)).toEqual([200, 200]);
+    expect(current).toMatchObject({ finished_at: new Date(started + 45 * 60_000).toISOString(), duration_min: 45 });
+  });
+
+  it("starts through the atomic wrapper for the token's lifter", async () => {
     const day = "40000000-0000-4000-8000-000000000001";
     const template = "50000000-0000-4000-8000-000000000001";
     await handleWatch(signedIn(), (ctx) =>
       startWatchWorkout(ctx, { templateId: template, programDayId: day, localDate: "2026-09-26" }),
     );
-    expect(db.rpc).toHaveBeenCalledWith("start_session", {
+    expect(db.rpc).toHaveBeenCalledWith("start_watch_session", {
       p_user: A,
       p_program_day_id: day,
       p_date: "2026-09-26",
@@ -351,16 +444,16 @@ describe("starting and finishing", () => {
     const state = await res.json();
     expect(state.conflict).toBe(true);
     expect(state.started).toBeUndefined();
-    expect(db.rpc).not.toHaveBeenCalledWith("start_session", expect.anything());
+    expect(db.rpc).not.toHaveBeenCalledWith("start_watch_session", expect.anything());
   });
 
   it("finds a days-old offline workout again when the reply to its start was lost", async () => {
     const template = "50000000-0000-4000-8000-000000000001";
     const startedAt = Date.now() - 48 * 60 * 60 * 1000;
-    db.rpc.mockImplementation(async (name: string) => {
-      if (name !== "start_session") return { data: null, error: null };
+    db.rpc.mockImplementation(async (name: string, args) => {
+      if (name !== "start_watch_session") return { data: null, error: null };
       const id = "20000000-0000-4000-8000-0000000000aa";
-      tables.session.push({ id, user_id: A, title: "Day 1", template_id: template, finished_at: null, created_at: new Date().toISOString() });
+      tables.session.push({ id, user_id: A, title: "Day 1", template_id: template, finished_at: null, created_at: args.p_started_at });
       return { data: id, error: null };
     });
     const start = () =>
@@ -370,7 +463,7 @@ describe("starting and finishing", () => {
     // Its start time is the watch's, two days back, so the retry finds it.
     const retry = await (await start()).json();
     expect(retry.started?.id).toBe("20000000-0000-4000-8000-0000000000aa");
-    expect(db.rpc.mock.calls.filter(([name]) => name === "start_session")).toHaveLength(1);
+    expect(db.rpc.mock.calls.filter(([name]) => name === "start_watch_session")).toHaveLength(1);
   });
 
   it("turns start_session's not-found into a 404", async () => {
@@ -444,6 +537,17 @@ describe("logging by voice on the phone", () => {
     const bench = tables.set.filter((row) => row.session_exercise_id === BENCH);
     expect(bench).toHaveLength(2);
     expect(bench[1]).toMatchObject({ user_id: A, set_number: 2, weight_kg: 80, reps: 5, is_warmup: false });
+  });
+
+  it.each(["{\"weight\":", "null"])("refuses an invalid device command (%s) without logging a set", async (body) => {
+    const res = await deviceSet(new Request("https://example.test/api/device/set", {
+      method: "POST",
+      headers: { authorization: `Bearer ${PHONE_TOKEN_A}`, "content-type": "application/json" },
+      body,
+    }));
+    expect({ status: res.status, body: await res.json() }).toEqual({ status: 400, body: { error: "invalid" } });
+    expect(tables.set.filter((s) => s.user_id === A)).toHaveLength(1);
+    expect(db.rpc).not.toHaveBeenCalledWith("log_sets", expect.anything());
   });
 
   it("logs the numbers it's told", async () => {

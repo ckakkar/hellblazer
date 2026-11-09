@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
  *   GET                     the workout's exercise names, for that model
  */
 export async function POST(request: Request) {
-  const body: unknown = await request.json().catch(() => ({}));
+  const body: unknown = await request.json().catch(() => null);
   if (body && typeof body === "object" && "heard" in body) {
     return handleWatch(request, (ctx) => logHeardSets(ctx, body), "phone");
   }

@@ -94,6 +94,14 @@ export async function setActiveProgram(input: { id: string; active: boolean }) {
     .object({ id: z.string().uuid(), active: z.boolean() })
     .parse(input);
   const { supabase, user } = await getAuthedContext();
+  const { data: program, error: readError } = await supabase
+    .from("program")
+    .select("id")
+    .eq("id", v.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (readError) throw readError;
+  if (!program) throw new Error("Program not found");
   // One step (set_active_program), so switching never leaves no program
   // active. Starting a program with no start date begins it today.
   const { error } = await supabase.rpc("set_active_program", {

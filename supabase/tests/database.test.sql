@@ -5,7 +5,7 @@
 -- in one transaction that's rolled back.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(42);
+select plan(62);
 
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-00000000000a', 'a@example.com'),
@@ -34,6 +34,7 @@ select ok(
   'load_preset builds a program'
 );
 select is((select count(*) from public.program where is_active)::int, 1, 'with exactly one active program');
+select set_config('test.program_a', (select id::text from public.program where is_active), true);
 select is(
   (select count(*) from public.template_exercise)::int, 3,
   'preset lifts resolve by name, case-insensitively; unknown names are skipped'
@@ -91,6 +92,28 @@ select is(
   (select planned_per_week from public.session where id = current_setting('test.session')::uuid)::int, 2,
   'and the program''s days a week then, so editing it later can''t rewrite the streak'
 );
+
+-- Moves still swap neighbours under the same parent lock as APPEND.
+select set_config('test.move_te', (select id::text from public.template_exercise
+  where template_id = (select template_id from public.program_day where id = current_setting('test.day')::uuid)
+  order by position limit 1), true);
+select public.move_template_exercise(current_setting('test.move_te')::uuid, 'down');
+select is((select position from public.template_exercise where id = current_setting('test.move_te')::uuid), 1,
+  'moving a template exercise down swaps it with the next neighbour');
+select is((select count(distinct position) from public.template_exercise
+  where template_id = (select template_id from public.program_day where id = current_setting('test.day')::uuid))::int, 2,
+  'template exercise positions remain distinct');
+select public.move_template_exercise(current_setting('test.move_te')::uuid, 'up');
+select is((select position from public.template_exercise where id = current_setting('test.move_te')::uuid), 0,
+  'moving the template exercise back restores its original position');
+select public.move_program_day(current_setting('test.day')::uuid, 'down');
+select is((select position from public.program_day where id = current_setting('test.day')::uuid), 1,
+  'moving a program day down swaps it with the next neighbour');
+select is((select count(distinct position) from public.program_day where program_id = current_setting('test.program_a')::uuid)::int, 2,
+  'program day positions remain distinct');
+select public.move_program_day(current_setting('test.day')::uuid, 'up');
+select is((select position from public.program_day where id = current_setting('test.day')::uuid), 0,
+  'moving the program day back restores its original position');
 
 -- Hands-free sets: numbered after the last, and a retried id adds nothing.
 select is(
@@ -185,6 +208,10 @@ select throws_ok(
   $$select * from public.watch_last_performances('00000000-0000-0000-0000-00000000000a', '{}')$$, '42501', null,
   'the watch API''s service-role function is off limits to lifters'
 );
+select throws_ok(
+  $$select public.start_watch_session()$$, '42501', null,
+  'a lifter cannot call the watch start wrapper directly'
+);
 select lives_ok(
   $$update public.profile set weekly_recap = false$$,
   'a lifter can turn the Sunday recap off'
@@ -232,6 +259,21 @@ select throws_ok(
   'B can''t log a set under A''s exercise'
 );
 insert into public.workout_template (user_id, name) values ('00000000-0000-0000-0000-00000000000b', 'B day');
+select set_config('test.program_b', public.create_program('B block', 4, current_date, '{}', true)::text, true);
+select throws_ok(
+  format('select public.set_active_program(%L, true, current_date)', current_setting('test.program_a')),
+  'P0001', 'program not found',
+  'activating A''s program as B is refused before touching B''s current program'
+);
+select throws_ok(
+  $$select public.set_active_program('ffffffff-ffff-4fff-8fff-ffffffffffff', true, current_date)$$,
+  'P0001', 'program not found',
+  'a missing activation target is refused too'
+);
+select ok(
+  (select is_active from public.program where id = current_setting('test.program_b')::uuid),
+  'a refused activation keeps the caller''s current program active'
+);
 select throws_ok(
   format(
     $$insert into public.template_exercise (user_id, template_id, exercise_id)
@@ -244,6 +286,8 @@ select throws_ok(
 );
 -- Tried here, checked below once A's row is visible again.
 update public.session set title = 'mine now';
+select public.move_template_exercise(current_setting('test.move_te')::uuid, 'down');
+select public.move_program_day(current_setting('test.day')::uuid, 'down');
 select throws_ok(
   format('select public.start_session(null, %L, null, null)', current_setting('test.day')), 'P0001', 'program day not found',
   'B can''t start a session from A''s program day'
@@ -263,6 +307,7 @@ select throws_ok(
 
 -- Signed out ----------------------------------------------------------------
 set local role anon;
+select throws_ok($$select public.start_watch_session()$$, '42501', null, 'anonymous callers cannot call the watch start wrapper');
 select throws_ok($$select public.start_session()$$, '42501', null, 'anonymous callers can''t start sessions');
 select throws_ok(
   format('select public.repeat_session(%L)', current_setting('test.session')), '42501', null,
@@ -270,10 +315,55 @@ select throws_ok(
 );
 
 reset role;
+select is((select position from public.template_exercise where id = current_setting('test.move_te')::uuid), 0,
+  'B cannot move A''s template exercise');
+select is((select position from public.program_day where id = current_setting('test.day')::uuid), 0,
+  'B cannot move A''s program day');
+select ok(
+  (select is_active from public.program where id = current_setting('test.program_a')::uuid),
+  'a refused activation never changes the other account''s program'
+);
 select is(
   (select title from public.session where id = current_setting('test.session')::uuid), 'Day 1: Upper',
   'B''s update didn''t touch A''s session'
 );
+
+-- The service-role watch start shares the web start's lock. A phone start
+-- that wins the lock cannot be relabelled as the watch's offline workout.
+set local role service_role;
+select set_config('request.jwt.claims', '{"role":"service_role"}', true);
+select set_config('test.phone', public.start_session(null, null, current_date, '00000000-0000-0000-0000-00000000000a')::text, true);
+select set_config('test.phone_at', (select created_at::text from public.session where id = current_setting('test.phone')::uuid), true);
+select ok(
+  public.start_watch_session(null, null, current_date - 2, '00000000-0000-0000-0000-00000000000a', now() - interval '2 days') is null,
+  'an offline start conflicts with an existing live workout'
+);
+select is(
+  (select created_at from public.session where id = current_setting('test.phone')::uuid), current_setting('test.phone_at')::timestamptz,
+  'the phone workout keeps its own start time'
+);
+update public.session set finished_at = now() where id = current_setting('test.phone')::uuid;
+select set_config('test.watch', public.start_watch_session(null, null, current_date - 2, '00000000-0000-0000-0000-00000000000a', now() - interval '2 days')::text, true);
+select is(
+  (select created_at from public.session where id = current_setting('test.watch')::uuid), now() - interval '2 days',
+  'a fresh offline start keeps the watch clock atomically'
+);
+select is(
+  public.start_watch_session(null, null, current_date - 2, '00000000-0000-0000-0000-00000000000a', now() - interval '2 days'), current_setting('test.watch')::uuid,
+  'retrying a days-old offline start returns its original session'
+);
+select set_config('test.watch_b', public.start_watch_session(null, null, current_date - 2, '00000000-0000-0000-0000-00000000000b', now() - interval '2 days')::text, true);
+select is(
+  (select user_id from public.session where id = current_setting('test.watch_b')::uuid),
+  '00000000-0000-0000-0000-00000000000b'::uuid,
+  'a matching start time belonging to A is never handed to B'
+);
+select throws_ok(
+  format('select public.start_watch_session(null, %L, current_date, %L)', current_setting('test.day'), '00000000-0000-0000-0000-00000000000b'),
+  'P0001', 'program day not found',
+  'the watch wrapper cannot start B on A''s program day'
+);
+reset role;
 
 select * from finish();
 rollback;
