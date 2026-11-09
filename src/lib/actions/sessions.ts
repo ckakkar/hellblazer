@@ -44,7 +44,10 @@ export async function startSession(input: {
   // open behind the new one, never finished. Discard it from the resume banner
   // to start fresh. A session left open for hours doesn't count.
   const live = await getActiveSession();
-  if (live && !live.stale) redirect(`/log/${live.id}`);
+  if (live && !live.stale) {
+    revalidatePath("/", "layout");
+    redirect(`/log/${live.id}`);
+  }
 
   // A session advances the program ONLY when it was started from an explicit
   // program day. Freeform work and bare templates stay off-plan by design: we
@@ -62,6 +65,7 @@ export async function startSession(input: {
   });
   if (error) throw error;
 
+  revalidatePath("/", "layout");
   redirect(`/log/${sessionId}`);
 }
 
@@ -85,12 +89,16 @@ export async function repeatSession(input: { sessionId: string; localDate?: stri
     .parse(input);
   const { supabase } = await getAuthedContext();
   const live = await getActiveSession();
-  if (live && !live.stale) redirect(`/log/${live.id}`);
+  if (live && !live.stale) {
+    revalidatePath("/", "layout");
+    redirect(`/log/${live.id}`);
+  }
   const { data: sessionId, error } = await supabase.rpc("repeat_session", {
     p_session: v.sessionId,
     ...(v.localDate ? { p_date: v.localDate } : {}),
   });
   if (error) throw error;
+  revalidatePath("/", "layout");
   redirect(`/log/${sessionId}`);
 }
 
@@ -426,10 +434,15 @@ export async function finishSession(input: {
   // Checked, not fire-and-forget: redirecting to the finished view after a
   // failed write would show the session as done while it stays in progress.
   if (Object.keys(patch).length > 0) {
-    const { error } = await supabase
+    let write = supabase
       .from("session")
       .update(patch)
       .eq("id", v.sessionId);
+    // Another device can finish after our read. Only the first finish
+    // records its time and duration; editing an already finished one still
+    // updates the duration above without changing when it ended.
+    if (patch.finished_at) write = write.is("finished_at", null);
+    const { error } = await write;
     if (error) throw error;
   }
   revalidatePath("/dashboard");

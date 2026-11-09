@@ -933,6 +933,16 @@ export type Database = {
         }
         Returns: string
       }
+      start_watch_session: {
+        Args: {
+          p_date?: string
+          p_program_day_id?: string
+          p_started_at?: string
+          p_template_id?: string
+          p_user?: string
+        }
+        Returns: string
+      }
       template_from_session: {
         Args: { p_name: string; p_session: string }
         Returns: string
