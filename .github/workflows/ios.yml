@@ -77,7 +77,7 @@ jobs:
           CODE_SIGNING_ALLOWED=NO
           build
 
-      - uses: ruby/setup-ruby@7f797815d8adceb1c412e7abefdd1ab4abc47a5f # v1
+      - uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1
         if: ${{ env.UPLOAD == 'true' }}
         with:
           ruby-version: "3.3"
