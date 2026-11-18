@@ -1511,6 +1511,27 @@ export function SessionLogger({
     // Nothing logged yet: shown at once, put back if the server says no.
     if (!hasSets) relabel(newExerciseId, meta.name, meta.primary_muscle);
     startNav(async () => {
+      // The server swaps a movement with no stored sets in place, so a set
+      // logged here that it doesn't have yet would land on the new movement
+      // when it's sent. Its sets go first; if one can't, nothing is swapped.
+      // (Each is sent again, an upsert, after anything already on its way.)
+      if (hasSets) {
+        const sets = ref.current.find((e) => e.seId === seId)?.sets ?? [];
+        const saved = await Promise.all(
+          sets.map((s, i) => {
+            if (!isLogged(s.reps)) return true;
+            const timer = timers.current.get(s.id);
+            if (timer) clearTimeout(timer);
+            timers.current.delete(s.id);
+            pendingSaves.current.delete(s.id);
+            return persist(seId, s, i + 1);
+          }),
+        );
+        if (!saved.every(Boolean)) {
+          showNotice(`Your sets on ${before.name} haven't saved yet, so it's not swapped. Try again once they have.`);
+          return;
+        }
+      }
       let swapped: Awaited<ReturnType<typeof swapSessionExercise>>;
       try {
         lastStructural.current = Date.now();

@@ -385,9 +385,11 @@ export async function clearHistory() {
   if (error) throw error;
   const { error: trashErr } = await supabase.from("deleted_session").delete().eq("user_id", user.id);
   if (trashErr) throw trashErr;
-  await nudgeWidgets(supabase, user.id);
   // Wipe skips too so the program rotation starts clean with the history.
-  await supabase.from("program_skip").delete().eq("user_id", user.id);
+  // A wipe that couldn't clear them isn't done: it fails, to be held again.
+  const { error: skipErr } = await supabase.from("program_skip").delete().eq("user_id", user.id);
+  if (skipErr) throw skipErr;
+  await nudgeWidgets(supabase, user.id);
   revalidatePath("/history");
   revalidatePath("/dashboard");
   revalidatePath("/progress");

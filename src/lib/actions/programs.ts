@@ -152,11 +152,13 @@ export async function skipWorkout(input: { programDayId: string }) {
 export async function pauseProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase, user } = await getAuthedContext();
-  const { data: p } = await supabase
+  const { data: p, error: readErr } = await supabase
     .from("program")
     .select("paused_at, start_date")
     .eq("id", id)
     .maybeSingle();
+  // A read that failed isn't "already paused": it fails, so the lifter hears.
+  if (readErr) throw readErr;
   if (!p || p.paused_at) return; // already paused / missing
   const { error } = await supabase
     .from("program")
@@ -179,11 +181,12 @@ export async function pauseProgram(input: { id: string }) {
 export async function resumeProgram(input: { id: string }) {
   const { id } = z.object({ id: z.string().uuid() }).parse(input);
   const { supabase, user } = await getAuthedContext();
-  const { data: p } = await supabase
+  const { data: p, error: readErr } = await supabase
     .from("program")
     .select("paused_at, start_date, pauses")
     .eq("id", id)
     .maybeSingle();
+  if (readErr) throw readErr;
   if (!p || !p.paused_at) return; // not paused
 
   const patch: TablesUpdate<"program"> = { paused_at: null };
