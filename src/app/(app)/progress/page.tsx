@@ -20,7 +20,6 @@ import { LadderStanding } from "@/components/tier/ladder-standing";
 import { OneRepMaxBoard } from "@/components/one-rep-max-board";
 import { PageHeader, EmptyState, SectionLabel } from "@/components/ui/page-header";
 import { ChartCard } from "@/components/ui/chart-card";
-import { buttonVariants } from "@/components/ui/button";
 import { Tape, TapeRow } from "@/components/ui/tape";
 import {
   OneRepMaxChart,
@@ -34,6 +33,7 @@ import { formatVolume, toDisplayWeight, trimNum, type Unit } from "@/lib/units";
 import { liftStory } from "@/lib/lift-story";
 import { MUSCLE_LABEL, MUSCLES, isWeakPoint, type Muscle } from "@/lib/muscles";
 import { ProgressBody, ProgressShell } from "./progress-controls";
+import { StartWorkoutLink } from "@/components/start-workout-link";
 
 export const metadata: Metadata = { title: "Progress" };
 
@@ -98,9 +98,7 @@ export default async function ProgressPage({
                     title="No logged exercises yet"
                     body="Log some working sets and your 1RM and volume trends will appear here."
                     action={
-                      <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
-                        Start a workout
-                      </Link>
+                      <StartWorkoutLink />
                     }
                   />
                 ) : (
@@ -343,9 +341,7 @@ async function MuscleTab({
           title={`No ${MUSCLE_LABEL[muscle]} work logged yet`}
           body="Log sets that train this muscle and its weekly trend, volume and stats will show up here."
           action={
-            <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
-              Start a workout
-            </Link>
+            <StartWorkoutLink />
           }
         />
       )}

@@ -598,7 +598,9 @@ function TemplateExercises({
             <li
               key={row.id}
               data-glide={row.id}
-              className="flex items-center gap-2 bg-surface px-3 py-2.5 sm:gap-3 sm:px-4"
+              // Under 380pt the sets and reps go under the name, so the
+              // name keeps the row's width ("Barb / ell…" at 320 said nothing).
+              className="flex flex-wrap items-center gap-x-2 gap-y-2 bg-surface px-3 py-2.5 min-[380px]:flex-nowrap sm:gap-3 sm:px-4"
             >
               <GripVertical className="hidden size-4 shrink-0 text-muted/50 sm:block" />
               <div className="min-w-0 flex-1">
@@ -615,7 +617,7 @@ function TemplateExercises({
                     type="button"
                     onClick={() => setSwapping(row)}
                     aria-label={`Swap ${row.exercise?.name ?? "exercise"} for another`}
-                    className="flex min-w-0 items-start gap-1 text-left text-sm leading-snug text-text"
+                    className="hb-hit flex min-w-0 items-start gap-1 text-left text-sm leading-snug text-text"
                   >
                     <span className="line-clamp-2 break-words">{row.exercise?.name ?? "Unknown"}</span>
                     <ArrowLeftRight aria-hidden className="mt-[3px] size-3 shrink-0 text-muted" />
@@ -630,64 +632,70 @@ function TemplateExercises({
                 {/* How long to rest after this one's sets, everywhere a
                     set is logged: the logger, the watch, Siri. A native
                     select, so iOS gives it its picker wheel. */}
-                <label className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted">
-                  <Timer aria-hidden className="size-3 shrink-0" />
-                  <RestPicker
-                    saved={row.rest_seconds}
-                    label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
-                    onPick={(raw) => setRest(row, raw)}
-                    className="rounded"
-                  >
-                    {restOptions}
-                  </RestPicker>
-                </label>
-                {/* Supersets: done back to back, resting after the round. */}
-                {(slots[i] || i < rows.length - 1) && (
-                  <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => toggleSuperset(row, i)}
-                    className="mt-0.5 flex min-w-0 items-center gap-1 text-xs text-muted transition-colors hover:text-text disabled:opacity-50"
-                  >
-                    {slots[i] ? <Unlink aria-hidden className="size-3 shrink-0" /> : <Link2 aria-hidden className="size-3 shrink-0" />}
-                    <span className="truncate">{supersetLabel(i)}</span>
-                  </button>
-                )}
+                {/* Side by side, each 44pt tall to the touch without
+                    their touch areas landing on each other. */}
+                <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+                  <label className="flex h-7 min-w-0 items-center gap-1 text-xs text-muted">
+                    <Timer aria-hidden className="size-3 shrink-0" />
+                    <RestPicker
+                      saved={row.rest_seconds}
+                      label={`Rest after ${row.exercise?.name ?? "this exercise"}`}
+                      onPick={(raw) => setRest(row, raw)}
+                      className="rounded"
+                    >
+                      {restOptions}
+                    </RestPicker>
+                  </label>
+                  {/* Supersets: done back to back, resting after the round. */}
+                  {(slots[i] || i < rows.length - 1) && (
+                    <button
+                      type="button"
+                      disabled={pending}
+                      onClick={() => toggleSuperset(row, i)}
+                      className="hb-hit flex h-7 min-w-0 items-center gap-1 text-xs text-muted transition-colors hover:text-text active:text-text disabled:opacity-50"
+                    >
+                      {slots[i] ? <Unlink aria-hidden className="size-3 shrink-0" /> : <Link2 aria-hidden className="size-3 shrink-0" />}
+                      <span className="truncate">{supersetLabel(i)}</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <input
-                type="number"
-                onFocus={selectAllOnFocus}
-                min={1}
-                defaultValue={row.target_sets ?? 3}
-                aria-label="target sets"
-                onBlur={(e) => setSets(row, e.target.value)}
-                className="h-9 w-12 rounded-lg bg-surface-2 text-center tnum text-sm text-text focus:outline-none focus:ring-2 focus:ring-text/25"
-              />
-              <span className="text-xs text-muted">×</span>
-              <input
-                type="text"
-                defaultValue={row.target_rep_range ?? ""}
-                aria-label="target rep range"
-                placeholder="8-12"
-                onBlur={(e) => setReps(row, e.target.value)}
-                className="h-9 w-16 rounded-lg bg-surface-2 text-center tnum text-sm text-text focus:outline-none focus:ring-2 focus:ring-text/25"
-              />
+              <div className="order-last flex w-full items-center gap-2 min-[380px]:order-none min-[380px]:w-auto">
+                <input
+                  type="number"
+                  onFocus={selectAllOnFocus}
+                  min={1}
+                  defaultValue={row.target_sets ?? 3}
+                  aria-label={`Target sets for ${row.exercise?.name ?? "this exercise"}`}
+                  onBlur={(e) => setSets(row, e.target.value)}
+                  className="h-11 w-12 rounded-lg bg-surface-2 text-center tnum text-sm text-text focus:outline-none focus:ring-2 focus:ring-text/25"
+                />
+                <span aria-hidden className="text-xs text-muted">×</span>
+                <input
+                  type="text"
+                  defaultValue={row.target_rep_range ?? ""}
+                  aria-label={`Target reps for ${row.exercise?.name ?? "this exercise"}`}
+                  placeholder="8-12"
+                  onBlur={(e) => setReps(row, e.target.value)}
+                  className="h-11 w-16 rounded-lg bg-surface-2 text-center tnum text-sm text-text focus:outline-none focus:ring-2 focus:ring-text/25"
+                />
+              </div>
 
               <div className="flex shrink-0 flex-col">
                 <button
                   disabled={i === 0}
-                  aria-label="Move up"
+                  aria-label={`Move ${row.exercise?.name ?? "exercise"} up`}
                   onClick={() => move(row, "up")}
-                  className="flex h-[22px] w-7 items-center justify-center text-muted hover:text-text disabled:opacity-30"
+                  className="hb-hit flex h-9 w-8 items-center justify-center text-muted hover:text-text active:text-text disabled:opacity-30"
                 >
                   <ChevronUp className="size-4" />
                 </button>
                 <button
                   disabled={i === rows.length - 1}
-                  aria-label="Move down"
+                  aria-label={`Move ${row.exercise?.name ?? "exercise"} down`}
                   onClick={() => move(row, "down")}
-                  className="flex h-[22px] w-7 items-center justify-center text-muted hover:text-text disabled:opacity-30"
+                  className="hb-hit flex h-9 w-8 items-center justify-center text-muted hover:text-text active:text-text disabled:opacity-30"
                 >
                   <ChevronDown className="size-4" />
                 </button>
@@ -793,7 +801,8 @@ function RestPicker({
           setPicked(e.target.value);
           onPick(e.target.value);
         }}
-        className="absolute inset-0 size-full cursor-pointer appearance-none opacity-0"
+        // 44pt to the touch, centred on its words, whatever their width.
+        className="absolute left-1/2 top-1/2 h-11 w-[max(100%,2.75rem)] -translate-x-1/2 -translate-y-1/2 cursor-pointer appearance-none opacity-0"
       >
         {children}
       </select>

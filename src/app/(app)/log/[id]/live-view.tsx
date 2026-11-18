@@ -125,7 +125,9 @@ export function LiveView({
 
       {/* Masthead and scoreboard: the bout's name on the poster, the lifter's
           fighter behind it, faded so it has no edge. */}
-      <div className="relative isolate">
+      {/* Clipped at the sides: the art runs off the right edge on purpose,
+          and mustn't make the page pan. */}
+      <div className="relative isolate overflow-x-clip">
         <div
           aria-hidden
           className="hb-live-art pointer-events-none absolute -top-12 right-[-3rem] -z-10 hidden h-[26rem] w-[56%] [--hb-fade:var(--color-bg)] md:block"

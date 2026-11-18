@@ -101,7 +101,7 @@ export function NumberStepper({
             ...figure,
             fontSize: "max(16px, min(var(--fit-max), calc((100cqw - var(--fit-reserve)) / var(--fit-em))))",
           }}
-          className="font-display h-full w-full min-w-0 bg-transparent text-center text-text focus:outline-none"
+          className="font-display h-full w-full min-w-0 bg-transparent text-center text-text focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text/25"
         />
         {suffix && (
           <span className="pointer-events-none absolute right-2 text-[13px] text-muted">

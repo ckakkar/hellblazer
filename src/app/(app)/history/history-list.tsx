@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, ViewTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { StartWorkoutLink } from "@/components/start-workout-link";
 import { format, parseISO } from "date-fns";
 import { CalendarDays } from "lucide-react";
 import { SearchField } from "@/components/ui/search-field";
@@ -10,7 +11,6 @@ import { SwipeRow } from "@/components/ui/swipe-row";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/page-header";
-import { buttonVariants } from "@/components/ui/button";
 import { formatVolume, type Unit } from "@/lib/units";
 import type { SessionSummary } from "@/lib/data/sessions";
 import { discardSession } from "@/lib/actions/sessions";
@@ -132,9 +132,7 @@ export function HistoryList({
         title="No sessions logged yet"
         body="Every workout you finish lands here, newest first."
         action={
-          <Link href="/log" className={buttonVariants({ variant: "secondary" })}>
-            Start a workout
-          </Link>
+          <StartWorkoutLink />
         }
       />
     );
@@ -155,47 +153,53 @@ export function HistoryList({
 
   return (
     <div>
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row lg:ml-[16rem]">
+      {/* The filters wrap rather than squeeze: where the column is too
+          narrow for all three (an iPad's, beside the sidebar and the month
+          rail), the search takes the first line and the two filters share
+          the next. On a shared line the search takes the room. */}
+      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:flex-wrap lg:ml-[16rem]">
         <SearchField
           value={q}
           onValueChange={setQ}
           placeholder="Search by title or date"
-          className="flex-1"
+          className="sm:min-w-0 sm:flex-[999_1_16rem]"
         />
-        <Select
-          value={templateId}
-          onChange={(e) => setTemplateId(e.target.value)}
-          aria-label="Filter by template"
-          className="sm:w-56"
-        >
-          <option value="all">All templates</option>
-          <option value="freeform">Freeform only</option>
-          {templates.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </Select>
-        {lifts.length > 0 && (
-          // On the server (?exercise=): which sessions had a lift is a read
-          // of their exercises, not something History already holds.
+        <div className="sm:flex-[1_0_13rem]">
           <Select
-            value={liftId ?? "all"}
-            onChange={(e) =>
-              router.replace(e.target.value === "all" ? "/history" : `/history?exercise=${e.target.value}`, {
-                scroll: false,
-              })
-            }
-            aria-label="Filter by lift"
-            className="sm:w-56"
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value)}
+            aria-label="Filter by template"
           >
-            <option value="all">Any lift</option>
-            {lifts.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
+            <option value="all">All templates</option>
+            <option value="freeform">Freeform only</option>
+            {templates.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
             ))}
           </Select>
+        </div>
+        {lifts.length > 0 && (
+          // On the server (?exercise=): which sessions had a lift is a read
+          // of their exercises, not something History already holds.
+          <div className="sm:flex-[1_0_13rem]">
+            <Select
+              value={liftId ?? "all"}
+              onChange={(e) =>
+                router.replace(e.target.value === "all" ? "/history" : `/history?exercise=${e.target.value}`, {
+                  scroll: false,
+                })
+              }
+              aria-label="Filter by lift"
+            >
+              <option value="all">Any lift</option>
+              {lifts.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </Select>
+          </div>
         )}
       </div>
 
