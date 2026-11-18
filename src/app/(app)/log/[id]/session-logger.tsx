@@ -22,6 +22,7 @@ import {
   Heart,
   Link2,
   Loader2,
+  NotebookPen,
   Pencil,
   Play,
   Plus,
@@ -103,6 +104,8 @@ import {
   updateSessionMeta,
 } from "@/lib/actions/sessions";
 import { deleteSetNow, failureCode, readSessionSets, saveSetNow, setEndedNow } from "@/lib/logger-sync";
+import { LiftNote, useLiftNotes } from "@/components/lift-note";
+import type { LiftNotes } from "@/lib/data/lift-notes";
 import { sendAgainIfDropped } from "@/lib/action-retry";
 
 type SetKind = "drop" | "rest_pause" | null;
@@ -225,6 +228,7 @@ export function SessionLogger({
   fighter,
   showRpe = false,
   lastWorkoutDate = null,
+  liftNotes = {},
 }: {
   session: SessionDetail;
   exerciseLibrary: Exercise[];
@@ -239,8 +243,11 @@ export function SessionLogger({
   showRpe?: boolean;
   /** The last workout with sets before this one (yyyy-MM-dd), for "first in N weeks". */
   lastWorkoutDate?: string | null;
+  /** The lifter's own notes on movements, by exercise id (any movement, so one swapped in has its note). */
+  liftNotes?: LiftNotes;
 }) {
   const [, startNav] = useTransition();
+  const { notes, unsaved: unsavedNotes, save: saveNote } = useLiftNotes(liftNotes, session.user_id);
   const router = useRouter();
   // A movement swapped in after sets were logged keeps the one it replaced's
   // targets; the rest are the session's own.
@@ -2196,6 +2203,18 @@ export function SessionLogger({
                     {addedTag(ex.seId)}
                   </div>
                   {ex.note && <p className="mt-1 text-[13px] text-muted">{ex.note}</p>}
+                  {notes[ex.exerciseId] && (
+                    // Yours, in view before the sheet opens: the seat and pin
+                    // are set before the first set.
+                    <p className="mt-2 flex items-start gap-2 text-[14px] leading-snug text-text [overflow-wrap:anywhere]">
+                      <NotebookPen aria-hidden className="mt-[3px] size-3.5 shrink-0 text-muted" />
+                      <span>
+                        <span className="sr-only">Your note: </span>
+                        {notes[ex.exerciseId]}
+                        {unsavedNotes.has(ex.exerciseId) && <span className="text-muted"> Not saved yet.</span>}
+                      </span>
+                    </p>
+                  )}
                   {slots[i] && <SupersetLine slot={slots[i]} exercises={exercises} index={i} className="mt-2" />}
                   <LastAndTarget
                     last={last ?? null}
@@ -2428,6 +2447,9 @@ export function SessionLogger({
           exercise={sheetEx}
           exerciseLibrary={exerciseLibrary}
           lastPerformance={lastFor(sheetEx.exerciseId) ?? null}
+          liftNote={notes[sheetEx.exerciseId] ?? null}
+          liftNoteUnsaved={unsavedNotes.has(sheetEx.exerciseId)}
+          onLiftNote={saveNote}
           target={targetFor(sheetEx)}
           superset={(() => {
             const i = exercises.findIndex((e) => e.seId === sheetEx.seId);
@@ -2549,6 +2571,9 @@ function ActiveExerciseModal({
   exercise,
   exerciseLibrary,
   lastPerformance,
+  liftNote,
+  liftNoteUnsaved,
+  onLiftNote,
   target,
   superset,
   open,
@@ -2574,6 +2599,10 @@ function ActiveExerciseModal({
   exercise: LocalExercise;
   exerciseLibrary: Exercise[];
   lastPerformance: LastPerformance | null;
+  /** The lifter's own note on this movement, kept across workouts. */
+  liftNote: string | null;
+  liftNoteUnsaved: boolean;
+  onLiftNote: (exerciseId: string, note: string | null) => void;
   /** Today's target on it (progression.ts). */
   target: Target | null;
   /** Where it sits among the session's exercises, and its superset if any. */
@@ -2735,6 +2764,14 @@ function ActiveExerciseModal({
           {exercise.note && (
             <div className="mb-3 text-[13px] text-muted">{exercise.note}</div>
           )}
+          <LiftNote
+            exerciseId={exercise.exerciseId}
+            exerciseName={exercise.name}
+            note={liftNote}
+            unsaved={liftNoteUnsaved}
+            onSave={onLiftNote}
+            className="mb-3"
+          />
           {guide && (
             // The library's how-to, without leaving the workout.
             <div className="mb-3">

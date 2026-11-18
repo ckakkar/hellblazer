@@ -158,6 +158,35 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_note: {
+        Row: {
+          exercise_id: string
+          note: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          exercise_id: string
+          note: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          exercise_id?: string
+          note?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exercise_note_exercise_id_fkey"
+            columns: ["exercise_id"]
+            isOneToOne: false
+            referencedRelation: "exercise"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_log: {
         Row: {
           created_at: string

@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { isStraight } from "@/lib/set-kinds";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight } from "lucide-react";
+import { Check, ChevronRight, NotebookPen } from "lucide-react";
+import type { LiftNotes } from "@/lib/data/lift-notes";
 import { format } from "date-fns";
 import { cn, fitFigure } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -45,6 +46,7 @@ export function LiveView({
   last,
   unit,
   fighter,
+  liftNotes = {},
 }: {
   sessionId: string;
   userId: string;
@@ -56,6 +58,8 @@ export function LiveView({
   last: Record<string, LastPerformance>;
   unit: Unit;
   fighter: TierKey;
+  /** The lifter's notes on movements: the one on the bar shows its own (read only here). */
+  liftNotes?: LiftNotes;
 }) {
   const router = useRouter();
   useLiveRefresh(userId);
@@ -201,7 +205,14 @@ export function LiveView({
 
       <div className="mt-6 grid grid-cols-1 gap-4 lg:mt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-6">
         {current ? (
-          <OnTheBar exercise={current} hasSet={latest != null} last={last[current.exerciseId]} unit={unit} seen={seen} />
+          <OnTheBar
+            exercise={current}
+            hasSet={latest != null}
+            last={last[current.exerciseId]}
+            note={liftNotes[current.exerciseId] ?? null}
+            unit={unit}
+            seen={seen}
+          />
         ) : (
           <p className="rounded-3xl bg-surface p-6 text-[15px] text-muted">No exercises in this workout yet.</p>
         )}
@@ -254,12 +265,14 @@ function OnTheBar({
   exercise,
   hasSet,
   last,
+  note,
   unit,
   seen,
 }: {
   exercise: BoardExercise;
   hasSet: boolean;
   last: LastPerformance | undefined;
+  note: string | null;
   unit: Unit;
   seen: Set<string>;
 }) {
@@ -293,6 +306,15 @@ function OnTheBar({
         {exercise.name}
       </h2>
       {facts.length > 0 && <p className="mt-1.5 text-[13px] text-muted">{facts.join(", ")}</p>}
+      {note && (
+        <p className="mt-2 flex items-start gap-2 text-[15px] leading-snug text-text [overflow-wrap:anywhere]">
+          <NotebookPen aria-hidden className="mt-[3px] size-3.5 shrink-0 text-muted" />
+          <span>
+            <span className="sr-only">Your note: </span>
+            {note}
+          </span>
+        </p>
+      )}
 
       {top ? (
         <div key={top.id} className={cn("mt-7", !seen.has(top.id) && "hb-set-land")}>

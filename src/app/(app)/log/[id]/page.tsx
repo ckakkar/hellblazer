@@ -8,6 +8,7 @@ import {
   sessionTargets,
 } from "@/lib/data/sessions";
 import { getExercises, getUsualExerciseIds } from "@/lib/data/exercises";
+import { getLiftNotes } from "@/lib/data/lift-notes";
 import { UsualLiftsProvider } from "@/components/usual-lifts";
 import { getShowRpe, getUnit } from "@/lib/settings";
 import { getProfile } from "@/lib/data/profile";
@@ -50,7 +51,7 @@ export default async function LoggerPage({
   if (ipad && (edit === undefined || !session.finished_at)) {
     if (boardIsOver(session.finished_at)) redirect(`/history/${id}`);
     const exerciseIds = [...new Set(session.session_exercise.map((se) => se.exercise_id))];
-    const last = await getLastPerformances(exerciseIds, id);
+    const [last, liftNotes] = await Promise.all([getLastPerformances(exerciseIds, id), getLiftNotes()]);
     return (
       <LiveView
         sessionId={session.id}
@@ -63,6 +64,7 @@ export default async function LoggerPage({
         last={last}
         unit={unit}
         fighter={fighter}
+        liftNotes={liftNotes}
       />
     );
   }
@@ -70,9 +72,10 @@ export default async function LoggerPage({
   const exerciseIds = [
     ...new Set(session.session_exercise.map((se) => se.exercise_id)),
   ];
-  const [lastPerformances, lastWorkoutDate] = await Promise.all([
+  const [lastPerformances, lastWorkoutDate, liftNotes] = await Promise.all([
     getLastPerformances(exerciseIds, id),
     session.finished_at ? null : getLastWorkoutDate(session),
+    getLiftNotes(),
   ]);
   const targets = sessionTargets(session);
 
@@ -88,6 +91,7 @@ export default async function LoggerPage({
         fighter={fighter}
         showRpe={showRpe}
         lastWorkoutDate={lastWorkoutDate}
+        liftNotes={liftNotes}
       />
     </UsualLiftsProvider>
   );

@@ -1,6 +1,7 @@
 import { getAllQueuedSets, removeQueuedSet, type PendingSetWrite } from "@/lib/offline-set-queue";
 import { replaySet } from "@/lib/actions/sessions";
 import { reportProblem } from "@/lib/report";
+import { inSetOrder } from "@/lib/logger-sync";
 
 /**
  * The device's outbox: sets logged with no signal wait in IndexedDB
@@ -51,9 +52,15 @@ export async function drainOutbox(userId: string, openSession: string | null): P
     const waiting = (await getAllQueuedSets()).filter((w) => mine(w, userId, openSession));
     publish({ waiting: waiting.length, sending: waiting.length > 0 && navigator.onLine });
     if (waiting.length === 0 || !navigator.onLine) return;
-    // Oldest first, so a set and the edit after it land in order.
-    for (const w of waiting.toSorted((a, b) => a.updatedAt - b.updatedAt)) {
-      const result = await replaySet({
+    // Oldest first, so a set and the edit after it land in order. Each goes
+    // in the set's own order with the logger's saves (inSetOrder): opened
+    // mid-upload, the logger's newer save of it waits for this one.
+    for (const listed of waiting.toSorted((a, b) => a.updatedAt - b.updatedAt)) {
+      // As the device has it now, not as it was listed: the logger may have
+      // saved it since (and cleared it), or written a newer copy.
+      const w = (await getAllQueuedSets()).find((q) => q.id === listed.id);
+      if (!w || !mine(w, userId, openSession)) continue;
+      const result = await inSetOrder(w.id, () => replaySet({
         userId,
         id: w.id,
         sessionExerciseId: w.sessionExerciseId,
@@ -65,7 +72,7 @@ export async function drainOutbox(userId: string, openSession: string | null): P
         kind: w.kind ?? null,
         loggedAt: w.loggedAt,
         deleted: w.deleted,
-      }).catch(() => ({ ok: false as const, permanent: false }));
+      })).catch(() => ({ ok: false as const, permanent: false }));
       // Another account now (or none): leave every write where it is.
       if (!result.ok && "wrongAccount" in result && result.wrongAccount) break;
       if (!result.ok && result.permanent) reportProblem("outbox-dropped");

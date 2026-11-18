@@ -8,6 +8,7 @@ export type ReportKind =
   | "action-failed"
   | "set-save-failed"
   | "finish-failed"
+  | "note-save-failed"
   | "outbox-dropped"
   | "outbox-stuck"
   | "render-error";

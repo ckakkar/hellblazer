@@ -31,8 +31,22 @@ import {
 import { useAction } from "@/lib/use-action";
 import { showNotice } from "@/lib/notice";
 import { Collapse } from "@/components/ui/collapse";
+import { LiftNote, useLiftNotes } from "@/components/lift-note";
+import type { LiftNotes } from "@/lib/data/lift-notes";
 
-export function ExercisesBrowser({ exercises, createName = null }: { exercises: Exercise[]; createName?: string | null }) {
+export function ExercisesBrowser({
+  exercises,
+  createName = null,
+  liftNotes = {},
+  userId,
+}: {
+  exercises: Exercise[];
+  createName?: string | null;
+  /** The lifter's own notes on movements, by exercise id. */
+  liftNotes?: LiftNotes;
+  userId: string;
+}) {
+  const { notes, unsaved, save: setNote } = useLiftNotes(liftNotes, userId);
   const [q, setQ] = useState("");
   const [muscle, setMuscle] = useState<string>("all");
   const [creating, setCreating] = useState(createName !== null);
@@ -57,7 +71,7 @@ export function ExercisesBrowser({ exercises, createName = null }: { exercises: 
     <div>
       <PageHeader
         title="Exercises"
-        subtitle="Every movement, grouped by the muscle it trains. Tap one for how to do it."
+        subtitle="Every movement, grouped by the muscle it trains. Tap one for how to do it, or to keep a note on it."
         stat={{ value: exercises.length, label: "movements" }}
         action={
           <Button onClick={() => setCreating(true)}>
@@ -96,6 +110,9 @@ export function ExercisesBrowser({ exercises, createName = null }: { exercises: 
                 <ExerciseRow
                   key={e.id}
                   exercise={e}
+                  note={notes[e.id] ?? null}
+                  noteUnsaved={unsaved.has(e.id)}
+                  onNote={setNote}
                   open={openId === e.id}
                   onToggle={() =>
                     setOpenId((cur) => (cur === e.id ? null : e.id))
@@ -132,16 +149,18 @@ export function ExercisesBrowser({ exercises, createName = null }: { exercises: 
 }
 
 /**
- * One exercise row, with its how-to as a disclosure underneath.
+ * One exercise row, with its how-to and the lifter's own note on it as a
+ * disclosure underneath (a custom exercise has no how-to, only the note).
  *
  * The toggle is a button covering only the name and meta, never the whole row:
  * the custom tag and delete control sit outside it, since nesting
  * interactive elements inside a button is invalid and breaks keyboard use.
- * Movements with no guide (any custom exercise) render as plain, inert text
- * rather than a control that opens nothing.
  */
 function ExerciseRow({
   exercise: e,
+  note,
+  noteUnsaved,
+  onNote,
   open,
   onToggle,
   deleting,
@@ -149,6 +168,9 @@ function ExerciseRow({
   onRestore,
 }: {
   exercise: Exercise;
+  note: string | null;
+  noteUnsaved: boolean;
+  onNote: (exerciseId: string, note: string | null) => void;
   open: boolean;
   onToggle: () => void;
   deleting: boolean;
@@ -162,14 +184,13 @@ function ExerciseRow({
     <>
       <div className="flex items-center gap-1.5">
         <span className="truncate text-[15px] text-text">{e.name}</span>
-        {guide && (
-          <ChevronDown
-            className={cn(
-              "size-3.5 shrink-0 text-muted transition-transform duration-200",
-              open && "rotate-180",
-            )}
-          />
-        )}
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "size-3.5 shrink-0 text-muted transition-transform duration-200",
+            open && "rotate-180",
+          )}
+        />
       </div>
       <p className="tnum mt-0.5 truncate text-[13px] text-muted">
         {[
@@ -186,19 +207,15 @@ function ExerciseRow({
   return (
     <div>
       <div className="flex items-center justify-between gap-3 px-4 py-3">
-        {guide ? (
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-expanded={open}
-            aria-controls={guideId}
-            className="-my-1 min-w-0 flex-1 rounded-lg py-1 text-left transition-[color,opacity] hover:text-text active:opacity-60"
-          >
-            {meta}
-          </button>
-        ) : (
-          <div className="min-w-0 flex-1">{meta}</div>
-        )}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls={guideId}
+          className="-my-1 min-w-0 flex-1 rounded-lg py-1 text-left transition-[color,opacity] hover:text-text active:opacity-60"
+        >
+          {meta}
+        </button>
         <div className="flex shrink-0 items-center gap-2">
           {e.secondary_muscles.length > 0 && (
             <span className="hidden text-[13px] text-muted sm:inline">
@@ -226,13 +243,21 @@ function ExerciseRow({
           ) : null}
         </div>
       </div>
-      {guide && (
-        <Collapse open={open} id={guideId} className="px-4 pb-4">
+      <Collapse open={open} id={guideId} className="px-4 pb-4">
+        {guide && (
           <p className="rounded-xl bg-text/[0.04] px-3.5 py-3 text-[14px] leading-[1.55] text-muted">
             {guide}
           </p>
-        </Collapse>
-      )}
+        )}
+        <LiftNote
+          exerciseId={e.id}
+          exerciseName={e.name}
+          note={note}
+          unsaved={noteUnsaved}
+          onSave={onNote}
+          className={guide ? "mt-3" : undefined}
+        />
+      </Collapse>
     </div>
   );
 }
